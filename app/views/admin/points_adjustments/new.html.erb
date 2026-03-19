@@ -1,0 +1,26 @@
+<% content_for :title, "Adjust Points" %>
+
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h3 mb-3">Adjust Loyalty Points</h1>
+        <p class="text-muted">Use positive points to add and negative points to deduct.</p>
+
+        <%= form_with scope: :points_adjustment, url: admin_points_adjustments_path, class: "vstack gap-3" do |form| %>
+          <div>
+            <%= form.label :phone_number, class: "form-label" %>
+            <%= form.telephone_field :phone_number, class: "form-control", required: true %>
+          </div>
+
+          <div>
+            <%= form.label :points, class: "form-label" %>
+            <%= form.number_field :points, class: "form-control", required: true %>
+          </div>
+
+          <%= form.submit "Save Adjustment", class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

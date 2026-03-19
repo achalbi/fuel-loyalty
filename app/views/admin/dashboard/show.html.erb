@@ -1,0 +1,53 @@
+<% content_for :title, "Admin Dashboard" %>
+
+<div class="page-intro">
+  <h1>Admin Dashboard</h1>
+  <p>Monitor your loyalty program operations, customer growth, and issued points from one place.</p>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card p-4 bg-primary bg-opacity-10 border border-primary border-opacity-25 metric-card">
+      <div class="d-flex gap-3">
+        <div class="icon-shape icon-md bg-primary text-white rounded-3">
+          <i class="ti ti-users fs-4"></i>
+        </div>
+        <div>
+          <h2 class="mb-3 fs-6">Customers</h2>
+          <p class="metric-value"><%= @customers_count %></p>
+          <p class="text-primary mb-0 small">Registered loyalty members</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card p-4 bg-success bg-opacity-10 border border-success border-opacity-25 metric-card">
+      <div class="d-flex gap-3">
+        <div class="icon-shape icon-md bg-success text-white rounded-3">
+          <i class="ti ti-receipt fs-4"></i>
+        </div>
+        <div>
+          <h2 class="mb-3 fs-6">Transactions</h2>
+          <p class="metric-value"><%= @transactions_count %></p>
+          <p class="text-success mb-0 small">Recorded fuel visits</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card p-4 bg-info bg-opacity-10 border border-info border-opacity-25 metric-card">
+      <div class="d-flex gap-3">
+        <div class="icon-shape icon-md bg-info text-white rounded-3">
+          <i class="ti ti-badge fs-4"></i>
+        </div>
+        <div>
+          <h2 class="mb-3 fs-6">Points Issued</h2>
+          <p class="metric-value"><%= @points_issued %></p>
+          <p class="text-info mb-0 small">Net loyalty points in circulation</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

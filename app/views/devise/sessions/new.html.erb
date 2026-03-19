@@ -1,0 +1,40 @@
+<% content_for :title, "Sign In" %>
+
+<div class="container d-flex align-items-center justify-content-center min-vh-100 py-5">
+  <div class="card template-form-card">
+    <div class="card-body p-5">
+      <div class="text-center mb-4">
+        <div class="brand-lockup justify-content-center mb-4">
+          <span class="brand-mark">F</span>
+          <span class="logo-text">Fuel Loyalty</span>
+        </div>
+        <h1 class="card-title mb-2 h4">Sign in to your account</h1>
+        <p class="small-muted mb-0">Use your username or email address to continue.</p>
+      </div>
+
+      <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { class: "vstack gap-3" }) do |form| %>
+        <div>
+          <%= form.label :login, "Username or Email", class: "form-label" %>
+          <%= form.text_field :login, autofocus: true, autocomplete: "username", class: "form-control", placeholder: "name@example.com", required: true %>
+        </div>
+
+        <div>
+          <%= form.label :password, class: "form-label d-flex justify-content-between" do %>
+            <span>Password</span>
+            <span class="small text-primary">Secure access</span>
+          <% end %>
+          <%= form.password_field :password, autocomplete: "current-password", class: "form-control", placeholder: "Password", required: true %>
+        </div>
+
+        <% if devise_mapping.rememberable? %>
+          <div class="form-check">
+            <%= form.check_box :remember_me, class: "form-check-input" %>
+            <%= form.label :remember_me, class: "form-check-label small" %>
+          </div>
+        <% end %>
+
+        <%= form.submit "Sign In", class: "btn btn-primary w-100" %>
+      <% end %>
+    </div>
+  </div>
+</div>

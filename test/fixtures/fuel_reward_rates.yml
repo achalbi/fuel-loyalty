@@ -1,0 +1,11 @@
+petrol:
+  fuel_type: petrol
+  points_per_100: 2
+
+diesel:
+  fuel_type: diesel
+  points_per_100: 1
+
+cng_lpg:
+  fuel_type: cng_lpg
+  points_per_100: 1

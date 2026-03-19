@@ -1,0 +1,34 @@
+Rails.application.routes.draw do
+  devise_for :users
+
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  root "dashboard#show"
+
+  get "/loyalty", to: "loyalty#new", as: :new_loyalty
+  post "/loyalty", to: "loyalty#create", as: :loyalty
+  get "/loyalty/result", to: "loyalty#show", as: :loyalty_result
+
+  namespace :staff do
+    resources :customers, only: %i[index new create] do
+      get :lookup, on: :collection
+      patch :activate, on: :member
+      patch :deactivate, on: :member
+    end
+    resources :redemptions, only: %i[new create]
+    resources :transactions, only: %i[new create]
+  end
+
+  namespace :admin do
+    resource :dashboard, only: :show, controller: "dashboard"
+    resource :fuel_reward_rates, only: %i[show update], controller: "fuel_reward_rates"
+    resource :theme_settings, only: %i[show update], controller: "theme_settings"
+    resources :customers, only: %i[index show new create destroy]
+    resources :transactions, only: :index
+    resources :points_adjustments, only: %i[new create]
+  end
+
+  resources :customers, only: %i[show edit update] do
+    resources :vehicles, only: %i[create edit update destroy]
+  end
+end

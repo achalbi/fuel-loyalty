@@ -1,0 +1,18 @@
+<% content_for :title, "Edit Vehicle" %>
+
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h3 mb-3">Edit Vehicle</h1>
+
+        <%= render "form",
+          customer: @customer,
+          vehicle: @vehicle,
+          field_label: "Vehicle Number",
+          submit_label: "Update Vehicle",
+          submit_class: "btn btn-primary" %>
+      </div>
+    </div>
+  </div>
+</div>

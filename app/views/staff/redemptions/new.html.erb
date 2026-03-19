@@ -1,0 +1,183 @@
+<% content_for :title, "Redeem Points" %>
+
+<div class="row g-4" data-redemption-lookup-root data-lookup-url="<%= lookup_staff_customers_path %>">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h3 mb-3">Redeem Loyalty Points</h1>
+        <p class="text-muted">Enter the customer's phone number, confirm the available balance, and record the redemption.</p>
+
+        <% if @errors.present? %>
+          <div class="alert alert-danger"><%= @errors.to_sentence %></div>
+        <% end %>
+
+        <%= form_with scope: :redemption, url: staff_redemptions_path, class: "vstack gap-3" do |form| %>
+          <div>
+            <%= form.label :phone_number, class: "form-label" %>
+            <%= form.telephone_field :phone_number, value: @prefill_phone_number, class: "form-control", required: true, autocomplete: "off", data: { phone_input: true } %>
+          </div>
+
+          <div>
+            <%= form.label :points, "Points to Redeem", class: "form-label" %>
+            <%= form.number_field :points, value: @prefill_points, class: "form-control", min: 1, required: true, data: { points_input: true } %>
+          </div>
+
+          <%= form.submit "Redeem Points", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Customer Details</h2>
+
+        <div data-customer-placeholder>
+          <p class="text-muted mb-0">Search by phone number to view the customer and current points balance.</p>
+        </div>
+
+        <div class="d-none" data-customer-panel>
+          <dl class="row mb-0 detail-grid">
+            <dt class="col-sm-5 text-muted">Name</dt>
+            <dd class="col-sm-7" data-customer-name></dd>
+
+            <dt class="col-sm-5 text-muted">Phone</dt>
+            <dd class="col-sm-7" data-customer-phone></dd>
+
+            <dt class="col-sm-5 text-muted">Available Points</dt>
+            <dd class="col-sm-7 fw-semibold" data-customer-points></dd>
+
+            <dt class="col-sm-5 text-muted">Vehicles</dt>
+            <dd class="col-sm-7" data-customer-vehicles-count></dd>
+          </dl>
+        </div>
+
+        <div class="alert alert-warning d-none mt-3 mb-0" data-customer-error role="alert"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (() => {
+    const initRedemptionLookup = () => {
+      const root = document.querySelector("[data-redemption-lookup-root]");
+      if (!root || root.dataset.lookupBound === "true") return;
+
+      root.dataset.lookupBound = "true";
+
+      const lookupUrl = root.dataset.lookupUrl;
+      const phoneInput = root.querySelector("[data-phone-input]");
+      const pointsInput = root.querySelector("[data-points-input]");
+      const submitButton = root.querySelector("[data-submit-button]");
+      const placeholder = root.querySelector("[data-customer-placeholder]");
+      const panel = root.querySelector("[data-customer-panel]");
+      const errorBox = root.querySelector("[data-customer-error]");
+      const nameTarget = root.querySelector("[data-customer-name]");
+      const phoneTarget = root.querySelector("[data-customer-phone]");
+      const pointsTarget = root.querySelector("[data-customer-points]");
+      const vehiclesCountTarget = root.querySelector("[data-customer-vehicles-count]");
+      let availablePoints = 0;
+      let customerLoaded = false;
+      let activeLookup = 0;
+
+      const updateSubmitState = () => {
+        const requestedPoints = Number(pointsInput.value || 0);
+        submitButton.disabled = !customerLoaded || requestedPoints <= 0 || requestedPoints > availablePoints;
+      };
+
+      const showError = (message) => {
+        errorBox.textContent = message;
+        errorBox.classList.remove("d-none");
+        panel.classList.add("d-none");
+        placeholder.classList.add("d-none");
+        customerLoaded = false;
+        availablePoints = 0;
+        updateSubmitState();
+      };
+
+      const clearError = () => {
+        errorBox.textContent = "";
+        errorBox.classList.add("d-none");
+      };
+
+      const clearState = () => {
+        clearError();
+        placeholder.classList.remove("d-none");
+        panel.classList.add("d-none");
+        nameTarget.textContent = "";
+        phoneTarget.textContent = "";
+        pointsTarget.textContent = "";
+        vehiclesCountTarget.textContent = "";
+        customerLoaded = false;
+        availablePoints = 0;
+        updateSubmitState();
+      };
+
+      const loadCustomer = async () => {
+        const phoneNumber = phoneInput.value.trim();
+
+        if (phoneNumber.length < 10) {
+          clearState();
+          return;
+        }
+
+        const lookupId = ++activeLookup;
+
+        try {
+          const response = await fetch(`${lookupUrl}?phone_number=${encodeURIComponent(phoneNumber)}`, {
+            headers: { Accept: "application/json" }
+          });
+
+          const payload = await response.json();
+          if (lookupId !== activeLookup) return;
+
+          if (!response.ok || !payload.found) {
+            showError(payload.message || "Customer not found for that phone number.");
+            return;
+          }
+
+          clearError();
+          placeholder.classList.add("d-none");
+          panel.classList.remove("d-none");
+          nameTarget.textContent = payload.customer.name;
+          phoneTarget.textContent = payload.customer.phone_number;
+          pointsTarget.textContent = payload.customer.total_points;
+          vehiclesCountTarget.textContent = payload.customer.vehicles.length;
+          availablePoints = Number(payload.customer.total_points || 0);
+          customerLoaded = true;
+
+          if (availablePoints <= 0) {
+            showError("This customer does not have any redeemable points.");
+            return;
+          }
+
+          updateSubmitState();
+        } catch (_error) {
+          if (lookupId !== activeLookup) return;
+          showError("Unable to fetch customer details right now.");
+        }
+      };
+
+      let lookupTimer;
+
+      phoneInput.addEventListener("input", () => {
+        clearTimeout(lookupTimer);
+        lookupTimer = setTimeout(loadCustomer, 300);
+      });
+
+      phoneInput.addEventListener("blur", loadCustomer);
+      pointsInput.addEventListener("input", updateSubmitState);
+
+      if (phoneInput.value.trim() !== "") {
+        loadCustomer();
+      } else {
+        clearState();
+      }
+    };
+
+    document.addEventListener("turbo:load", initRedemptionLookup);
+    document.addEventListener("DOMContentLoaded", initRedemptionLookup);
+  })();
+</script>

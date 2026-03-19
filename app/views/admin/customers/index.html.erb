@@ -1,0 +1,49 @@
+<% content_for :title, "Customers" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4 page-header">
+  <div class="page-intro mb-0">
+    <h1>Customers</h1>
+    <p>Browse enrolled loyalty customers, their vehicles, and their current point balance.</p>
+  </div>
+  <div class="page-actions">
+    <%= link_to "Add Customer", new_admin_customer_path, class: "btn btn-primary" %>
+  </div>
+</div>
+
+<div class="card table-responsive">
+  <div class="table-responsive">
+    <table class="table responsive-table mb-0 table-hover">
+      <thead class="table-light border-light">
+        <tr>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Status</th>
+          <th>Vehicles</th>
+          <th>Points</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @customers.each do |customer| %>
+          <tr class="align-middle">
+            <td data-label="Name"><%= link_to(customer.display_name, admin_customer_path(customer)) %></td>
+            <td data-label="Phone"><%= customer.phone_number %></td>
+            <td data-label="Status">
+              <span class="badge rounded-pill <%= customer.active? ? "text-bg-success" : "text-bg-secondary" %>">
+                <%= customer.status_label %>
+              </span>
+            </td>
+            <td data-label="Vehicles"><%= customer.vehicles.map(&:vehicle_number).presence&.join(", ") || "N/A" %></td>
+            <td data-label="Points"><%= customer.total_points %></td>
+            <td data-label="Actions" class="text-end">
+              <div class="table-action-group justify-content-end">
+                <%= link_to "View", admin_customer_path(customer), class: "btn btn-sm btn-outline-primary" %>
+                <%= button_to "Delete", admin_customer_path(customer), method: :delete, class: "btn btn-sm btn-outline-danger", form: { data: { confirm_modal: true, confirm_message: "Remove this customer?" } } %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

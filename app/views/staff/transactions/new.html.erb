@@ -1,0 +1,241 @@
+<% content_for :title, "New Transaction" %>
+
+<div class="row g-4" data-customer-lookup-root data-lookup-url="<%= lookup_staff_customers_path %>" data-selected-vehicle-id="<%= @prefill_vehicle_id %>">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h3 mb-3">Record Fuel Transaction</h1>
+        <p class="text-muted">Enter the customer's phone number to load their profile, then select the vehicle for this visit.</p>
+
+        <% if @errors.present? %>
+          <div class="alert alert-danger"><%= @errors.to_sentence %></div>
+        <% end %>
+
+        <%= form_with scope: :transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
+          <div>
+            <%= form.label :phone_number, class: "form-label" %>
+            <%= form.telephone_field :phone_number, value: @prefill_phone_number, class: "form-control", required: true, autocomplete: "off", data: { phone_input: true } %>
+            <div class="form-text">Customer must already exist. Use the customer screen to register a new customer or add more vehicles.</div>
+          </div>
+
+          <div>
+            <%= form.label :vehicle_id, "Vehicle", class: "form-label" %>
+            <%= form.select :vehicle_id, [], { prompt: "Select a vehicle" }, class: "form-select", required: true, disabled: true, data: { vehicle_select: true } %>
+          </div>
+
+          <div>
+            <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
+            <%= form.number_field :fuel_amount, value: @prefill_fuel_amount, class: "form-control", step: "0.01", min: 1, required: true %>
+          </div>
+
+          <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Customer Details</h2>
+
+        <div data-customer-placeholder>
+          <p class="text-muted mb-0">Search by phone number to load the customer profile and available vehicles.</p>
+        </div>
+
+        <div class="d-none" data-customer-panel>
+          <dl class="row mb-0 detail-grid">
+            <dt class="col-sm-5 text-muted">Name</dt>
+            <dd class="col-sm-7" data-customer-name></dd>
+
+            <dt class="col-sm-5 text-muted">Phone</dt>
+            <dd class="col-sm-7" data-customer-phone></dd>
+
+            <dt class="col-sm-5 text-muted">Status</dt>
+            <dd class="col-sm-7">
+              <span class="badge rounded-pill" data-customer-status></span>
+            </dd>
+
+            <dt class="col-sm-5 text-muted">Points</dt>
+            <dd class="col-sm-7" data-customer-points></dd>
+
+            <dt class="col-sm-5 text-muted">Vehicles</dt>
+            <dd class="col-sm-7" data-customer-vehicles-count></dd>
+          </dl>
+
+          <hr>
+          <div>
+            <h3 class="h6">Registered Vehicles</h3>
+            <ul class="list-group list-group-flush" data-customer-vehicles-list></ul>
+          </div>
+        </div>
+
+        <div class="alert alert-warning d-none mt-3 mb-0" data-customer-error role="alert"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (() => {
+    const initLookup = () => {
+      const root = document.querySelector("[data-customer-lookup-root]");
+      if (!root || root.dataset.lookupBound === "true") return;
+
+      root.dataset.lookupBound = "true";
+
+      const lookupUrl = root.dataset.lookupUrl;
+      const phoneInput = root.querySelector("[data-phone-input]");
+      const vehicleSelect = root.querySelector("[data-vehicle-select]");
+      const submitButton = root.querySelector("[data-submit-button]");
+      const selectedVehicleId = root.dataset.selectedVehicleId;
+      const placeholder = root.querySelector("[data-customer-placeholder]");
+      const panel = root.querySelector("[data-customer-panel]");
+      const errorBox = root.querySelector("[data-customer-error]");
+      const nameTarget = root.querySelector("[data-customer-name]");
+      const phoneTarget = root.querySelector("[data-customer-phone]");
+      const statusTarget = root.querySelector("[data-customer-status]");
+      const pointsTarget = root.querySelector("[data-customer-points]");
+      const vehiclesCountTarget = root.querySelector("[data-customer-vehicles-count]");
+      const vehiclesListTarget = root.querySelector("[data-customer-vehicles-list]");
+      let activeLookup = 0;
+      let customerActive = false;
+
+      const resetVehicleSelect = () => {
+        vehicleSelect.innerHTML = "";
+        const prompt = document.createElement("option");
+        prompt.value = "";
+        prompt.textContent = "Select a vehicle";
+        vehicleSelect.appendChild(prompt);
+        vehicleSelect.value = "";
+        vehicleSelect.disabled = true;
+        submitButton.disabled = true;
+      };
+
+      const syncSubmitState = () => {
+        submitButton.disabled = vehicleSelect.value === "" || !customerActive;
+      };
+
+      const renderVehicles = (vehicles) => {
+        resetVehicleSelect();
+        vehiclesListTarget.innerHTML = "";
+
+        vehicles.forEach((vehicle) => {
+          const option = document.createElement("option");
+          option.value = vehicle.id;
+          option.textContent = vehicle.display_name;
+          vehicleSelect.appendChild(option);
+
+          const item = document.createElement("li");
+          item.className = "list-group-item vehicle-mini-card";
+          item.innerHTML = `<div class="fw-semibold">${vehicle.vehicle_number}</div><div class="small text-muted">${vehicle.fuel_type} | ${vehicle.vehicle_kind}</div>`;
+          vehiclesListTarget.appendChild(item);
+        });
+
+        if (vehicles.length > 0) {
+          vehicleSelect.disabled = false;
+          if (selectedVehicleId) {
+            vehicleSelect.value = selectedVehicleId;
+          }
+          syncSubmitState();
+        }
+      };
+
+      const showError = (message, { keepPanel = false } = {}) => {
+        errorBox.textContent = message;
+        errorBox.classList.remove("d-none");
+        placeholder.classList.add("d-none");
+        panel.classList.toggle("d-none", !keepPanel);
+        resetVehicleSelect();
+      };
+
+      const clearError = () => {
+        errorBox.textContent = "";
+        errorBox.classList.add("d-none");
+      };
+
+      const clearState = () => {
+        clearError();
+        panel.classList.add("d-none");
+        placeholder.classList.remove("d-none");
+        nameTarget.textContent = "";
+        phoneTarget.textContent = "";
+        pointsTarget.textContent = "";
+        statusTarget.textContent = "";
+        statusTarget.className = "badge rounded-pill";
+        vehiclesCountTarget.textContent = "";
+        vehiclesListTarget.innerHTML = "";
+        customerActive = false;
+        resetVehicleSelect();
+      };
+
+      const loadCustomer = async () => {
+        const phoneNumber = phoneInput.value.trim();
+
+        if (phoneNumber.length < 10) {
+          clearState();
+          return;
+        }
+
+        const lookupId = ++activeLookup;
+
+        try {
+          const response = await fetch(`${lookupUrl}?phone_number=${encodeURIComponent(phoneNumber)}`, {
+            headers: { Accept: "application/json" }
+          });
+
+          const payload = await response.json();
+          if (lookupId !== activeLookup) return;
+
+          if (!response.ok || !payload.found) {
+            showError(payload.message || "Customer not found for that phone number.");
+            return;
+          }
+
+          clearError();
+          placeholder.classList.add("d-none");
+          panel.classList.remove("d-none");
+          nameTarget.textContent = payload.customer.name;
+          phoneTarget.textContent = payload.customer.phone_number;
+          statusTarget.textContent = payload.customer.status_label;
+          statusTarget.className = `badge rounded-pill ${payload.customer.active ? "text-bg-success" : "text-bg-secondary"}`;
+          pointsTarget.textContent = payload.customer.total_points;
+          vehiclesCountTarget.textContent = payload.customer.vehicles.length;
+          customerActive = payload.customer.active;
+          renderVehicles(payload.customer.vehicles);
+
+          if (!payload.customer.active) {
+            showError("This customer is inactive. Activate the customer before recording a transaction.", { keepPanel: true });
+          } else if (payload.customer.vehicles.length === 0) {
+            showError("This customer does not have any registered vehicles yet.", { keepPanel: true });
+          }
+        } catch (_error) {
+          if (lookupId !== activeLookup) return;
+          showError("Unable to fetch customer details right now.");
+        }
+      };
+
+      let lookupTimer;
+
+      phoneInput.addEventListener("input", () => {
+        clearTimeout(lookupTimer);
+        lookupTimer = setTimeout(loadCustomer, 300);
+      });
+
+      phoneInput.addEventListener("blur", loadCustomer);
+
+      vehicleSelect.addEventListener("change", () => {
+        syncSubmitState();
+      });
+
+      if (phoneInput.value.trim() !== "") {
+        loadCustomer();
+      } else {
+        clearState();
+      }
+    };
+
+    document.addEventListener("turbo:load", initLookup);
+    document.addEventListener("DOMContentLoaded", initLookup);
+  })();
+</script>

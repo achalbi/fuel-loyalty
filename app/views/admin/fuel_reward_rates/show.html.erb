@@ -1,0 +1,32 @@
+<% content_for :title, "Reward Rates" %>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h3 mb-3">Fuel Reward Rates</h1>
+        <p class="text-muted">Set how many loyalty points a customer earns for every Rs.100 spent on each fuel type.</p>
+
+        <%= form_with scope: :fuel_reward_rates, url: admin_fuel_reward_rates_path, method: :patch, class: "vstack gap-3" do |form| %>
+          <% @fuel_reward_rates.each do |rate| %>
+            <div class="row align-items-end g-3">
+              <div class="col-md-6">
+                <label class="form-label"><%= rate.display_name %></label>
+                <input type="text" class="form-control" value="<%= rate.fuel_type %>" disabled>
+              </div>
+              <div class="col-md-6">
+                <%= form.label "#{rate.fuel_type}_points_per_100", "Points per Rs.100", class: "form-label" %>
+                <%= number_field_tag "fuel_reward_rates[#{rate.fuel_type}][points_per_100]", rate.points_per_100, class: "form-control", min: 0, required: true, id: "#{rate.fuel_type}_points_per_100" %>
+                <% if rate.errors[:points_per_100].any? %>
+                  <div class="text-danger small mt-1"><%= rate.errors[:points_per_100].to_sentence %></div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+
+          <%= form.submit "Save Reward Rates", class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

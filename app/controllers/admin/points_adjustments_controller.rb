@@ -1,0 +1,33 @@
+module Admin
+  class PointsAdjustmentsController < BaseController
+    def new
+      authorize PointsLedger
+    end
+
+    def create
+      authorize PointsLedger
+      customer = Customer.find_by(phone_number: Customer.normalize_phone_number(points_adjustment_params[:phone_number]))
+
+      unless customer
+        flash.now[:alert] = "Customer not found."
+        return render :new, status: :unprocessable_entity
+      end
+
+      customer.points_ledgers.create!(
+        points: points_adjustment_params[:points],
+        entry_type: :adjust
+      )
+
+      redirect_to customer_path(customer), notice: "Points adjusted successfully."
+    rescue ActiveRecord::RecordInvalid => e
+      flash.now[:alert] = e.record.errors.full_messages.to_sentence
+      render :new, status: :unprocessable_entity
+    end
+
+    private
+
+    def points_adjustment_params
+      params.require(:points_adjustment).permit(:phone_number, :points)
+    end
+  end
+end

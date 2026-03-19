@@ -1,0 +1,62 @@
+<% content_for :title, "Loyalty Result" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4 summary-header">
+  <div>
+    <h1 class="h3 mb-1"><%= @customer.name.presence || "Customer" %></h1>
+    <p class="text-muted mb-0">Phone: <%= @customer.phone_number %></p>
+  </div>
+  <div class="text-end summary-metric">
+    <div class="display-6 fw-bold"><%= @customer.total_points %></div>
+    <div class="text-muted">Total Points</div>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3 page-header">
+      <h2 class="h5 mb-0"><%= @full_history ? "Full Loyalty Activity" : "Last 5 Loyalty Activities" %></h2>
+      <div class="page-actions">
+        <% if @show_full_history_button %>
+          <%= link_to "Show Full History", loyalty_result_path(phone_number: @customer.phone_number, full_history: 1), class: "btn btn-outline-primary btn-sm" %>
+        <% elsif @full_history %>
+          <%= link_to "Show Last 5", loyalty_result_path(phone_number: @customer.phone_number), class: "btn btn-outline-secondary btn-sm" %>
+        <% end %>
+      </div>
+    </div>
+
+    <% if @activities.any? %>
+      <div class="table-responsive">
+        <table class="table responsive-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Activity</th>
+              <th>Vehicle</th>
+              <th>Fuel Amount</th>
+              <th>Points</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @activities.each do |activity| %>
+              <tr>
+                <td data-label="Date"><%= l(activity.created_at, format: :short) %></td>
+                <td data-label="Activity"><%= activity.entry_type == "earn" ? "Fuel Purchase" : "Points Redeemed" %></td>
+                <td data-label="Vehicle"><%= activity.fuel_transaction&.vehicle&.vehicle_number || "N/A" %></td>
+                <td data-label="Fuel Amount">
+                  <% if activity.fuel_transaction.present? %>
+                    <%= number_to_currency(activity.fuel_transaction.fuel_amount, unit: "₹") %>
+                  <% else %>
+                    N/A
+                  <% end %>
+                </td>
+                <td data-label="Points" class="<%= activity.points.positive? ? "text-success" : "text-danger" %>"><%= activity.points %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="text-muted mb-0">No loyalty activity found.</p>
+    <% end %>
+  </div>
+</div>

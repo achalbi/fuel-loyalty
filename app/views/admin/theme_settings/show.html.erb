@@ -1,0 +1,42 @@
+<% content_for :title, "Theme Settings" %>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h3 mb-3">Theme Settings</h1>
+        <p class="text-muted">Choose the primary brand color used across buttons, links, highlights, and key UI accents.</p>
+
+        <%= form_with model: @theme_setting, url: admin_theme_settings_path, method: :patch, class: "vstack gap-3" do |form| %>
+          <div class="row g-3 align-items-end">
+            <div class="col-sm-4">
+              <%= form.label :primary_color, "Primary Color", class: "form-label" %>
+              <%= form.color_field :primary_color, class: "form-control form-control-color w-100", required: true %>
+            </div>
+
+            <div class="col-sm-8">
+              <label class="form-label">Current Hex Value</label>
+              <input type="text" class="form-control" value="<%= @theme_setting.primary_color %>" disabled>
+              <% if @theme_setting.errors[:primary_color].any? %>
+                <div class="text-danger small mt-1"><%= @theme_setting.errors[:primary_color].to_sentence %></div>
+              <% end %>
+            </div>
+          </div>
+
+          <div class="card border-dashed">
+            <div class="card-body">
+              <p class="small text-muted mb-2">Preview</p>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="badge rounded-pill text-bg-light border px-3 py-2">Accent Badge</span>
+                <button type="button" class="btn btn-primary">Primary Button</button>
+                <button type="button" class="btn btn-outline-primary">Outline Button</button>
+              </div>
+            </div>
+          </div>
+
+          <%= form.submit "Save Theme Color", class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

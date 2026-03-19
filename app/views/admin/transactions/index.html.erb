@@ -1,0 +1,37 @@
+<% content_for :title, "Transactions" %>
+
+<div class="d-flex justify-content-between align-items-center mb-4 page-header">
+  <div class="page-intro mb-0">
+    <h1>Transactions</h1>
+    <p>Review recent fuel transactions, the associated customer, and the operator who handled each visit.</p>
+  </div>
+</div>
+
+<div class="card table-responsive">
+  <div class="table-responsive">
+    <table class="table responsive-table mb-0 table-hover">
+      <thead class="table-light border-light">
+        <tr>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Vehicle</th>
+          <th>Amount</th>
+          <th>Staff</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @transactions.each do |transaction| %>
+          <tr class="align-middle">
+            <td data-label="Date"><%= l(transaction.created_at, format: :short) %></td>
+            <td data-label="Customer"><%= transaction.customer.display_name %></td>
+            <td data-label="Phone"><%= transaction.customer.phone_number %></td>
+            <td data-label="Vehicle"><%= transaction.vehicle&.vehicle_number || "N/A" %></td>
+            <td data-label="Amount"><%= number_to_currency(transaction.fuel_amount, unit: "₹") %></td>
+            <td data-label="Staff"><%= transaction.user.email %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

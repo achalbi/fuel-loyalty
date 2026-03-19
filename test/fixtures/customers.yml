@@ -1,0 +1,11 @@
+one:
+  name: Arun
+  phone_number: 9000000001
+  vehicle_number: TN01AA1111
+  active: true
+
+two:
+  name: Meena
+  phone_number: 9000000002
+  vehicle_number: TN01AA2222
+  active: true

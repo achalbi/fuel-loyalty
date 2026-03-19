@@ -1,0 +1,9 @@
+<% content_for :title, "Add Customer" %>
+
+<%= render "customers/form",
+  customer: @customer,
+  form_url: admin_customers_path,
+  form_method: :post,
+  include_vehicle_fields: true,
+  submit_label: "Save Customer",
+  title: "Add Customer" %>

@@ -1,0 +1,11 @@
+one:
+  customer: one
+  fuel_transaction: one
+  points: 5
+  entry_type: 0
+
+two:
+  customer: two
+  fuel_transaction: two
+  points: 9
+  entry_type: 0

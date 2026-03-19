@@ -1,0 +1,11 @@
+one:
+  customer: one
+  user: two
+  vehicle: one
+  fuel_amount: 500
+
+two:
+  customer: two
+  user: two
+  vehicle: three
+  fuel_amount: 900

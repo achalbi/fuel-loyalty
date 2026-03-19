@@ -1,0 +1,69 @@
+services:
+  app:
+    build:
+      context: .
+      target: development
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
+    image: fuel-loyalty-dev
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/app_development
+      TEST_DATABASE_URL: postgresql://postgres:postgres@db:5432/app_test
+      REDIS_URL: redis://redis:6379/0
+      RAILS_ENV: development
+      BUNDLE_PATH: /usr/local/bundle
+      RAILS_LOG_TO_STDOUT: "1"
+    volumes:
+      - .:/app
+      - bundle:/usr/local/bundle
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/up || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app_development"]
+      interval: 60s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 60s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  bundle:
+  postgres_data:
+  redis_data:

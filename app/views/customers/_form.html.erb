@@ -1,0 +1,47 @@
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h3 mb-3"><%= title %></h1>
+
+        <%= form_with model: customer, url: form_url, method: form_method, class: "vstack gap-3" do |form| %>
+          <% if customer.errors.any? %>
+            <div class="alert alert-danger">
+              <%= customer.errors.full_messages.to_sentence %>
+            </div>
+          <% end %>
+
+          <div>
+            <%= form.label :name, class: "form-label" %>
+            <%= form.text_field :name, class: "form-control" %>
+          </div>
+
+          <div>
+            <%= form.label :phone_number, class: "form-label" %>
+            <%= form.telephone_field :phone_number, class: "form-control", required: true %>
+          </div>
+
+          <% if include_vehicle_fields %>
+            <div>
+              <%= form.label :vehicle_number, "Initial Vehicle Number", class: "form-label" %>
+              <%= form.text_field :vehicle_number, class: "form-control" %>
+              <div class="form-text">You can add more vehicles after the customer record is created.</div>
+            </div>
+
+            <div>
+              <%= form.label :fuel_type, "Fuel Type", class: "form-label" %>
+              <%= form.select :fuel_type, Vehicle::FUEL_TYPE_OPTIONS, { prompt: "Select fuel type" }, class: "form-select" %>
+            </div>
+
+            <div>
+              <%= form.label :vehicle_kind, "Vehicle Type", class: "form-label" %>
+              <%= form.select :vehicle_kind, Vehicle::VEHICLE_KIND_OPTIONS, { prompt: "Select vehicle type" }, class: "form-select" %>
+            </div>
+          <% end %>
+
+          <%= form.submit submit_label, class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

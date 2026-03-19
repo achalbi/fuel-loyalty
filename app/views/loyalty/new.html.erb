@@ -1,0 +1,25 @@
+<% content_for :title, "Loyalty Lookup" %>
+
+<div class="d-flex align-items-center justify-content-center py-5">
+  <div class="card lookup-card">
+    <div class="card-body p-5">
+      <div class="text-center mb-4">
+        <div class="brand-lockup justify-content-center mb-4">
+          <span class="brand-mark">F</span>
+          <span class="logo-text">Fuel Loyalty</span>
+        </div>
+        <h1 class="h4 mb-2">Loyalty Lookup</h1>
+        <p class="small-muted mb-0">Enter your mobile number to view your current loyalty points and recent visits.</p>
+      </div>
+
+      <%= form_with scope: :loyalty, url: loyalty_path, class: "vstack gap-3" do |form| %>
+        <div>
+          <%= form.label :phone_number, class: "form-label" %>
+          <%= form.telephone_field :phone_number, class: "form-control", placeholder: "Enter registered mobile number", required: true %>
+        </div>
+
+        <%= form.submit "Check Points", class: "btn btn-primary w-100" %>
+      <% end %>
+    </div>
+  </div>
+</div>

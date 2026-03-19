@@ -1,0 +1,17 @@
+one:
+  customer: one
+  vehicle_number: TN01AA1111
+  fuel_type: petrol
+  vehicle_kind: two_wheeler
+
+two:
+  customer: one
+  vehicle_number: TN01AA1112
+  fuel_type: diesel
+  vehicle_kind: lmv
+
+three:
+  customer: two
+  vehicle_number: TN01AA2222
+  fuel_type: cng_lpg
+  vehicle_kind: lcv
