@@ -55,7 +55,7 @@ steps:
       - --quiet
 
       # Runtime configuration
-      - --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE}
+      - --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE},RAILS_SERVE_STATIC_FILES=true
 
       # Labels (traceability)
       - --update-labels=managed-by=gcp-cloud-build-deploy-cloud-run,gcb-trigger-id=$_TRIGGER_ID,gcb-trigger-region=$LOCATION,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID
@@ -78,7 +78,7 @@ substitutions:
   _SERVICE_NAME: fuel-loyalty-git
   REPO_NAME: achalbi-fuel-loyalty
 
-  # 🔴 INLINE SECRETS (TEMPORARY ONLY)
+  # INLINE SECRETS (TEMPORARY ONLY)
   _SECRET_KEY_BASE: 'c30c5d031fbb18ffa657d8f91534bce95f9a3b8fac7e803726641fc7c41a19766f4ee01b202ebb317120b90319bd28a7901f94e368896e0d3aa2890a0b601fca'
   _DATABASE_URL: 'postgresql://postgres:e7BZhKFVvp3J0V4t@db.pjkwixcnauayaplyhqdt.supabase.co:5432/postgres'
 
