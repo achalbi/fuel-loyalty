@@ -29,7 +29,6 @@ COPY . .
 # Precompile assets (no Node assumed)
 RUN SECRET_KEY_BASE=dummy bundle exec rails assets:precompile
 
----
 
 # ---------- Runtime Stage ----------
 FROM ruby:3.3-slim AS runtime
