@@ -32,4 +32,4 @@ port ENV.fetch("PORT", 8080)
 
 environment ENV.fetch("RAILS_ENV", "production")
 
-plugin :tmp_restart
+# plugin :tmp_restart # for development restarts
