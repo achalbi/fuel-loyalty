@@ -1,6 +1,10 @@
 steps:
-  # Build the Docker image
+  # -----------------------------
+  # Build Docker image (BuildKit enabled)
+  # -----------------------------
   - name: 'gcr.io/cloud-builders/docker'
+    env:
+      - 'DOCKER_BUILDKIT=1'
     args:
       - 'build'
       - '-t'
@@ -9,49 +13,40 @@ steps:
       - 'gcr.io/$PROJECT_ID/fuel-loyalty:latest'
       - '.'
 
-  # Push the Docker image to Google Container Registry
+  # -----------------------------
+  # Push images
+  # -----------------------------
   - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - 'gcr.io/$PROJECT_ID/fuel-loyalty:$COMMIT_SHA'
+    args: ['push', 'gcr.io/$PROJECT_ID/fuel-loyalty:$COMMIT_SHA']
 
   - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - 'gcr.io/$PROJECT_ID/fuel-loyalty:latest'
+    args: ['push', 'gcr.io/$PROJECT_ID/fuel-loyalty:latest']
 
+  # -----------------------------
   # Deploy to Cloud Run
+  # -----------------------------
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+    entrypoint: 'gcloud'
     args:
       - 'run'
       - 'deploy'
       - 'fuel-loyalty'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/fuel-loyalty:$COMMIT_SHA'
-      - '--region'
-      - 'us-central1'
-      - '--platform'
-      - 'managed'
+      - '--image=gcr.io/$PROJECT_ID/fuel-loyalty:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--port'
-      - '3000'
-      - '--set-env-vars'
-      - 'RAILS_ENV=production,SECRET_KEY_BASE=${_SECRET_KEY_BASE}'
-      - '--set-cloudsql-instances'
-      - '${_CLOUD_SQL_CONNECTION_NAME}'
-      - '--add-cloudsql-instances'
-      - '${_CLOUD_SQL_CONNECTION_NAME}'
+      - '--port=3000'
+      - '--set-env-vars=RAILS_ENV=production'
+      - '--set-secrets=SECRET_KEY_BASE=${_SECRET_KEY_BASE}:latest'
+      - '--set-secrets=DATABASE_URL=${_DATABASE_URL}:latest'
 
-# Store images in Google Container Registry
 images:
   - 'gcr.io/$PROJECT_ID/fuel-loyalty:$COMMIT_SHA'
   - 'gcr.io/$PROJECT_ID/fuel-loyalty:latest'
 
-# Set timeout
 timeout: '1200s'
 
 # Substitution variables (set these in Cloud Build trigger)
 substitutions:
-  _SECRET_KEY_BASE: ''
-  _CLOUD_SQL_CONNECTION_NAME: ''
+  _SECRET_KEY_BASE: 'c30c5d031fbb18ffa657d8f91534bce95f9a3b8fac7e803726641fc7c41a19766f4ee01b202ebb317120b90319bd28a7901f94e368896e0d3aa2890a0b601fca'
+  _DATABASE_URL: 'postgresql://postgres:e7BZhKFVvp3J0V4t@db.pjkwixcnauayaplyhqdt.supabase.co:5432/postgres'
