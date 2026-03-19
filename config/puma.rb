@@ -41,4 +41,4 @@ pidfile ENV["PIDFILE"] if ENV["PIDFILE"]
 port ENV.fetch("PORT") { 8080 }
 bind "tcp://0.0.0.0:#{ENV.fetch("PORT") { 8080 }}"
 
-workers ENV.fetch("WEB_CONCURRENCY", 2)
+# workers ENV.fetch("WEB_CONCURRENCY", 2)
