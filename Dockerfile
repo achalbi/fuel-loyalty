@@ -16,6 +16,8 @@ WORKDIR /app
 # Bundler config (deterministic + production)
 ENV BUNDLE_DEPLOYMENT=1 \
     BUNDLE_PATH=/usr/local/bundle \
+    RAILS_ENV=production \
+    RACK_ENV=production \
     BUNDLE_WITHOUT="development test"
 
 COPY Gemfile Gemfile.lock ./
