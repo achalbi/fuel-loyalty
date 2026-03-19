@@ -1,52 +1,88 @@
 steps:
   # -----------------------------
-  # Build Docker image (BuildKit enabled)
+  # Pull previous image (for cache)
   # -----------------------------
-  - name: 'gcr.io/cloud-builders/docker'
-    env:
-      - 'DOCKER_BUILDKIT=1'
+  - name: gcr.io/cloud-builders/docker
+    id: Pull
+    entrypoint: /bin/bash
     args:
-      - 'build'
-      - '-t'
-      - 'gcr.io/$PROJECT_ID/fuel-loyalty:$COMMIT_SHA'
-      - '-t'
-      - 'gcr.io/$PROJECT_ID/fuel-loyalty:latest'
-      - '.'
+      - -c
+      - |
+        docker pull $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:latest || exit 0
 
   # -----------------------------
-  # Push images
+  # Build image (BuildKit enabled)
   # -----------------------------
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/fuel-loyalty:$COMMIT_SHA']
+  - name: gcr.io/cloud-builders/docker
+    id: Build
+    env:
+      - DOCKER_BUILDKIT=1
+    args:
+      - build
+      - --cache-from=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:latest
+      - -t
+      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+      - -t
+      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:latest
+      - -f
+      - Dockerfile
+      - .
 
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/fuel-loyalty:latest']
+  # -----------------------------
+  # Push image
+  # -----------------------------
+  - name: gcr.io/cloud-builders/docker
+    id: Push
+    args:
+      - push
+      - --all-tags
+      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME
 
   # -----------------------------
   # Deploy to Cloud Run
   # -----------------------------
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: Deploy
+    entrypoint: gcloud
     args:
-      - 'run'
-      - 'deploy'
-      - 'fuel-loyalty'
-      - '--image=gcr.io/$PROJECT_ID/fuel-loyalty:$COMMIT_SHA'
-      - '--region=us-central1'
-      - '--platform=managed'
-      - '--allow-unauthenticated'
-      - '--port=3000'
-      - '--set-env-vars=RAILS_ENV=production'
-      - '--set-secrets=SECRET_KEY_BASE=${_SECRET_KEY_BASE}:latest'
-      - '--set-secrets=DATABASE_URL=${_DATABASE_URL}:latest'
+      - run
+      - services
+      - update
+      - $_SERVICE_NAME
+      - --image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+      - --region=$_DEPLOY_REGION
+      - --platform=managed
+      - --quiet
+
+      # Runtime configuration
+      - --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE}
+
+      # Labels (traceability)
+      - --update-labels=managed-by=gcp-cloud-build-deploy-cloud-run,gcb-trigger-id=$_TRIGGER_ID,gcb-trigger-region=$LOCATION,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID
 
 images:
-  - 'gcr.io/$PROJECT_ID/fuel-loyalty:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/fuel-loyalty:latest'
+  - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+  - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:latest
 
-timeout: '1200s'
+options:
+  requestedVerifyOption: VERIFIED
+  substitutionOption: ALLOW_LOOSE
+  logging: CLOUD_LOGGING_ONLY
 
-# Substitution variables (set these in Cloud Build trigger)
 substitutions:
+  _TRIGGER_ID: ad281931-7075-4970-a527-68cd5ab9de7f
+  _DEPLOY_REGION: us-central1
+  _AR_HOSTNAME: us-central1-docker.pkg.dev
+  _AR_REPOSITORY: cloud-run-source-deploy
+  _AR_PROJECT_ID: thoughtbasics
+  _SERVICE_NAME: fuel-loyalty-git
+  REPO_NAME: achalbi-fuel-loyalty
+
+  # 🔴 INLINE SECRETS (TEMPORARY ONLY)
   _SECRET_KEY_BASE: 'c30c5d031fbb18ffa657d8f91534bce95f9a3b8fac7e803726641fc7c41a19766f4ee01b202ebb317120b90319bd28a7901f94e368896e0d3aa2890a0b601fca'
   _DATABASE_URL: 'postgresql://postgres:e7BZhKFVvp3J0V4t@db.pjkwixcnauayaplyhqdt.supabase.co:5432/postgres'
+
+tags:
+  - gcp-cloud-build-deploy-cloud-run
+  - fuel-loyalty-git
+
