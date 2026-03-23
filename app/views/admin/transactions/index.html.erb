@@ -1,37 +1,222 @@
 <% content_for :title, "Transactions" %>
 
-<div class="d-flex justify-content-between align-items-center mb-4 page-header">
+<div class="mb-4 page-header admin-transactions-header">
   <div class="page-intro mb-0">
     <h1>Transactions</h1>
     <p>Review recent fuel transactions, the associated customer, and the operator who handled each visit.</p>
   </div>
+
+  <div class="page-actions">
+    <%= link_to "+",
+      new_staff_transaction_path,
+      class: "customer-details-quick-action admin-transactions-create-action",
+      aria: { label: "New Transaction" },
+      title: "New Transaction" %>
+  </div>
 </div>
 
-<div class="card table-responsive">
-  <div class="table-responsive">
-    <table class="table responsive-table mb-0 table-hover">
-      <thead class="table-light border-light">
-        <tr>
-          <th>Date</th>
-          <th>Customer</th>
-          <th>Phone</th>
-          <th>Vehicle</th>
-          <th>Amount</th>
-          <th>Staff</th>
-        </tr>
-      </thead>
-      <tbody>
+<div class="card shadow-sm admin-transactions-filter mb-4">
+  <div class="card-body">
+    <%= form_with url: admin_transactions_path, method: :get, local: true, class: "admin-transactions-filter__form" do |form| %>
+      <%= hidden_field_tag :range, (@current_range == "today" ? "today" : "all") %>
+
+      <div class="admin-transactions-filter__topline">
+        <div class="admin-transactions-filter__group">
+          <span class="admin-transactions-filter__label">Quick Filter</span>
+          <div class="dashboard-filter-chips">
+            <%= link_to "All",
+              admin_transactions_path(range: "all", sort: @current_sort),
+              class: "dashboard-filter-chip #{'is-active' if @current_range == 'all'}" %>
+            <%= link_to "Today",
+              admin_transactions_path(range: "today", sort: @current_sort),
+              class: "dashboard-filter-chip #{'is-active' if @current_range == 'today'}" %>
+          </div>
+        </div>
+
+        <div class="admin-transactions-filter__sort">
+          <div>
+            <%= form.label :sort, "Sort By", class: "admin-transactions-filter__label" %>
+            <%= form.select :sort,
+              options_for_select(
+                [
+                  ["Time: Latest first", "time_desc"],
+                  ["Time: Oldest first", "time_asc"],
+                  ["Amount: High to low", "amount_desc"],
+                  ["Amount: Low to high", "amount_asc"]
+                ],
+                @current_sort
+              ),
+              {},
+              class: "form-select admin-transactions-filter__select",
+              onchange: "this.form.requestSubmit()" %>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-transactions-filter__group admin-transactions-filter__range">
+        <span class="admin-transactions-filter__label">Time Range</span>
+        <div class="admin-transactions-filter__range-fields">
+          <div>
+            <%= form.label :start_date, "From", class: "visually-hidden" %>
+            <%= form.date_field :start_date,
+              value: @current_start_date&.iso8601,
+              class: "form-control admin-transactions-filter__date",
+              onchange: "this.form.requestSubmit()" %>
+          </div>
+          <div>
+            <%= form.label :end_date, "To", class: "visually-hidden" %>
+            <%= form.date_field :end_date,
+              value: @current_end_date&.iso8601,
+              class: "form-control admin-transactions-filter__date",
+              onchange: "this.form.requestSubmit()" %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="card shadow-sm admin-transactions-card">
+  <div class="card-body">
+    <% if @transactions.any? %>
+      <div class="customer-details-vehicle-list admin-transactions-list">
         <% @transactions.each do |transaction| %>
-          <tr class="align-middle">
-            <td data-label="Date"><%= l(transaction.created_at, format: :short) %></td>
-            <td data-label="Customer"><%= transaction.customer.display_name %></td>
-            <td data-label="Phone"><%= transaction.customer.phone_number %></td>
-            <td data-label="Vehicle"><%= transaction.vehicle&.vehicle_number || "N/A" %></td>
-            <td data-label="Amount"><%= number_to_currency(transaction.fuel_amount, unit: "₹") %></td>
-            <td data-label="Staff"><%= transaction.user.email %></td>
-          </tr>
+          <% modal_id = "adminTransactionModal-#{transaction.id}" %>
+          <% customer_name = transaction.customer.display_name.to_s.titleize %>
+          <% vehicle_number = transaction.vehicle&.vehicle_number || "Vehicle not linked" %>
+          <% fuel_type_label = transaction.vehicle&.display_fuel_type || "Fuel type unavailable" %>
+          <% vehicle_kind_label = transaction.vehicle&.display_vehicle_kind || "Vehicle type unavailable" %>
+          <div class="customer-details-vehicle-row admin-transaction-item">
+            <div class="customer-details-vehicle-row__main admin-transaction-item__main">
+              <span class="admin-transaction-item__name"><%= customer_name %></span>
+              <span class="admin-transaction-item__time"><%= l(transaction.created_at, format: "%d %b %Y · %I:%M %p") %></span>
+            </div>
+
+            <div class="admin-transaction-item__side">
+              <span class="admin-transaction-item__amount"><%= number_to_currency(transaction.fuel_amount, unit: "₹") %></span>
+              <button
+                type="button"
+                class="customer-details-history-preview-action admin-transaction-item__view"
+                data-bs-toggle="modal"
+                data-bs-target="#<%= modal_id %>"
+                aria-label="View details for <%= customer_name %>"
+                title="View transaction details">
+                <i class="ti ti-eye" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="modal fade admin-transaction-modal"
+            id="<%= modal_id %>"
+            tabindex="-1"
+            aria-labelledby="<%= modal_id %>-label"
+            aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable admin-transaction-modal__dialog">
+              <div class="modal-content confirm-modal-content admin-transaction-modal__content">
+                <div class="modal-header border-0 pb-0">
+                  <div>
+                    <p class="admin-transaction-modal__eyebrow mb-1">Transaction Details</p>
+                    <h2 class="modal-title h5 mb-1" id="<%= modal_id %>-label"><%= customer_name %></h2>
+                    <p class="text-muted mb-0 small"><%= l(transaction.created_at, format: "%d %b %Y · %I:%M %p") %></p>
+                  </div>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body pt-3">
+                  <div class="admin-transaction-modal__hero">
+                    <div class="admin-transaction-modal__hero-top">
+                      <div class="admin-transaction-modal__hero-copy">
+                        <span class="admin-transaction-modal__amount"><%= number_to_currency(transaction.fuel_amount, unit: "₹") %></span>
+                        <span class="admin-transaction-modal__hero-note">Fuel purchase amount for this visit</span>
+                      </div>
+                      <span class="admin-transaction-modal__fuel-chip"><%= fuel_type_label %></span>
+                    </div>
+
+                    <div class="admin-transaction-modal__meta">
+                      <span class="admin-transaction-modal__meta-chip">
+                        <i class="ti ti-clock-hour-4" aria-hidden="true"></i>
+                        <%= l(transaction.created_at, format: "%d %b %Y · %I:%M %p") %>
+                      </span>
+                      <span class="admin-transaction-modal__meta-chip">
+                        <i class="ti ti-car" aria-hidden="true"></i>
+                        <%= vehicle_kind_label %>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="admin-transaction-modal__details">
+                    <div class="admin-transaction-modal__detail">
+                      <span class="admin-transaction-modal__detail-icon">
+                        <i class="ti ti-device-mobile" aria-hidden="true"></i>
+                      </span>
+                      <div class="admin-transaction-modal__detail-body">
+                        <span class="admin-transaction-modal__label">Phone Number</span>
+                        <strong class="admin-transaction-modal__value">+91 <%= transaction.customer.phone_number %></strong>
+                      </div>
+                    </div>
+                    <div class="admin-transaction-modal__detail">
+                      <span class="admin-transaction-modal__detail-icon admin-transaction-modal__detail-icon--plate" aria-hidden="true"></span>
+                      <div class="admin-transaction-modal__detail-body">
+                        <span class="admin-transaction-modal__label">Vehicle Number</span>
+                        <strong class="admin-transaction-modal__value"><%= vehicle_number %></strong>
+                      </div>
+                    </div>
+                    <div class="admin-transaction-modal__detail">
+                      <span class="admin-transaction-modal__detail-icon">
+                        <i class="ti ti-gas-station" aria-hidden="true"></i>
+                      </span>
+                      <div class="admin-transaction-modal__detail-body">
+                        <span class="admin-transaction-modal__label">Fuel / Type</span>
+                        <strong class="admin-transaction-modal__value"><%= "#{fuel_type_label} · #{vehicle_kind_label}" %></strong>
+                      </div>
+                    </div>
+                    <div class="admin-transaction-modal__detail">
+                      <span class="admin-transaction-modal__detail-icon">
+                        <i class="ti ti-user-circle" aria-hidden="true"></i>
+                      </span>
+                      <div class="admin-transaction-modal__detail-body">
+                        <span class="admin-transaction-modal__label">Handled By</span>
+                        <strong class="admin-transaction-modal__value"><%= transaction.user.display_name %></strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         <% end %>
-      </tbody>
-    </table>
+      </div>
+
+      <div class="customer-details-ledger-pagination admin-transactions-pagination">
+        <div class="customer-details-ledger-pagination__summary">
+          Showing <strong><%= @showing_from %>-<%= @showing_to %></strong> of <strong><%= @total_transactions %></strong> transactions
+        </div>
+
+        <% if @total_pages > 1 %>
+          <div class="customer-details-ledger-pagination__actions">
+            <% if @current_page > 1 %>
+              <%= link_to "Previous",
+                admin_transactions_path(range: (@current_range == "today" ? "today" : "all"), sort: @current_sort, start_date: @current_start_date&.iso8601, end_date: @current_end_date&.iso8601, page: @current_page - 1),
+                class: "btn btn-outline-secondary btn-sm" %>
+            <% else %>
+              <span class="btn btn-outline-secondary btn-sm disabled">Previous</span>
+            <% end %>
+
+            <span class="customer-details-ledger-pagination__status">Page <strong><%= @current_page %></strong> of <%= @total_pages %></span>
+
+            <% if @current_page < @total_pages %>
+              <%= link_to "Next",
+                admin_transactions_path(range: (@current_range == "today" ? "today" : "all"), sort: @current_sort, start_date: @current_start_date&.iso8601, end_date: @current_end_date&.iso8601, page: @current_page + 1),
+                class: "btn btn-outline-secondary btn-sm" %>
+            <% else %>
+              <span class="btn btn-outline-secondary btn-sm disabled">Next</span>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="admin-transactions-empty mb-0">No transactions recorded yet.</p>
+    <% end %>
   </div>
 </div>

@@ -1,0 +1,26 @@
+<% points_ledger_entries.each do |entry| %>
+  <% point_label = entry.points.positive? ? "+#{entry.points}" : entry.points.to_s %>
+  <% point_state = entry.points.positive? ? "is-positive" : "is-negative" %>
+  <% entry_label = case entry.entry_type
+  when "earn" then "Points Earned"
+  when "redeem" then "Points Redeemed"
+  when "expire" then "Points Expired"
+  else "Manual Adjustment"
+  end %>
+  <% entry_support = case entry.entry_type
+  when "earn" then entry.fuel_transaction.present? ? "From fuel visit" : "Added to loyalty balance"
+  when "redeem" then "Used to unlock rewards"
+  when "expire" then "Expired from loyalty balance"
+  else "Updated by staff or admin"
+  end %>
+  <div class="customer-details-vehicle-row customer-details-history-row customer-details-ledger-item">
+    <div class="customer-details-vehicle-row__main customer-details-history-row__main customer-details-ledger-item__meta">
+      <div class="customer-details-vehicle-row__number customer-details-ledger-item__label"><%= entry_label %></div>
+      <div class="customer-details-history-row__handled-by customer-details-ledger-item__support"><%= entry_support %></div>
+    </div>
+    <div class="customer-details-history-row__side customer-details-ledger-item__side">
+      <span class="loyalty-activity-item__points <%= point_state %>"><%= point_label %></span>
+      <span class="customer-details-history-row__date customer-details-ledger-item__date"><%= l(entry.created_at, format: :short) %></span>
+    </div>
+  </div>
+<% end %>

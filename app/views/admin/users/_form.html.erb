@@ -1,0 +1,74 @@
+<% modal_context = local_assigns[:context].to_s == "modal" %>
+
+<% form_markup = capture do %>
+  <%= form_with model: user, url: form_url, method: form_method, class: "vstack gap-3" do |form| %>
+    <% if user.errors.any? %>
+      <div class="alert alert-danger">
+        <%= user.errors.full_messages.to_sentence %>
+      </div>
+    <% end %>
+
+    <div>
+      <%= form.label :username, class: "form-label" %>
+      <%= form.text_field :username, class: "form-control", required: true, autocomplete: "username" %>
+    </div>
+
+    <div>
+      <%= form.label :phone_number, "Mobile Number", class: "form-label" %>
+      <div class="input-group">
+        <span class="input-group-text phone-prefix">+91</span>
+        <%= form.telephone_field :phone_number, class: "form-control", required: true, placeholder: "10 digit mobile number", inputmode: "numeric", autocomplete: "tel-national", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit mobile number", data: { phone_number_field: true } %>
+      </div>
+    </div>
+
+    <div>
+      <%= form.label :email, "Email (Optional)", class: "form-label" %>
+      <%= form.email_field :email, value: user.explicit_email, class: "form-control", placeholder: "name@example.com", autocomplete: "email" %>
+    </div>
+
+    <div>
+      <%= form.label :role, class: "form-label" %>
+      <%= form.select :role, User.roles.keys.map { |role| [role.titleize, role] }, {}, class: "form-select" %>
+    </div>
+
+    <div>
+      <%= form.label :password, class: "form-label" %>
+      <%= form.password_field :password, class: "form-control", autocomplete: form_method == :post ? "new-password" : "off" %>
+      <% if form_method != :post %>
+        <div class="form-text">Leave blank to keep the existing password.</div>
+      <% end %>
+    </div>
+
+    <div>
+      <%= form.label :password_confirmation, class: "form-label" %>
+      <%= form.password_field :password_confirmation, class: "form-control", autocomplete: form_method == :post ? "new-password" : "off" %>
+    </div>
+
+    <div class="d-flex gap-2">
+      <%= form.submit submit_label, class: "btn btn-primary" %>
+      <% if modal_context %>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+      <% else %>
+        <%= link_to "Cancel", admin_users_path, class: "btn btn-outline-secondary" %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<% if modal_context %>
+  <div class="admin-users-form admin-users-form--modal">
+    <%= form_markup %>
+  </div>
+<% else %>
+  <div class="row justify-content-center">
+    <div class="col-md-7">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h1 class="h3 mb-2"><%= title %></h1>
+          <p class="text-muted mb-3"><%= description %></p>
+          <%= form_markup %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>

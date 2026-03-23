@@ -46,30 +46,21 @@
 
           <div class="dropdown">
             <a href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" class="avatar avatar-sm rounded-circle bg-primary-subtle text-primary text-decoration-none">
-              <span class="avatar-initials"><%= current_user.email.first.upcase %></span>
+              <span class="avatar-initials"><%= current_user.avatar_initial %></span>
             </a>
 
             <div class="dropdown-menu dropdown-menu-end p-0 user-menu">
               <div class="d-flex gap-3 align-items-center border-bottom px-3 py-3">
                 <div class="avatar avatar-md rounded-circle bg-primary-subtle text-primary">
-                  <span class="avatar-initials"><%= current_user.email.first.upcase %></span>
+                  <span class="avatar-initials"><%= current_user.avatar_initial %></span>
                 </div>
                 <div>
-                  <h4 class="mb-0 small fw-semibold"><%= current_user.email %></h4>
-                  <p class="mb-0 small text-muted"><%= current_user.role.titleize %></p>
+                  <h4 class="mb-0 small fw-semibold"><%= current_user.display_name %></h4>
+                  <p class="mb-0 small text-muted"><%= current_user.display_phone_number || "Mobile not set" %></p>
                 </div>
               </div>
               <div class="p-2 d-flex flex-column gap-1 small">
-                <% if current_user.admin? %>
-                  <%= link_to "Dashboard", admin_dashboard_path, class: "dropdown-item rounded-2" %>
-                  <%= link_to "Add Customer", new_admin_customer_path, class: "dropdown-item rounded-2" %>
-                  <%= link_to "Theme", admin_theme_settings_path, class: "dropdown-item rounded-2" %>
-                  <%= link_to "Reward Rates", admin_fuel_reward_rates_path, class: "dropdown-item rounded-2" %>
-                <% else %>
-                  <%= link_to "New Transaction", new_staff_transaction_path, class: "dropdown-item rounded-2" %>
-                  <%= link_to "Customer Search", staff_customers_path, class: "dropdown-item rounded-2" %>
-                  <%= link_to "Add Customer", new_staff_customer_path, class: "dropdown-item rounded-2" %>
-                <% end %>
+                <%= link_to "Change Password", edit_password_path, class: "dropdown-item rounded-2" %>
                 <%= button_to "Logout", destroy_user_session_path, method: :delete, form_class: "m-0", class: "dropdown-item rounded-2 text-danger bg-transparent border-0 text-start w-100" %>
               </div>
             </div>
@@ -89,19 +80,19 @@
           <% if current_user.admin? %>
             <li class="px-4 py-2"><small class="nav-section-label">Admin</small></li>
             <li><%= link_to admin_dashboard_path, class: "nav-link #{'active' if current_page?(admin_dashboard_path)}" do %><i class="ti ti-home"></i><span class="nav-text">Dashboard</span><% end %></li>
+            <li><%= link_to admin_users_path, class: "nav-link #{'active' if request.path.start_with?(admin_users_path)}" do %><i class="ti ti-user-cog"></i><span class="nav-text">Users</span><% end %></li>
             <li><%= link_to admin_customers_path, class: "nav-link #{'active' if current_page?(admin_customers_path)}" do %><i class="ti ti-users"></i><span class="nav-text">Customers</span><% end %></li>
-            <li><%= link_to new_admin_customer_path, class: "nav-link #{'active' if current_page?(new_admin_customer_path)}" do %><i class="ti ti-user-plus"></i><span class="nav-text">Add Customer</span><% end %></li>
             <li><%= link_to admin_transactions_path, class: "nav-link #{'active' if current_page?(admin_transactions_path)}" do %><i class="ti ti-receipt"></i><span class="nav-text">Transactions</span><% end %></li>
-            <li><%= link_to admin_theme_settings_path, class: "nav-link #{'active' if current_page?(admin_theme_settings_path)}" do %><i class="ti ti-palette"></i><span class="nav-text">Theme</span><% end %></li>
             <li><%= link_to admin_fuel_reward_rates_path, class: "nav-link #{'active' if current_page?(admin_fuel_reward_rates_path)}" do %><i class="ti ti-adjustments"></i><span class="nav-text">Reward Rates</span><% end %></li>
             <li><%= link_to new_staff_redemption_path, class: "nav-link #{'active' if current_page?(new_staff_redemption_path)}" do %><i class="ti ti-gift-card"></i><span class="nav-text">Redeem Points</span><% end %></li>
             <li><%= link_to new_admin_points_adjustment_path, class: "nav-link #{'active' if current_page?(new_admin_points_adjustment_path)}" do %><i class="ti ti-arrows-diff"></i><span class="nav-text">Adjust Points</span><% end %></li>
+            <li class="px-4 pt-4 pb-2"><small class="nav-section-label">App Management</small></li>
+            <li><%= link_to admin_theme_settings_path, class: "nav-link #{'active' if current_page?(admin_theme_settings_path)}" do %><i class="ti ti-palette"></i><span class="nav-text">Theme</span><% end %></li>
           <% else %>
             <li class="px-4 py-2"><small class="nav-section-label">Operations</small></li>
-            <li><%= link_to new_staff_transaction_path, class: "nav-link #{'active' if current_page?(new_staff_transaction_path)}" do %><i class="ti ti-fuel-station"></i><span class="nav-text">New Transaction</span><% end %></li>
-            <li><%= link_to staff_customers_path, class: "nav-link #{'active' if current_page?(staff_customers_path)}" do %><i class="ti ti-users"></i><span class="nav-text">Customer Search</span><% end %></li>
+            <li><%= link_to new_staff_transaction_path, class: "nav-link #{'active' if current_page?(new_staff_transaction_path)}" do %><i class="ti ti-gas-station"></i><span class="nav-text">New Transaction</span><% end %></li>
+            <li><%= link_to staff_customers_path, class: "nav-link #{'active' if current_page?(staff_customers_path)}" do %><i class="ti ti-users"></i><span class="nav-text">Customers</span><% end %></li>
             <li><%= link_to new_staff_redemption_path, class: "nav-link #{'active' if current_page?(new_staff_redemption_path)}" do %><i class="ti ti-gift-card"></i><span class="nav-text">Redeem Points</span><% end %></li>
-            <li><%= link_to new_staff_customer_path, class: "nav-link #{'active' if current_page?(new_staff_customer_path)}" do %><i class="ti ti-user-plus"></i><span class="nav-text">Add Customer</span><% end %></li>
           <% end %>
 
           <li class="px-4 pt-4 pb-2"><small class="nav-section-label">Access</small></li>
@@ -110,7 +101,7 @@
       </aside>
 
       <main id="content" class="content py-10">
-        <div class="container-fluid py-3">
+        <div class="container-fluid <%= flash.any? ? 'pt-0 pb-3 has-flash' : 'py-3' %>">
           <% flash.each do |type, message| %>
             <% bootstrap_type = type.to_s == "notice" ? "success" : "danger" %>
             <div class="alert alert-<%= bootstrap_type %> border-0 shadow-sm"><%= message %></div>

@@ -1,12 +1,17 @@
-<% content_for :title, "Customer Search" %>
+<% content_for :title, "Customers" %>
 
-<div class="d-flex justify-content-between align-items-center mb-4 page-header">
+<div class="mb-4 page-header admin-customers-header">
   <div class="page-intro mb-0">
-    <h1>Customer Search</h1>
+    <h1>Customers</h1>
     <p>Search by customer name or phone number to open the customer profile and manage vehicles quickly.</p>
   </div>
   <div class="page-actions">
-    <%= link_to "Add Customer", new_staff_customer_path, class: "btn btn-primary" %>
+    <%= button_tag "+",
+      type: "button",
+      class: "customer-details-quick-action admin-customers-create-action",
+      data: { bs_toggle: "modal", bs_target: "#addCustomerModal" },
+      aria: { label: "Add Customer" },
+      title: "Add Customer" %>
   </div>
 </div>
 
@@ -28,47 +33,70 @@
   </div>
 </div>
 
-<div class="card table-responsive">
-  <div class="table-responsive">
-    <table class="table responsive-table mb-0 table-hover align-middle">
-      <thead class="table-light border-light">
-        <tr>
-          <th>Name</th>
-          <th>Phone</th>
-          <th>Status</th>
-          <th>Vehicles</th>
-          <th>Points</th>
-          <th class="text-end">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if @customers.any? %>
-          <% @customers.each do |customer| %>
-            <tr>
-              <td data-label="Name"><%= customer.display_name %></td>
-              <td data-label="Phone"><%= customer.phone_number %></td>
-              <td data-label="Status">
-                <span class="badge rounded-pill <%= customer.active? ? "text-bg-success" : "text-bg-secondary" %>">
-                  <%= customer.status_label %>
-                </span>
-              </td>
-              <td data-label="Vehicles"><%= customer.vehicles.map(&:vehicle_number).presence&.join(", ") || "N/A" %></td>
-              <td data-label="Points"><%= customer.total_points %></td>
-              <td data-label="Action" class="text-end">
-                <div class="table-action-group justify-content-end">
-                  <%= link_to "Open", customer_path(customer), class: "btn btn-sm btn-outline-primary" %>
-                </div>
-              </td>
-            </tr>
-          <% end %>
-        <% else %>
-          <tr>
-            <td colspan="6" class="text-center text-muted py-4">
-              <%= @query.present? ? "No customers matched that search." : "No customers available yet." %>
-            </td>
-          </tr>
+<div class="card shadow-sm admin-customers-card">
+  <div class="card-body">
+    <% if @customers.any? %>
+      <div class="customer-details-vehicle-list admin-customers-list">
+        <% @customers.each do |customer| %>
+          <% display_name = customer.display_name.to_s.titleize %>
+          <% vehicle_summary = customer.vehicles.map(&:vehicle_number).presence&.join(", ") || "No vehicles on file" %>
+          <div class="customer-details-vehicle-row admin-customer-item">
+            <div class="customer-details-vehicle-row__main admin-customer-item__main">
+              <div class="admin-customer-item__heading">
+                <span class="admin-customer-item__name"><%= display_name %></span>
+                <span class="admin-customer-item__status <%= customer.active? ? "is-active" : "is-inactive" %>"><%= customer.status_label %></span>
+              </div>
+              <div class="admin-customer-item__details">
+                <span class="admin-customer-item__phone">+91 <%= customer.phone_number %></span>
+                <span class="admin-customer-item__vehicles"><%= vehicle_summary %></span>
+              </div>
+            </div>
+            <div class="admin-customer-item__side">
+              <span class="admin-customer-item__points"><%= customer.total_points %> pts</span>
+              <%= link_to customer_path(customer),
+                class: "customer-details-history-preview-action admin-customer-item__view",
+                aria: { label: "View #{display_name}" },
+                title: "View customer" do %>
+                <i class="ti ti-eye" aria-hidden="true"></i>
+              <% end %>
+            </div>
+          </div>
         <% end %>
-      </tbody>
-    </table>
+      </div>
+    <% else %>
+      <p class="admin-customers-empty mb-0">
+        <%= @query.present? ? "No customers matched that search." : "No customers available yet." %>
+      </p>
+    <% end %>
+  </div>
+</div>
+
+<div
+  class="modal fade customer-details-modal admin-customers-modal"
+  id="addCustomerModal"
+  tabindex="-1"
+  aria-labelledby="addCustomerModalLabel"
+  aria-hidden="true"
+  data-auto-open-modal="<%= @customer.errors.any? %>">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content confirm-modal-content customer-details-modal__content admin-customers-modal__content">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h2 class="modal-title h5 mb-1" id="addCustomerModalLabel">Add Customer</h2>
+          <p class="text-muted mb-0 small">Create a new customer and optionally add the first vehicle right away.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <%= render "customers/form",
+          customer: @customer,
+          form_url: staff_customers_path,
+          form_method: :post,
+          include_vehicle_fields: true,
+          submit_label: "Save Customer",
+          title: "Add Customer",
+          context: "modal" %>
+      </div>
+    </div>
   </div>
 </div>

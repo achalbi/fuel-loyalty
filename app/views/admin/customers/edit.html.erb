@@ -1,0 +1,9 @@
+<% content_for :title, "Edit Customer" %>
+
+<%= render "customers/form",
+  customer: @customer,
+  form_url: admin_customer_path(@customer),
+  form_method: :patch,
+  include_vehicle_fields: false,
+  submit_label: "Update Customer",
+  title: "Edit Customer" %>

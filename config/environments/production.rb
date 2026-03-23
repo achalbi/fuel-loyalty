@@ -1,6 +1,12 @@
 require "active_support/core_ext/integer/time"
+require "uri"
 
 Rails.application.configure do
+  app_url = ENV["APP_URL"].presence
+  app_uri = URI.parse(app_url) if app_url
+  app_host = app_uri&.host || ENV["APP_HOST"].presence || "localhost"
+  app_protocol = app_uri&.scheme || ENV["APP_PROTOCOL"].presence || (app_host.in?(%w[localhost 127.0.0.1]) ? "http" : "https")
+
   # Settings specified here will take precedence over those in config/application.rb.
 
   # Code is not reloaded between requests.
@@ -57,7 +63,8 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  config.action_mailer.default_url_options = { host: app_host, protocol: app_protocol }
+  config.action_mailer.asset_host = "#{app_protocol}://#{app_host}"
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
   # config.action_mailer.smtp_settings = {

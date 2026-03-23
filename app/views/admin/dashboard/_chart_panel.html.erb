@@ -1,0 +1,35 @@
+<div class="card dashboard-chart-card" data-chart-card="<%= chart[:key] %>">
+  <% badge_label = local_assigns[:badge_label] %>
+  <% badge_direction = local_assigns[:badge_direction].presence || "neutral" %>
+  <div class="card-body">
+    <div class="dashboard-chart-card__header">
+      <div>
+        <h2 class="h5 mb-1"><%= chart[:title] %></h2>
+        <p class="small-muted mb-0" data-chart-subtitle><%= chart[:subtitle] %></p>
+      </div>
+
+      <span
+        class="badge rounded-pill border dashboard-chart-card__badge <%= badge_label.present? ? "is-#{badge_direction}" : "d-none" %>"
+        data-chart-badge><%= badge_label %></span>
+    </div>
+
+    <div class="dashboard-chart-card__stage">
+      <div class="dashboard-skeleton dashboard-skeleton--chart" data-dashboard-skeleton aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+
+      <canvas
+        height="<%= local_assigns.fetch(:height, 260) %>"
+        data-dashboard-chart="<%= chart[:key] %>"
+        data-chart-kind="<%= chart[:kind] %>"
+        data-chart-horizontal="<%= chart[:horizontal] ? "true" : "false" %>"></canvas>
+
+      <div class="dashboard-chart-card__empty d-none" data-chart-empty>
+        Not enough data yet for this view.
+      </div>
+    </div>
+  </div>
+</div>

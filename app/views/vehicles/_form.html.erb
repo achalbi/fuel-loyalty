@@ -1,4 +1,8 @@
 <%= form_with model: [customer, vehicle], class: "vstack gap-2" do |form| %>
+  <% if local_assigns[:context].present? %>
+    <%= hidden_field_tag :vehicle_form_context, local_assigns[:context] %>
+  <% end %>
+
   <% if vehicle.errors.any? %>
     <div class="alert alert-danger"><%= vehicle.errors.full_messages.to_sentence %></div>
   <% end %>

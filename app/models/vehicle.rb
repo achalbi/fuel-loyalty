@@ -27,11 +27,16 @@ class Vehicle < ApplicationRecord
 
   validates :fuel_type, presence: true
   validates :vehicle_kind, presence: true
-  validates :vehicle_number, presence: true, uniqueness: { case_sensitive: false }
+  validates :vehicle_number, presence: true, uniqueness: { scope: :customer_id, case_sensitive: false }
   validate :vehicle_number_format
 
   def self.normalize_vehicle_number(value)
     value.to_s.upcase.gsub(/[^A-Z0-9]/, "")
+  end
+
+  def self.valid_vehicle_number?(value)
+    normalized_value = normalize_vehicle_number(value)
+    normalized_value.match?(STANDARD_VEHICLE_NUMBER_REGEX) || normalized_value.match?(BH_VEHICLE_NUMBER_REGEX)
   end
 
   def display_fuel_type

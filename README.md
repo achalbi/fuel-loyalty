@@ -18,6 +18,34 @@ docker compose -f docker-compose.prod.yml up --build
 
 The production app will be available at <http://localhost:8080>.
 
+## Production deploy checklist
+
+Set these environment variables before deploying a real production instance:
+
+```bash
+APP_URL=https://your-domain.example
+MAILER_FROM=no-reply@your-domain.example
+SECRET_KEY_BASE=replace-with-a-real-secret
+DATABASE_URL=postgresql://user:password@host:5432/app_production
+REDIS_URL=redis://host:6379/0
+```
+
+Notes:
+
+- `APP_URL` is used for mailer links, asset URLs, and PWA metadata.
+- `MAILER_FROM` controls the sender address for Devise and app mailers.
+- `SECRET_KEY_BASE` must be a real secret in production. The compose default is only for local testing.
+- If you cannot provide `APP_URL`, you can use `APP_HOST` and `APP_PROTOCOL` instead.
+
+Recommended pre-deploy checks:
+
+```bash
+docker compose exec -T app bin/rails test
+docker compose exec -T app bin/rails zeitwerk:check
+docker compose exec -T app bundle exec brakeman -q
+docker compose exec -T app bundle exec rails assets:precompile
+```
+
 ## Useful commands
 
 ```bash

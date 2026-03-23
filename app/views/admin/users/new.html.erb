@@ -1,0 +1,9 @@
+<% content_for :title, "Add User" %>
+
+<%= render "form",
+  user: @user,
+  form_url: admin_users_path,
+  form_method: :post,
+  submit_label: "Create User",
+  title: "Add User",
+  description: "Create a new staff or admin login for this station." %>

@@ -1,0 +1,9 @@
+<% content_for :title, "Edit User" %>
+
+<%= render "form",
+  user: @user,
+  form_url: admin_user_path(@user),
+  form_method: :patch,
+  submit_label: "Update User",
+  title: "Edit User",
+  description: "Update account details or switch the access role between admin and staff." %>

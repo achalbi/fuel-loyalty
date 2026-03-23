@@ -1,0 +1,51 @@
+<% items = Array(payload[:items]) %>
+<% badge_label = payload.dig(:comparison, :label) %>
+<% badge_direction = payload.dig(:comparison, :direction).presence || "neutral" %>
+
+<div class="card dashboard-insight-card dashboard-leaderboard-card" data-dashboard-leaderboard="<%= card[:key] %>">
+  <div class="card-body">
+    <div class="dashboard-insight-card__header">
+      <div>
+        <h2 class="h5 mb-1"><%= card[:title] %></h2>
+        <p class="small-muted mb-0"><%= card[:subtitle] %></p>
+      </div>
+
+      <span
+        class="badge rounded-pill border dashboard-chart-card__badge <%= badge_label.present? ? "is-#{badge_direction}" : "d-none" %>"
+        data-leaderboard-badge><%= badge_label %></span>
+    </div>
+
+    <div class="dashboard-leaderboard-list" data-leaderboard-list>
+      <% items.each do |item| %>
+        <div class="dashboard-leaderboard-row" data-leaderboard-item>
+          <div class="dashboard-leaderboard-row__identity">
+            <span class="dashboard-leaderboard-row__rank">#<%= item[:rank] %></span>
+            <div class="dashboard-leaderboard-row__copy">
+              <strong class="dashboard-leaderboard-row__name"><%= item[:label] %></strong>
+              <span class="dashboard-leaderboard-row__value"><%= item[:display_value] %></span>
+            </div>
+          </div>
+
+          <div class="dashboard-leaderboard-row__trend">
+            <canvas
+              height="42"
+              data-leaderboard-sparkline
+              data-sparkline-direction="<%= item[:direction] %>"
+              data-sparkline-values="<%= json_escape(Array(item[:trend_values]).to_json) %>"></canvas>
+            <span class="dashboard-leaderboard-row__change is-<%= item[:direction] %>"><%= item[:change_label] %></span>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="dashboard-chart-card__empty dashboard-leaderboard-card__empty <%= items.any? ? "d-none" : "" %>" data-leaderboard-empty>
+      Not enough data yet for this view.
+    </div>
+
+    <div class="dashboard-skeleton dashboard-skeleton--insight" data-dashboard-skeleton aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </div>
+</div>

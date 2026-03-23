@@ -12,16 +12,16 @@
         <p class="small-muted mb-0">Enter your mobile number to view your current loyalty points and recent visits.</p>
       </div>
 
-      <%= form_with scope: :loyalty, url: loyalty_path, class: "vstack gap-3" do |form| %>
+      <%= form_with url: loyalty_result_path, method: :get, local: true, class: "vstack gap-3" do %>
         <div>
-          <%= form.label :phone_number, class: "form-label" %>
+          <%= label_tag :phone_number, "Phone number", class: "form-label" %>
           <div class="input-group">
             <span class="input-group-text phone-prefix">+91</span>
-            <%= form.telephone_field :phone_number, class: "form-control", placeholder: "10 digit phone number", required: true, inputmode: "numeric", autocomplete: "tel-national", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit phone number", data: { phone_number_field: true } %>
+            <%= telephone_field_tag :phone_number, @phone_number, class: "form-control", placeholder: "10 digit phone number", required: true, inputmode: "numeric", autocomplete: "tel-national", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit phone number", data: { phone_number_field: true } %>
           </div>
         </div>
 
-        <%= form.submit "Check Points", class: "btn btn-primary w-100" %>
+        <%= submit_tag "Check Points", class: "btn btn-primary w-100", name: nil %>
       <% end %>
 
       <section class="install-app-panel mt-4" data-pwa-install-panel data-install-source="loyalty_page" aria-labelledby="loyalty-install-app-title">

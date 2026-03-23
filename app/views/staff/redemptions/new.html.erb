@@ -22,7 +22,14 @@
 
           <div>
             <%= form.label :points, "Points to Redeem", class: "form-label" %>
-            <%= form.number_field :points, value: @prefill_points, class: "form-control", min: 1, required: true, data: { points_input: true } %>
+            <%= form.select :points,
+              options_for_select(@prefill_points.present? ? [[@prefill_points.to_i, @prefill_points.to_i]] : [], @prefill_points),
+              { prompt: "Select redeemable points" },
+              class: "form-select",
+              required: true,
+              disabled: true,
+              data: { points_select: true, prefill_value: @prefill_points } %>
+            <div class="form-text">Points can only be redeemed in multiples of <%= PointsRedeemer::REDEMPTION_INCREMENT %>.</div>
           </div>
 
           <%= form.submit "Redeem Points", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
@@ -32,28 +39,47 @@
   </div>
 
   <div class="col-lg-5">
-    <div class="card shadow-sm h-100">
+    <div class="card shadow-sm h-100 loyalty-result-card redemption-customer-shell">
       <div class="card-body">
-        <h2 class="h5 mb-3">Customer Details</h2>
+        <div class="redemption-customer-shell__header">
+          <div>
+            <h2 class="h5 mb-1">Customer Details</h2>
+            <p class="text-muted mb-0">Review the current balance before confirming the redemption.</p>
+          </div>
+        </div>
 
-        <div data-customer-placeholder>
+        <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
+          <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
+            <i class="ti ti-search"></i>
+          </div>
           <p class="text-muted mb-0">Search by phone number to view the customer and current points balance.</p>
         </div>
 
-        <div class="d-none" data-customer-panel>
-          <dl class="row mb-0 detail-grid">
-            <dt class="col-sm-5 text-muted">Name</dt>
-            <dd class="col-sm-7" data-customer-name></dd>
+        <div class="d-none redemption-customer-card" data-customer-panel>
+          <div class="redemption-customer-card__hero">
+            <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
+            <strong class="redemption-customer-card__value" data-customer-points></strong>
+            <span class="redemption-customer-card__note is-pending" data-customer-redeem-note></span>
+          </div>
 
-            <dt class="col-sm-5 text-muted">Phone</dt>
-            <dd class="col-sm-7" data-customer-phone></dd>
+          <div class="redemption-customer-card__identity">
+            <div class="redemption-customer-card__identity-heading">
+              <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
+              <span class="redemption-customer-card__status" data-customer-status></span>
+            </div>
+            <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
+          </div>
 
-            <dt class="col-sm-5 text-muted">Available Points</dt>
-            <dd class="col-sm-7 fw-semibold" data-customer-points></dd>
-
-            <dt class="col-sm-5 text-muted">Vehicles</dt>
-            <dd class="col-sm-7" data-customer-vehicles-count></dd>
-          </dl>
+          <div class="redemption-customer-card__stats">
+            <div class="redemption-customer-card__stat">
+              <span class="redemption-customer-card__stat-label">Max Redeemable</span>
+              <strong class="redemption-customer-card__stat-value" data-customer-max-redeemable></strong>
+            </div>
+            <div class="redemption-customer-card__stat">
+              <span class="redemption-customer-card__stat-label">Vehicles on File</span>
+              <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
+            </div>
+          </div>
         </div>
 
         <div class="alert alert-warning d-none mt-3 mb-0" data-customer-error role="alert"></div>
@@ -72,7 +98,7 @@
 
       const lookupUrl = root.dataset.lookupUrl;
       const phoneInput = root.querySelector("[data-phone-input]");
-      const pointsInput = root.querySelector("[data-points-input]");
+      const pointsSelect = root.querySelector("[data-points-select]");
       const submitButton = root.querySelector("[data-submit-button]");
       const placeholder = root.querySelector("[data-customer-placeholder]");
       const panel = root.querySelector("[data-customer-panel]");
@@ -80,21 +106,53 @@
       const nameTarget = root.querySelector("[data-customer-name]");
       const phoneTarget = root.querySelector("[data-customer-phone]");
       const pointsTarget = root.querySelector("[data-customer-points]");
+      const statusTarget = root.querySelector("[data-customer-status]");
+      const redeemNoteTarget = root.querySelector("[data-customer-redeem-note]");
+      const maxRedeemableTarget = root.querySelector("[data-customer-max-redeemable]");
       const vehiclesCountTarget = root.querySelector("[data-customer-vehicles-count]");
       let availablePoints = 0;
+      let maxRedeemablePoints = 0;
       let customerLoaded = false;
       let activeLookup = 0;
+      const numberFormatter = new Intl.NumberFormat("en-IN");
 
-      const updateSubmitState = () => {
-        const requestedPoints = Number(pointsInput.value || 0);
-        submitButton.disabled = !customerLoaded || requestedPoints <= 0 || requestedPoints > availablePoints;
+      const populateRedeemableOptions = (maxPoints, selectedValue = "") => {
+        const normalizedSelectedValue = String(selectedValue || "").trim();
+        const placeholderLabel = maxPoints >= 100 ? "Select redeemable points" : "No redeemable points available";
+
+        pointsSelect.innerHTML = "";
+
+        const placeholderOption = document.createElement("option");
+        placeholderOption.value = "";
+        placeholderOption.textContent = placeholderLabel;
+        pointsSelect.appendChild(placeholderOption);
+
+        for (let points = 100; points <= maxPoints; points += 100) {
+          const option = document.createElement("option");
+          option.value = String(points);
+          option.textContent = String(points);
+          pointsSelect.appendChild(option);
+        }
+
+        if (normalizedSelectedValue !== "" && Number(normalizedSelectedValue) <= maxPoints && Number(normalizedSelectedValue) % 100 === 0) {
+          pointsSelect.value = normalizedSelectedValue;
+        } else {
+          pointsSelect.value = "";
+        }
+
+        pointsSelect.disabled = !customerLoaded || maxPoints < 100;
       };
 
-      const showError = (message) => {
+      const updateSubmitState = () => {
+        const requestedPoints = Number(pointsSelect.value || 0);
+        submitButton.disabled = !customerLoaded || pointsSelect.disabled || requestedPoints <= 0 || requestedPoints > maxRedeemablePoints;
+      };
+
+      const showError = (message, { keepPanel = false } = {}) => {
         errorBox.textContent = message;
         errorBox.classList.remove("d-none");
-        panel.classList.add("d-none");
         placeholder.classList.add("d-none");
+        panel.classList.toggle("d-none", !keepPanel);
         customerLoaded = false;
         availablePoints = 0;
         updateSubmitState();
@@ -112,9 +170,16 @@
         nameTarget.textContent = "";
         phoneTarget.textContent = "";
         pointsTarget.textContent = "";
+        statusTarget.textContent = "";
+        statusTarget.className = "redemption-customer-card__status";
+        redeemNoteTarget.textContent = "";
+        redeemNoteTarget.className = "redemption-customer-card__note is-pending";
+        maxRedeemableTarget.textContent = "";
         vehiclesCountTarget.textContent = "";
         customerLoaded = false;
         availablePoints = 0;
+        maxRedeemablePoints = 0;
+        populateRedeemableOptions(0);
         updateSubmitState();
       };
 
@@ -146,13 +211,28 @@
           panel.classList.remove("d-none");
           nameTarget.textContent = payload.customer.name;
           phoneTarget.textContent = payload.customer.phone_number;
-          pointsTarget.textContent = payload.customer.total_points;
-          vehiclesCountTarget.textContent = payload.customer.vehicles.length;
+          pointsTarget.textContent = numberFormatter.format(payload.customer.total_points || 0);
+          statusTarget.textContent = payload.customer.status_label;
+          statusTarget.className = `redemption-customer-card__status ${payload.customer.active ? "is-active" : "is-inactive"}`;
+          maxRedeemableTarget.textContent = `${numberFormatter.format(payload.customer.max_redeemable_points || 0)} pts`;
+          vehiclesCountTarget.textContent = String(payload.customer.vehicles.length);
           availablePoints = Number(payload.customer.total_points || 0);
+          maxRedeemablePoints = Number(payload.customer.max_redeemable_points || 0);
           customerLoaded = true;
+          populateRedeemableOptions(maxRedeemablePoints, pointsSelect.dataset.prefillValue || pointsSelect.value);
+          pointsSelect.dataset.prefillValue = "";
 
-          if (availablePoints <= 0) {
-            showError("This customer does not have any redeemable points.");
+          if (maxRedeemablePoints >= 100) {
+            redeemNoteTarget.textContent = `Ready to redeem up to ${numberFormatter.format(maxRedeemablePoints)} points`;
+            redeemNoteTarget.className = "redemption-customer-card__note is-redeemable";
+          } else {
+            const pointsNeeded = Math.max(100 - availablePoints, 0);
+            redeemNoteTarget.textContent = `${numberFormatter.format(pointsNeeded)} more points needed to unlock rewards`;
+            redeemNoteTarget.className = "redemption-customer-card__note is-pending";
+          }
+
+          if (maxRedeemablePoints < 100) {
+            showError("This customer does not have enough redeemable points. Minimum redemption is 100 points.", { keepPanel: true });
             return;
           }
 
@@ -171,7 +251,7 @@
       });
 
       phoneInput.addEventListener("blur", loadCustomer);
-      pointsInput.addEventListener("input", updateSubmitState);
+      pointsSelect.addEventListener("change", updateSubmitState);
 
       if (phoneInput.value.trim() !== "") {
         loadCustomer();

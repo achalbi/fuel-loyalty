@@ -2,8 +2,7 @@ module Staff
   class CustomersController < BaseController
     def index
       authorize Customer, :lookup?
-      @query = params[:q].to_s.strip
-      @customers = customer_scope
+      load_index_state
     end
 
     def new
@@ -23,7 +22,8 @@ module Staff
         notice = was_new_record ? "Customer created successfully." : "Customer updated successfully."
         redirect_to customer_path(@customer), notice: notice
       else
-        render :new, status: :unprocessable_entity
+        load_index_state(form_customer: @customer)
+        render :index, status: :unprocessable_entity
       end
     end
 
@@ -48,6 +48,7 @@ module Staff
             active: customer.active?,
             status_label: customer.status_label,
             total_points: customer.total_points,
+            max_redeemable_points: PointsRedeemer.max_redeemable_points(customer.total_points),
             vehicles: customer.vehicles.map do |vehicle|
               {
                 id: vehicle.id,
@@ -74,9 +75,16 @@ module Staff
 
     private
 
+    def load_index_state(form_customer: Customer.new)
+      @query = params[:q].to_s.strip
+      @customers = customer_scope
+      @customer = form_customer
+    end
+
     def customer_scope
+      return top_customers_scope if @query.blank?
+
       scope = Customer.includes(:vehicles).order(created_at: :desc)
-      return scope.limit(20) if @query.blank?
 
       escaped_query = ActiveRecord::Base.sanitize_sql_like(@query)
       normalized_phone = Customer.normalize_phone_number(@query)
@@ -89,6 +97,16 @@ module Staff
       end
 
       scope.where(conditions.join(" OR "), values).limit(50)
+    end
+
+    def top_customers_scope
+      Customer
+        .left_joins(:points_ledgers)
+        .includes(:vehicles)
+        .select("customers.*, COALESCE(SUM(points_ledgers.points), 0) AS total_points_sum")
+        .group("customers.id")
+        .order(Arel.sql("COALESCE(SUM(points_ledgers.points), 0) DESC, customers.created_at DESC"))
+        .limit(3)
     end
 
     def customer_params

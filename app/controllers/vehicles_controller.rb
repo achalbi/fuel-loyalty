@@ -11,6 +11,7 @@ class VehiclesController < ApplicationController
     if @vehicle.save
       redirect_to customer_path(@customer), notice: "Vehicle added successfully."
     else
+      @vehicle_modal_mode = :create
       render "customers/show", status: :unprocessable_entity
     end
   end
@@ -24,6 +25,9 @@ class VehiclesController < ApplicationController
 
     if @vehicle.update(vehicle_params)
       redirect_to customer_path(@customer), notice: "Vehicle updated successfully."
+    elsif params[:vehicle_form_context] == "modal"
+      @vehicle_modal_mode = :edit
+      render "customers/show", status: :unprocessable_entity
     else
       render :edit, status: :unprocessable_entity
     end
@@ -41,7 +45,7 @@ class VehiclesController < ApplicationController
   private
 
   def set_customer
-    @customer = Customer.includes(:vehicles, transactions: %i[user vehicle], points_ledgers: []).find(params[:customer_id])
+    @customer = Customer.includes(:vehicles, transactions: %i[user vehicle]).find(params[:customer_id])
   end
 
   def set_vehicle

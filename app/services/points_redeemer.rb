@@ -1,8 +1,13 @@
 class PointsRedeemer
+  REDEMPTION_INCREMENT = 100
   Result = Struct.new(:customer, :points_redeemed, keyword_init: true)
 
   def self.call(...)
     new(...).call
+  end
+
+  def self.max_redeemable_points(available_points)
+    (available_points.to_i / REDEMPTION_INCREMENT) * REDEMPTION_INCREMENT
   end
 
   def initialize(phone_number:, points:)
@@ -13,13 +18,22 @@ class PointsRedeemer
   def call
     customer = find_customer!
     points_to_redeem = normalized_points
+    max_redeemable_points = self.class.max_redeemable_points(customer.total_points)
 
-    if points_to_redeem <= 0
-      raise ActiveRecord::RecordInvalid.new(build_redeem_record(customer, points_to_redeem).tap { |record| record.errors.add(:points, "must be greater than 0") })
+    if max_redeemable_points < REDEMPTION_INCREMENT
+      invalid_redemption!(customer, points_to_redeem, "must have at least #{REDEMPTION_INCREMENT} available points to redeem")
     end
 
-    if customer.total_points < points_to_redeem
-      raise ActiveRecord::RecordInvalid.new(build_redeem_record(customer, points_to_redeem).tap { |record| record.errors.add(:points, "cannot exceed available points") })
+    if points_to_redeem <= 0
+      invalid_redemption!(customer, points_to_redeem, "must be greater than 0")
+    end
+
+    if (points_to_redeem % REDEMPTION_INCREMENT) != 0
+      invalid_redemption!(customer, points_to_redeem, "must be in multiples of #{REDEMPTION_INCREMENT}")
+    end
+
+    if points_to_redeem > max_redeemable_points
+      invalid_redemption!(customer, points_to_redeem, "cannot exceed #{max_redeemable_points} redeemable points")
     end
 
     customer.points_ledgers.create!(
@@ -33,6 +47,14 @@ class PointsRedeemer
   private
 
   attr_reader :phone_number, :points
+
+  def invalid_redemption!(customer, points_to_redeem, message)
+    raise ActiveRecord::RecordInvalid.new(
+      build_redeem_record(customer, points_to_redeem).tap do |record|
+        record.errors.add(:points, message)
+      end
+    )
+  end
 
   def build_redeem_record(customer, points_to_redeem)
     customer.points_ledgers.build(points: -points_to_redeem, entry_type: :redeem)

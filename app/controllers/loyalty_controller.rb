@@ -26,6 +26,9 @@ class LoyaltyController < ApplicationController
     @customer = Customer.find_by(phone_number: @phone_number)
 
     if @customer
+      @total_points = @customer.total_points
+      @redeemable_points = PointsRedeemer.max_redeemable_points(@total_points)
+      @points_until_redeemable = [PointsRedeemer::REDEMPTION_INCREMENT - @total_points.to_i, 0].max
       @full_history = params[:full_history] == "1"
       @activities = @customer.loyalty_activities(limit: @full_history ? nil : 5)
       @show_full_history_button = !@full_history && @customer.loyalty_activities_count > 5

@@ -21,6 +21,8 @@ Rails.application.configure do
   # Show full error reports.
   config.consider_all_requests_local = true
   config.cache_store = :null_store
+  # Ignore stale precompiled manifests in test so Propshaft resolves current assets.
+  config.assets.manifest_path = Rails.root.join("tmp/propshaft-test/.manifest.json")
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable

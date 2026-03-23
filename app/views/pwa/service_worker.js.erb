@@ -45,7 +45,13 @@ self.addEventListener("activate", (event) => {
           .filter((key) => key.startsWith("fuel-loyalty-") && !activeCaches.has(key))
           .map((key) => caches.delete(key))
       )
-    ).then(() => self.clients.claim())
+    ).then(async () => {
+      if ("navigationPreload" in self.registration) {
+        await self.registration.navigationPreload.enable();
+      }
+
+      return self.clients.claim();
+    })
   );
 });
 
@@ -76,11 +82,11 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     if (cacheableNavigation(url.pathname)) {
-      event.respondWith(networkFirst(request, PAGE_CACHE));
+      event.respondWith(networkFirst(event, request, PAGE_CACHE));
       return;
     }
 
-    event.respondWith(networkWithOfflineFallback(request));
+    event.respondWith(networkWithOfflineFallback(event, request));
   }
 });
 
@@ -115,11 +121,11 @@ async function staleWhileRevalidate(request, cacheName) {
   return cachedResponse || networkResponse;
 }
 
-async function networkFirst(request, cacheName) {
+async function networkFirst(event, request, cacheName) {
   const cache = await caches.open(cacheName);
 
   try {
-    const response = await fetch(request);
+    const response = (await preloadResponse(event)) || (await fetch(request));
     await cacheResponse(cache, request, response);
     return response;
   } catch (_error) {
@@ -127,11 +133,21 @@ async function networkFirst(request, cacheName) {
   }
 }
 
-async function networkWithOfflineFallback(request) {
+async function networkWithOfflineFallback(event, request) {
   try {
-    return await fetch(request);
+    return (await preloadResponse(event)) || (await fetch(request));
   } catch (_error) {
     return caches.match(OFFLINE_URL);
+  }
+}
+
+async function preloadResponse(event) {
+  if (!event || !("preloadResponse" in event)) return null;
+
+  try {
+    return await event.preloadResponse;
+  } catch (_error) {
+    return null;
   }
 }
 

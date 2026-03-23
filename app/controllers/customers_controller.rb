@@ -1,10 +1,23 @@
 class CustomersController < ApplicationController
+  include CustomerPointsLedgerRendering
+  include CustomerTransactionHistoryRendering
+
   before_action :authenticate_user!
-  before_action :set_customer, only: %i[show edit update]
+  before_action :set_customer, only: %i[show edit update points_ledger transaction_history]
 
   def show
     authorize @customer
-    @vehicle = Vehicle.new
+    prepare_show_state
+  end
+
+  def points_ledger
+    authorize @customer
+    render_points_ledger_for(@customer)
+  end
+
+  def transaction_history
+    authorize @customer
+    render_transaction_history_for(@customer)
   end
 
   def edit
@@ -19,7 +32,8 @@ class CustomersController < ApplicationController
     if @customer.save
       redirect_to customer_path(@customer), notice: "Customer updated successfully."
     else
-      render :edit, status: :unprocessable_entity
+      prepare_show_state(open_edit_modal: true)
+      render :show, status: :unprocessable_entity
     end
   end
 
@@ -30,6 +44,12 @@ class CustomersController < ApplicationController
   end
 
   def set_customer
-    @customer = Customer.includes(:vehicles, transactions: %i[user vehicle], points_ledgers: []).find(params[:id])
+    @customer = Customer.includes(:vehicles, transactions: %i[user vehicle]).find(params[:id])
+  end
+
+  def prepare_show_state(open_edit_modal: false)
+    @vehicle = Vehicle.new
+    @customer_update_path = customer_path(@customer)
+    @customer_edit_modal_open = open_edit_modal
   end
 end

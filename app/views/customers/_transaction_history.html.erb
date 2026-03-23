@@ -1,0 +1,53 @@
+<% showing_from = total_remaining_entries.zero? ? 0 : ((current_page - 1) * CustomerTransactionHistoryRendering::TRANSACTION_HISTORY_PER_PAGE) + 1 %>
+<% showing_to = total_remaining_entries.zero? ? 0 : showing_from + transaction_history_entries.size - 1 %>
+
+<% if transaction_history_entries.any? %>
+  <div class="customer-details-vehicle-list customer-details-history-list">
+    <% transaction_history_entries.each do |transaction| %>
+      <div class="customer-details-vehicle-row customer-details-history-row">
+        <div class="customer-details-vehicle-row__main customer-details-history-row__main">
+          <div class="customer-details-vehicle-row__number customer-details-history-row__vehicle">
+            <%= transaction.vehicle&.vehicle_number || "Vehicle not linked" %>
+          </div>
+          <div class="customer-details-history-row__handled-by">
+            Handled by <strong><%= transaction.user.display_name %></strong>
+          </div>
+        </div>
+        <div class="customer-details-history-row__side">
+          <span class="customer-details-history-item__amount"><%= number_to_currency(transaction.fuel_amount, unit: "₹") %></span>
+          <span class="customer-details-history-row__date"><%= l(transaction.created_at, format: :short) %></span>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <p class="text-muted mb-0">No additional transactions yet.</p>
+<% end %>
+
+<% if total_remaining_entries.positive? %>
+  <div class="customer-details-ledger-pagination">
+    <div class="customer-details-ledger-pagination__summary">
+      Showing <strong><%= showing_from %>-<%= showing_to %></strong> of <strong><%= total_remaining_entries %></strong> more transactions
+    </div>
+
+    <% if total_pages > 1 %>
+      <div class="customer-details-ledger-pagination__actions">
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          data-transaction-history-page-link="<%= customer_transaction_history_path_for(customer, page: current_page - 1) %>"
+          <%= "disabled" if current_page <= 1 %>>
+          Previous
+        </button>
+        <span class="customer-details-ledger-pagination__status">Page <strong><%= current_page %></strong> of <%= total_pages %></span>
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          data-transaction-history-page-link="<%= customer_transaction_history_path_for(customer, page: current_page + 1) %>"
+          <%= "disabled" if current_page >= total_pages %>>
+          Next
+        </button>
+      </div>
+    <% end %>
+  </div>
+<% end %>

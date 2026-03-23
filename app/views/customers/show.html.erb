@@ -1,127 +1,421 @@
 <% content_for :title, "Customer Details" %>
 <% persisted_vehicles = @customer.vehicles.select(&:persisted?) %>
+<% recent_transactions = @customer.recent_transactions(CustomerTransactionHistoryRendering::TRANSACTION_PREVIEW_LIMIT) %>
+<% more_transactions_available = @customer.transactions.size > CustomerTransactionHistoryRendering::TRANSACTION_PREVIEW_LIMIT %>
+<% recent_points_ledger_entries = @customer.points_ledgers.order(created_at: :desc).limit(CustomerPointsLedgerRendering::POINTS_LEDGER_PREVIEW_LIMIT) %>
+<% more_points_ledger_entries_available = @customer.points_ledgers.count > CustomerPointsLedgerRendering::POINTS_LEDGER_PREVIEW_LIMIT %>
+<% add_vehicle_form = @vehicle_modal_mode == :create ? @vehicle : Vehicle.new %>
+<% customer_policy = policy(@customer) %>
+<% can_edit_customer = customer_policy.update? %>
+<% can_activate_customer = customer_policy.activate? && !@customer.active? %>
+<% can_deactivate_customer = customer_policy.deactivate? && @customer.active? %>
+<% can_delete_customer = customer_policy.destroy? %>
+<% customer_menu_actions_available = can_edit_customer || can_activate_customer || can_deactivate_customer || can_delete_customer %>
+<% customer_update_path = @customer_update_path || customer_path(@customer) %>
 
-<div class="d-flex justify-content-between align-items-center mb-4 summary-header">
-  <div>
-    <div class="d-flex align-items-center gap-2 mb-1">
-      <h1 class="h3 mb-0"><%= @customer.display_name %></h1>
-      <span class="badge rounded-pill <%= @customer.active? ? "text-bg-success" : "text-bg-secondary" %>"><%= @customer.status_label %></span>
-    </div>
-    <p class="text-muted mb-0">Phone: <%= @customer.phone_number %></p>
-  </div>
-  <div class="text-end d-flex flex-column align-items-end gap-2 summary-actions">
-    <div class="summary-metric">
-      <div class="display-6 fw-bold"><%= @customer.total_points %></div>
-      <div class="text-muted">Current Points</div>
-    </div>
+<div class="customer-details-shell">
+  <div class="card shadow-sm loyalty-result-card loyalty-result-hero customer-details-hero">
+    <div class="card-body loyalty-result-hero__body customer-details-hero__body">
+      <div class="loyalty-result-points customer-details-hero__points">
+        <span class="small-muted">Current Points</span>
+        <strong class="loyalty-result-hero__value customer-details-hero__value" aria-label="<%= @customer.total_points %> current points"><%= @customer.total_points %></strong>
+        <div class="customer-details-hero__meta">
+          <span class="customer-details-hero__chip"><strong><%= @customer.transactions.size %></strong> visits</span>
+          <span class="customer-details-hero__chip"><strong><%= persisted_vehicles.size %></strong> vehicles</span>
+          <span class="customer-details-hero__chip">Joined <strong><%= @customer.created_at.strftime("%b %Y") %></strong></span>
+        </div>
+      </div>
 
-    <% if policy(@customer).update? %>
-      <%= link_to "Edit Customer", edit_customer_path(@customer), class: "btn btn-primary" %>
-    <% end %>
-
-    <% if policy(@customer).activate? && !@customer.active? %>
-      <%= button_to "Mark Active", activate_staff_customer_path(@customer), method: :patch, class: "btn btn-success" %>
-    <% end %>
-
-    <% if policy(@customer).deactivate? && @customer.active? %>
-      <%= button_to "Mark Inactive", deactivate_staff_customer_path(@customer), method: :patch, class: "btn btn-outline-secondary", form: { data: { turbo_confirm: "Mark this customer as inactive?" } } %>
-    <% end %>
-
-    <% if policy(@customer).destroy? %>
-      <%= button_to "Delete Customer", admin_customer_path(@customer), method: :delete, class: "btn btn-outline-danger", form: { data: { confirm_modal: true, confirm_message: "Remove this customer?" } } %>
-    <% end %>
-  </div>
-</div>
-
-<div class="row g-4">
-  <div class="col-lg-7">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h2 class="h5">Recent Transactions</h2>
-        <% if @customer.transactions.any? %>
-          <div class="table-responsive">
-            <table class="table responsive-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Vehicle</th>
-                  <th>Amount</th>
-                  <th>Handled By</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% @customer.recent_transactions(10).each do |transaction| %>
-                  <tr>
-                    <td data-label="Date"><%= l(transaction.created_at, format: :short) %></td>
-                    <td data-label="Vehicle"><%= transaction.vehicle&.vehicle_number || "N/A" %></td>
-                    <td data-label="Amount"><%= number_to_currency(transaction.fuel_amount, unit: "₹") %></td>
-                    <td data-label="Handled By"><%= transaction.user.email %></td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
+      <div class="loyalty-result-hero__identity customer-details-hero__identity">
+        <div class="customer-details-hero__identity-main">
+          <div class="customer-details-hero__identity-heading">
+            <h1 class="h3 mb-0 loyalty-result-hero__name"><%= @customer.display_name.to_s.titleize %></h1>
+            <span class="customer-details-hero__status <%= @customer.active? ? "is-active" : "is-inactive" %>"><%= @customer.status_label %></span>
           </div>
-        <% else %>
-          <p class="text-muted mb-0">No transactions recorded yet.</p>
+          <p class="text-muted mb-0 loyalty-result-hero__phone">Phone: <%= @customer.phone_number %></p>
+        </div>
+
+        <% if customer_menu_actions_available %>
+          <div class="dropdown customer-details-hero__menu">
+            <button
+              type="button"
+              class="customer-details-vehicle-row__menu-toggle"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+              aria-label="Customer actions"
+              title="Customer actions">
+              <i class="ti ti-pencil" aria-hidden="true"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end customer-details-vehicle-row__menu-list">
+              <% if can_edit_customer %>
+                <button
+                  type="button"
+                  class="dropdown-item"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editCustomerModal">
+                  <i class="ti ti-pencil me-2" aria-hidden="true"></i>Edit Customer
+                </button>
+              <% end %>
+
+              <% if can_activate_customer %>
+                <%= button_to activate_staff_customer_path(@customer),
+                  method: :patch,
+                  class: "dropdown-item",
+                  form: { class: "customer-details-vehicle-row__menu-form" } do %>
+                  <i class="ti ti-check me-2" aria-hidden="true"></i>Mark Active
+                <% end %>
+              <% end %>
+
+              <% if can_deactivate_customer %>
+                <%= button_to deactivate_staff_customer_path(@customer),
+                  method: :patch,
+                  class: "dropdown-item",
+                  form: {
+                    class: "customer-details-vehicle-row__menu-form",
+                    data: { turbo_confirm: "Mark this customer as inactive?" }
+                  } do %>
+                  <i class="ti ti-circle-off me-2" aria-hidden="true"></i>Mark Inactive
+                <% end %>
+              <% end %>
+
+              <% if can_delete_customer %>
+                <%= button_to admin_customer_path(@customer),
+                  method: :delete,
+                  class: "dropdown-item text-danger",
+                  form: {
+                    class: "customer-details-vehicle-row__menu-form",
+                    data: { confirm_modal: true, confirm_message: "Remove this customer?" }
+                  } do %>
+                  <i class="ti ti-trash me-2" aria-hidden="true"></i>Delete Customer
+                <% end %>
+              <% end %>
+            </div>
+          </div>
         <% end %>
       </div>
     </div>
   </div>
 
-  <div class="col-lg-5">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h2 class="h5">Vehicles</h2>
-        <% if persisted_vehicles.any? %>
-          <ul class="list-group mb-4">
-            <% persisted_vehicles.each do |vehicle| %>
-              <li class="list-group-item">
-                <div class="d-flex justify-content-between align-items-start gap-3 vehicle-row">
-                  <div class="vehicle-meta">
-                    <div class="fw-semibold"><%= vehicle.vehicle_number %></div>
-                    <div class="small text-muted"><%= vehicle.display_fuel_type %> | <%= vehicle.display_vehicle_kind %></div>
+  <div class="customer-details-grid">
+    <div class="customer-details-stack customer-details-stack--tight">
+      <div class="card shadow-sm loyalty-result-card customer-details-section">
+        <div class="card-body">
+          <div class="customer-details-section__header customer-details-section__header--with-action">
+            <div>
+              <h2 class="h5 mb-1">Vehicles</h2>
+              <p class="text-muted mb-0">Registered vehicles used for faster staff lookup.</p>
+            </div>
+
+            <% if policy(@customer).update? %>
+              <div class="customer-details-section__header-actions">
+                <button
+                  type="button"
+                  class="customer-details-quick-action"
+                  data-bs-toggle="modal"
+                  data-bs-target="#addVehicleModal"
+                  aria-label="Add vehicle"
+                  title="Add vehicle">
+                  +
+                </button>
+              </div>
+            <% end %>
+          </div>
+
+          <% if persisted_vehicles.any? %>
+            <div class="customer-details-vehicle-list">
+              <% persisted_vehicles.each do |vehicle| %>
+                <div class="customer-details-vehicle-row">
+                  <div class="customer-details-vehicle-row__main">
+                    <div class="customer-details-vehicle-row__number"><%= vehicle.vehicle_number %></div>
+                    <div class="customer-details-vehicle-row__meta"><%= vehicle.display_fuel_type %> · <%= vehicle.display_vehicle_kind %></div>
                   </div>
 
                   <% if policy(@customer).update? %>
-                    <div class="table-action-group vehicle-action-group">
-                      <%= link_to "Edit", edit_customer_vehicle_path(@customer, vehicle), class: "btn btn-sm btn-outline-primary" %>
-                      <%= button_to "Delete", customer_vehicle_path(@customer, vehicle), method: :delete, class: "btn btn-sm btn-outline-danger", form: { data: { confirm_modal: true, confirm_message: "Remove this vehicle?" } } %>
-                    </div>
-                  <% end %>
-                </div>
-              </li>
-            <% end %>
-          </ul>
-        <% else %>
-          <p class="text-muted">No vehicles registered yet.</p>
-        <% end %>
+                    <div class="dropdown customer-details-vehicle-row__menu">
+                      <button
+                        type="button"
+                        class="customer-details-vehicle-row__menu-toggle"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        aria-label="Vehicle actions"
+                        title="Vehicle actions">
+                        <i class="ti ti-pencil" aria-hidden="true"></i>
+                      </button>
+                      <div class="dropdown-menu dropdown-menu-end customer-details-vehicle-row__menu-list">
+                        <button
+                          type="button"
+                          class="dropdown-item"
+                          data-bs-toggle="modal"
+                          data-bs-target="#editVehicleModal-<%= vehicle.id %>">
+                          <i class="ti ti-pencil me-2" aria-hidden="true"></i>Edit
+                        </button>
+                        <%= button_to customer_vehicle_path(@customer, vehicle),
+                          method: :delete,
+                          class: "dropdown-item text-danger",
+                          form: {
+                            class: "customer-details-vehicle-row__menu-form",
+                            data: { confirm_modal: true, confirm_message: "Remove this vehicle?" }
+                          } do %>
+                          <i class="ti ti-trash me-2" aria-hidden="true"></i>Delete
+                        <% end %>
+  </div>
+</div>
 
-        <% if policy(@customer).update? %>
-          <div class="mb-4">
-            <h3 class="h6">Add Vehicle</h3>
-            <%= render "vehicles/form",
-              customer: @customer,
-              vehicle: @vehicle,
-              field_label: "Vehicle Number",
-              submit_label: "Add Vehicle",
-              submit_class: "btn btn-outline-primary" %>
+<% if can_edit_customer %>
+  <div
+    class="modal fade customer-details-modal"
+    id="editCustomerModal"
+    tabindex="-1"
+    aria-labelledby="editCustomerModalLabel"
+    aria-hidden="true"
+    data-auto-open-modal="<%= @customer_edit_modal_open %>">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content confirm-modal-content customer-details-modal__content">
+        <div class="modal-header border-0 pb-0">
+          <div>
+            <h2 class="modal-title h5 mb-1" id="editCustomerModalLabel">Edit Customer</h2>
+            <p class="text-muted mb-0 small">Update customer details without leaving this page.</p>
           </div>
-        <% end %>
-
-        <h2 class="h5">Points Ledger</h2>
-        <% if @customer.points_ledgers.any? %>
-          <ul class="list-group">
-            <% @customer.points_ledgers.order(created_at: :desc).limit(10).each do |entry| %>
-              <li class="list-group-item d-flex justify-content-between align-items-center gap-3 stack-mobile">
-                <span><%= entry.entry_type.humanize %></span>
-                <span class="<%= entry.points.positive? ? "text-success" : "text-danger" %>"><%= entry.points %></span>
-              </li>
-            <% end %>
-          </ul>
-        <% else %>
-          <p class="text-muted mb-0">No ledger entries yet.</p>
-        <% end %>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <%= render "customers/form",
+            customer: @customer,
+            form_url: customer_update_path,
+            form_method: :patch,
+            include_vehicle_fields: false,
+            submit_label: "Update Customer",
+            title: "Edit Customer",
+            context: "modal" %>
+        </div>
       </div>
     </div>
   </div>
+<% end %>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-muted mb-0">No vehicles registered yet.</p>
+          <% end %>
+
+          <% if policy(@customer).update? %>
+            <% persisted_vehicles.each do |vehicle| %>
+              <% edit_vehicle_form = (@vehicle_modal_mode == :edit && @vehicle.id == vehicle.id) ? @vehicle : vehicle %>
+              <div
+                class="modal fade customer-details-modal"
+                id="editVehicleModal-<%= vehicle.id %>"
+                tabindex="-1"
+                aria-labelledby="editVehicleModalLabel-<%= vehicle.id %>"
+                aria-hidden="true"
+                data-auto-open-modal="<%= @vehicle_modal_mode == :edit && @vehicle.id == vehicle.id %>">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                  <div class="modal-content confirm-modal-content customer-details-modal__content">
+                    <div class="modal-header border-0 pb-0">
+                      <div>
+                        <h2 class="modal-title h5 mb-1" id="editVehicleModalLabel-<%= vehicle.id %>">Edit Vehicle</h2>
+                        <p class="text-muted mb-0 small">Update the registered vehicle details for this customer.</p>
+                      </div>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body pt-3">
+                      <%= render "vehicles/form",
+                        customer: @customer,
+                        vehicle: edit_vehicle_form,
+                        field_label: "Vehicle Number",
+                        submit_label: "Update Vehicle",
+                        submit_class: "btn btn-primary w-100",
+                        context: "modal" %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="card shadow-sm loyalty-result-card customer-details-section">
+        <div class="card-body">
+          <div class="customer-details-section__header customer-details-section__header--with-action">
+            <div>
+              <h2 class="h5 mb-1">Recent Transactions</h2>
+              <p class="text-muted mb-0 customer-details-history-intro">Latest fuel visits and purchase amounts.</p>
+            </div>
+
+            <% if more_transactions_available %>
+              <div class="customer-details-section__header-actions">
+                <button
+                  type="button"
+                  class="customer-details-history-preview-action"
+                  data-bs-toggle="modal"
+                  data-bs-target="#transactionHistoryModal"
+                  aria-label="View more transactions"
+                  title="View more transactions">
+                  <i class="ti ti-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+            <% end %>
+          </div>
+
+          <% if recent_transactions.any? %>
+            <div class="customer-details-vehicle-list customer-details-history-list">
+              <% recent_transactions.each do |transaction| %>
+                <div class="customer-details-vehicle-row customer-details-history-row">
+                  <div class="customer-details-vehicle-row__main customer-details-history-row__main">
+                    <div class="customer-details-vehicle-row__number customer-details-history-row__vehicle">
+                      <%= transaction.vehicle&.vehicle_number || "Vehicle not linked" %>
+                    </div>
+                    <div class="customer-details-history-row__handled-by">
+                      Handled by <strong><%= transaction.user.display_name %></strong>
+                    </div>
+                  </div>
+                  <div class="customer-details-history-row__side">
+                    <span class="customer-details-history-item__amount"><%= number_to_currency(transaction.fuel_amount, unit: "₹") %></span>
+                    <span class="customer-details-history-row__date"><%= l(transaction.created_at, format: :short) %></span>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-muted mb-0">No transactions recorded yet.</p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="customer-details-stack">
+
+      <div class="card shadow-sm loyalty-result-card customer-details-section">
+        <div class="card-body">
+          <div class="customer-details-section__header customer-details-section__header--with-action">
+            <div>
+              <h2 class="h5 mb-1">Points Ledger</h2>
+              <p class="text-muted mb-0 customer-details-history-intro">Latest points movements and reward activity.</p>
+            </div>
+
+            <% if more_points_ledger_entries_available %>
+              <div class="customer-details-section__header-actions">
+                <button
+                  type="button"
+                  class="customer-details-history-preview-action"
+                  data-bs-toggle="modal"
+                  data-bs-target="#pointsLedgerModal"
+                  aria-label="View more points activity"
+                  title="View more points activity">
+                  <i class="ti ti-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+            <% end %>
+          </div>
+
+          <% if recent_points_ledger_entries.any? %>
+            <div class="customer-details-vehicle-list customer-details-ledger-list">
+              <%= render "customers/points_ledger_rows", points_ledger_entries: recent_points_ledger_entries %>
+            </div>
+          <% else %>
+            <p class="text-muted mb-0">No ledger entries yet.</p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <% if policy(@customer).update? %>
+    <div
+      class="modal fade customer-details-modal"
+      id="addVehicleModal"
+      tabindex="-1"
+      aria-labelledby="addVehicleModalLabel"
+      aria-hidden="true"
+      data-auto-open-modal="<%= @vehicle_modal_mode == :create %>">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content confirm-modal-content customer-details-modal__content">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <h2 class="modal-title h5 mb-1" id="addVehicleModalLabel">Add Vehicle</h2>
+              <p class="text-muted mb-0 small">Save a vehicle here so future transactions are faster for staff.</p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <%= render "vehicles/form",
+              customer: @customer,
+              vehicle: add_vehicle_form,
+              field_label: "Vehicle Number",
+              submit_label: "Add Vehicle",
+              submit_class: "btn btn-primary w-100",
+              context: "modal" %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% if more_transactions_available %>
+    <div
+      class="modal fade customer-details-modal"
+      id="transactionHistoryModal"
+      tabindex="-1"
+      aria-labelledby="transactionHistoryModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content confirm-modal-content customer-details-modal__content">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <h2 class="modal-title h5 mb-1" id="transactionHistoryModalLabel">More Transactions</h2>
+              <p class="text-muted mb-0 small">Additional transaction history beyond the latest 3 entries.</p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <div
+              class="customer-details-remote-shell"
+              data-transaction-history-panel
+              data-transaction-history-url="<%= customer_transaction_history_path_for(@customer, page: 1) %>"
+              aria-live="polite">
+              <div class="customer-details-ledger-state is-loading" data-transaction-history-status>
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Loading more transactions...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% if more_points_ledger_entries_available %>
+    <div
+      class="modal fade customer-details-modal"
+      id="pointsLedgerModal"
+      tabindex="-1"
+      aria-labelledby="pointsLedgerModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content confirm-modal-content customer-details-modal__content">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <h2 class="modal-title h5 mb-1" id="pointsLedgerModalLabel">More Points Activity</h2>
+              <p class="text-muted mb-0 small">Additional points movement beyond the latest 3 entries.</p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <div
+              class="customer-details-remote-shell"
+              data-points-ledger-panel
+              data-points-ledger-url="<%= customer_points_ledger_path_for(@customer, page: 1) %>"
+              aria-live="polite">
+              <div class="customer-details-ledger-state is-loading" data-points-ledger-status>
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Loading more points activity...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
 </div>

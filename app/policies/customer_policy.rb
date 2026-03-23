@@ -7,6 +7,14 @@ class CustomerPolicy < ApplicationPolicy
     user.present?
   end
 
+  def points_ledger?
+    show?
+  end
+
+  def transaction_history?
+    show?
+  end
+
   def new?
     staff_access?
   end

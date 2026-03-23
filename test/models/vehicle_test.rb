@@ -36,4 +36,27 @@ class VehicleTest < ActiveSupport::TestCase
     assert_not vehicle.valid?
     assert_includes vehicle.errors[:vehicle_number], "is invalid"
   end
+
+  test "allows the same vehicle number for different customers" do
+    vehicle = Vehicle.new(
+      customer: customers(:two),
+      vehicle_number: vehicles(:one).vehicle_number,
+      fuel_type: :diesel,
+      vehicle_kind: :lmv
+    )
+
+    assert vehicle.valid?
+  end
+
+  test "rejects the same vehicle number for the same customer" do
+    vehicle = Vehicle.new(
+      customer: customers(:one),
+      vehicle_number: vehicles(:one).vehicle_number,
+      fuel_type: :diesel,
+      vehicle_kind: :lmv
+    )
+
+    assert_not vehicle.valid?
+    assert_includes vehicle.errors[:vehicle_number], "has already been taken"
+  end
 end

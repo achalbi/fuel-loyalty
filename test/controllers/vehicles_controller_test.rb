@@ -66,4 +66,22 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_match "Vehicle number has already been taken", response.body
     assert_match vehicles(:two).vehicle_number, response.body
   end
+
+  test "invalid vehicle edit from modal re-renders customer page and reopens matching modal" do
+    sign_in users(:two)
+
+    patch customer_vehicle_path(customers(:one), vehicles(:one)), params: {
+      vehicle_form_context: "modal",
+      vehicle: {
+        vehicle_number: vehicles(:two).vehicle_number,
+        fuel_type: "diesel",
+        vehicle_kind: "lmv"
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_match "Vehicle number has already been taken", response.body
+    assert_match "editVehicleModal-#{vehicles(:one).id}", response.body
+    assert_match 'data-auto-open-modal="true"', response.body
+  end
 end

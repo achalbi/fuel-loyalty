@@ -1,19 +1,37 @@
 <% content_for :title, "Loyalty Result" %>
 
-<div class="d-flex justify-content-between align-items-center mb-4 summary-header">
-  <div>
-    <h1 class="h3 mb-1"><%= @customer.name.presence || "Customer" %></h1>
-    <p class="text-muted mb-0">Phone: <%= @customer.phone_number %></p>
-  </div>
-  <div class="text-end summary-metric">
-    <div class="display-6 fw-bold"><%= @customer.total_points %></div>
-    <div class="text-muted">Total Points</div>
+<div class="card shadow-sm loyalty-result-card loyalty-result-hero" data-loyalty-points-hero>
+  <div class="card-body loyalty-result-hero__body">
+    <div class="loyalty-result-hero__confetti" aria-hidden="true" data-loyalty-confetti></div>
+
+    <div class="summary-metric loyalty-result-points loyalty-result-hero__points">
+      <span class="small-muted">Total Points</span>
+      <strong
+        class="loyalty-result-hero__value"
+        data-loyalty-points-value
+        data-loyalty-points-target="<%= @total_points %>"
+        aria-label="<%= @total_points %> points">0</strong>
+      <% if @redeemable_points >= PointsRedeemer::REDEMPTION_INCREMENT %>
+        <span class="loyalty-result-points__status is-redeemable" data-loyalty-redeem-status>
+          Rewards unlocked: <strong><%= @redeemable_points %> points</strong>
+        </span>
+      <% else %>
+        <span class="loyalty-result-points__status is-pending" data-loyalty-redeem-status>
+          <strong><%= @points_until_redeemable %> points more</strong> to unlock rewards
+        </span>
+      <% end %>
+    </div>
+
+    <div class="loyalty-result-hero__identity">
+      <h1 class="h3 mb-1 loyalty-result-hero__name"><%= @customer.display_name.to_s.titleize %></h1>
+      <p class="text-muted mb-0 loyalty-result-hero__phone">Phone: <%= @customer.phone_number %></p>
+    </div>
   </div>
 </div>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm loyalty-result-card">
   <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center mb-3 page-header">
+    <div class="d-flex justify-content-between align-items-center mb-3 page-header loyalty-activity-header">
       <h2 class="h5 mb-0"><%= @full_history ? "Full Loyalty Activity" : "Last 5 Loyalty Activities" %></h2>
       <div class="page-actions">
         <% if @show_full_history_button %>
@@ -25,35 +43,50 @@
     </div>
 
     <% if @activities.any? %>
-      <div class="table-responsive">
-        <table class="table responsive-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Activity</th>
-              <th>Vehicle</th>
-              <th>Fuel Amount</th>
-              <th>Points</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @activities.each do |activity| %>
-              <tr>
-                <td data-label="Date"><%= l(activity.created_at, format: :short) %></td>
-                <td data-label="Activity"><%= activity.entry_type == "earn" ? "Fuel Purchase" : "Points Redeemed" %></td>
-                <td data-label="Vehicle"><%= activity.fuel_transaction&.vehicle&.vehicle_number || "N/A" %></td>
-                <td data-label="Fuel Amount">
+      <div class="loyalty-activity-list">
+        <% @activities.each do |activity| %>
+          <% vehicle = activity.fuel_transaction&.vehicle %>
+          <% point_label = activity.points.positive? ? "+#{activity.points}" : activity.points.to_s %>
+          <% point_state = activity.points.positive? ? "is-positive" : "is-negative" %>
+          <% fuel_badge = case vehicle&.fuel_type
+                         when "petrol" then { label: "P", tone: "petrol", title: "Petrol" }
+                         when "diesel" then { label: "D", tone: "diesel", title: "Diesel" }
+                         when "cng_lpg" then { label: "C", tone: "cng", title: "CNG / LPG" }
+                         end %>
+          <details class="loyalty-activity-item" data-loyalty-activity>
+            <summary class="loyalty-activity-item__summary">
+              <span class="loyalty-activity-item__date"><%= l(activity.created_at, format: :short) %></span>
+              <span class="loyalty-activity-item__points <%= point_state %>"><%= point_label %></span>
+            </summary>
+
+            <div class="loyalty-activity-item__details">
+              <% if fuel_badge.present? %>
+                <div class="loyalty-activity-item__details-header">
+                  <span
+                    class="loyalty-activity-item__fuel-badge is-<%= fuel_badge[:tone] %>"
+                    data-loyalty-fuel-badge
+                    title="<%= fuel_badge[:title] %>"
+                    aria-label="<%= fuel_badge[:title] %>"><%= fuel_badge[:label] %></span>
+                </div>
+              <% end %>
+
+              <div class="loyalty-activity-item__detail">
+                <span>Vehicle</span>
+                <strong><%= vehicle&.vehicle_number || "N/A" %></strong>
+              </div>
+              <div class="loyalty-activity-item__detail">
+                <span>Fuel Amount</span>
+                <strong>
                   <% if activity.fuel_transaction.present? %>
                     <%= number_to_currency(activity.fuel_transaction.fuel_amount, unit: "₹") %>
                   <% else %>
                     N/A
                   <% end %>
-                </td>
-                <td data-label="Points" class="<%= activity.points.positive? ? "text-success" : "text-danger" %>"><%= activity.points %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
+                </strong>
+              </div>
+            </div>
+          </details>
+        <% end %>
       </div>
     <% else %>
       <p class="text-muted mb-0">No loyalty activity found.</p>

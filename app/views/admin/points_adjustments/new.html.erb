@@ -1,7 +1,7 @@
 <% content_for :title, "Adjust Points" %>
 
-<div class="row justify-content-center">
-  <div class="col-md-6">
+<div class="row g-4" data-points-adjustment-lookup-root data-lookup-url="<%= lookup_staff_customers_path %>">
+  <div class="col-lg-7">
     <div class="card shadow-sm">
       <div class="card-body">
         <h1 class="h3 mb-3">Adjust Loyalty Points</h1>
@@ -12,13 +12,14 @@
             <%= form.label :phone_number, class: "form-label" %>
             <div class="input-group">
               <span class="input-group-text phone-prefix">+91</span>
-              <%= form.telephone_field :phone_number, class: "form-control", required: true, placeholder: "10 digit phone number", inputmode: "numeric", autocomplete: "tel-national", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit phone number", data: { phone_number_field: true } %>
+              <%= form.telephone_field :phone_number, value: @prefill_phone_number, class: "form-control", required: true, placeholder: "10 digit phone number", inputmode: "numeric", autocomplete: "off", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit phone number", data: { phone_input: true, phone_number_field: true } %>
             </div>
           </div>
 
           <div>
             <%= form.label :points, class: "form-label" %>
-            <%= form.number_field :points, class: "form-control", required: true %>
+            <%= form.number_field :points, value: @prefill_points, class: "form-control", required: true %>
+            <div class="form-text">Use positive values to add points and negative values to deduct from the customer balance.</div>
           </div>
 
           <%= form.submit "Save Adjustment", class: "btn btn-primary" %>
@@ -26,4 +27,204 @@
       </div>
     </div>
   </div>
+
+  <div class="col-lg-5">
+    <div class="card shadow-sm h-100 loyalty-result-card redemption-customer-shell">
+      <div class="card-body">
+        <div class="redemption-customer-shell__header">
+          <div>
+            <h2 class="h5 mb-1">Customer Details</h2>
+            <p class="text-muted mb-0">Review the current balance before applying a manual adjustment.</p>
+          </div>
+        </div>
+
+        <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
+          <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
+            <i class="ti ti-search"></i>
+          </div>
+          <p class="text-muted mb-0">Search by phone number to view the customer profile, current points, and registered vehicles.</p>
+        </div>
+
+        <div class="d-none redemption-customer-card" data-customer-panel>
+          <div class="redemption-customer-card__hero">
+            <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
+            <strong class="redemption-customer-card__value" data-customer-points></strong>
+            <span class="redemption-customer-card__note is-pending" data-customer-note></span>
+          </div>
+
+          <div class="redemption-customer-card__identity">
+            <div class="redemption-customer-card__identity-heading">
+              <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
+              <span class="redemption-customer-card__status" data-customer-status></span>
+            </div>
+            <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
+          </div>
+
+          <div class="redemption-customer-card__stats">
+            <div class="redemption-customer-card__stat">
+              <span class="redemption-customer-card__stat-label">Max Redeemable</span>
+              <strong class="redemption-customer-card__stat-value" data-customer-max-redeemable></strong>
+            </div>
+            <div class="redemption-customer-card__stat">
+              <span class="redemption-customer-card__stat-label">Vehicles on File</span>
+              <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
+            </div>
+          </div>
+
+          <div class="transaction-customer-card__vehicles">
+            <div class="transaction-customer-card__vehicles-header">
+              <div>
+                <h3 class="h6 mb-1">Registered Vehicles</h3>
+                <p class="small-muted mb-0">Use this list to confirm the customer profile before updating points.</p>
+              </div>
+            </div>
+
+            <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+          </div>
+        </div>
+
+        <div class="alert alert-warning d-none mt-3 mb-0" data-customer-error role="alert"></div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  (() => {
+    const initPointsAdjustmentLookup = () => {
+      const root = document.querySelector("[data-points-adjustment-lookup-root]");
+      if (!root || root.dataset.lookupBound === "true") return;
+
+      root.dataset.lookupBound = "true";
+
+      const lookupUrl = root.dataset.lookupUrl;
+      const phoneInput = root.querySelector("[data-phone-input]");
+      const placeholder = root.querySelector("[data-customer-placeholder]");
+      const panel = root.querySelector("[data-customer-panel]");
+      const errorBox = root.querySelector("[data-customer-error]");
+      const nameTarget = root.querySelector("[data-customer-name]");
+      const phoneTarget = root.querySelector("[data-customer-phone]");
+      const pointsTarget = root.querySelector("[data-customer-points]");
+      const noteTarget = root.querySelector("[data-customer-note]");
+      const statusTarget = root.querySelector("[data-customer-status]");
+      const maxRedeemableTarget = root.querySelector("[data-customer-max-redeemable]");
+      const vehiclesCountTarget = root.querySelector("[data-customer-vehicles-count]");
+      const vehiclesListTarget = root.querySelector("[data-customer-vehicles-list]");
+      const numberFormatter = new Intl.NumberFormat("en-IN");
+      let activeLookup = 0;
+
+      const clearError = () => {
+        errorBox.textContent = "";
+        errorBox.classList.add("d-none");
+      };
+
+      const showError = (message) => {
+        errorBox.textContent = message;
+        errorBox.classList.remove("d-none");
+        placeholder.classList.add("d-none");
+        panel.classList.add("d-none");
+      };
+
+      const clearState = () => {
+        clearError();
+        placeholder.classList.remove("d-none");
+        panel.classList.add("d-none");
+        nameTarget.textContent = "";
+        phoneTarget.textContent = "";
+        pointsTarget.textContent = "";
+        noteTarget.textContent = "";
+        noteTarget.className = "redemption-customer-card__note is-pending";
+        statusTarget.textContent = "";
+        statusTarget.className = "redemption-customer-card__status";
+        maxRedeemableTarget.textContent = "";
+        vehiclesCountTarget.textContent = "";
+        vehiclesListTarget.innerHTML = "";
+      };
+
+      const renderVehicles = (vehicles) => {
+        vehiclesListTarget.innerHTML = "";
+
+        if (vehicles.length === 0) {
+          const emptyState = document.createElement("div");
+          emptyState.className = "transaction-customer-card__vehicles-empty";
+          emptyState.textContent = "No registered vehicles available for this customer yet.";
+          vehiclesListTarget.appendChild(emptyState);
+          return;
+        }
+
+        vehicles.forEach((vehicle) => {
+          const item = document.createElement("div");
+          item.className = "customer-details-vehicle-row";
+          item.innerHTML = `<span class="customer-details-vehicle-row__main"><span class="customer-details-vehicle-row__number">${vehicle.vehicle_number}</span><span class="customer-details-vehicle-row__meta">${vehicle.fuel_type} · ${vehicle.vehicle_kind}</span></span>`;
+          vehiclesListTarget.appendChild(item);
+        });
+      };
+
+      const loadCustomer = async () => {
+        const phoneNumber = phoneInput.value.replace(/\D/g, "");
+
+        if (phoneNumber.length !== 10) {
+          clearState();
+          return;
+        }
+
+        const lookupId = ++activeLookup;
+
+        try {
+          const response = await fetch(`${lookupUrl}?phone_number=${encodeURIComponent(phoneNumber)}`, {
+            headers: { Accept: "application/json" }
+          });
+
+          const payload = await response.json();
+          if (lookupId !== activeLookup) return;
+
+          if (!response.ok || !payload.found) {
+            showError(payload.message || "Customer not found for that phone number.");
+            return;
+          }
+
+          clearError();
+          placeholder.classList.add("d-none");
+          panel.classList.remove("d-none");
+          nameTarget.textContent = payload.customer.name;
+          phoneTarget.textContent = payload.customer.phone_number;
+          pointsTarget.textContent = numberFormatter.format(payload.customer.total_points || 0);
+          statusTarget.textContent = payload.customer.status_label;
+          statusTarget.className = `redemption-customer-card__status ${payload.customer.active ? "is-active" : "is-inactive"}`;
+          maxRedeemableTarget.textContent = `${numberFormatter.format(payload.customer.max_redeemable_points || 0)} pts`;
+          vehiclesCountTarget.textContent = String(payload.customer.vehicles.length);
+          renderVehicles(payload.customer.vehicles);
+
+          if (payload.customer.active) {
+            noteTarget.textContent = "Ready to add or deduct points on this balance";
+            noteTarget.className = "redemption-customer-card__note is-redeemable";
+          } else {
+            noteTarget.textContent = "Customer is inactive. Adjustments will still update the balance.";
+            noteTarget.className = "redemption-customer-card__note is-pending";
+          }
+        } catch (_error) {
+          if (lookupId !== activeLookup) return;
+          showError("Unable to fetch customer details right now.");
+        }
+      };
+
+      let lookupTimer;
+
+      phoneInput.addEventListener("input", () => {
+        clearTimeout(lookupTimer);
+        lookupTimer = setTimeout(loadCustomer, 300);
+      });
+
+      phoneInput.addEventListener("blur", loadCustomer);
+
+      if (phoneInput.value.trim() !== "") {
+        loadCustomer();
+      } else {
+        clearState();
+      }
+    };
+
+    document.addEventListener("turbo:load", initPointsAdjustmentLookup);
+    document.addEventListener("DOMContentLoaded", initPointsAdjustmentLookup);
+  })();
+</script>

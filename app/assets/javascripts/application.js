@@ -236,6 +236,173 @@
     });
   };
 
+  const initializeAutoOpenModals = () => {
+    document.querySelectorAll("[data-auto-open-modal='true']").forEach((modalElement) => {
+      if (modalElement.dataset.autoOpenModalHandled === "true") return;
+
+      modalElement.dataset.autoOpenModalHandled = "true";
+      bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    });
+  };
+
+  const initializeLazyPointsLedger = () => {
+    const renderLedgerErrorState = (panel) => {
+      panel.innerHTML = `
+        <div class="customer-details-ledger-state is-error">
+          <span>Couldn't load the points ledger right now.</span>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-points-ledger-retry>Try again</button>
+        </div>
+      `;
+    };
+
+    const loadLedgerPage = async (panel, url) => {
+      if (!panel || !url || panel.dataset.pointsLedgerLoading === "true") return;
+
+      panel.dataset.pointsLedgerLoading = "true";
+
+      if (panel.dataset.pointsLedgerLoaded !== "true") {
+        panel.innerHTML = `
+          <div class="customer-details-ledger-state is-loading" data-points-ledger-status>
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>Loading points ledger...</span>
+          </div>
+        `;
+      }
+
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Accept": "text/html",
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          credentials: "same-origin"
+        });
+
+        if (!response.ok) throw new Error(`Failed with status ${response.status}`);
+
+        panel.innerHTML = await response.text();
+        panel.dataset.pointsLedgerLoaded = "true";
+        panel.dataset.pointsLedgerUrl = url;
+      } catch (error) {
+        renderLedgerErrorState(panel);
+      } finally {
+        panel.dataset.pointsLedgerLoading = "false";
+      }
+    };
+
+    document.querySelectorAll("[data-points-ledger-panel]").forEach((panel) => {
+      if (panel.dataset.pointsLedgerBound === "true") return;
+
+      panel.dataset.pointsLedgerBound = "true";
+      const modalElement = panel.closest(".modal");
+      const initialUrl = panel.dataset.pointsLedgerUrl;
+      if (!modalElement || !initialUrl) return;
+
+      modalElement.addEventListener("shown.bs.modal", () => {
+        loadLedgerPage(panel, panel.dataset.pointsLedgerUrl || initialUrl);
+      });
+    });
+
+    if (window.__fuelLoyaltyPointsLedgerClickBound) return;
+
+    window.__fuelLoyaltyPointsLedgerClickBound = true;
+
+    document.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[data-points-ledger-page-link], [data-points-ledger-retry]");
+      if (!trigger) return;
+
+      const panel = trigger.closest("[data-points-ledger-panel]");
+      if (!panel) return;
+
+      event.preventDefault();
+
+      if (trigger.hasAttribute("disabled")) return;
+
+      const nextUrl = trigger.dataset.pointsLedgerPageLink || panel.dataset.pointsLedgerUrl;
+      loadLedgerPage(panel, nextUrl);
+    });
+  };
+
+  const initializeLazyTransactionHistory = () => {
+    const renderTransactionHistoryErrorState = (panel) => {
+      panel.innerHTML = `
+        <div class="customer-details-ledger-state is-error">
+          <span>Couldn't load more transactions right now.</span>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-transaction-history-retry>Try again</button>
+        </div>
+      `;
+    };
+
+    const loadTransactionHistoryPage = async (panel, url) => {
+      if (!panel || !url || panel.dataset.transactionHistoryLoading === "true") return;
+
+      panel.dataset.transactionHistoryLoading = "true";
+
+      if (panel.dataset.transactionHistoryLoaded !== "true") {
+        panel.innerHTML = `
+          <div class="customer-details-ledger-state is-loading" data-transaction-history-status>
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>Loading more transactions...</span>
+          </div>
+        `;
+      }
+
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Accept": "text/html",
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          credentials: "same-origin"
+        });
+
+        if (!response.ok) throw new Error(`Failed with status ${response.status}`);
+
+        panel.innerHTML = await response.text();
+        panel.dataset.transactionHistoryLoaded = "true";
+        panel.dataset.transactionHistoryUrl = url;
+      } catch (error) {
+        renderTransactionHistoryErrorState(panel);
+      } finally {
+        panel.dataset.transactionHistoryLoading = "false";
+      }
+    };
+
+    document.querySelectorAll("[data-transaction-history-panel]").forEach((panel) => {
+      if (panel.dataset.transactionHistoryBound === "true") return;
+
+      panel.dataset.transactionHistoryBound = "true";
+      const modalElement = panel.closest(".modal");
+      const initialUrl = panel.dataset.transactionHistoryUrl;
+      if (!modalElement || !initialUrl) return;
+
+      modalElement.addEventListener("shown.bs.modal", () => {
+        loadTransactionHistoryPage(panel, panel.dataset.transactionHistoryUrl || initialUrl);
+      });
+    });
+
+    if (window.__fuelLoyaltyTransactionHistoryClickBound) return;
+
+    window.__fuelLoyaltyTransactionHistoryClickBound = true;
+
+    document.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[data-transaction-history-page-link], [data-transaction-history-retry]");
+      if (!trigger) return;
+
+      const panel = trigger.closest("[data-transaction-history-panel]");
+      if (!panel) return;
+
+      event.preventDefault();
+
+      if (trigger.hasAttribute("disabled")) return;
+
+      const nextUrl = trigger.dataset.transactionHistoryPageLink || panel.dataset.transactionHistoryUrl;
+      loadTransactionHistoryPage(panel, nextUrl);
+    });
+  };
+
   const normalizePhoneNumberInput = (value) => value.replace(/\D/g, "").slice(0, 10);
 
   const syncPhoneNumberValidity = (input) => {
@@ -270,6 +437,228 @@
       input.addEventListener("invalid", () => {
         syncPhoneNumberValidity(input);
       });
+    });
+  };
+
+  const initializeLoyaltyPointsHero = () => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    document.querySelectorAll("[data-loyalty-points-hero]").forEach((hero) => {
+      const confettiLayer = hero.querySelector("[data-loyalty-confetti]");
+      const pointsValue = hero.querySelector("[data-loyalty-points-value]");
+      if (!confettiLayer) return;
+
+      const targetPoints = Number(pointsValue?.dataset.loyaltyPointsTarget || 0);
+      const renderPointsValue = (value) => {
+        if (!pointsValue) return;
+
+        pointsValue.textContent = `${value}`;
+      };
+
+      window.clearTimeout(hero.__loyaltyPointsResetTimer);
+      window.clearTimeout(hero.__loyaltyPointsBounceTimer);
+      window.clearTimeout(hero.__loyaltyPointsCleanupTimer);
+      window.cancelAnimationFrame(hero.__loyaltyPointsCountFrame);
+      confettiLayer.classList.remove("is-fading");
+      confettiLayer.replaceChildren();
+      hero.classList.remove("is-celebrating");
+      hero.classList.remove("is-points-bouncing");
+      renderPointsValue(0);
+
+      if (prefersReducedMotion) {
+        renderPointsValue(targetPoints);
+        return;
+      }
+
+      const countDuration = 1100;
+      const startTime = performance.now();
+      const countUp = (timestamp) => {
+        const progress = Math.min((timestamp - startTime) / countDuration, 1);
+        const easedProgress = 1 - ((1 - progress) ** 3);
+        const currentValue = Math.round(targetPoints * easedProgress);
+
+        renderPointsValue(currentValue);
+
+        if (progress < 1) {
+          hero.__loyaltyPointsCountFrame = window.requestAnimationFrame(countUp);
+        }
+      };
+
+      hero.__loyaltyPointsCountFrame = window.requestAnimationFrame(countUp);
+
+      const css = getComputedStyle(document.documentElement);
+      const colors = [
+        css.getPropertyValue("--fl-primary").trim() || "#43b150",
+        "#7dd3fc",
+        "#fbbf24",
+        "#fb7185",
+        "#f97316",
+        "#a3e635",
+        css.getPropertyValue("--fl-success").trim() || "#198754"
+      ];
+      const pointsBlock = hero.querySelector(".loyalty-result-hero__points");
+      const heroRect = hero.getBoundingClientRect();
+      const pointsRect = pointsBlock?.getBoundingClientRect();
+      const centerX = pointsRect
+        ? ((pointsRect.left + pointsRect.width / 2 - heroRect.left) / heroRect.width) * 100
+        : 50;
+      const centerY = pointsRect
+        ? ((pointsRect.top + pointsRect.height / 2 - heroRect.top) / heroRect.height) * 100
+        : 34;
+      const leftAnchor = Math.max(14, centerX - 24);
+      const leftInnerAnchor = Math.max(26, centerX - 12);
+      const rightInnerAnchor = Math.min(74, centerX + 12);
+      const rightAnchor = Math.min(86, centerX + 24);
+      const bottomLaunchY = Math.min(128, Math.max(116, centerY + 86));
+
+      const appendConfettiBurst = ({ originX, originY, count, direction, delayBase, centerSpread = 214, verticalLift = null }) => {
+        Array.from({ length: count }).forEach((_, index) => {
+          const piece = document.createElement("span");
+          const horizontalBias = direction === "left" ? -1 : direction === "right" ? 1 : 0;
+          const horizontalSpread = 48 + Math.random() * 152;
+          const horizontalDrift = horizontalBias === 0
+            ? (Math.random() - 0.5) * centerSpread
+            : horizontalBias * horizontalSpread + (Math.random() - 0.5) * 34;
+          const upwardLift = verticalLift === null
+            ? -72 - Math.random() * 156
+            : verticalLift.min + Math.random() * (verticalLift.max - verticalLift.min);
+
+          piece.className = "loyalty-result-confetti__piece";
+          piece.style.setProperty("--confetti-origin-x", `${originX}%`);
+          piece.style.setProperty("--confetti-origin-y", `${originY}%`);
+          piece.style.setProperty("--confetti-color", colors[(index + Math.round(originX)) % colors.length]);
+          piece.style.setProperty("--confetti-size", `${(9 + Math.random() * 10).toFixed(2)}px`);
+          piece.style.setProperty("--confetti-delay", `${(delayBase + Math.random() * 0.26).toFixed(2)}s`);
+          piece.style.setProperty("--confetti-duration", `${(2.2 + Math.random() * 0.85).toFixed(2)}s`);
+          piece.style.setProperty("--confetti-rotate", `${Math.round(Math.random() * 360 - 180)}deg`);
+          piece.style.setProperty("--confetti-x", `${horizontalDrift.toFixed(2)}px`);
+          piece.style.setProperty("--confetti-y", `${upwardLift.toFixed(2)}px`);
+          confettiLayer.appendChild(piece);
+        });
+      };
+
+      const appendFirework = ({ x, y, angle, delay, color }) => {
+        const firework = document.createElement("span");
+        const trail = document.createElement("span");
+        const burst = document.createElement("span");
+        const spark = document.createElement("span");
+
+        firework.className = "loyalty-result-firework";
+        trail.className = "loyalty-result-firework__trail";
+        burst.className = "loyalty-result-firework__burst";
+        spark.className = "loyalty-result-firework__spark";
+
+        firework.style.setProperty("--firework-x", `${x}%`);
+        firework.style.setProperty("--firework-y", `${y}%`);
+        firework.style.setProperty("--firework-angle", `${angle}deg`);
+        firework.style.setProperty("--firework-delay", `${delay.toFixed(2)}s`);
+        firework.style.setProperty("--firework-duration", `${(1.5 + Math.random() * 0.35).toFixed(2)}s`);
+        firework.style.setProperty("--firework-trail-length", `${(5.6 + Math.random() * 1.8).toFixed(2)}rem`);
+        firework.style.setProperty("--firework-burst-size", `${(2.8 + Math.random() * 0.7).toFixed(2)}rem`);
+        firework.style.setProperty("--firework-color", color);
+
+        firework.appendChild(trail);
+        firework.appendChild(burst);
+        firework.appendChild(spark);
+        confettiLayer.appendChild(firework);
+      };
+
+      [
+        { x: leftAnchor, y: centerY - 8, angle: -28, delay: 0.02, color: "#fbbf24" },
+        { x: centerX, y: centerY - 12, angle: 0, delay: 0.12, color: "#fde047" },
+        { x: leftInnerAnchor, y: centerY - 10, angle: -18, delay: 0.18, color: "#7dd3fc" },
+        { x: rightAnchor, y: centerY - 8, angle: 28, delay: 0.08, color: css.getPropertyValue("--fl-primary").trim() || "#43b150" },
+        { x: rightInnerAnchor, y: centerY - 10, angle: 18, delay: 0.26, color: "#fb7185" }
+      ].forEach(appendFirework);
+
+      appendConfettiBurst({
+        originX: leftAnchor,
+        originY: bottomLaunchY - 3,
+        count: 24,
+        direction: "left",
+        delayBase: 0.48,
+        verticalLift: { min: -168, max: -292 }
+      });
+      appendConfettiBurst({
+        originX: leftInnerAnchor,
+        originY: bottomLaunchY - 6,
+        count: 14,
+        direction: "center",
+        delayBase: 0.62,
+        centerSpread: 150,
+        verticalLift: { min: -154, max: -276 }
+      });
+      appendConfettiBurst({
+        originX: centerX,
+        originY: bottomLaunchY - 8,
+        count: 28,
+        direction: "center",
+        delayBase: 0.36,
+        centerSpread: 104,
+        verticalLift: { min: -208, max: -334 }
+      });
+      appendConfettiBurst({
+        originX: rightInnerAnchor,
+        originY: bottomLaunchY - 6,
+        count: 14,
+        direction: "center",
+        delayBase: 0.68,
+        centerSpread: 150,
+        verticalLift: { min: -154, max: -276 }
+      });
+      appendConfettiBurst({
+        originX: rightAnchor,
+        originY: bottomLaunchY - 3,
+        count: 24,
+        direction: "right",
+        delayBase: 0.54,
+        verticalLift: { min: -168, max: -292 }
+      });
+      appendConfettiBurst({
+        originX: Math.max(10, centerX - 32),
+        originY: bottomLaunchY,
+        count: 10,
+        direction: "right",
+        delayBase: 0.74,
+        centerSpread: 118,
+        verticalLift: { min: -132, max: -248 }
+      });
+      appendConfettiBurst({
+        originX: Math.min(90, centerX + 32),
+        originY: bottomLaunchY,
+        count: 10,
+        direction: "left",
+        delayBase: 0.78,
+        centerSpread: 118,
+        verticalLift: { min: -132, max: -248 }
+      });
+      appendConfettiBurst({
+        originX: centerX,
+        originY: bottomLaunchY + 2,
+        count: 12,
+        direction: "center",
+        delayBase: 0.86,
+        centerSpread: 126,
+        verticalLift: { min: -144, max: -262 }
+      });
+
+      requestAnimationFrame(() => {
+        hero.classList.add("is-celebrating");
+      });
+
+      hero.__loyaltyPointsResetTimer = window.setTimeout(() => {
+        hero.classList.remove("is-celebrating");
+        confettiLayer.classList.add("is-fading");
+      }, 1400);
+
+      hero.__loyaltyPointsBounceTimer = window.setTimeout(() => {
+        hero.classList.add("is-points-bouncing");
+      }, 1100);
+
+      hero.__loyaltyPointsCleanupTimer = window.setTimeout(() => {
+        hero.classList.remove("is-points-bouncing");
+        confettiLayer.replaceChildren();
+      }, 2100);
     });
   };
 
@@ -416,8 +805,16 @@
   document.addEventListener("DOMContentLoaded", initializeSidebar);
   document.addEventListener("turbo:load", initializeConfirmModal);
   document.addEventListener("DOMContentLoaded", initializeConfirmModal);
+  document.addEventListener("turbo:load", initializeAutoOpenModals);
+  document.addEventListener("DOMContentLoaded", initializeAutoOpenModals);
+  document.addEventListener("turbo:load", initializeLazyPointsLedger);
+  document.addEventListener("DOMContentLoaded", initializeLazyPointsLedger);
+  document.addEventListener("turbo:load", initializeLazyTransactionHistory);
+  document.addEventListener("DOMContentLoaded", initializeLazyTransactionHistory);
   document.addEventListener("turbo:load", initializePhoneNumberFields);
   document.addEventListener("DOMContentLoaded", initializePhoneNumberFields);
+  document.addEventListener("turbo:load", initializeLoyaltyPointsHero);
+  document.addEventListener("DOMContentLoaded", initializeLoyaltyPointsHero);
   document.addEventListener("turbo:load", initializeInstallPrompt);
   document.addEventListener("DOMContentLoaded", initializeInstallPrompt);
   bindInstallPromptEvents();

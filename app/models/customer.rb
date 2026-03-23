@@ -25,6 +25,8 @@ class Customer < ApplicationRecord
   end
 
   def total_points
+    return self[:total_points_sum].to_i if has_attribute?(:total_points_sum)
+
     points_ledgers.sum(:points)
   end
 

@@ -9,13 +9,13 @@
           <span class="logo-text">Fuel Loyalty</span>
         </div>
         <h1 class="card-title mb-2 h4">Sign in to your account</h1>
-        <p class="small-muted mb-0">Use your username or email address to continue.</p>
+        <p class="small-muted mb-0">Use your username or mobile number to continue.</p>
       </div>
 
       <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { class: "vstack gap-3" }) do |form| %>
         <div>
-          <%= form.label :login, "Username or Email", class: "form-label" %>
-          <%= form.text_field :login, autofocus: true, autocomplete: "username", class: "form-control", placeholder: "name@example.com", required: true %>
+          <%= form.label :login, "Username or Mobile Number", class: "form-label" %>
+          <%= form.text_field :login, autofocus: true, autocomplete: "username", class: "form-control", placeholder: "username or 10 digit mobile number", required: true %>
         </div>
 
         <div>

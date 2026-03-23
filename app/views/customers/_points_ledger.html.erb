@@ -1,0 +1,38 @@
+<% showing_from = total_remaining_entries.zero? ? 0 : ((current_page - 1) * CustomerPointsLedgerRendering::POINTS_LEDGER_PER_PAGE) + 1 %>
+<% showing_to = total_remaining_entries.zero? ? 0 : showing_from + points_ledger_entries.size - 1 %>
+
+<% if points_ledger_entries.any? %>
+  <div class="customer-details-vehicle-list customer-details-ledger-list">
+    <%= render "customers/points_ledger_rows", points_ledger_entries: %>
+  </div>
+<% else %>
+  <p class="text-muted mb-0">No more ledger entries to show.</p>
+<% end %>
+
+<% if total_remaining_entries.positive? %>
+  <div class="customer-details-ledger-pagination">
+    <div class="customer-details-ledger-pagination__summary">
+      Showing <strong><%= showing_from %>-<%= showing_to %></strong> of <strong><%= total_remaining_entries %></strong> more entries
+    </div>
+
+    <% if total_pages > 1 %>
+      <div class="customer-details-ledger-pagination__actions">
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          data-points-ledger-page-link="<%= customer_points_ledger_path_for(customer, page: current_page - 1) %>"
+          <%= "disabled" if current_page <= 1 %>>
+          Previous
+        </button>
+        <span class="customer-details-ledger-pagination__status">Page <strong><%= current_page %></strong> of <%= total_pages %></span>
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          data-points-ledger-page-link="<%= customer_points_ledger_path_for(customer, page: current_page + 1) %>"
+          <%= "disabled" if current_page >= total_pages %>>
+          Next
+        </button>
+      </div>
+    <% end %>
+  </div>
+<% end %>

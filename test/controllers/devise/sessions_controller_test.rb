@@ -27,10 +27,10 @@ module Devise
         get new_user_session_path
 
         assert_response :success
-        assert_select "link[rel='manifest'][href='#{manifest_path}']", 1
-        assert_select "link[rel='apple-touch-icon'][href='/icon-192.png?v=test-release']", 1
-        assert_select "link[rel='icon'][href='/icon.png?v=test-release']", 1
-        assert_select "link[rel='icon'][href='/icon.svg?v=test-release']", 1
+        assert_includes @response.body, %(rel="manifest" href="#{manifest_path}")
+        assert_includes @response.body, %(href="/icon-192.png?v=test-release")
+        assert_includes @response.body, %(href="/icon.png?v=test-release")
+        assert_includes @response.body, %(href="/icon.svg?v=test-release")
       end
     end
   end

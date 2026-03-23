@@ -1,79 +1,291 @@
 <% content_for :title, "New Transaction" %>
+<% active_lookup_mode = @active_lookup_mode.presence_in(%w[phone vehicle]) || "phone" %>
+<% phone_tab_active = active_lookup_mode == "phone" %>
+<% vehicle_tab_active = active_lookup_mode == "vehicle" %>
 
-<div class="row g-4" data-customer-lookup-root data-lookup-url="<%= lookup_staff_customers_path %>" data-selected-vehicle-id="<%= @prefill_vehicle_id %>">
-  <div class="col-lg-7">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h1 class="h3 mb-3">Record Fuel Transaction</h1>
-        <p class="text-muted">Enter the customer's phone number to load their profile, then select the vehicle for this visit.</p>
+<div class="card shadow-sm mb-4 transaction-entry-shell">
+  <div class="card-body">
+    <h1 class="h3 mb-2">Record Fuel Transaction</h1>
+    <p class="text-muted mb-3">Find the customer for this visit using a phone number or vehicle number, then record the fuel amount.</p>
 
-        <% if @errors.present? %>
-          <div class="alert alert-danger"><%= @errors.to_sentence %></div>
-        <% end %>
+    <ul class="nav nav-pills transaction-entry-tabs" id="transactionEntryTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link <%= "active" if phone_tab_active %>"
+          id="transaction-phone-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#transaction-phone-pane"
+          type="button"
+          role="tab"
+          aria-controls="transaction-phone-pane"
+          aria-selected="<%= phone_tab_active %>">
+          <span class="transaction-entry-tabs__header">
+            <span class="transaction-entry-tabs__icon" aria-hidden="true">
+              <i class="ti ti-device-mobile"></i>
+            </span>
+            <span class="transaction-entry-tabs__title">Phone Number</span>
+          </span>
+          <span class="transaction-entry-tabs__meta">Find the customer first, then choose a vehicle.</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link <%= "active" if vehicle_tab_active %>"
+          id="transaction-vehicle-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#transaction-vehicle-pane"
+          type="button"
+          role="tab"
+          aria-controls="transaction-vehicle-pane"
+          aria-selected="<%= vehicle_tab_active %>">
+          <span class="transaction-entry-tabs__header">
+            <span class="transaction-entry-tabs__icon" aria-hidden="true">
+              <i class="ti ti-car"></i>
+            </span>
+            <span class="transaction-entry-tabs__title">Vehicle Number</span>
+          </span>
+          <span class="transaction-entry-tabs__meta">Match the vehicle plate to the right customer profile.</span>
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>
 
-        <%= form_with scope: :transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
-          <div>
-            <%= form.label :phone_number, class: "form-label" %>
-            <div class="input-group">
-              <span class="input-group-text phone-prefix">+91</span>
-              <%= form.telephone_field :phone_number, value: @prefill_phone_number, class: "form-control", required: true, placeholder: "10 digit phone number", inputmode: "numeric", autocomplete: "off", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit phone number", data: { phone_input: true, phone_number_field: true } %>
+<div class="tab-content transaction-entry-content">
+  <div
+    class="tab-pane fade <%= "show active" if phone_tab_active %>"
+    id="transaction-phone-pane"
+    role="tabpanel"
+    aria-labelledby="transaction-phone-tab"
+    tabindex="0">
+    <div
+      class="row g-4"
+      data-transaction-phone-root
+      data-lookup-url="<%= lookup_staff_customers_path %>"
+      data-selected-vehicle-id="<%= phone_tab_active ? @prefill_vehicle_id : "" %>">
+      <div class="col-lg-7">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="h4 mb-3">Lookup by Phone</h2>
+            <p class="text-muted">Enter the customer's phone number to load the profile, then choose the vehicle for this visit.</p>
+
+            <% if phone_tab_active && @errors.present? %>
+              <div class="alert alert-danger"><%= @errors.to_sentence %></div>
+            <% end %>
+
+            <%= form_with scope: :transaction, namespace: :phone_transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
+              <%= form.hidden_field :lookup_mode, value: "phone" %>
+
+              <div>
+                <%= form.label :phone_number, class: "form-label" %>
+                <div class="input-group">
+                  <span class="input-group-text phone-prefix">+91</span>
+                  <%= form.telephone_field :phone_number,
+                    value: phone_tab_active ? @prefill_phone_number : nil,
+                    class: "form-control",
+                    required: true,
+                    placeholder: "10 digit phone number",
+                    inputmode: "numeric",
+                    autocomplete: "off",
+                    maxlength: 10,
+                    pattern: "\\d{10}",
+                    title: "Enter a 10 digit phone number",
+                    data: { phone_input: true, phone_number_field: true } %>
+                </div>
+                <div class="form-text">Customer must already exist. Use the customer screen to register a new customer or add more vehicles.</div>
+              </div>
+
+              <div>
+                <%= form.label :vehicle_id, "Vehicle", class: "form-label" %>
+                <%= form.select :vehicle_id, [], { prompt: "Select a vehicle" }, class: "form-select", required: true, disabled: true, data: { vehicle_select: true } %>
+              </div>
+
+              <div>
+                <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
+                <%= form.number_field :fuel_amount, value: phone_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
+              </div>
+
+              <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="card shadow-sm h-100 loyalty-result-card redemption-customer-shell transaction-customer-shell">
+          <div class="card-body">
+            <div class="redemption-customer-shell__header">
+              <div>
+                <h2 class="h5 mb-1">Customer Details</h2>
+                <p class="text-muted mb-0">Review the profile and choose the right vehicle before recording fuel.</p>
+              </div>
             </div>
-            <div class="form-text">Customer must already exist. Use the customer screen to register a new customer or add more vehicles.</div>
-          </div>
 
-          <div>
-            <%= form.label :vehicle_id, "Vehicle", class: "form-label" %>
-            <%= form.select :vehicle_id, [], { prompt: "Select a vehicle" }, class: "form-select", required: true, disabled: true, data: { vehicle_select: true } %>
-          </div>
+            <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
+              <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
+                <i class="ti ti-search"></i>
+              </div>
+              <p class="text-muted mb-0">Search by phone number to view the customer profile and available vehicles.</p>
+            </div>
 
-          <div>
-            <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
-            <%= form.number_field :fuel_amount, value: @prefill_fuel_amount, class: "form-control", step: "0.01", min: 1, required: true %>
-          </div>
+            <div class="d-none redemption-customer-card transaction-customer-card" data-customer-panel>
+              <div class="redemption-customer-card__hero">
+                <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
+                <strong class="redemption-customer-card__value" data-customer-points></strong>
+                <span class="redemption-customer-card__note is-pending" data-customer-note></span>
+              </div>
 
-          <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
-        <% end %>
+              <div class="redemption-customer-card__identity">
+                <div class="redemption-customer-card__identity-heading">
+                  <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
+                  <span class="redemption-customer-card__status" data-customer-status></span>
+                </div>
+                <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
+              </div>
+
+              <div class="redemption-customer-card__stats transaction-customer-card__stats">
+                <div class="redemption-customer-card__stat">
+                  <span class="redemption-customer-card__stat-label">Vehicles on File</span>
+                  <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
+                </div>
+                <div class="redemption-customer-card__stat">
+                  <span class="redemption-customer-card__stat-label">Selected Vehicle</span>
+                  <strong class="redemption-customer-card__stat-value transaction-customer-card__stat-value" data-customer-selected-vehicle></strong>
+                </div>
+              </div>
+
+              <div class="transaction-customer-card__vehicles">
+                <div class="transaction-customer-card__vehicles-header">
+                  <div>
+                    <h3 class="h6 mb-1">Registered Vehicles</h3>
+                    <p class="small-muted mb-0">Tap a vehicle here or choose from the selector on the left.</p>
+                  </div>
+                </div>
+
+                <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+              </div>
+            </div>
+
+            <div class="alert alert-warning d-none mt-3 mb-0" data-customer-error role="alert"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="col-lg-5">
-    <div class="card shadow-sm h-100">
-      <div class="card-body">
-        <h2 class="h5 mb-3">Customer Details</h2>
+  <div
+    class="tab-pane fade <%= "show active" if vehicle_tab_active %>"
+    id="transaction-vehicle-pane"
+    role="tabpanel"
+    aria-labelledby="transaction-vehicle-tab"
+    tabindex="0">
+    <div
+      class="row g-4"
+      data-transaction-vehicle-root
+      data-lookup-url="<%= lookup_staff_transactions_path %>"
+      data-selected-vehicle-id="<%= vehicle_tab_active ? @prefill_vehicle_id : "" %>">
+      <div class="col-lg-7">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="h4 mb-3">Lookup by Vehicle</h2>
+            <p class="text-muted">Enter the vehicle number to find the customer. If multiple customers share the same vehicle number, choose the correct profile before saving.</p>
 
-        <div data-customer-placeholder>
-          <p class="text-muted mb-0">Search by phone number to load the customer profile and available vehicles.</p>
-        </div>
+            <% if vehicle_tab_active && @errors.present? %>
+              <div class="alert alert-danger"><%= @errors.to_sentence %></div>
+            <% end %>
 
-        <div class="d-none" data-customer-panel>
-          <dl class="row mb-0 detail-grid">
-            <dt class="col-sm-5 text-muted">Name</dt>
-            <dd class="col-sm-7" data-customer-name></dd>
+            <%= form_with scope: :transaction, namespace: :vehicle_transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
+              <%= form.hidden_field :lookup_mode, value: "vehicle" %>
 
-            <dt class="col-sm-5 text-muted">Phone</dt>
-            <dd class="col-sm-7" data-customer-phone></dd>
+              <div>
+                <%= form.label :vehicle_number, "Vehicle Number", class: "form-label" %>
+                <%= form.text_field :vehicle_number,
+                  value: vehicle_tab_active ? @prefill_vehicle_number : nil,
+                  class: "form-control",
+                  required: true,
+                  placeholder: "Enter vehicle number",
+                  autocomplete: "off",
+                  spellcheck: "false",
+                  autocapitalize: "characters",
+                  title: "Enter a valid vehicle number",
+                  data: { vehicle_number_input: true } %>
+                <div class="form-text">Use the full vehicle number as printed on the plate.</div>
+              </div>
 
-            <dt class="col-sm-5 text-muted">Status</dt>
-            <dd class="col-sm-7">
-              <span class="badge rounded-pill" data-customer-status></span>
-            </dd>
+              <div>
+                <%= form.label :vehicle_id, "Matching Customer", class: "form-label" %>
+                <%= form.select :vehicle_id, [], { prompt: "Select the matching customer" }, class: "form-select", required: true, disabled: true, data: { vehicle_select: true } %>
+              </div>
 
-            <dt class="col-sm-5 text-muted">Points</dt>
-            <dd class="col-sm-7" data-customer-points></dd>
+              <div>
+                <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
+                <%= form.number_field :fuel_amount, value: vehicle_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
+              </div>
 
-            <dt class="col-sm-5 text-muted">Vehicles</dt>
-            <dd class="col-sm-7" data-customer-vehicles-count></dd>
-          </dl>
-
-          <hr>
-          <div>
-            <h3 class="h6">Registered Vehicles</h3>
-            <ul class="list-group list-group-flush" data-customer-vehicles-list></ul>
+              <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
+            <% end %>
           </div>
         </div>
+      </div>
 
-        <div class="alert alert-warning d-none mt-3 mb-0" data-customer-error role="alert"></div>
+      <div class="col-lg-5">
+        <div class="card shadow-sm h-100 loyalty-result-card redemption-customer-shell transaction-customer-shell">
+          <div class="card-body">
+            <div class="redemption-customer-shell__header">
+              <div>
+                <h2 class="h5 mb-1">Matched Customer</h2>
+                <p class="text-muted mb-0">Confirm the matched profile and vehicle before recording this transaction.</p>
+              </div>
+            </div>
+
+            <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
+              <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
+                <i class="ti ti-car"></i>
+              </div>
+              <p class="text-muted mb-0">Search by vehicle number to load the customer profile and matched vehicle.</p>
+            </div>
+
+            <div class="d-none redemption-customer-card transaction-customer-card" data-customer-panel>
+              <div class="redemption-customer-card__hero">
+                <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
+                <strong class="redemption-customer-card__value" data-customer-points></strong>
+                <span class="redemption-customer-card__note is-pending" data-customer-note></span>
+              </div>
+
+              <div class="redemption-customer-card__identity">
+                <div class="redemption-customer-card__identity-heading">
+                  <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
+                  <span class="redemption-customer-card__status" data-customer-status></span>
+                </div>
+                <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
+              </div>
+
+              <div class="redemption-customer-card__stats transaction-customer-card__stats">
+                <div class="redemption-customer-card__stat">
+                  <span class="redemption-customer-card__stat-label">Vehicles on File</span>
+                  <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
+                </div>
+                <div class="redemption-customer-card__stat">
+                  <span class="redemption-customer-card__stat-label">Selected Vehicle</span>
+                  <strong class="redemption-customer-card__stat-value transaction-customer-card__stat-value" data-customer-selected-vehicle></strong>
+                </div>
+              </div>
+
+              <div class="transaction-customer-card__vehicles">
+                <div class="transaction-customer-card__vehicles-header">
+                  <div>
+                    <h3 class="h6 mb-1">Registered Vehicles</h3>
+                    <p class="small-muted mb-0">The matched vehicle is highlighted below so the visit can be verified quickly.</p>
+                  </div>
+                </div>
+
+                <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+              </div>
+            </div>
+
+            <div class="alert alert-warning d-none mt-3 mb-0" data-customer-error role="alert"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -81,17 +293,38 @@
 
 <script>
   (() => {
-    const initLookup = () => {
-      const root = document.querySelector("[data-customer-lookup-root]");
-      if (!root || root.dataset.lookupBound === "true") return;
+    const numberFormatter = new Intl.NumberFormat("en-IN");
+    const vehicleNumberPattern = /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$|^[0-9]{2}BH[0-9]{4}[A-Z]{2}$/;
+    const normalizeVehicleNumberInput = (value) => value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-      root.dataset.lookupBound = "true";
+    const buildVehicleRows = (target, vehicles, { selectedVehicleId, onVehicleSelect, emptyMessage }) => {
+      target.innerHTML = "";
 
-      const lookupUrl = root.dataset.lookupUrl;
-      const phoneInput = root.querySelector("[data-phone-input]");
-      const vehicleSelect = root.querySelector("[data-vehicle-select]");
-      const submitButton = root.querySelector("[data-submit-button]");
-      const selectedVehicleId = root.dataset.selectedVehicleId;
+      if (vehicles.length === 0) {
+        const emptyState = document.createElement("div");
+        emptyState.className = "transaction-customer-card__vehicles-empty";
+        emptyState.textContent = emptyMessage;
+        target.appendChild(emptyState);
+        return;
+      }
+
+      vehicles.forEach((vehicle) => {
+        const element = document.createElement(onVehicleSelect ? "button" : "div");
+        if (onVehicleSelect) {
+          element.type = "button";
+          element.addEventListener("click", () => onVehicleSelect(vehicle));
+        }
+
+        element.className = "customer-details-vehicle-row transaction-customer-card__vehicle-row";
+        element.dataset.vehicleItem = "true";
+        element.dataset.vehicleId = String(vehicle.id);
+        element.classList.toggle("is-selected", String(vehicle.id) === String(selectedVehicleId || ""));
+        element.innerHTML = `<span class="customer-details-vehicle-row__main"><span class="customer-details-vehicle-row__number">${vehicle.vehicle_number}</span><span class="customer-details-vehicle-row__meta">${vehicle.fuel_type} · ${vehicle.vehicle_kind}</span></span>`;
+        target.appendChild(element);
+      });
+    };
+
+    const createCustomerCardController = (root) => {
       const placeholder = root.querySelector("[data-customer-placeholder]");
       const panel = root.querySelector("[data-customer-panel]");
       const errorBox = root.querySelector("[data-customer-error]");
@@ -99,146 +332,405 @@
       const phoneTarget = root.querySelector("[data-customer-phone]");
       const statusTarget = root.querySelector("[data-customer-status]");
       const pointsTarget = root.querySelector("[data-customer-points]");
+      const noteTarget = root.querySelector("[data-customer-note]");
       const vehiclesCountTarget = root.querySelector("[data-customer-vehicles-count]");
+      const selectedVehicleTarget = root.querySelector("[data-customer-selected-vehicle]");
       const vehiclesListTarget = root.querySelector("[data-customer-vehicles-list]");
-      let activeLookup = 0;
-      let customerActive = false;
-
-      const resetVehicleSelect = () => {
-        vehicleSelect.innerHTML = "";
-        const prompt = document.createElement("option");
-        prompt.value = "";
-        prompt.textContent = "Select a vehicle";
-        vehicleSelect.appendChild(prompt);
-        vehicleSelect.value = "";
-        vehicleSelect.disabled = true;
-        submitButton.disabled = true;
-      };
-
-      const syncSubmitState = () => {
-        submitButton.disabled = vehicleSelect.value === "" || !customerActive;
-      };
-
-      const renderVehicles = (vehicles) => {
-        resetVehicleSelect();
-        vehiclesListTarget.innerHTML = "";
-
-        vehicles.forEach((vehicle) => {
-          const option = document.createElement("option");
-          option.value = vehicle.id;
-          option.textContent = vehicle.display_name;
-          vehicleSelect.appendChild(option);
-
-          const item = document.createElement("li");
-          item.className = "list-group-item vehicle-mini-card";
-          item.innerHTML = `<div class="fw-semibold">${vehicle.vehicle_number}</div><div class="small text-muted">${vehicle.fuel_type} | ${vehicle.vehicle_kind}</div>`;
-          vehiclesListTarget.appendChild(item);
-        });
-
-        if (vehicles.length > 0) {
-          vehicleSelect.disabled = false;
-          if (selectedVehicleId) {
-            vehicleSelect.value = selectedVehicleId;
-          }
-          syncSubmitState();
-        }
-      };
-
-      const showError = (message, { keepPanel = false } = {}) => {
-        errorBox.textContent = message;
-        errorBox.classList.remove("d-none");
-        placeholder.classList.add("d-none");
-        panel.classList.toggle("d-none", !keepPanel);
-        resetVehicleSelect();
-      };
 
       const clearError = () => {
         errorBox.textContent = "";
         errorBox.classList.add("d-none");
       };
 
-      const clearState = () => {
+      const setError = (message, { keepPanel = false } = {}) => {
+        errorBox.textContent = message;
+        errorBox.classList.remove("d-none");
+        panel.classList.toggle("d-none", !keepPanel);
+        placeholder.classList.toggle("d-none", keepPanel);
+      };
+
+      const clearPanel = () => {
         clearError();
         panel.classList.add("d-none");
         placeholder.classList.remove("d-none");
         nameTarget.textContent = "";
         phoneTarget.textContent = "";
-        pointsTarget.textContent = "";
         statusTarget.textContent = "";
-        statusTarget.className = "badge rounded-pill";
+        statusTarget.className = "redemption-customer-card__status";
+        pointsTarget.textContent = "";
+        noteTarget.textContent = "";
+        noteTarget.className = "redemption-customer-card__note is-pending";
         vehiclesCountTarget.textContent = "";
+        selectedVehicleTarget.textContent = "";
         vehiclesListTarget.innerHTML = "";
-        customerActive = false;
-        resetVehicleSelect();
       };
 
-      const loadCustomer = async () => {
-        const phoneNumber = phoneInput.value.replace(/\D/g, "");
+      const renderCustomer = (customer, { selectedVehicleId = "", noteText = "", noteState = "is-pending", onVehicleSelect = null, emptyMessage = "No registered vehicles available for this customer yet." } = {}) => {
+        clearError();
+        placeholder.classList.add("d-none");
+        panel.classList.remove("d-none");
+        nameTarget.textContent = customer.name;
+        phoneTarget.textContent = customer.phone_number;
+        statusTarget.textContent = customer.status_label;
+        statusTarget.className = `redemption-customer-card__status ${customer.active ? "is-active" : "is-inactive"}`;
+        pointsTarget.textContent = numberFormatter.format(customer.total_points || 0);
+        noteTarget.textContent = noteText;
+        noteTarget.className = `redemption-customer-card__note ${noteState}`;
+        vehiclesCountTarget.textContent = customer.vehicles.length;
 
-        if (phoneNumber.length !== 10) {
-          clearState();
-          return;
-        }
+        const selectedVehicle = customer.vehicles.find((vehicle) => String(vehicle.id) === String(selectedVehicleId || ""));
+        selectedVehicleTarget.textContent = selectedVehicle ? selectedVehicle.vehicle_number : (customer.vehicles.length > 0 ? "Not selected" : "None");
 
-        const lookupId = ++activeLookup;
+        buildVehicleRows(vehiclesListTarget, customer.vehicles, {
+          selectedVehicleId,
+          onVehicleSelect,
+          emptyMessage
+        });
+      };
 
-        try {
-          const response = await fetch(`${lookupUrl}?phone_number=${encodeURIComponent(phoneNumber)}`, {
-            headers: { Accept: "application/json" }
-          });
+      return {
+        clearPanel,
+        clearError,
+        setError,
+        renderCustomer
+      };
+    };
 
-          const payload = await response.json();
-          if (lookupId !== activeLookup) return;
+    const initializePhoneLookup = () => {
+      document.querySelectorAll("[data-transaction-phone-root]").forEach((root) => {
+        if (root.dataset.lookupBound === "true") return;
+        root.dataset.lookupBound = "true";
 
-          if (!response.ok || !payload.found) {
-            showError(payload.message || "Customer not found for that phone number.");
+        const lookupUrl = root.dataset.lookupUrl;
+        const preselectedVehicleId = root.dataset.selectedVehicleId;
+        const phoneInput = root.querySelector("[data-phone-input]");
+        const vehicleSelect = root.querySelector("[data-vehicle-select]");
+        const submitButton = root.querySelector("[data-submit-button]");
+        const card = createCustomerCardController(root);
+        let activeLookup = 0;
+        let customerActive = false;
+        let currentCustomer = null;
+
+        const resetVehicleSelect = () => {
+          vehicleSelect.innerHTML = "";
+          const prompt = document.createElement("option");
+          prompt.value = "";
+          prompt.textContent = "Select a vehicle";
+          vehicleSelect.appendChild(prompt);
+          vehicleSelect.value = "";
+          vehicleSelect.disabled = true;
+          submitButton.disabled = true;
+        };
+
+        const selectedVehicle = () => currentCustomer?.vehicles.find((vehicle) => String(vehicle.id) === String(vehicleSelect.value || ""));
+
+        const syncSubmitState = () => {
+          submitButton.disabled = vehicleSelect.value === "" || !customerActive;
+        };
+
+        const syncCustomerCard = () => {
+          if (!currentCustomer) {
+            card.clearPanel();
             return;
           }
 
-          clearError();
-          placeholder.classList.add("d-none");
-          panel.classList.remove("d-none");
-          nameTarget.textContent = payload.customer.name;
-          phoneTarget.textContent = payload.customer.phone_number;
-          statusTarget.textContent = payload.customer.status_label;
-          statusTarget.className = `badge rounded-pill ${payload.customer.active ? "text-bg-success" : "text-bg-secondary"}`;
-          pointsTarget.textContent = payload.customer.total_points;
-          vehiclesCountTarget.textContent = payload.customer.vehicles.length;
-          customerActive = payload.customer.active;
-          renderVehicles(payload.customer.vehicles);
+          let noteText = "Select the matching vehicle for this visit";
+          let noteState = "is-pending";
 
-          if (!payload.customer.active) {
-            showError("This customer is inactive. Activate the customer before recording a transaction.", { keepPanel: true });
-          } else if (payload.customer.vehicles.length === 0) {
-            showError("This customer does not have any registered vehicles yet.", { keepPanel: true });
+          if (!customerActive) {
+            noteText = "Customer must be active before recording a transaction";
+          } else if (currentCustomer.vehicles.length === 0) {
+            noteText = "Add a vehicle before recording fuel";
+          } else if (selectedVehicle()) {
+            noteText = "Ready to record fuel for the selected vehicle";
+            noteState = "is-redeemable";
+          } else if (currentCustomer.vehicles.length === 1) {
+            noteText = "1 vehicle ready for this visit";
           }
-        } catch (_error) {
-          if (lookupId !== activeLookup) return;
-          showError("Unable to fetch customer details right now.");
+
+          card.renderCustomer(currentCustomer, {
+            selectedVehicleId: vehicleSelect.value,
+            noteText,
+            noteState,
+            onVehicleSelect: (vehicle) => {
+              if (vehicleSelect.disabled) return;
+              vehicleSelect.value = String(vehicle.id);
+              syncSubmitState();
+              syncCustomerCard();
+            }
+          });
+        };
+
+        const loadCustomer = async () => {
+          const phoneNumber = phoneInput.value.replace(/\D/g, "");
+
+          if (phoneNumber.length !== 10) {
+            currentCustomer = null;
+            customerActive = false;
+            card.clearPanel();
+            resetVehicleSelect();
+            return;
+          }
+
+          const lookupId = ++activeLookup;
+
+          try {
+            const response = await fetch(`${lookupUrl}?phone_number=${encodeURIComponent(phoneNumber)}`, {
+              headers: { Accept: "application/json" }
+            });
+
+            const payload = await response.json();
+            if (lookupId !== activeLookup) return;
+
+            if (!response.ok || !payload.found) {
+              currentCustomer = null;
+              customerActive = false;
+              resetVehicleSelect();
+              card.setError(payload.message || "Customer not found for that phone number.");
+              return;
+            }
+
+            currentCustomer = payload.customer;
+            customerActive = payload.customer.active;
+            resetVehicleSelect();
+
+            payload.customer.vehicles.forEach((vehicle) => {
+              const option = document.createElement("option");
+              option.value = vehicle.id;
+              option.textContent = vehicle.display_name;
+              vehicleSelect.appendChild(option);
+            });
+
+            if (payload.customer.vehicles.length > 0) {
+              vehicleSelect.disabled = false;
+
+              if (preselectedVehicleId && payload.customer.vehicles.some((vehicle) => String(vehicle.id) === String(preselectedVehicleId))) {
+                vehicleSelect.value = String(preselectedVehicleId);
+              } else if (payload.customer.vehicles.length === 1) {
+                vehicleSelect.value = String(payload.customer.vehicles[0].id);
+              }
+            }
+
+            syncSubmitState();
+            syncCustomerCard();
+
+            if (!payload.customer.active) {
+              vehicleSelect.disabled = true;
+              submitButton.disabled = true;
+              card.setError("This customer is inactive. Activate the customer before recording a transaction.", { keepPanel: true });
+            } else if (payload.customer.vehicles.length === 0) {
+              card.setError("This customer does not have any registered vehicles yet.", { keepPanel: true });
+            }
+          } catch (_error) {
+            if (lookupId !== activeLookup) return;
+            currentCustomer = null;
+            customerActive = false;
+            resetVehicleSelect();
+            card.setError("Unable to fetch customer details right now.");
+          }
+        };
+
+        let lookupTimer;
+
+        phoneInput.addEventListener("input", () => {
+          clearTimeout(lookupTimer);
+          lookupTimer = setTimeout(loadCustomer, 300);
+        });
+
+        phoneInput.addEventListener("blur", loadCustomer);
+
+        vehicleSelect.addEventListener("change", () => {
+          syncSubmitState();
+          syncCustomerCard();
+        });
+
+        if (phoneInput.value.trim() !== "") {
+          loadCustomer();
+        } else {
+          card.clearPanel();
+          resetVehicleSelect();
         }
-      };
-
-      let lookupTimer;
-
-      phoneInput.addEventListener("input", () => {
-        clearTimeout(lookupTimer);
-        lookupTimer = setTimeout(loadCustomer, 300);
       });
-
-      phoneInput.addEventListener("blur", loadCustomer);
-
-      vehicleSelect.addEventListener("change", () => {
-        syncSubmitState();
-      });
-
-      if (phoneInput.value.trim() !== "") {
-        loadCustomer();
-      } else {
-        clearState();
-      }
     };
 
-    document.addEventListener("turbo:load", initLookup);
-    document.addEventListener("DOMContentLoaded", initLookup);
+    const initializeVehicleLookup = () => {
+      document.querySelectorAll("[data-transaction-vehicle-root]").forEach((root) => {
+        if (root.dataset.lookupBound === "true") return;
+        root.dataset.lookupBound = "true";
+
+        const lookupUrl = root.dataset.lookupUrl;
+        const preselectedVehicleId = root.dataset.selectedVehicleId;
+        const vehicleNumberInput = root.querySelector("[data-vehicle-number-input]");
+        const matchSelect = root.querySelector("[data-vehicle-select]");
+        const submitButton = root.querySelector("[data-submit-button]");
+        const card = createCustomerCardController(root);
+        let activeLookup = 0;
+        let currentMatches = [];
+        let selectedMatch = null;
+
+        const resetMatchSelect = () => {
+          matchSelect.innerHTML = "";
+          const prompt = document.createElement("option");
+          prompt.value = "";
+          prompt.textContent = "Select the matching customer";
+          matchSelect.appendChild(prompt);
+          matchSelect.value = "";
+          matchSelect.disabled = true;
+          submitButton.disabled = true;
+        };
+
+        const syncSubmitState = () => {
+          submitButton.disabled = !selectedMatch || !selectedMatch.customer.active;
+        };
+
+        const syncCustomerCard = () => {
+          if (!selectedMatch) {
+            card.clearPanel();
+            return;
+          }
+
+          let noteText = "Ready to record fuel for the entered vehicle";
+          let noteState = "is-redeemable";
+
+          if (!selectedMatch.customer.active) {
+            noteText = "Customer must be active before recording a transaction";
+            noteState = "is-pending";
+          }
+
+          card.renderCustomer(selectedMatch.customer, {
+            selectedVehicleId: selectedMatch.vehicle_id,
+            noteText,
+            noteState
+          });
+        };
+
+        const applySelection = () => {
+          selectedMatch = currentMatches.find((match) => String(match.vehicle_id) === String(matchSelect.value || "")) || null;
+          syncSubmitState();
+          syncCustomerCard();
+
+          if (!selectedMatch && currentMatches.length > 1) {
+            card.setError("Multiple customers use this vehicle number. Select the correct customer to continue.");
+            return;
+          }
+
+          if (selectedMatch && !selectedMatch.customer.active) {
+            card.setError("This customer is inactive. Activate the customer before recording a transaction.", { keepPanel: true });
+          }
+        };
+
+        const loadMatches = async ({ force = false } = {}) => {
+          vehicleNumberInput.value = normalizeVehicleNumberInput(vehicleNumberInput.value);
+          const vehicleNumber = vehicleNumberInput.value;
+
+          if (vehicleNumber === "") {
+            currentMatches = [];
+            selectedMatch = null;
+            card.clearPanel();
+            resetMatchSelect();
+            return;
+          }
+
+          if (!force && vehicleNumber.length < 6) {
+            currentMatches = [];
+            selectedMatch = null;
+            card.clearPanel();
+            resetMatchSelect();
+            return;
+          }
+
+          const lookupId = ++activeLookup;
+
+          try {
+            const response = await fetch(`${lookupUrl}?vehicle_number=${encodeURIComponent(vehicleNumber)}`, {
+              headers: { Accept: "application/json" }
+            });
+
+            const payload = await response.json();
+            if (lookupId !== activeLookup) return;
+
+            if (!response.ok || !payload.found) {
+              currentMatches = [];
+              selectedMatch = null;
+              resetMatchSelect();
+              card.setError(payload.message || "No customer was found for that vehicle number.");
+              return;
+            }
+
+            currentMatches = payload.matches || [];
+            selectedMatch = null;
+            resetMatchSelect();
+
+            currentMatches.forEach((match) => {
+              const option = document.createElement("option");
+              option.value = match.vehicle_id;
+              option.textContent = `${match.customer.name} · +91 ${match.customer.phone_number}`;
+              matchSelect.appendChild(option);
+            });
+
+            if (currentMatches.length > 0) {
+              matchSelect.disabled = false;
+
+              if (preselectedVehicleId && currentMatches.some((match) => String(match.vehicle_id) === String(preselectedVehicleId))) {
+                matchSelect.value = String(preselectedVehicleId);
+              } else if (currentMatches.length === 1) {
+                matchSelect.value = String(currentMatches[0].vehicle_id);
+              }
+            }
+
+            applySelection();
+          } catch (_error) {
+            if (lookupId !== activeLookup) return;
+            currentMatches = [];
+            selectedMatch = null;
+            resetMatchSelect();
+            card.setError("Unable to fetch vehicle details right now.");
+          }
+        };
+
+        const syncVehicleNumberValidity = () => {
+          if (vehicleNumberInput.value === "" || vehicleNumberPattern.test(vehicleNumberInput.value)) {
+            vehicleNumberInput.setCustomValidity("");
+            return;
+          }
+
+          vehicleNumberInput.setCustomValidity("Enter a valid vehicle number.");
+        };
+
+        let lookupTimer;
+
+        vehicleNumberInput.addEventListener("input", () => {
+          vehicleNumberInput.value = normalizeVehicleNumberInput(vehicleNumberInput.value);
+          syncVehicleNumberValidity();
+          clearTimeout(lookupTimer);
+          lookupTimer = setTimeout(() => loadMatches({ force: false }), 300);
+        });
+
+        vehicleNumberInput.addEventListener("blur", () => {
+          syncVehicleNumberValidity();
+          loadMatches({ force: true });
+        });
+
+        vehicleNumberInput.addEventListener("invalid", syncVehicleNumberValidity);
+
+        matchSelect.addEventListener("change", applySelection);
+
+        if (vehicleNumberInput.value.trim() !== "") {
+          syncVehicleNumberValidity();
+          loadMatches({ force: true });
+        } else {
+          card.clearPanel();
+          resetMatchSelect();
+        }
+      });
+    };
+
+    const initLookupTabs = () => {
+      initializePhoneLookup();
+      initializeVehicleLookup();
+    };
+
+    document.addEventListener("turbo:load", initLookupTabs);
+    document.addEventListener("DOMContentLoaded", initLookupTabs);
   })();
 </script>

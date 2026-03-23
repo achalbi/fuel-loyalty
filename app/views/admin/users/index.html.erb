@@ -1,0 +1,113 @@
+<% content_for :title, "Users" %>
+
+<div class="mb-4 page-header admin-users-header">
+  <div class="page-intro mb-0">
+    <h1>Users</h1>
+    <p>Create staff accounts, promote users to admin, and manage who can access the station dashboard.</p>
+  </div>
+  <div class="page-actions">
+    <%= button_tag "+",
+      type: "button",
+      class: "customer-details-quick-action admin-users-create-action",
+      data: { bs_toggle: "modal", bs_target: "#addUserModal" },
+      aria: { label: "Add User" },
+      title: "Add User" %>
+  </div>
+</div>
+
+<div class="card shadow-sm admin-users-card">
+  <div class="card-body">
+    <% if @users.any? %>
+      <div class="customer-details-vehicle-list admin-users-list">
+        <% @users.each do |user| %>
+          <% display_name = user.username.to_s.titleize %>
+          <% modal_id = "editUserModal-#{user.id}" %>
+          <% edit_form_user = (@edit_user&.id == user.id ? @edit_user : user) %>
+          <div class="customer-details-vehicle-row admin-user-item">
+            <div class="customer-details-vehicle-row__main admin-user-item__main">
+              <div class="admin-user-item__heading">
+                <span class="admin-user-item__name"><%= display_name %></span>
+                <span class="admin-user-item__role <%= user.admin? ? "is-admin" : "is-staff" %>"><%= user.role.titleize %></span>
+              </div>
+              <div class="admin-user-item__details">
+                <span class="admin-user-item__phone"><%= user.display_phone_number || "Mobile not set" %></span>
+                <span class="admin-user-item__email"><%= user.explicit_email || "Email not set" %></span>
+              </div>
+            </div>
+            <div class="admin-user-item__side">
+              <%= button_tag type: "button",
+                class: "customer-details-history-preview-action admin-user-item__edit",
+                data: { bs_toggle: "modal", bs_target: "##{modal_id}" },
+                aria: { label: "Edit #{display_name}" },
+                title: "Edit user" do %>
+                <i class="ti ti-pencil" aria-hidden="true"></i>
+              <% end %>
+            </div>
+          </div>
+
+          <div
+            class="modal fade customer-details-modal admin-users-modal"
+            id="<%= modal_id %>"
+            tabindex="-1"
+            aria-labelledby="<%= modal_id %>-label"
+            aria-hidden="true"
+            data-auto-open-modal="<%= @edit_user&.id == user.id %>">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+              <div class="modal-content confirm-modal-content customer-details-modal__content admin-users-modal__content">
+                <div class="modal-header border-0 pb-0">
+                  <div>
+                    <h2 class="modal-title h5 mb-1" id="<%= modal_id %>-label">Edit User</h2>
+                    <p class="text-muted mb-0 small">Update account details or switch the access role between admin and staff.</p>
+                  </div>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-3">
+                  <%= render "form",
+                    user: edit_form_user,
+                    form_url: admin_user_path(user),
+                    form_method: :patch,
+                    submit_label: "Update User",
+                    title: "Edit User",
+                    description: "Update account details or switch the access role between admin and staff.",
+                    context: "modal" %>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="admin-users-empty mb-0">No users available yet.</p>
+    <% end %>
+  </div>
+</div>
+
+<div
+  class="modal fade customer-details-modal admin-users-modal"
+  id="addUserModal"
+  tabindex="-1"
+  aria-labelledby="addUserModalLabel"
+  aria-hidden="true"
+  data-auto-open-modal="<%= @user.errors.any? %>">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content confirm-modal-content customer-details-modal__content admin-users-modal__content">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h2 class="modal-title h5 mb-1" id="addUserModalLabel">Add User</h2>
+          <p class="text-muted mb-0 small">Create a new staff or admin login for this station.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <%= render "form",
+          user: @user,
+          form_url: admin_users_path,
+          form_method: :post,
+          submit_label: "Create User",
+          title: "Add User",
+          description: "Create a new staff or admin login for this station.",
+          context: "modal" %>
+      </div>
+    </div>
+  </div>
+</div>

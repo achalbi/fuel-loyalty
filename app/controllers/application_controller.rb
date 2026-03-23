@@ -1,6 +1,6 @@
 class ApplicationController < ActionController::Base
   include Pundit::Authorization
-  helper_method :pwa_cache_buster
+  helper_method :pwa_cache_buster, :customer_points_ledger_path_for, :customer_transaction_history_path_for
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
@@ -55,6 +55,22 @@ class ApplicationController < ActionController::Base
         .max
 
       "dev-#{latest_mtime || Time.current.to_i}"
+    end
+  end
+
+  def customer_points_ledger_path_for(customer, page: 1)
+    if controller_path.start_with?("admin/")
+      points_ledger_admin_customer_path(customer, page:)
+    else
+      points_ledger_customer_path(customer, page:)
+    end
+  end
+
+  def customer_transaction_history_path_for(customer, page: 1)
+    if controller_path.start_with?("admin/")
+      transaction_history_admin_customer_path(customer, page:)
+    else
+      transaction_history_customer_path(customer, page:)
     end
   end
 end

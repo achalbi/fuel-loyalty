@@ -1,0 +1,56 @@
+<%
+  metric ||= nil
+  change_pct = metric&.dig(:change_pct)
+  direction = metric&.dig(:direction)
+  change_class =
+    if change_pct.nil?
+      "is-neutral"
+    elsif direction == "up"
+      "is-positive"
+    elsif direction == "down"
+      "is-negative"
+    else
+      "is-neutral"
+    end
+  change_text =
+    if metric.nil?
+      "No data yet"
+    elsif change_pct.nil?
+      "New baseline"
+    else
+      "#{change_pct.positive? ? '+' : ''}#{change_pct}% vs previous period"
+    end
+  breakdown_items = Array(metric&.dig(:breakdown))
+%>
+<div class="card dashboard-kpi-card dashboard-kpi-card--<%= card[:tone] %>" data-kpi-card="<%= card[:key] %>">
+  <div class="card-body">
+    <div class="dashboard-kpi-card__icon" aria-hidden="true">
+      <i class="ti <%= card[:icon] %>"></i>
+    </div>
+
+    <div class="dashboard-kpi-card__content">
+      <p class="dashboard-kpi-card__title"><%= card[:title] %></p>
+      <p class="dashboard-kpi-card__value" data-kpi-value><%= metric&.dig(:display_value) || "0" %></p>
+
+      <div class="dashboard-kpi-card__breakdown <%= "d-none" if breakdown_items.empty? %>" data-kpi-breakdown>
+        <% breakdown_items.each do |item| %>
+          <div class="dashboard-kpi-card__breakdown-item" data-kpi-breakdown-item>
+            <span class="dashboard-kpi-card__breakdown-label"><%= item[:label] || item["label"] %></span>
+            <strong class="dashboard-kpi-card__breakdown-value"><%= item[:display_value] || item["display_value"] %></strong>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="dashboard-kpi-card__footer">
+        <span class="dashboard-kpi-card__change <%= change_class %>" data-kpi-change><%= change_text %></span>
+        <span class="small-muted" data-kpi-note><%= card[:note] %></span>
+      </div>
+    </div>
+
+    <div class="dashboard-skeleton dashboard-skeleton--kpi" data-dashboard-skeleton aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </div>
+</div>

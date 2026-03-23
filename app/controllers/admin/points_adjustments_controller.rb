@@ -6,6 +6,7 @@ module Admin
 
     def create
       authorize PointsLedger
+      assign_prefill_values
       normalized_phone = Customer.normalize_phone_number(points_adjustment_params[:phone_number])
 
       unless Customer.valid_phone_number?(normalized_phone)
@@ -35,6 +36,13 @@ module Admin
 
     def points_adjustment_params
       params.require(:points_adjustment).permit(:phone_number, :points)
+    end
+
+    def assign_prefill_values
+      return unless params[:points_adjustment].present?
+
+      @prefill_phone_number = points_adjustment_params[:phone_number]
+      @prefill_points = points_adjustment_params[:points]
     end
   end
 end

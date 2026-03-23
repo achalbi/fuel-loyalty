@@ -37,7 +37,8 @@ class PwaControllerTest < ActionDispatch::IntegrationTest
       assert_includes response.media_type, "javascript"
       assert_equal "no-cache", response.headers["Cache-Control"]
       assert_equal "/", response.headers["Service-Worker-Allowed"]
-      assert_includes response.body, "fuel-loyalty-static-test-release"
+      assert_includes response.body, "const CACHE_VERSION = \"test-release\";"
+      assert_includes response.body, "const STATIC_CACHE = `fuel-loyalty-static-${CACHE_VERSION}`;"
       assert_includes response.body, "/icon-192.png?v=test-release"
       assert_includes response.body, "/icon.png?v=test-release"
       assert_includes response.body, "/icon.svg?v=test-release"
