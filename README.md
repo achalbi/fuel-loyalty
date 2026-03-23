@@ -46,6 +46,37 @@ docker compose exec -T app bundle exec brakeman -q
 docker compose exec -T app bundle exec rails assets:precompile
 ```
 
+## Run a production migration on Cloud Run
+
+This repo's Cloud Build config targets the Cloud Run service `fuel-loyalty-git`
+in `us-central1`. To run a one-off migration against the same image, use:
+
+```bash
+SERVICE=fuel-loyalty-git
+REGION=us-central1
+IMAGE="$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(spec.template.spec.containers[0].image)')"
+
+gcloud run jobs deploy "${SERVICE}-migrate" \
+  --region "$REGION" \
+  --image "$IMAGE" \
+  --command bundle \
+  --args exec,rails,db:migrate \
+  --set-env-vars RAILS_ENV=production \
+  --set-env-vars RAILS_SERVE_STATIC_FILES=true \
+  --set-env-vars APP_URL=https://your-app.example.com \
+  --set-env-vars MAILER_FROM=no-reply@your-app.example.com \
+  --set-env-vars DATABASE_URL='your-production-database-url' \
+  --set-env-vars SECRET_KEY_BASE='your-production-secret-key'
+
+gcloud run jobs execute "${SERVICE}-migrate" --region "$REGION" --wait
+```
+
+After the job succeeds, you can remove it:
+
+```bash
+gcloud run jobs delete "${SERVICE}-migrate" --region "$REGION"
+```
+
 ## Useful commands
 
 ```bash

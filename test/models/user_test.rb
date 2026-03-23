@@ -19,6 +19,19 @@ class UserTest < ActiveSupport::TestCase
     assert_equal users(:two), user
   end
 
+  test "falls back to username and email authentication when phone number attribute is unavailable" do
+    original_availability = User.method(:phone_number_attribute_available?)
+    User.define_singleton_method(:phone_number_attribute_available?) { false }
+
+    begin
+      assert_equal users(:one), User.find_for_database_authentication(login: "admin")
+      assert_equal users(:two), User.find_for_database_authentication(login: "staff@example.com")
+      assert_nil User.find_for_database_authentication(login: "9000000022")
+    ensure
+      User.define_singleton_method(:phone_number_attribute_available?) { original_availability.call }
+    end
+  end
+
   test "normalizes phone number and syncs internal email" do
     user = User.create!(
       username: "staff_three",
@@ -105,5 +118,18 @@ class UserTest < ActiveSupport::TestCase
 
     assert_not user.update(role: :staff)
     assert_includes user.errors[:role], "must leave at least one admin user"
+  end
+
+  test "login and display phone number do not raise when phone number attribute is unavailable" do
+    user = User.new(username: "admin", email: "admin@example.com")
+    original_has_attribute = user.method(:has_attribute?)
+    user.define_singleton_method(:has_attribute?) { |_attribute_name| false }
+
+    begin
+      assert_equal "admin", user.login
+      assert_nil user.display_phone_number
+    ensure
+      user.define_singleton_method(:has_attribute?) { |attribute_name| original_has_attribute.call(attribute_name) }
+    end
   end
 end

@@ -8,11 +8,6 @@ Set these on the Cloud Run service, not in git:
 PUBLIC_BASE_URL=https://your-app.example.com
 CLOUDFLARE_ZONE_ID=your-zone-id
 CLOUDFLARE_API_TOKEN=your-api-token
-
-PUBLIC_BASE_URL: fly.thoughtbasics.com
-CLOUDFLARE_ACCOUNT_ID: a965bf76feba4afa019ef93240e48029
-CLOUDFLARE_ZONE_ID: c6e4de2cef3a64253cb6e9d69bfa9436
-CLOUDFLARE_API_TOKEN: cfut_aSY8rGEFcxNlz13gD6ubZqOIQcVCILIo5kpOywMw24e898d5
 ```
 
 `RELEASE_SHA` is now injected by Cloud Build on each deploy and is used to version the service worker cache.
