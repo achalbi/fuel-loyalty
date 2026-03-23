@@ -1,6 +1,6 @@
 <% content_for :title, "Sign In" %>
 
-<div class="container d-flex align-items-center justify-content-center min-vh-100 py-5">
+<div class="container d-flex align-items-center justify-content-center min-vh-100 py-3">
   <div class="card template-form-card">
     <div class="card-body p-5">
       <div class="text-center mb-4">
@@ -35,6 +35,13 @@
 
         <%= form.submit "Sign In", class: "btn btn-primary w-100" %>
       <% end %>
+
+      <div class="text-center mt-3">
+        <%= link_to new_loyalty_path, class: "small fw-medium text-decoration-none" do %>
+          <i class="ti ti-arrow-left me-1" aria-hidden="true"></i>
+          Back to Loyalty Lookup
+        <% end %>
+      </div>
 
       <section class="install-app-panel mt-4" data-pwa-install-panel data-install-source="login_page" aria-labelledby="install-app-title">
         <div class="d-flex align-items-start gap-3">

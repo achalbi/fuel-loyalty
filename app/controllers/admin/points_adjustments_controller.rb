@@ -6,7 +6,14 @@ module Admin
 
     def create
       authorize PointsLedger
-      customer = Customer.find_by(phone_number: Customer.normalize_phone_number(points_adjustment_params[:phone_number]))
+      normalized_phone = Customer.normalize_phone_number(points_adjustment_params[:phone_number])
+
+      unless Customer.valid_phone_number?(normalized_phone)
+        flash.now[:alert] = "Phone number must be a 10 digit number."
+        return render :new, status: :unprocessable_entity
+      end
+
+      customer = Customer.find_by(phone_number: normalized_phone)
 
       unless customer
         flash.now[:alert] = "Customer not found."

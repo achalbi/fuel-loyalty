@@ -18,7 +18,10 @@
 
           <div>
             <%= form.label :phone_number, class: "form-label" %>
-            <%= form.telephone_field :phone_number, class: "form-control", required: true %>
+            <div class="input-group">
+              <span class="input-group-text phone-prefix">+91</span>
+              <%= form.telephone_field :phone_number, class: "form-control", required: true, placeholder: "10 digit phone number", inputmode: "numeric", autocomplete: "tel-national", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit phone number", data: { phone_number_field: true } %>
+            </div>
           </div>
 
           <% if include_vehicle_fields %>

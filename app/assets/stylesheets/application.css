@@ -768,6 +768,13 @@ html[data-theme="dark"] select.form-select:disabled {
   font-size: 0.8125rem;
 }
 
+.phone-prefix {
+  min-width: 3.4rem;
+  justify-content: center;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
 .reward-rates-form {
   gap: 0.85rem !important;
 }
@@ -948,6 +955,7 @@ html[data-theme="dark"] .dropdown-menu {
   border-radius: 0.9rem;
   padding: 0.7rem 0.9rem;
   font-size: 0.875rem;
+  margin-top: 1rem !important;
 }
 
 .alert-success {
@@ -1023,13 +1031,13 @@ h4 {
 
   .content .container-fluid,
   .public-main .container {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
   }
 
   .py-10 {
-    padding-top: 4.5rem !important;
-    padding-bottom: 3.5rem !important;
+    padding-top: 4.2rem !important;
+    padding-bottom: 3rem !important;
   }
 
   .page-header,
@@ -1100,12 +1108,32 @@ h4 {
 }
 
 @media (max-width: 767.98px) {
+  body {
+    font-size: 0.9rem;
+  }
+
   .topbar-role-badge {
     display: none;
   }
 
   .topbar .ms-auto {
     min-width: 0;
+  }
+
+  .topbar {
+    padding-left: 0.7rem !important;
+    padding-right: 0.7rem !important;
+  }
+
+  .content .container-fluid,
+  .public-main .container {
+    padding-left: 0.78rem;
+    padding-right: 0.78rem;
+  }
+
+  .py-10 {
+    padding-top: 3.95rem !important;
+    padding-bottom: 2.35rem !important;
   }
 
   .brand-lockup {
@@ -1132,7 +1160,128 @@ h4 {
   }
 
   .logo-text {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+  }
+
+  .page-intro {
+    margin-bottom: 0.85rem;
+  }
+
+  .page-intro h1 {
+    font-size: 1.16rem;
+  }
+
+  .page-intro p,
+  .small-muted,
+  .form-text,
+  .small {
+    font-size: 0.76rem;
+  }
+
+  .h3,
+  h3,
+  .card h1.h3 {
+    font-size: 1.12rem;
+  }
+
+  .h4,
+  h4 {
+    font-size: 1rem;
+  }
+
+  .card {
+    border-radius: 0.78rem;
+  }
+
+  .card-body {
+    padding: 0.8rem;
+  }
+
+  .template-form-card .card-body,
+  .lookup-card .card-body {
+    padding: 1.1rem !important;
+  }
+
+  .install-app-panel {
+    padding: 0.82rem;
+    border-radius: 0.88rem;
+  }
+
+  .install-app-icon {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.78rem;
+  }
+
+  .install-app-icon .ti {
+    font-size: 1.02rem;
+  }
+
+  .install-app-panel .btn {
+    min-height: 2.45rem;
+  }
+
+  .alert {
+    border-radius: 0.78rem;
+    padding: 0.52rem 0.68rem;
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    margin-bottom: 0.6rem;
+  }
+
+  .content .container-fluid > .alert:first-child,
+  .public-main .container > .alert:first-child {
+    margin-top: 0.25rem;
+  }
+
+  .form-label {
+    font-size: 0.77rem;
+    margin-bottom: 0.28rem;
+  }
+
+  .form-control,
+  .form-select {
+    min-height: 2.25rem;
+    padding: 0.4rem 0.68rem;
+    font-size: 0.84rem;
+  }
+
+  .form-select {
+    background-position: right 0.72rem center;
+    padding-right: 2rem;
+  }
+
+  .input-group-text {
+    padding: 0.35rem 0.62rem;
+    font-size: 0.76rem;
+  }
+
+  .phone-prefix {
+    min-width: 3rem;
+  }
+
+  .btn {
+    --bs-btn-font-size: 0.82rem;
+    --bs-btn-padding-y: 0.4rem;
+    --bs-btn-padding-x: 0.72rem;
+    --bs-btn-border-radius: 0.64rem;
+  }
+
+  .btn-sm {
+    --bs-btn-font-size: 0.74rem;
+    --bs-btn-padding-y: 0.26rem;
+    --bs-btn-padding-x: 0.56rem;
+    --bs-btn-border-radius: 0.55rem;
+  }
+
+  .badge {
+    font-size: 0.67rem;
+  }
+
+  .table > :not(caption) > * > * {
+    padding-top: 0.58rem;
+    padding-bottom: 0.58rem;
+    font-size: 0.82rem;
   }
 
   .table-responsive {
@@ -1152,12 +1301,12 @@ h4 {
   }
 
   .responsive-table tbody tr {
-    padding: 0.9rem 0.95rem;
+    padding: 0.76rem 0.82rem;
     border: 1px solid var(--fl-gray-200);
-    border-radius: 0.95rem;
+    border-radius: 0.85rem;
     background: linear-gradient(180deg, var(--fl-surface-elevated), var(--fl-surface));
     box-shadow: 0 0.55rem 1.2rem rgba(12, 16, 13, 0.06);
-    margin-bottom: 0.7rem;
+    margin-bottom: 0.55rem;
   }
 
   .responsive-table tbody tr:last-child {
@@ -1166,11 +1315,11 @@ h4 {
 
   .responsive-table td {
     border: 0;
-    padding: 0.38rem 0;
+    padding: 0.3rem 0;
     text-align: right !important;
     display: grid;
-    grid-template-columns: minmax(88px, 36%) 1fr;
-    gap: 0.7rem;
+    grid-template-columns: minmax(82px, 34%) 1fr;
+    gap: 0.58rem;
     align-items: start;
   }
 
@@ -1180,7 +1329,7 @@ h4 {
     align-items: center;
     margin-bottom: 0;
     color: var(--fl-gray-500);
-    font-size: 0.74rem;
+    font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -1191,9 +1340,9 @@ h4 {
   .responsive-table td[data-label="Action"] {
     grid-template-columns: 1fr;
     text-align: left !important;
-    padding-top: 0.7rem;
+    padding-top: 0.58rem;
     border-top: 1px dashed var(--fl-gray-200);
-    margin-top: 0.35rem;
+    margin-top: 0.28rem;
   }
 
   .responsive-table .table-action-group {
@@ -1211,16 +1360,16 @@ h4 {
 
   .reward-rate-row {
     grid-template-columns: minmax(0, 1fr) minmax(112px, 42%);
-    gap: 0.8rem;
-    padding: 0.85rem 0.9rem;
+    gap: 0.68rem;
+    padding: 0.74rem 0.78rem;
   }
 
   .reward-rate-title {
-    font-size: 0.9rem;
+    font-size: 0.86rem;
   }
 
   .reward-rate-meta {
-    font-size: 0.76rem;
+    font-size: 0.73rem;
   }
 
   .responsive-table td[colspan] {
@@ -1241,7 +1390,7 @@ h4 {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch !important;
-    gap: 0.5rem !important;
+    gap: 0.42rem !important;
   }
 
   .stack-mobile > * {
@@ -1250,33 +1399,34 @@ h4 {
 
   .list-group {
     display: grid;
-    gap: 0.65rem;
+    gap: 0.5rem;
   }
 
   .list-group-item {
     border: 1px solid var(--fl-gray-200);
-    border-radius: 0.95rem !important;
+    border-radius: 0.82rem !important;
     background: linear-gradient(180deg, var(--fl-surface-elevated), var(--fl-surface));
     box-shadow: 0 0.45rem 1rem rgba(12, 16, 13, 0.05);
+    padding: 0.62rem 0.72rem;
   }
 
   .detail-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem 0.65rem;
+    gap: 0.4rem 0.5rem;
   }
 
   .detail-grid dt,
   .detail-grid dd {
     margin: 0;
-    padding: 0.7rem 0.75rem;
+    padding: 0.56rem 0.62rem;
     border: 1px solid var(--fl-gray-200);
-    border-radius: 0.85rem;
+    border-radius: 0.74rem;
     background: var(--fl-surface);
   }
 
   .detail-grid dt {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--fl-gray-500) !important;
@@ -1284,6 +1434,7 @@ h4 {
 
   .detail-grid dd {
     font-weight: 600;
+    font-size: 0.82rem;
   }
 
   .page-actions {

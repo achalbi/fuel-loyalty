@@ -21,4 +21,12 @@ class PointsRedeemerTest < ActiveSupport::TestCase
 
     assert_includes error.record.errors.full_messages.to_sentence, "cannot exceed available points"
   end
+
+  test "rejects redemption when the phone number is not 10 digits" do
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      PointsRedeemer.call(phone_number: "12345", points: 1)
+    end
+
+    assert_includes error.record.errors.full_messages, "Phone number must be a 10 digit number"
+  end
 end

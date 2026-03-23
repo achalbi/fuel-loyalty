@@ -41,4 +41,19 @@ class TransactionCreatorTest < ActiveSupport::TestCase
 
     assert_includes error.record.errors.full_messages, "Customer must be active to record transactions"
   end
+
+  test "rejects transactions when the phone number is not 10 digits" do
+    user = User.create!(email: "staff-invalid-phone@example.com", username: "staff_invalid_phone", password: "password123", role: :staff)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      TransactionCreator.call(
+        user: user,
+        phone_number: "12345",
+        fuel_amount: 500,
+        vehicle_id: vehicles(:one).id
+      )
+    end
+
+    assert_includes error.record.errors.full_messages, "Phone number must be a 10 digit number"
+  end
 end

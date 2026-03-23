@@ -1,4 +1,8 @@
 class Customer < ApplicationRecord
+  PHONE_NUMBER_LENGTH = 10
+  PHONE_NUMBER_FORMAT = /\A\d{#{PHONE_NUMBER_LENGTH}}\z/
+  PHONE_NUMBER_ERROR_MESSAGE = "must be a 10 digit number"
+
   has_many :transactions, dependent: :restrict_with_exception
   has_many :points_ledgers, dependent: :destroy
   has_many :vehicles, -> { order(:vehicle_number) }, dependent: :destroy
@@ -6,9 +10,14 @@ class Customer < ApplicationRecord
   before_validation :normalize_phone_number
 
   validates :phone_number, presence: true, uniqueness: true
+  validates :phone_number, format: { with: PHONE_NUMBER_FORMAT, message: PHONE_NUMBER_ERROR_MESSAGE }
 
   def self.normalize_phone_number(value)
     value.to_s.gsub(/\D/, "")
+  end
+
+  def self.valid_phone_number?(value)
+    normalize_phone_number(value).match?(PHONE_NUMBER_FORMAT)
   end
 
   def status_label

@@ -30,7 +30,13 @@ module Staff
     def lookup
       authorize Customer, :lookup?
 
-      customer = Customer.includes(:vehicles).find_by(phone_number: Customer.normalize_phone_number(params[:phone_number]))
+      normalized_phone = Customer.normalize_phone_number(params[:phone_number])
+
+      unless Customer.valid_phone_number?(normalized_phone)
+        return render json: { found: false, message: "Phone number must be a 10 digit number." }, status: :unprocessable_entity
+      end
+
+      customer = Customer.includes(:vehicles).find_by(phone_number: normalized_phone)
 
       if customer
         render json: {

@@ -11,7 +11,7 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     )
     assert_not_nil response.headers["ETag"]
     assert_select "h1", "Loyalty Lookup"
-    assert_select "link[rel='manifest'][href='#{pwa_manifest_path}']"
+    assert_select "link[rel='manifest'][href^='#{pwa_manifest_path}']"
     assert_select "link[href*='cdn.jsdelivr']", count: 0
     assert_select "link[href*='fonts.googleapis']", count: 0
     assert_select "script[src*='cdn.jsdelivr']", count: 0
@@ -19,6 +19,12 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_select "link[href*='/assets/tabler-icons.min']", count: 1
     assert_select "link[href*='/assets/application']", count: 1
     assert_select "script[src*='/assets/bootstrap.bundle.min']", count: 1
+    assert_select "input[placeholder='10 digit phone number']", 1
+    assert_select "[data-pwa-install-panel][data-install-source='loyalty_page']", 1
+    assert_select "[data-pwa-install-button]", text: /Install App/
+    assert_select "[data-pwa-install-status]", /Install Fuel Loyalty|Add Fuel Loyalty/
+    assert_select "input[placeholder='10 digit phone number'][maxlength='10'][data-phone-number-field='true']", 1
+    assert_includes response.body, 'pattern="\d{10}"'
   end
 
   test "returns 304 for a fresh loyalty shell request" do
@@ -59,6 +65,13 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :unprocessable_entity
     assert_select ".alert", /No customer found/
+  end
+
+  test "returns validation feedback when the phone number is not 10 digits" do
+    post loyalty_path, params: { loyalty: { phone_number: "12345" } }
+
+    assert_response :unprocessable_entity
+    assert_select ".alert", /Phone number must be a 10 digit number/
   end
 
   test "shows full loyalty history when requested" do

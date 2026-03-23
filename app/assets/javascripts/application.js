@@ -236,6 +236,43 @@
     });
   };
 
+  const normalizePhoneNumberInput = (value) => value.replace(/\D/g, "").slice(0, 10);
+
+  const syncPhoneNumberValidity = (input) => {
+    if (input.value === "" || input.value.length === 10) {
+      input.setCustomValidity("");
+      return;
+    }
+
+    input.setCustomValidity("Enter a 10 digit phone number.");
+  };
+
+  const initializePhoneNumberFields = () => {
+    document.querySelectorAll("[data-phone-number-field]").forEach((input) => {
+      if (input.dataset.phoneNumberBound === "true") {
+        syncPhoneNumberValidity(input);
+        return;
+      }
+
+      input.dataset.phoneNumberBound = "true";
+      input.value = normalizePhoneNumberInput(input.value);
+      syncPhoneNumberValidity(input);
+
+      input.addEventListener("input", () => {
+        input.value = normalizePhoneNumberInput(input.value);
+        syncPhoneNumberValidity(input);
+      });
+
+      input.addEventListener("blur", () => {
+        syncPhoneNumberValidity(input);
+      });
+
+      input.addEventListener("invalid", () => {
+        syncPhoneNumberValidity(input);
+      });
+    });
+  };
+
   const setInstallPanelState = (panel, state = {}) => {
     const button = panel.querySelector("[data-pwa-install-button]");
     const status = panel.querySelector("[data-pwa-install-status]");
@@ -262,7 +299,7 @@
 
     button.classList.remove("btn-primary");
     button.classList.add("btn-outline-primary");
-    status.textContent = "Use the install button to add Fuel Loyalty to this device without waiting for a browser auto-prompt.";
+    status.textContent = "Install Fuel Loyalty app to this device";
 
     if (state.showManualInstructions) {
       help.textContent = installInstructionsForDevice();
@@ -379,6 +416,8 @@
   document.addEventListener("DOMContentLoaded", initializeSidebar);
   document.addEventListener("turbo:load", initializeConfirmModal);
   document.addEventListener("DOMContentLoaded", initializeConfirmModal);
+  document.addEventListener("turbo:load", initializePhoneNumberFields);
+  document.addEventListener("DOMContentLoaded", initializePhoneNumberFields);
   document.addEventListener("turbo:load", initializeInstallPrompt);
   document.addEventListener("DOMContentLoaded", initializeInstallPrompt);
   bindInstallPromptEvents();

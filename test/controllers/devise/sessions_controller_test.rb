@@ -14,6 +14,7 @@ module Devise
       get new_user_session_path
 
       assert_response :success
+      assert_select "a[href='#{new_loyalty_path}']", text: /Back to Loyalty Lookup/
       assert_select "[data-pwa-install-panel]", 1
       assert_select "[data-pwa-install-button]", text: /Install App/
       assert_select "[data-pwa-install-status]", /Install Fuel Loyalty|Add Fuel Loyalty/

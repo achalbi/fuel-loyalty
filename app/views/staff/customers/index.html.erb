@@ -15,7 +15,7 @@
     <%= form_with url: staff_customers_path, method: :get, class: "row g-3 align-items-end", local: true do |form| %>
       <div class="col-lg-8">
         <%= form.label :q, "Search", class: "form-label" %>
-        <%= form.text_field :q, value: @query, class: "form-control", placeholder: "Enter customer name or phone number" %>
+        <%= form.text_field :q, value: @query, class: "form-control", placeholder: "Enter customer name or 10 digit phone number" %>
       </div>
 
       <div class="col-lg-4 d-flex gap-2 stack-mobile">

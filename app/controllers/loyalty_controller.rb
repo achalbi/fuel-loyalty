@@ -21,6 +21,8 @@ class LoyaltyController < ApplicationController
 
   def show
     @phone_number = Customer.normalize_phone_number(params[:phone_number])
+    return render_invalid_phone_number unless Customer.valid_phone_number?(@phone_number)
+
     @customer = Customer.find_by(phone_number: @phone_number)
 
     if @customer
@@ -35,10 +37,17 @@ class LoyaltyController < ApplicationController
 
   def create
     @phone_number = Customer.normalize_phone_number(loyalty_params[:phone_number])
+    return render_invalid_phone_number unless Customer.valid_phone_number?(@phone_number)
+
     redirect_to loyalty_result_path(phone_number: @phone_number)
   end
 
   private
+
+  def render_invalid_phone_number
+    flash.now[:alert] = "Phone number must be a 10 digit number."
+    render :new, status: :unprocessable_entity
+  end
 
   def loyalty_params
     params.require(:loyalty).permit(:phone_number)

@@ -14,7 +14,10 @@
         <%= form_with scope: :redemption, url: staff_redemptions_path, class: "vstack gap-3" do |form| %>
           <div>
             <%= form.label :phone_number, class: "form-label" %>
-            <%= form.telephone_field :phone_number, value: @prefill_phone_number, class: "form-control", required: true, autocomplete: "off", data: { phone_input: true } %>
+            <div class="input-group">
+              <span class="input-group-text phone-prefix">+91</span>
+              <%= form.telephone_field :phone_number, value: @prefill_phone_number, class: "form-control", required: true, placeholder: "10 digit phone number", inputmode: "numeric", autocomplete: "off", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit phone number", data: { phone_input: true, phone_number_field: true } %>
+            </div>
           </div>
 
           <div>
@@ -116,9 +119,9 @@
       };
 
       const loadCustomer = async () => {
-        const phoneNumber = phoneInput.value.trim();
+        const phoneNumber = phoneInput.value.replace(/\D/g, "");
 
-        if (phoneNumber.length < 10) {
+        if (phoneNumber.length !== 10) {
           clearState();
           return;
         }

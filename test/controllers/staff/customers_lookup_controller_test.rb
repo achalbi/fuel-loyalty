@@ -27,6 +27,17 @@ module Staff
       assert_response :not_found
     end
 
+    test "returns validation error for a phone number that is not 10 digits" do
+      sign_in users(:two)
+
+      get lookup_staff_customers_path, params: { phone_number: "12345" }, as: :json
+
+      assert_response :unprocessable_entity
+      payload = JSON.parse(response.body)
+      assert_equal false, payload["found"]
+      assert_equal "Phone number must be a 10 digit number.", payload["message"]
+    end
+
     test "staff can toggle customer status" do
       sign_in users(:two)
 

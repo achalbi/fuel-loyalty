@@ -39,9 +39,25 @@ class PointsRedeemer
   end
 
   def find_customer!
-    Customer.find_by!(phone_number: Customer.normalize_phone_number(phone_number))
+    validate_phone_number!
+
+    Customer.find_by!(phone_number: normalized_phone_number)
   rescue ActiveRecord::RecordNotFound
     raise ActiveRecord::RecordInvalid.new(Customer.new(phone_number: phone_number).tap { |customer| customer.errors.add(:phone_number, "was not found") })
+  end
+
+  def validate_phone_number!
+    return if Customer.valid_phone_number?(phone_number)
+
+    raise ActiveRecord::RecordInvalid.new(
+      Customer.new(phone_number: normalized_phone_number.presence || phone_number).tap do |customer|
+        customer.errors.add(:phone_number, Customer::PHONE_NUMBER_ERROR_MESSAGE)
+      end
+    )
+  end
+
+  def normalized_phone_number
+    @normalized_phone_number ||= Customer.normalize_phone_number(phone_number)
   end
 
   def normalized_points
