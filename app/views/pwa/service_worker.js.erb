@@ -3,12 +3,17 @@ const STATIC_CACHE = `fuel-loyalty-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `fuel-loyalty-pages-${CACHE_VERSION}`;
 const API_CACHE = `fuel-loyalty-api-${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline.html";
+const IMMEDIATE_ACTIVATION = <%= Rails.env.development? ? "true" : "false" %>;
+const ICON_192_URL = "/icon-192.png?v=<%= @cache_version %>";
+const ICON_512_URL = "/icon.png?v=<%= @cache_version %>";
+const ICON_SVG_URL = "/icon.svg?v=<%= @cache_version %>";
+const MANIFEST_URL = "<%= pwa_manifest_path(v: @cache_version) %>";
 const PRECACHE_URLS = [
   OFFLINE_URL,
-  "/icon-192.png",
-  "/icon.png",
-  "/icon.svg",
-  "<%= pwa_manifest_path %>",
+  ICON_192_URL,
+  ICON_512_URL,
+  ICON_SVG_URL,
+  MANIFEST_URL,
   "<%= asset_path('theme_boot.js') %>",
   "<%= asset_path('bootstrap.min.css') %>",
   "<%= asset_path('tabler-icons.min.css') %>",
@@ -24,6 +29,10 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
   );
+
+  if (IMMEDIATE_ACTIVATION) {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {
@@ -52,9 +61,10 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
+  const requestCacheKey = `${url.pathname}${url.search}`;
   if (url.origin !== self.location.origin) return;
 
-  if (url.pathname.startsWith("/assets/") || PRECACHE_URLS.includes(url.pathname)) {
+  if (url.pathname.startsWith("/assets/") || PRECACHE_URLS.includes(requestCacheKey)) {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
     return;
   }

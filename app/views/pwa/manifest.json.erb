@@ -1,20 +1,21 @@
+<% cache_buster = pwa_cache_buster %>
 {
   "id": "/",
   "name": "Fuel Loyalty",
   "short_name": "Fuel Loyalty",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "/icon.svg?v=<%= cache_buster %>",
       "type": "image/svg+xml",
       "sizes": "any"
     },
     {
-      "src": "/icon-192.png",
+      "src": "/icon-192.png?v=<%= cache_buster %>",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/icon.png",
+      "src": "/icon.png?v=<%= cache_buster %>",
       "type": "image/png",
       "sizes": "512x512"
     }

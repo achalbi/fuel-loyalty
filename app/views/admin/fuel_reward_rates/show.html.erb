@@ -7,16 +7,22 @@
         <h1 class="h3 mb-3">Fuel Reward Rates</h1>
         <p class="text-muted">Set how many loyalty points a customer earns for every Rs.100 spent on each fuel type.</p>
 
-        <%= form_with scope: :fuel_reward_rates, url: admin_fuel_reward_rates_path, method: :patch, class: "vstack gap-3" do |form| %>
+        <%= form_with scope: :fuel_reward_rates, url: admin_fuel_reward_rates_path, method: :patch, class: "reward-rates-form vstack gap-3" do |form| %>
           <% @fuel_reward_rates.each do |rate| %>
-            <div class="row align-items-end g-3">
-              <div class="col-md-6">
-                <label class="form-label"><%= rate.display_name %></label>
-                <input type="text" class="form-control" value="<%= rate.fuel_type %>" disabled>
+            <% field_id = "#{rate.fuel_type}_points_per_100" %>
+            <% hint_id = "#{field_id}_hint" %>
+
+            <div class="reward-rate-row">
+              <div class="reward-rate-copy">
+                <label for="<%= field_id %>" class="reward-rate-title"><%= rate.display_name %></label>
+                <p class="reward-rate-meta mb-0">Points awarded for every Rs.100 spent on this fuel type.</p>
               </div>
-              <div class="col-md-6">
-                <%= form.label "#{rate.fuel_type}_points_per_100", "Points per Rs.100", class: "form-label" %>
-                <%= number_field_tag "fuel_reward_rates[#{rate.fuel_type}][points_per_100]", rate.points_per_100, class: "form-control", min: 0, required: true, id: "#{rate.fuel_type}_points_per_100" %>
+
+              <div class="reward-rate-field">
+                <div class="input-group reward-rate-input-group">
+                  <%= number_field_tag "fuel_reward_rates[#{rate.fuel_type}][points_per_100]", rate.points_per_100, class: "form-control text-end", min: 0, required: true, id: field_id, aria: { describedby: hint_id } %>
+                  <span class="input-group-text" id="<%= hint_id %>">pts</span>
+                </div>
                 <% if rate.errors[:points_per_100].any? %>
                   <div class="text-danger small mt-1"><%= rate.errors[:points_per_100].to_sentence %></div>
                 <% end %>

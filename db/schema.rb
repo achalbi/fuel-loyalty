@@ -10,9 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_19_095000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_23_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "analytics_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.string "page_path", null: false
+    t.jsonb "properties", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.text "user_agent"
+    t.bigint "user_id"
+    t.index ["created_at"], name: "index_analytics_events_on_created_at"
+    t.index ["name"], name: "index_analytics_events_on_name"
+    t.index ["user_id"], name: "index_analytics_events_on_user_id"
+  end
 
   create_table "customers", force: :cascade do |t|
     t.boolean "active", default: true, null: false
@@ -87,6 +100,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_19_095000) do
     t.index ["vehicle_number"], name: "index_vehicles_on_vehicle_number", unique: true
   end
 
+  add_foreign_key "analytics_events", "users"
   add_foreign_key "points_ledgers", "customers"
   add_foreign_key "points_ledgers", "transactions"
   add_foreign_key "transactions", "customers"

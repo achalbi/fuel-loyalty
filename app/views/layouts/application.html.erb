@@ -2,6 +2,7 @@
 <html>
   <head>
     <% theme_setting = ThemeSetting.current %>
+    <% cache_buster = pwa_cache_buster %>
     <title><%= content_for(:title) || "Fuel Loyalty" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,10 +15,10 @@
 
     <%= yield :head %>
 
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon-192.png">
-    <link rel="manifest" href="<%= pwa_manifest_path %>">
+    <link rel="icon" href="/icon.png?v=<%= cache_buster %>" type="image/png">
+    <link rel="icon" href="/icon.svg?v=<%= cache_buster %>" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon-192.png?v=<%= cache_buster %>">
+    <link rel="manifest" href="<%= pwa_manifest_path(v: cache_buster) %>">
     <%= javascript_include_tag "theme_boot", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "bootstrap.min", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "tabler-icons.min", "data-turbo-track": "reload" %>
@@ -79,7 +80,7 @@
       <aside id="sidebar" class="sidebar">
         <div class="logo-area">
           <%= link_to root_path, class: "brand-lockup" do %>
-            <span class="brand-mark">F</span>
+            <span class="brand-mark" aria-hidden="true"><%= image_tag "/icon.svg?v=#{cache_buster}", alt: "", class: "brand-mark-image" %></span>
             <span class="logo-text">Fuel Loyalty</span>
           <% end %>
         </div>
@@ -123,7 +124,7 @@
         <nav class="navbar bg-white border-bottom px-3 py-3">
           <div class="container">
             <%= link_to root_path, class: "brand-lockup" do %>
-              <span class="brand-mark">F</span>
+              <span class="brand-mark" aria-hidden="true"><%= image_tag "/icon.svg?v=#{cache_buster}", alt: "", class: "brand-mark-image" %></span>
               <span class="logo-text">Fuel Loyalty</span>
             <% end %>
 

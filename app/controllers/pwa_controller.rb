@@ -10,7 +10,7 @@ class PwaController < ApplicationController
   end
 
   def service_worker
-    @cache_version = ENV.fetch("RELEASE_SHA", Rails.application.config.assets.version)
+    @cache_version = pwa_cache_buster
 
     response.set_header("Cache-Control", "no-cache")
     response.set_header("Service-Worker-Allowed", "/")

@@ -60,6 +60,8 @@ Rails.application.configure do
 
   # Suppress logger output for asset requests.
   config.assets.quiet = true
+  # Ignore stale precompiled manifests in development so Propshaft serves live assets.
+  config.assets.manifest_path = Rails.root.join("tmp/propshaft-dev/.manifest.json")
 
   if ENV["RAILS_LOG_TO_STDOUT"].present?
     logger           = ActiveSupport::Logger.new($stdout)

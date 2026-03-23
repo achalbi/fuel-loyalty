@@ -1,5 +1,6 @@
 class ApplicationController < ActionController::Base
   include Pundit::Authorization
+  helper_method :pwa_cache_buster
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
@@ -29,5 +30,31 @@ class ApplicationController < ActionController::Base
 
   def user_not_authorized
     redirect_to root_path, alert: "You are not authorized to perform that action."
+  end
+
+  def pwa_cache_buster
+    return ENV["RELEASE_SHA"] if ENV["RELEASE_SHA"].present?
+    return development_pwa_cache_buster if Rails.env.development?
+
+    Rails.application.config.assets.version
+  end
+
+  def development_pwa_cache_buster
+    @development_pwa_cache_buster ||= begin
+      watched_paths = Dir.glob(
+        [
+          Rails.root.join("app/assets/**/*").to_s,
+          Rails.root.join("app/views/layouts/**/*").to_s,
+          Rails.root.join("app/views/pwa/**/*").to_s
+        ]
+      )
+
+      latest_mtime = watched_paths
+        .select { |path| File.file?(path) }
+        .map { |path| File.mtime(path).to_i }
+        .max
+
+      "dev-#{latest_mtime || Time.current.to_i}"
+    end
   end
 end

@@ -1,0 +1,36 @@
+require "test_helper"
+
+module Devise
+  class SessionsControllerTest < ActionDispatch::IntegrationTest
+    def with_release_sha(value)
+      original_value = ENV["RELEASE_SHA"]
+      ENV["RELEASE_SHA"] = value
+      yield
+    ensure
+      ENV["RELEASE_SHA"] = original_value
+    end
+
+    test "sign in page shows the install app call to action" do
+      get new_user_session_path
+
+      assert_response :success
+      assert_select "[data-pwa-install-panel]", 1
+      assert_select "[data-pwa-install-button]", text: /Install App/
+      assert_select "[data-pwa-install-status]", /Install Fuel Loyalty|Add Fuel Loyalty/
+    end
+
+    test "sign in page uses cache-busted pwa asset links" do
+      with_release_sha("test-release") do
+        manifest_path = pwa_manifest_path(v: "test-release")
+
+        get new_user_session_path
+
+        assert_response :success
+        assert_select "link[rel='manifest'][href='#{manifest_path}']", 1
+        assert_select "link[rel='apple-touch-icon'][href='/icon-192.png?v=test-release']", 1
+        assert_select "link[rel='icon'][href='/icon.png?v=test-release']", 1
+        assert_select "link[rel='icon'][href='/icon.svg?v=test-release']", 1
+      end
+    end
+  end
+end

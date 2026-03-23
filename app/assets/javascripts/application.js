@@ -1,5 +1,79 @@
 (() => {
+  const ANALYTICS_ENDPOINT = "/analytics/events";
   const THEME_STORAGE_KEY = "fuel-loyalty-theme";
+  const PWA_INSTALL_EVENT_NAMES = new Set([
+    "pwa_install_cta_viewed",
+    "pwa_install_prompt_available",
+    "pwa_install_cta_clicked",
+    "pwa_install_manual_instructions_shown",
+    "pwa_install_prompt_shown",
+    "pwa_install_prompt_accepted",
+    "pwa_install_prompt_dismissed",
+    "pwa_install_completed",
+    "pwa_install_prompt_error"
+  ]);
+
+  const installPromptState = {
+    deferredPrompt: null
+  };
+
+  const currentPagePath = () => `${window.location.pathname}${window.location.search}`;
+
+  const isStandaloneMode = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+  const installInstructionsForDevice = () => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+
+    if (/iphone|ipad|ipod/.test(userAgent)) {
+      return "Open Safari's Share menu, then tap Add to Home Screen.";
+    }
+
+    if (/android/.test(userAgent)) {
+      return "Open your browser menu, then choose Install app or Add to Home Screen.";
+    }
+
+    return "Use the install option in your browser menu or address bar to add Fuel Loyalty.";
+  };
+
+  const dispatchAnalyticsIntegrations = (name, properties) => {
+    if (typeof window.gtag === "function") {
+      window.gtag("event", name, properties);
+    }
+
+    if (Array.isArray(window.dataLayer)) {
+      window.dataLayer.push({ event: name, ...properties });
+    }
+
+    if (typeof window.plausible === "function") {
+      window.plausible(name, { props: properties });
+    }
+  };
+
+  const trackAnalyticsEvent = (name, properties = {}) => {
+    if (!PWA_INSTALL_EVENT_NAMES.has(name)) return;
+
+    const payload = {
+      name,
+      page_path: currentPagePath(),
+      properties: {
+        ...properties,
+        standalone: isStandaloneMode()
+      }
+    };
+
+    dispatchAnalyticsIntegrations(name, payload.properties);
+
+    fetch(ANALYTICS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || ""
+      },
+      credentials: "same-origin",
+      keepalive: true,
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  };
 
   const registerServiceWorker = () => {
     if (!("serviceWorker" in navigator)) return;
@@ -7,7 +81,7 @@
 
     window.__fuelLoyaltyServiceWorkerRegistered = true;
 
-    window.addEventListener("load", async () => {
+    const register = async () => {
       try {
         const registration = await navigator.serviceWorker.register("/service-worker.js", { scope: "/" });
 
@@ -32,7 +106,9 @@
       } catch (error) {
         console.error("Service worker registration failed", error);
       }
-    }, { once: true });
+    };
+
+    register();
   };
 
   const preferredTheme = () => {
@@ -160,11 +236,151 @@
     });
   };
 
+  const setInstallPanelState = (panel, state = {}) => {
+    const button = panel.querySelector("[data-pwa-install-button]");
+    const status = panel.querySelector("[data-pwa-install-status]");
+    const help = panel.querySelector("[data-pwa-install-help]");
+
+    if (!button || !status || !help) return;
+
+    if (isStandaloneMode()) {
+      panel.classList.add("d-none");
+      return;
+    }
+
+    panel.classList.remove("d-none");
+    button.disabled = state.busy === true;
+
+    if (installPromptState.deferredPrompt) {
+      button.classList.remove("btn-outline-primary");
+      button.classList.add("btn-primary");
+      status.textContent = "Install Fuel Loyalty now for one-tap staff access from your home screen.";
+      help.classList.add("d-none");
+      help.textContent = "";
+      return;
+    }
+
+    button.classList.remove("btn-primary");
+    button.classList.add("btn-outline-primary");
+    status.textContent = "Use the install button to add Fuel Loyalty to this device without waiting for a browser auto-prompt.";
+
+    if (state.showManualInstructions) {
+      help.textContent = installInstructionsForDevice();
+      help.classList.remove("d-none");
+      return;
+    }
+
+    help.classList.add("d-none");
+    help.textContent = "";
+  };
+
+  const refreshInstallPanels = (state = {}) => {
+    document.querySelectorAll("[data-pwa-install-panel]").forEach((panel) => {
+      setInstallPanelState(panel, state);
+    });
+  };
+
+  const bindInstallPromptEvents = () => {
+    if (window.__fuelLoyaltyInstallPromptBound) return;
+
+    window.__fuelLoyaltyInstallPromptBound = true;
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      installPromptState.deferredPrompt = event;
+      trackAnalyticsEvent("pwa_install_prompt_available", {
+        prompt_supported: true,
+        platforms: Array.isArray(event.platforms) ? event.platforms : []
+      });
+      refreshInstallPanels();
+    });
+
+    window.addEventListener("appinstalled", () => {
+      installPromptState.deferredPrompt = null;
+      trackAnalyticsEvent("pwa_install_completed", {
+        source: "browser_install_event"
+      });
+      refreshInstallPanels();
+    });
+  };
+
+  const initializeInstallPrompt = () => {
+    const panels = document.querySelectorAll("[data-pwa-install-panel]");
+    if (panels.length === 0) return;
+
+    panels.forEach((panel) => {
+      const button = panel.querySelector("[data-pwa-install-button]");
+      if (!button) return;
+
+      if (panel.dataset.installViewed !== "true" && !isStandaloneMode()) {
+        panel.dataset.installViewed = "true";
+        trackAnalyticsEvent("pwa_install_cta_viewed", {
+          source: panel.dataset.installSource || "unknown"
+        });
+      }
+
+      if (panel.dataset.bound === "true") {
+        setInstallPanelState(panel);
+        return;
+      }
+
+      panel.dataset.bound = "true";
+
+      button.addEventListener("click", async () => {
+        const source = panel.dataset.installSource || "unknown";
+        const prompt = installPromptState.deferredPrompt;
+
+        trackAnalyticsEvent("pwa_install_cta_clicked", {
+          source,
+          prompt_available: Boolean(prompt)
+        });
+
+        if (!prompt) {
+          setInstallPanelState(panel, { showManualInstructions: true });
+          trackAnalyticsEvent("pwa_install_manual_instructions_shown", {
+            source,
+            reason: "prompt_unavailable"
+          });
+          return;
+        }
+
+        try {
+          setInstallPanelState(panel, { busy: true });
+          trackAnalyticsEvent("pwa_install_prompt_shown", { source });
+          await prompt.prompt();
+          const choice = await prompt.userChoice;
+
+          trackAnalyticsEvent(
+            choice.outcome === "accepted" ? "pwa_install_prompt_accepted" : "pwa_install_prompt_dismissed",
+            {
+              source,
+              outcome: choice.outcome
+            }
+          );
+        } catch (error) {
+          trackAnalyticsEvent("pwa_install_prompt_error", {
+            source,
+            message: error.message
+          });
+        } finally {
+          installPromptState.deferredPrompt = null;
+          setInstallPanelState(panel, { busy: false });
+          refreshInstallPanels();
+        }
+      });
+
+      setInstallPanelState(panel);
+    });
+  };
+
   document.addEventListener("turbo:load", initializeTheme);
   document.addEventListener("DOMContentLoaded", initializeTheme);
   document.addEventListener("turbo:load", initializeSidebar);
   document.addEventListener("DOMContentLoaded", initializeSidebar);
   document.addEventListener("turbo:load", initializeConfirmModal);
   document.addEventListener("DOMContentLoaded", initializeConfirmModal);
+  document.addEventListener("turbo:load", initializeInstallPrompt);
+  document.addEventListener("DOMContentLoaded", initializeInstallPrompt);
+  bindInstallPromptEvents();
   registerServiceWorker();
 })();

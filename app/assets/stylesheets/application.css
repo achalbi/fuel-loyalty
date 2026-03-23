@@ -110,6 +110,12 @@
   --bs-body-color: var(--fl-text);
   --bs-border-color: var(--fl-border);
   --bs-secondary-color: var(--fl-muted);
+  --bs-secondary-bg: var(--fl-surface-muted);
+  --bs-tertiary-bg: var(--fl-surface);
+  --bs-form-control-bg: var(--fl-surface);
+  --bs-form-control-disabled-bg: var(--fl-surface-muted);
+  --bs-form-select-bg: var(--fl-surface);
+  --bs-form-select-disabled-bg: var(--fl-surface-muted);
   --bs-link-color: var(--fl-gray-700);
   --bs-link-hover-color: var(--fl-primary);
   color-scheme: light;
@@ -241,14 +247,18 @@ html[data-theme="dark"] body {
 .brand-mark {
   width: 2rem;
   height: 2rem;
-  border-radius: 0.75rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--fl-primary), var(--fl-primary-accent));
-  color: #fff;
-  font-weight: 700;
-  box-shadow: 0 12px 24px rgba(47, 158, 68, 0.2);
+  flex-shrink: 0;
+}
+
+.brand-mark-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 20px rgba(47, 158, 68, 0.18));
 }
 
 .logo-text {
@@ -572,6 +582,41 @@ html[data-theme="dark"] body {
   padding: 1.75rem !important;
 }
 
+.install-app-panel {
+  border: 1px solid rgba(var(--bs-primary-rgb), 0.22);
+  border-radius: 1rem;
+  padding: 1rem;
+  background:
+    linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.12), transparent 65%),
+    var(--fl-surface-elevated);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.install-app-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--fl-primary), var(--fl-primary-accent));
+  color: var(--fl-primary-contrast);
+  box-shadow: 0 0.75rem 1.5rem rgba(var(--bs-primary-rgb), 0.18);
+}
+
+.install-app-icon .ti {
+  font-size: 1.2rem;
+}
+
+.install-app-panel .btn {
+  min-height: 2.75rem;
+}
+
+.install-app-panel .btn[disabled] {
+  opacity: 0.72;
+}
+
 .border-dashed {
   border-style: dashed !important;
 }
@@ -584,6 +629,8 @@ html[data-theme="dark"] body {
 .form-control,
 .form-select {
   background: var(--fl-surface);
+  background-color: var(--fl-surface);
+  background-clip: padding-box;
   border-color: var(--fl-gray-200);
   color: var(--fl-gray-800);
   font-size: 0.875rem;
@@ -591,8 +638,99 @@ html[data-theme="dark"] body {
   padding: 0.45rem 0.75rem;
 }
 
+.form-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: var(--fl-surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%237A6C57' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 0.9rem 0.9rem;
+  padding-right: 2.25rem;
+}
+
+.form-select[data-vehicle-select] {
+  background-color: var(--fl-surface);
+}
+
 .form-control::placeholder {
   color: var(--fl-gray-500);
+}
+
+.form-control:disabled,
+.form-control[readonly],
+.form-select:disabled {
+  background: var(--fl-surface-muted);
+  background-color: var(--fl-surface-muted);
+  border-color: var(--fl-gray-200);
+  color: var(--fl-gray-500);
+  opacity: 1;
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+  -webkit-text-fill-color: var(--fl-gray-500);
+  -webkit-box-shadow: 0 0 0 1000px var(--fl-surface-muted) inset;
+}
+
+.form-select:disabled {
+  -webkit-text-fill-color: var(--fl-gray-500);
+  -webkit-box-shadow: 0 0 0 1000px var(--fl-surface-muted) inset;
+}
+
+html[data-theme="dark"] .form-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23C0B08D' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+}
+
+html[data-theme="dark"] input.form-control,
+html[data-theme="dark"] textarea.form-control,
+html[data-theme="dark"] select.form-select {
+  background-color: var(--fl-surface) !important;
+  color: var(--fl-gray-800);
+}
+
+html[data-theme="dark"] input.form-control:disabled,
+html[data-theme="dark"] input.form-control[readonly],
+html[data-theme="dark"] textarea.form-control:disabled,
+html[data-theme="dark"] textarea.form-control[readonly],
+html[data-theme="dark"] select.form-select:disabled {
+  background-color: var(--fl-surface-muted) !important;
+  color: var(--fl-gray-500) !important;
+  border-color: var(--fl-gray-200) !important;
+}
+
+.form-select option,
+.form-select optgroup {
+  background: var(--fl-surface-elevated);
+  color: var(--fl-gray-800);
+}
+
+.form-control-color {
+  padding: 0.35rem;
+  background: var(--fl-surface);
+  border-color: var(--fl-gray-200);
+}
+
+.form-control-color::-webkit-color-swatch {
+  border: 1px solid var(--fl-gray-200);
+  border-radius: 0.55rem;
+}
+
+.form-control-color::-moz-color-swatch {
+  border: 1px solid var(--fl-gray-200);
+  border-radius: 0.55rem;
+}
+
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus,
+.form-select:-webkit-autofill,
+.form-select:-webkit-autofill:hover,
+.form-select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--fl-gray-800);
+  -webkit-box-shadow: 0 0 0 1000px var(--fl-surface) inset;
+  transition: background-color 9999s ease-out;
 }
 
 .form-control:focus,
@@ -621,6 +759,57 @@ html[data-theme="dark"] body {
 .form-check-input:checked {
   background-color: var(--fl-primary);
   border-color: var(--fl-primary);
+}
+
+.input-group-text {
+  background: var(--fl-surface-muted);
+  border-color: var(--fl-gray-200);
+  color: var(--fl-gray-700);
+  font-size: 0.8125rem;
+}
+
+.reward-rates-form {
+  gap: 0.85rem !important;
+}
+
+.reward-rate-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(132px, 168px);
+  gap: 1rem;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--fl-gray-200);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, var(--fl-surface-elevated), var(--fl-surface));
+}
+
+.reward-rate-copy {
+  min-width: 0;
+}
+
+.reward-rate-title {
+  display: block;
+  margin: 0;
+  color: var(--fl-gray-800);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.reward-rate-meta {
+  color: var(--fl-gray-500);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.reward-rate-field,
+.reward-rate-input-group {
+  width: 100%;
+}
+
+.reward-rate-field .form-control {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .btn {
@@ -682,6 +871,26 @@ html[data-theme="dark"] body {
   --bs-btn-hover-border-color: var(--fl-gray-200);
 }
 
+.dropdown-menu {
+  --bs-dropdown-bg: var(--fl-surface-elevated);
+  --bs-dropdown-color: var(--fl-gray-800);
+  --bs-dropdown-link-color: var(--fl-gray-800);
+  --bs-dropdown-link-hover-color: var(--fl-primary-strong);
+  --bs-dropdown-link-hover-bg: var(--fl-primary-soft);
+  --bs-dropdown-link-active-color: var(--fl-primary-contrast);
+  --bs-dropdown-link-active-bg: var(--fl-primary);
+  --bs-dropdown-border-color: var(--fl-gray-200);
+  --bs-dropdown-divider-bg: var(--fl-gray-200);
+  --bs-dropdown-box-shadow: var(--fl-shadow);
+  background: var(--fl-surface-elevated);
+  border-color: var(--fl-gray-200);
+  color: var(--fl-gray-800);
+}
+
+.dropdown-divider {
+  border-top-color: var(--fl-gray-200);
+}
+
 .dropdown-item {
   color: var(--fl-gray-800);
 }
@@ -694,6 +903,12 @@ html[data-theme="dark"] body {
 
 .navbar.bg-white {
   background: var(--fl-surface) !important;
+}
+
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .dropdown-menu {
+  color-scheme: dark;
 }
 
 .bg-primary {
@@ -992,6 +1207,20 @@ h4 {
   .responsive-table .table-action-group .button_to,
   .responsive-table .table-action-group .btn {
     width: 100%;
+  }
+
+  .reward-rate-row {
+    grid-template-columns: minmax(0, 1fr) minmax(112px, 42%);
+    gap: 0.8rem;
+    padding: 0.85rem 0.9rem;
+  }
+
+  .reward-rate-title {
+    font-size: 0.9rem;
+  }
+
+  .reward-rate-meta {
+    font-size: 0.76rem;
   }
 
   .responsive-table td[colspan] {

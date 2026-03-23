@@ -5,7 +5,7 @@
     <div class="card-body p-5">
       <div class="text-center mb-4">
         <div class="brand-lockup justify-content-center mb-4">
-          <span class="brand-mark">F</span>
+          <span class="brand-mark" aria-hidden="true"><%= image_tag "/icon.svg?v=#{pwa_cache_buster}", alt: "", class: "brand-mark-image" %></span>
           <span class="logo-text">Fuel Loyalty</span>
         </div>
         <h1 class="card-title mb-2 h4">Sign in to your account</h1>
@@ -35,6 +35,33 @@
 
         <%= form.submit "Sign In", class: "btn btn-primary w-100" %>
       <% end %>
+
+      <section class="install-app-panel mt-4" data-pwa-install-panel data-install-source="login_page" aria-labelledby="install-app-title">
+        <div class="d-flex align-items-start gap-3">
+          <div class="install-app-icon" aria-hidden="true">
+            <i class="ti ti-device-mobile-down"></i>
+          </div>
+
+          <div class="flex-grow-1">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+              <h2 id="install-app-title" class="h6 mb-0">Install Fuel Loyalty</h2>
+              <span class="badge text-bg-light border">Recommended</span>
+            </div>
+
+            <p class="small-muted mb-3" data-pwa-install-status>
+              Add Fuel Loyalty to this device for faster staff access and a full-screen app experience.
+            </p>
+
+            <div class="d-grid gap-2">
+              <button type="button" class="btn btn-outline-primary" data-pwa-install-button>
+                <i class="ti ti-download me-1"></i>
+                <span>Install App</span>
+              </button>
+              <p class="small-muted mb-0 d-none" data-pwa-install-help></p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </div>
