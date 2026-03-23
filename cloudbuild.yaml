@@ -55,8 +55,8 @@ steps:
       - --quiet
 
       # Runtime configuration
-      - --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE},RAILS_SERVE_STATIC_FILES=true
-      - --update-env-vars=RELEASE_SHA=$COMMIT_SHA
+      - --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE},RAILS_SERVE_STATIC_FILES=true,RELEASE_SHA=$COMMIT_SHA
+
 
       # Labels (traceability)
       - --update-labels=managed-by=gcp-cloud-build-deploy-cloud-run,gcb-trigger-id=$_TRIGGER_ID,gcb-trigger-region=$LOCATION,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID
