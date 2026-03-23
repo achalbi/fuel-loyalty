@@ -1,6 +1,11 @@
 class LoyaltyController < ApplicationController
   PUBLIC_CACHE_FALLBACK_TIME = Time.utc(2024, 1, 1).freeze
 
+  # Older cached loyalty shells may still submit POST /loyalty. Keep that
+  # compatibility path CSRF-free because it only normalizes the phone number
+  # and redirects to the read-only GET result page.
+  skip_forgery_protection only: :create
+
   def new
     theme_setting = ThemeSetting.current
     cache_version = ENV.fetch("RELEASE_SHA", Rails.application.config.assets.version)

@@ -46,6 +46,17 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "legacy post lookup works without a csrf token" do
+    original_value = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+
+    post loyalty_path, params: { loyalty: { phone_number: customers(:one).phone_number } }
+
+    assert_redirected_to loyalty_result_path(phone_number: customers(:one).phone_number)
+  ensure
+    ActionController::Base.allow_forgery_protection = original_value
+  end
+
   test "shows loyalty details for an existing customer" do
     customers(:one).points_ledgers.create!(points: -2, entry_type: :redeem)
 
