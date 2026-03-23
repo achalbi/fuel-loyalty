@@ -39,6 +39,32 @@ steps:
       - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME
 
   # -----------------------------
+  # Run database migrations
+  # -----------------------------
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: Migrate
+    entrypoint: /bin/bash
+    args:
+      - -c
+      - |
+        gcloud run jobs deploy ${_SERVICE_NAME}-migrate \
+          --image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA \
+          --region=$_DEPLOY_REGION \
+          --command=bundle \
+          --args=exec,rails,db:migrate \
+          --max-retries=0 \
+          --parallelism=1 \
+          --tasks=1 \
+          --task-timeout=900s \
+          --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE},RAILS_SERVE_STATIC_FILES=true,APP_URL=${_APP_URL},MAILER_FROM=${_MAILER_FROM},RELEASE_SHA=$COMMIT_SHA \
+          --quiet
+
+        gcloud run jobs execute ${_SERVICE_NAME}-migrate \
+          --region=$_DEPLOY_REGION \
+          --wait \
+          --quiet
+
+  # -----------------------------
   # Deploy to Cloud Run
   # -----------------------------
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -55,7 +81,7 @@ steps:
       - --quiet
 
       # Runtime configuration
-      - --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE},RAILS_SERVE_STATIC_FILES=true,RELEASE_SHA=$COMMIT_SHA
+      - --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE},RAILS_SERVE_STATIC_FILES=true,APP_URL=${_APP_URL},MAILER_FROM=${_MAILER_FROM},RELEASE_SHA=$COMMIT_SHA
 
 
       # Labels (traceability)
@@ -78,10 +104,15 @@ substitutions:
   _AR_PROJECT_ID: thoughtbasics
   _SERVICE_NAME: fuel-loyalty-git
   REPO_NAME: achalbi-fuel-loyalty
+  _APP_URL: 'https://fly.thoughtbasics.com'
+  _MAILER_FROM: 'no-reply@fly.thoughtbasics.com'
 
+  # Set these in the Cloud Build trigger or replace them with Secret Manager integration
+  # before deploying from this file.
   # INLINE SECRETS (TEMPORARY ONLY)
   _SECRET_KEY_BASE: 'c30c5d031fbb18ffa657d8f91534bce95f9a3b8fac7e803726641fc7c41a19766f4ee01b202ebb317120b90319bd28a7901f94e368896e0d3aa2890a0b601fca'
   _DATABASE_URL: 'postgresql://postgres:e7BZhKFVvp3J0V4t@db.pjkwixcnauayaplyhqdt.supabase.co:5432/postgres'
+
 
 tags:
   - gcp-cloud-build-deploy-cloud-run

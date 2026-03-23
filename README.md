@@ -46,10 +46,22 @@ docker compose exec -T app bundle exec brakeman -q
 docker compose exec -T app bundle exec rails assets:precompile
 ```
 
-## Run a production migration on Cloud Run
+## Cloud Run deploy behavior
+
+`cloudbuild.yaml` now runs `rails db:migrate` automatically on every deploy before
+the Cloud Run service is updated.
+
+This is safe to run every time: Rails only applies pending migrations, so if
+there are no new migration files, nothing changes in the database.
+
+This is intentionally done in the deploy pipeline, not in the Docker build and
+not in the app startup command, so production database changes happen once per
+deploy instead of once per container boot.
+
+## Run a production migration manually on Cloud Run
 
 This repo's Cloud Build config targets the Cloud Run service `fuel-loyalty-git`
-in `us-central1`. To run a one-off migration against the same image, use:
+in `us-central1`. If you ever need to run the same migration step manually, use:
 
 ```bash
 SERVICE=fuel-loyalty-git
