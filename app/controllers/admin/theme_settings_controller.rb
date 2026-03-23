@@ -10,6 +10,7 @@ module Admin
       authorize @theme_setting
 
       if @theme_setting.update(theme_setting_params)
+        Cdn::Purger.call if @theme_setting.saved_change_to_primary_color?
         redirect_to admin_theme_settings_path, notice: "Theme color updated successfully."
       else
         flash.now[:alert] = @theme_setting.errors.full_messages.to_sentence

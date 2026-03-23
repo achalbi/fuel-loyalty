@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#43B05C">
+    <title>Fuel Loyalty Offline</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f4fbf6;
+        color: #15331c;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      main {
+        max-width: 32rem;
+        background: #ffffff;
+        border: 1px solid rgba(67, 176, 92, 0.18);
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: 0 24px 60px rgba(8, 30, 15, 0.08);
+      }
+
+      h1 {
+        margin-top: 0;
+        margin-bottom: 12px;
+        font-size: clamp(1.75rem, 3vw, 2.25rem);
+      }
+
+      p {
+        margin: 0 0 12px;
+        line-height: 1.6;
+      }
+
+      a {
+        color: #2e8743;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>You are offline</h1>
+      <p>Fuel Loyalty can still reopen some previously visited public pages, but live loyalty lookups and staff actions need a network connection.</p>
+      <p>Reconnect and refresh to continue. If you were in the middle of a transaction, please verify the latest data before submitting again.</p>
+      <p><a href="/loyalty">Return to Loyalty Lookup</a></p>
+    </main>
+  </body>
+</html>

@@ -17,4 +17,8 @@ end
 
 class ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
+
+  setup do
+    host! "www.example.test"
+  end
 end

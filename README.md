@@ -17,3 +17,7 @@ docker compose run --rm app bundle exec rails db:prepare
 docker compose down
 docker compose down -v
 ```
+
+## Edge rollout
+
+The repo now includes an incremental edge-cache rollout path for the public loyalty shell. See [docs/edge-cache-rollout.md](/Users/achalindiresh/workspace/fuel-loyalty/docs/edge-cache-rollout.md) for the Cloudflare cache rules, required runtime env vars, and theme-change purge behavior.

@@ -1,6 +1,40 @@
 (() => {
   const THEME_STORAGE_KEY = "fuel-loyalty-theme";
 
+  const registerServiceWorker = () => {
+    if (!("serviceWorker" in navigator)) return;
+    if (window.__fuelLoyaltyServiceWorkerRegistered) return;
+
+    window.__fuelLoyaltyServiceWorkerRegistered = true;
+
+    window.addEventListener("load", async () => {
+      try {
+        const registration = await navigator.serviceWorker.register("/service-worker.js", { scope: "/" });
+
+        const notifyUpdate = () => {
+          window.dispatchEvent(new CustomEvent("pwa:update-available", { detail: { registration } }));
+        };
+
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          notifyUpdate();
+        }
+
+        registration.addEventListener("updatefound", () => {
+          const candidate = registration.installing;
+          if (!candidate) return;
+
+          candidate.addEventListener("statechange", () => {
+            if (candidate.state === "installed" && navigator.serviceWorker.controller) {
+              notifyUpdate();
+            }
+          });
+        });
+      } catch (error) {
+        console.error("Service worker registration failed", error);
+      }
+    }, { once: true });
+  };
+
   const preferredTheme = () => {
     if (document.documentElement.dataset.theme) return document.documentElement.dataset.theme;
 
@@ -132,4 +166,5 @@
   document.addEventListener("DOMContentLoaded", initializeSidebar);
   document.addEventListener("turbo:load", initializeConfirmModal);
   document.addEventListener("DOMContentLoaded", initializeConfirmModal);
+  registerServiceWorker();
 })();

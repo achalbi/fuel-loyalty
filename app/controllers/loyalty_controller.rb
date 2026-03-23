@@ -1,5 +1,23 @@
 class LoyaltyController < ApplicationController
-  def new; end
+  PUBLIC_CACHE_FALLBACK_TIME = Time.utc(2024, 1, 1).freeze
+
+  def new
+    theme_setting = ThemeSetting.current
+    cache_version = ENV.fetch("RELEASE_SHA", Rails.application.config.assets.version)
+
+    set_public_cache_headers(
+      max_age: 0,
+      s_maxage: 60,
+      stale_while_revalidate: 30,
+      stale_if_error: 86_400
+    )
+
+    return unless stale?(
+      etag: [cache_version, theme_setting.primary_color],
+      last_modified: theme_setting.updated_at&.utc || PUBLIC_CACHE_FALLBACK_TIME,
+      public: true
+    )
+  end
 
   def show
     @phone_number = Customer.normalize_phone_number(params[:phone_number])

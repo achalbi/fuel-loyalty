@@ -2,6 +2,8 @@ Rails.application.routes.draw do
   devise_for :users
 
   get "up" => "rails/health#show", as: :rails_health_check
+  get "/manifest.json", to: "pwa#manifest", as: :pwa_manifest, defaults: { format: :json }
+  get "/service-worker.js", to: "pwa#service_worker", as: :pwa_service_worker, defaults: { format: :js }
 
   root "dashboard#show"
 

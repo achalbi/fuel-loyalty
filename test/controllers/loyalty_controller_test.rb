@@ -5,7 +5,37 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     get new_loyalty_path
 
     assert_response :success
+    assert_equal(
+      ["max-age=0", "public", "s-maxage=60", "stale-if-error=86400", "stale-while-revalidate=30"],
+      response.headers["Cache-Control"].split(", ").sort
+    )
+    assert_not_nil response.headers["ETag"]
     assert_select "h1", "Loyalty Lookup"
+    assert_select "link[rel='manifest'][href='#{pwa_manifest_path}']"
+    assert_select "link[href*='cdn.jsdelivr']", count: 0
+    assert_select "link[href*='fonts.googleapis']", count: 0
+    assert_select "script[src*='cdn.jsdelivr']", count: 0
+    assert_select "link[href*='/assets/bootstrap.min']", count: 1
+    assert_select "link[href*='/assets/tabler-icons.min']", count: 1
+    assert_select "link[href*='/assets/application']", count: 1
+    assert_select "script[src*='/assets/bootstrap.bundle.min']", count: 1
+  end
+
+  test "returns 304 for a fresh loyalty shell request" do
+    get new_loyalty_path
+
+    assert_response :success
+
+    get new_loyalty_path, headers: {
+      "If-None-Match" => response.headers["ETag"],
+      "If-Modified-Since" => response.headers["Last-Modified"]
+    }
+
+    assert_response :not_modified
+    assert_equal(
+      ["max-age=0", "public", "s-maxage=60", "stale-if-error=86400", "stale-while-revalidate=30"],
+      response.headers["Cache-Control"].split(", ").sort
+    )
   end
 
   test "shows loyalty details for an existing customer" do

@@ -1,22 +1,40 @@
 {
-  "name": "App",
+  "id": "/",
+  "name": "Fuel Loyalty",
+  "short_name": "Fuel Loyalty",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "/icon-192.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "192x192"
     },
     {
       "src": "/icon.png",
       "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "maskable"
+      "sizes": "512x512"
     }
   ],
-  "start_url": "/",
+  "start_url": "/loyalty?source=pwa",
   "display": "standalone",
   "scope": "/",
-  "description": "App.",
-  "theme_color": "red",
-  "background_color": "red"
+  "description": "Fuel station loyalty lookup and staff operations app.",
+  "theme_color": "<%= @theme_setting.primary_color %>",
+  "background_color": "#F7FFF8",
+  "lang": "en",
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Loyalty Lookup",
+      "url": "/loyalty"
+    },
+    {
+      "name": "Staff Login",
+      "url": "/users/sign_in"
+    }
+  ]
 }

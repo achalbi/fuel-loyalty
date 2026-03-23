@@ -7,6 +7,7 @@ module Staff
 
       get staff_customers_path
       assert_response :success
+      assert_equal "private, no-store", response.headers["Cache-Control"]
       assert_select "h1", "Customer Search"
       assert_select "td", text: "Arun"
 

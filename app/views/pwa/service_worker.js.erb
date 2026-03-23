@@ -1,0 +1,132 @@
+const CACHE_VERSION = "<%= @cache_version %>";
+const STATIC_CACHE = `fuel-loyalty-static-${CACHE_VERSION}`;
+const PAGE_CACHE = `fuel-loyalty-pages-${CACHE_VERSION}`;
+const API_CACHE = `fuel-loyalty-api-${CACHE_VERSION}`;
+const OFFLINE_URL = "/offline.html";
+const PRECACHE_URLS = [
+  OFFLINE_URL,
+  "/icon-192.png",
+  "/icon.png",
+  "/icon.svg",
+  "<%= pwa_manifest_path %>",
+  "<%= asset_path('theme_boot.js') %>",
+  "<%= asset_path('bootstrap.min.css') %>",
+  "<%= asset_path('tabler-icons.min.css') %>",
+  "<%= asset_path('application.css') %>",
+  "<%= asset_path('bootstrap.bundle.min.js') %>",
+  "<%= asset_path('application.js') %>"
+];
+const CACHEABLE_NAVIGATION_PATHS = new Set(["/loyalty"]);
+const SENSITIVE_PREFIXES = ["/admin", "/staff", "/users", "/customers"];
+const SENSITIVE_PATHS = new Set(["/loyalty/result"]);
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  const activeCaches = new Set([STATIC_CACHE, PAGE_CACHE, API_CACHE]);
+
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key.startsWith("fuel-loyalty-") && !activeCaches.has(key))
+          .map((key) => caches.delete(key))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (url.pathname.startsWith("/assets/") || PRECACHE_URLS.includes(url.pathname)) {
+    event.respondWith(cacheFirst(request, STATIC_CACHE));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/public/")) {
+    event.respondWith(staleWhileRevalidate(request, API_CACHE));
+    return;
+  }
+
+  if (request.mode === "navigate") {
+    if (cacheableNavigation(url.pathname)) {
+      event.respondWith(networkFirst(request, PAGE_CACHE));
+      return;
+    }
+
+    event.respondWith(networkWithOfflineFallback(request));
+  }
+});
+
+function cacheableNavigation(pathname) {
+  if (SENSITIVE_PATHS.has(pathname)) return false;
+  if (SENSITIVE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return false;
+
+  return CACHEABLE_NAVIGATION_PATHS.has(pathname);
+}
+
+async function cacheFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cachedResponse = await cache.match(request);
+
+  if (cachedResponse) return cachedResponse;
+
+  const response = await fetch(request);
+  await cacheResponse(cache, request, response);
+  return response;
+}
+
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cachedResponse = await cache.match(request);
+  const networkResponse = fetch(request)
+    .then(async (response) => {
+      await cacheResponse(cache, request, response);
+      return response;
+    })
+    .catch(() => cachedResponse);
+
+  return cachedResponse || networkResponse;
+}
+
+async function networkFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+
+  try {
+    const response = await fetch(request);
+    await cacheResponse(cache, request, response);
+    return response;
+  } catch (_error) {
+    return (await cache.match(request)) || caches.match(OFFLINE_URL);
+  }
+}
+
+async function networkWithOfflineFallback(request) {
+  try {
+    return await fetch(request);
+  } catch (_error) {
+    return caches.match(OFFLINE_URL);
+  }
+}
+
+async function cacheResponse(cache, request, response) {
+  if (!response || !response.ok || response.type !== "basic") return;
+
+  await cache.put(request, response.clone());
+}
