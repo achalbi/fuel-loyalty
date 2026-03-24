@@ -85,6 +85,18 @@ module Staff
       get new_staff_customer_path
 
       assert_response :success
+      assert_select "button[data-cancel-back-button='true'][data-fallback-path='#{staff_customers_path}']", text: "Cancel"
+      assert_includes response.body, "window.history.back()"
+    end
+
+    test "staff new customer screen prefills searched phone and vehicle values" do
+      sign_in users(:two)
+
+      get new_staff_customer_path, params: { phone_number: "98888 77777", vehicle_number: "tn 30 ab 1234" }
+
+      assert_response :success
+      assert_select "input[name='customer[phone_number]'][value='9888877777']"
+      assert_select "input[name='customer[vehicle_number]'][value='TN30AB1234']"
     end
   end
 end

@@ -25,6 +25,8 @@ module Admin
 
       get new_admin_customer_path
       assert_response :success
+      assert_select "button[data-cancel-back-button='true'][data-fallback-path='#{admin_customers_path}']", text: "Cancel"
+      assert_includes response.body, "window.history.back()"
 
       get admin_customer_path(customers(:one))
       assert_response :success

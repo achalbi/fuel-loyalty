@@ -22,6 +22,7 @@ Rails.application.routes.draw do
     resources :redemptions, only: %i[new create]
     resources :transactions, only: %i[new create] do
       get :lookup, on: :collection
+      post :register_customer, on: :collection
     end
   end
 

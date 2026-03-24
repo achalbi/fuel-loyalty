@@ -27,6 +27,10 @@ module Staff
       get lookup_staff_customers_path, params: { phone_number: "9999999999" }, as: :json
 
       assert_response :not_found
+      payload = JSON.parse(response.body)
+      assert_equal false, payload["found"]
+      assert_equal "Customer not found for that phone number.", payload["message"]
+      assert_equal new_staff_customer_path(phone_number: "9999999999"), payload["register_customer_path"]
     end
 
     test "returns validation error for a phone number that is not 10 digits" do

@@ -6,7 +6,7 @@ module Staff
     end
 
     def new
-      @customer = Customer.new
+      @customer = Customer.new(new_customer_prefill_attributes)
       authorize @customer
     end
 
@@ -61,7 +61,11 @@ module Staff
           }
         }
       else
-        render json: { found: false, message: "Customer not found for that phone number." }, status: :not_found
+        render json: {
+          found: false,
+          message: "Customer not found for that phone number.",
+          register_customer_path: register_customer_prefill_path(phone_number: normalized_phone)
+        }, status: :not_found
       end
     end
 
@@ -79,6 +83,13 @@ module Staff
       @query = params[:q].to_s.strip
       @customers = customer_scope
       @customer = form_customer
+    end
+
+    def new_customer_prefill_attributes
+      {
+        phone_number: Customer.normalize_phone_number(params[:phone_number]).presence,
+        vehicle_number: Vehicle.normalize_vehicle_number(params[:vehicle_number]).presence
+      }.compact_blank
     end
 
     def customer_scope

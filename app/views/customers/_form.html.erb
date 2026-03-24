@@ -1,4 +1,7 @@
 <% modal_context = local_assigns[:context].to_s == "modal" %>
+<% show_back_cancel_button = local_assigns[:show_back_cancel_button] %>
+<% cancel_fallback_path = local_assigns[:cancel_fallback_path] %>
+<% hidden_fields = local_assigns[:hidden_fields] || {} %>
 
 <% form_markup = capture do %>
   <%= form_with model: customer, url: form_url, method: form_method, class: "vstack gap-3" do |form| %>
@@ -39,10 +42,21 @@
       </div>
     <% end %>
 
+    <% hidden_fields.each do |field_name, field_value| %>
+      <%= hidden_field_tag field_name, field_value %>
+    <% end %>
+
     <div class="d-flex gap-2">
       <%= form.submit submit_label, class: "btn btn-primary" %>
       <% if modal_context %>
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+      <% elsif show_back_cancel_button %>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          data-cancel-back-button="true"
+          data-fallback-path="<%= cancel_fallback_path %>"
+          onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = this.dataset.fallbackPath; }">Cancel</button>
       <% end %>
     </div>
   <% end %>

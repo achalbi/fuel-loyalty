@@ -1,9 +1,10 @@
 <% content_for :title, "New Transaction" %>
-<% active_lookup_mode = @active_lookup_mode.presence_in(%w[phone vehicle]) || "phone" %>
+<% active_lookup_mode = @active_lookup_mode.presence_in(%w[phone vehicle]) || "vehicle" %>
 <% phone_tab_active = active_lookup_mode == "phone" %>
 <% vehicle_tab_active = active_lookup_mode == "vehicle" %>
+<% registration_customer = @registration_customer || Customer.new %>
 
-<div class="card shadow-sm mb-4 transaction-entry-shell">
+<div class="card shadow-sm mb-2 transaction-entry-shell">
   <div class="card-body">
     <h1 class="h3 mb-2">Record Fuel Transaction</h1>
     <p class="text-muted mb-3">Find the customer for this visit using a phone number or vehicle number, then record the fuel amount.</p>
@@ -59,114 +60,116 @@
     aria-labelledby="transaction-phone-tab"
     tabindex="0">
     <div
-      class="row g-4"
+      class="transaction-entry-panel"
       data-transaction-phone-root
       data-lookup-url="<%= lookup_staff_customers_path %>"
       data-selected-vehicle-id="<%= phone_tab_active ? @prefill_vehicle_id : "" %>">
-      <div class="col-lg-7">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h2 class="h4 mb-3">Lookup by Phone</h2>
-            <p class="text-muted">Enter the customer's phone number to load the profile, then choose the vehicle for this visit.</p>
+      <div class="alert alert-warning d-none mb-0 transaction-customer-error" data-customer-error role="alert"></div>
 
-            <% if phone_tab_active && @errors.present? %>
-              <div class="alert alert-danger"><%= @errors.to_sentence %></div>
-            <% end %>
+      <div class="row gx-4 gy-3">
+        <div class="col-lg-7">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h2 class="h4 mb-3">Lookup by Phone</h2>
+              <p class="text-muted">Enter the customer's phone number to load the profile, then choose the vehicle for this visit.</p>
 
-            <%= form_with scope: :transaction, namespace: :phone_transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
-              <%= form.hidden_field :lookup_mode, value: "phone" %>
+              <% if phone_tab_active && @errors.present? %>
+                <div class="alert alert-danger"><%= @errors.to_sentence %></div>
+              <% end %>
 
-              <div>
-                <%= form.label :phone_number, class: "form-label" %>
-                <div class="input-group">
-                  <span class="input-group-text phone-prefix">+91</span>
-                  <%= form.telephone_field :phone_number,
-                    value: phone_tab_active ? @prefill_phone_number : nil,
-                    class: "form-control",
-                    required: true,
-                    placeholder: "10 digit phone number",
-                    inputmode: "numeric",
-                    autocomplete: "off",
-                    maxlength: 10,
-                    pattern: "\\d{10}",
-                    title: "Enter a 10 digit phone number",
-                    data: { phone_input: true, phone_number_field: true } %>
+              <%= form_with scope: :transaction, namespace: :phone_transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
+                <%= form.hidden_field :lookup_mode, value: "phone" %>
+
+                <div>
+                  <%= form.label :phone_number, class: "form-label" %>
+                  <div class="input-group">
+                    <span class="input-group-text phone-prefix transaction-entry-lookup-prefix">+91</span>
+                    <%= form.telephone_field :phone_number,
+                      value: phone_tab_active ? @prefill_phone_number : nil,
+                      class: "form-control transaction-entry-lookup-input",
+                      required: true,
+                      placeholder: "10 digit phone number",
+                      inputmode: "numeric",
+                      autocomplete: "off",
+                      maxlength: 10,
+                      pattern: "\\d{10}",
+                      title: "Enter a 10 digit phone number",
+                      data: { phone_input: true, phone_number_field: true } %>
+                  </div>
+                  <div class="form-text">Customer must already exist. Use the customer screen to register a new customer or add more vehicles.</div>
                 </div>
-                <div class="form-text">Customer must already exist. Use the customer screen to register a new customer or add more vehicles.</div>
-              </div>
 
-              <div>
-                <%= form.label :vehicle_id, "Vehicle", class: "form-label" %>
-                <%= form.select :vehicle_id, [], { prompt: "Select a vehicle" }, class: "form-select", required: true, disabled: true, data: { vehicle_select: true } %>
-              </div>
+                <div>
+                  <%= form.label :vehicle_id, "Vehicle", class: "form-label" %>
+                  <%= form.select :vehicle_id, [], { prompt: "Select a vehicle" }, class: "form-select", required: true, disabled: true, data: { vehicle_select: true } %>
+                </div>
 
-              <div>
-                <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
-                <%= form.number_field :fuel_amount, value: phone_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
-              </div>
+                <div>
+                  <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
+                  <%= form.number_field :fuel_amount, value: phone_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
+                </div>
 
-              <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
-            <% end %>
+                <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
+              <% end %>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="col-lg-5">
-        <div class="card shadow-sm h-100 loyalty-result-card redemption-customer-shell transaction-customer-shell">
-          <div class="card-body">
-            <div class="redemption-customer-shell__header">
-              <div>
-                <h2 class="h5 mb-1">Customer Details</h2>
-                <p class="text-muted mb-0">Review the profile and choose the right vehicle before recording fuel.</p>
-              </div>
-            </div>
-
-            <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
-              <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
-                <i class="ti ti-search"></i>
-              </div>
-              <p class="text-muted mb-0">Search by phone number to view the customer profile and available vehicles.</p>
-            </div>
-
-            <div class="d-none redemption-customer-card transaction-customer-card" data-customer-panel>
-              <div class="redemption-customer-card__hero">
-                <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
-                <strong class="redemption-customer-card__value" data-customer-points></strong>
-                <span class="redemption-customer-card__note is-pending" data-customer-note></span>
-              </div>
-
-              <div class="redemption-customer-card__identity">
-                <div class="redemption-customer-card__identity-heading">
-                  <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
-                  <span class="redemption-customer-card__status" data-customer-status></span>
-                </div>
-                <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
-              </div>
-
-              <div class="redemption-customer-card__stats transaction-customer-card__stats">
-                <div class="redemption-customer-card__stat">
-                  <span class="redemption-customer-card__stat-label">Vehicles on File</span>
-                  <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
-                </div>
-                <div class="redemption-customer-card__stat">
-                  <span class="redemption-customer-card__stat-label">Selected Vehicle</span>
-                  <strong class="redemption-customer-card__stat-value transaction-customer-card__stat-value" data-customer-selected-vehicle></strong>
+        <div class="col-lg-5">
+          <div class="card shadow-sm h-100 loyalty-result-card redemption-customer-shell transaction-customer-shell">
+            <div class="card-body">
+              <div class="redemption-customer-shell__header">
+                <div>
+                  <h2 class="h5 mb-1">Customer Details</h2>
+                  <p class="text-muted mb-0">Review the profile and choose the right vehicle before recording fuel.</p>
                 </div>
               </div>
 
-              <div class="transaction-customer-card__vehicles">
-                <div class="transaction-customer-card__vehicles-header">
-                  <div>
-                    <h3 class="h6 mb-1">Registered Vehicles</h3>
-                    <p class="small-muted mb-0">Tap a vehicle here or choose from the selector on the left.</p>
+              <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
+                <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
+                  <i class="ti ti-search"></i>
+                </div>
+                <p class="text-muted mb-0">Search by phone number to view the customer profile and available vehicles.</p>
+              </div>
+
+              <div class="d-none redemption-customer-card transaction-customer-card" data-customer-panel>
+                <div class="redemption-customer-card__hero">
+                  <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
+                  <strong class="redemption-customer-card__value" data-customer-points></strong>
+                  <span class="redemption-customer-card__note is-pending" data-customer-note></span>
+                </div>
+
+                <div class="redemption-customer-card__identity">
+                  <div class="redemption-customer-card__identity-heading">
+                    <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
+                    <span class="redemption-customer-card__status" data-customer-status></span>
+                  </div>
+                  <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
+                </div>
+
+                <div class="redemption-customer-card__stats transaction-customer-card__stats">
+                  <div class="redemption-customer-card__stat">
+                    <span class="redemption-customer-card__stat-label">Vehicles on File</span>
+                    <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
+                  </div>
+                  <div class="redemption-customer-card__stat">
+                    <span class="redemption-customer-card__stat-label">Selected Vehicle</span>
+                    <strong class="redemption-customer-card__stat-value transaction-customer-card__stat-value" data-customer-selected-vehicle></strong>
                   </div>
                 </div>
 
-                <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+                <div class="transaction-customer-card__vehicles">
+                  <div class="transaction-customer-card__vehicles-header">
+                    <div>
+                      <h3 class="h6 mb-1">Registered Vehicles</h3>
+                      <p class="small-muted mb-0">Tap a vehicle here or choose from the selector on the left.</p>
+                    </div>
+                  </div>
+
+                  <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+                </div>
               </div>
             </div>
-
-            <div class="alert alert-warning d-none mt-3 mb-0" data-customer-error role="alert"></div>
           </div>
         </div>
       </div>
@@ -180,112 +183,151 @@
     aria-labelledby="transaction-vehicle-tab"
     tabindex="0">
     <div
-      class="row g-4"
+      class="transaction-entry-panel"
       data-transaction-vehicle-root
       data-lookup-url="<%= lookup_staff_transactions_path %>"
       data-selected-vehicle-id="<%= vehicle_tab_active ? @prefill_vehicle_id : "" %>">
-      <div class="col-lg-7">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h2 class="h4 mb-3">Lookup by Vehicle</h2>
-            <p class="text-muted">Enter the vehicle number to find the customer. If multiple customers share the same vehicle number, choose the correct profile before saving.</p>
+      <div class="alert alert-warning d-none mb-0 transaction-customer-error" data-customer-error role="alert"></div>
 
-            <% if vehicle_tab_active && @errors.present? %>
-              <div class="alert alert-danger"><%= @errors.to_sentence %></div>
-            <% end %>
+      <div class="row gx-4 gy-3">
+        <div class="col-lg-7">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h2 class="h4 mb-3">Lookup by Vehicle</h2>
+              <p class="text-muted">Enter the vehicle number to find the customer. If multiple customers share the same vehicle number, choose the correct profile before saving.</p>
 
-            <%= form_with scope: :transaction, namespace: :vehicle_transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
-              <%= form.hidden_field :lookup_mode, value: "vehicle" %>
+              <% if vehicle_tab_active && @errors.present? %>
+                <div class="alert alert-danger"><%= @errors.to_sentence %></div>
+              <% end %>
 
-              <div>
-                <%= form.label :vehicle_number, "Vehicle Number", class: "form-label" %>
-                <%= form.text_field :vehicle_number,
-                  value: vehicle_tab_active ? @prefill_vehicle_number : nil,
-                  class: "form-control",
-                  required: true,
-                  placeholder: "Enter vehicle number",
-                  autocomplete: "off",
-                  spellcheck: "false",
-                  autocapitalize: "characters",
-                  title: "Enter a valid vehicle number",
-                  data: { vehicle_number_input: true } %>
-                <div class="form-text">Use the full vehicle number as printed on the plate.</div>
-              </div>
+              <%= form_with scope: :transaction, namespace: :vehicle_transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
+                <%= form.hidden_field :lookup_mode, value: "vehicle" %>
 
-              <div>
-                <%= form.label :vehicle_id, "Matching Customer", class: "form-label" %>
-                <%= form.select :vehicle_id, [], { prompt: "Select the matching customer" }, class: "form-select", required: true, disabled: true, data: { vehicle_select: true } %>
-              </div>
+                <div>
+                  <%= form.label :vehicle_number, "Vehicle Number", class: "form-label" %>
+                  <%= form.text_field :vehicle_number,
+                    value: vehicle_tab_active ? @prefill_vehicle_number : nil,
+                    class: "form-control transaction-entry-lookup-input",
+                    required: true,
+                    placeholder: "Enter vehicle number",
+                    autocomplete: "off",
+                    spellcheck: "false",
+                    autocapitalize: "characters",
+                    title: "Enter a valid vehicle number",
+                    data: { vehicle_number_input: true } %>
+                  <div class="form-text">Use the full vehicle number as printed on the plate.</div>
+                </div>
 
-              <div>
-                <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
-                <%= form.number_field :fuel_amount, value: vehicle_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
-              </div>
+                <div>
+                  <%= form.label :vehicle_id, "Matching Customer", class: "form-label" %>
+                  <%= form.select :vehicle_id, [], { prompt: "Select the matching customer" }, class: "form-select", required: true, disabled: true, data: { vehicle_select: true } %>
+                </div>
 
-              <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
-            <% end %>
+                <div>
+                  <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
+                  <%= form.number_field :fuel_amount, value: vehicle_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
+                </div>
+
+                <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
+              <% end %>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="col-lg-5">
-        <div class="card shadow-sm h-100 loyalty-result-card redemption-customer-shell transaction-customer-shell">
-          <div class="card-body">
-            <div class="redemption-customer-shell__header">
-              <div>
-                <h2 class="h5 mb-1">Matched Customer</h2>
-                <p class="text-muted mb-0">Confirm the matched profile and vehicle before recording this transaction.</p>
-              </div>
-            </div>
-
-            <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
-              <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
-                <i class="ti ti-car"></i>
-              </div>
-              <p class="text-muted mb-0">Search by vehicle number to load the customer profile and matched vehicle.</p>
-            </div>
-
-            <div class="d-none redemption-customer-card transaction-customer-card" data-customer-panel>
-              <div class="redemption-customer-card__hero">
-                <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
-                <strong class="redemption-customer-card__value" data-customer-points></strong>
-                <span class="redemption-customer-card__note is-pending" data-customer-note></span>
-              </div>
-
-              <div class="redemption-customer-card__identity">
-                <div class="redemption-customer-card__identity-heading">
-                  <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
-                  <span class="redemption-customer-card__status" data-customer-status></span>
-                </div>
-                <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
-              </div>
-
-              <div class="redemption-customer-card__stats transaction-customer-card__stats">
-                <div class="redemption-customer-card__stat">
-                  <span class="redemption-customer-card__stat-label">Vehicles on File</span>
-                  <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
-                </div>
-                <div class="redemption-customer-card__stat">
-                  <span class="redemption-customer-card__stat-label">Selected Vehicle</span>
-                  <strong class="redemption-customer-card__stat-value transaction-customer-card__stat-value" data-customer-selected-vehicle></strong>
+        <div class="col-lg-5">
+          <div class="card shadow-sm h-100 loyalty-result-card redemption-customer-shell transaction-customer-shell">
+            <div class="card-body">
+              <div class="redemption-customer-shell__header">
+                <div>
+                  <h2 class="h5 mb-1">Matched Customer</h2>
+                  <p class="text-muted mb-0">Confirm the matched profile and vehicle before recording this transaction.</p>
                 </div>
               </div>
 
-              <div class="transaction-customer-card__vehicles">
-                <div class="transaction-customer-card__vehicles-header">
-                  <div>
-                    <h3 class="h6 mb-1">Registered Vehicles</h3>
-                    <p class="small-muted mb-0">The matched vehicle is highlighted below so the visit can be verified quickly.</p>
+              <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
+                <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
+                  <i class="ti ti-car"></i>
+                </div>
+                <p class="text-muted mb-0">Search by vehicle number to load the customer profile and matched vehicle.</p>
+              </div>
+
+              <div class="d-none redemption-customer-card transaction-customer-card" data-customer-panel>
+                <div class="redemption-customer-card__hero">
+                  <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
+                  <strong class="redemption-customer-card__value" data-customer-points></strong>
+                  <span class="redemption-customer-card__note is-pending" data-customer-note></span>
+                </div>
+
+                <div class="redemption-customer-card__identity">
+                  <div class="redemption-customer-card__identity-heading">
+                    <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
+                    <span class="redemption-customer-card__status" data-customer-status></span>
+                  </div>
+                  <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
+                </div>
+
+                <div class="redemption-customer-card__stats transaction-customer-card__stats">
+                  <div class="redemption-customer-card__stat">
+                    <span class="redemption-customer-card__stat-label">Vehicles on File</span>
+                    <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
+                  </div>
+                  <div class="redemption-customer-card__stat">
+                    <span class="redemption-customer-card__stat-label">Selected Vehicle</span>
+                    <strong class="redemption-customer-card__stat-value transaction-customer-card__stat-value" data-customer-selected-vehicle></strong>
                   </div>
                 </div>
 
-                <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+                <div class="transaction-customer-card__vehicles">
+                  <div class="transaction-customer-card__vehicles-header">
+                    <div>
+                      <h3 class="h6 mb-1">Registered Vehicles</h3>
+                      <p class="small-muted mb-0">The matched vehicle is highlighted below so the visit can be verified quickly.</p>
+                    </div>
+                  </div>
+
+                  <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+                </div>
               </div>
             </div>
-
-            <div class="alert alert-warning d-none mt-3 mb-0" data-customer-error role="alert"></div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div
+  class="modal fade customer-details-modal admin-customers-modal"
+  id="transactionAddCustomerModal"
+  tabindex="-1"
+  aria-labelledby="transactionAddCustomerModalLabel"
+  aria-hidden="true"
+  data-transaction-registration-modal
+  data-auto-open-modal="<%= @transaction_registration_modal_open %>">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content confirm-modal-content customer-details-modal__content admin-customers-modal__content">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h2 class="modal-title h5 mb-1" id="transactionAddCustomerModalLabel">Add Customer</h2>
+          <p class="text-muted mb-0 small">Create the customer here and continue recording the transaction without leaving this page.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <%= render "customers/form",
+          customer: registration_customer,
+          form_url: register_customer_staff_transactions_path,
+          form_method: :post,
+          include_vehicle_fields: true,
+          submit_label: "Save Customer",
+          title: "Add Customer",
+          context: "modal",
+          hidden_fields: {
+            "transaction_lookup[lookup_mode]" => active_lookup_mode,
+            "transaction_lookup[phone_number]" => @prefill_phone_number,
+            "transaction_lookup[vehicle_number]" => @prefill_vehicle_number,
+            "transaction_lookup[fuel_amount]" => @prefill_fuel_amount
+          } %>
       </div>
     </div>
   </div>
@@ -324,6 +366,79 @@
       });
     };
 
+    const createRegistrationModalController = () => {
+      const modalElement = document.querySelector("[data-transaction-registration-modal]");
+      if (!modalElement) {
+        return {
+          cancelPendingOpen: () => {},
+          scheduleOpen: () => {}
+        };
+      }
+
+      const form = modalElement.querySelector("form");
+      const nameField = modalElement.querySelector("[name='customer[name]']");
+      const phoneField = modalElement.querySelector("[name='customer[phone_number]']");
+      const vehicleField = modalElement.querySelector("[name='customer[vehicle_number]']");
+      const fuelTypeField = modalElement.querySelector("[name='customer[fuel_type]']");
+      const vehicleKindField = modalElement.querySelector("[name='customer[vehicle_kind]']");
+      const lookupModeField = modalElement.querySelector("[name='transaction_lookup[lookup_mode]']");
+      const lookupPhoneField = modalElement.querySelector("[name='transaction_lookup[phone_number]']");
+      const lookupVehicleField = modalElement.querySelector("[name='transaction_lookup[vehicle_number]']");
+      const lookupFuelAmountField = modalElement.querySelector("[name='transaction_lookup[fuel_amount]']");
+      let focusTarget = null;
+      let openTimer = null;
+
+      const cancelPendingOpen = () => {
+        if (!openTimer) return;
+
+        window.clearTimeout(openTimer);
+        openTimer = null;
+      };
+
+      modalElement.addEventListener("shown.bs.modal", () => {
+        focusTarget?.focus();
+      });
+
+      modalElement.addEventListener("hidden.bs.modal", () => {
+        cancelPendingOpen();
+      });
+
+      const showNow = ({ lookupMode, phoneNumber = "", vehicleNumber = "", fuelAmount = "" }) => {
+        form?.reset();
+        modalElement.querySelector(".alert.alert-danger")?.remove();
+
+        if (nameField) nameField.value = "";
+        if (phoneField) phoneField.value = phoneNumber;
+        if (vehicleField) vehicleField.value = vehicleNumber;
+        if (fuelTypeField) fuelTypeField.value = "";
+        if (vehicleKindField) vehicleKindField.value = "";
+        if (lookupModeField) lookupModeField.value = lookupMode;
+        if (lookupPhoneField) lookupPhoneField.value = phoneNumber;
+        if (lookupVehicleField) lookupVehicleField.value = vehicleNumber;
+        if (lookupFuelAmountField) lookupFuelAmountField.value = fuelAmount;
+
+        focusTarget = nameField || phoneField || vehicleField;
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+      };
+
+      const openNow = (payload) => {
+        cancelPendingOpen();
+        showNow(payload);
+      };
+
+      const scheduleOpen = (payload) => {
+        cancelPendingOpen();
+        openTimer = window.setTimeout(() => {
+          openTimer = null;
+          showNow(payload);
+        }, 2000);
+      };
+
+      return { cancelPendingOpen, openNow, scheduleOpen };
+    };
+
+    const registrationModal = createRegistrationModalController();
+
     const createCustomerCardController = (root) => {
       const placeholder = root.querySelector("[data-customer-placeholder]");
       const panel = root.querySelector("[data-customer-panel]");
@@ -336,14 +451,49 @@
       const vehiclesCountTarget = root.querySelector("[data-customer-vehicles-count]");
       const selectedVehicleTarget = root.querySelector("[data-customer-selected-vehicle]");
       const vehiclesListTarget = root.querySelector("[data-customer-vehicles-list]");
+      let suppressNextBlurLookup = false;
+
+      errorBox.addEventListener("pointerdown", (event) => {
+        if (event.target.closest("[data-register-customer-link]")) {
+          suppressNextBlurLookup = true;
+        }
+      });
 
       const clearError = () => {
-        errorBox.textContent = "";
+        errorBox.replaceChildren();
         errorBox.classList.add("d-none");
       };
 
-      const setError = (message, { keepPanel = false } = {}) => {
-        errorBox.textContent = message;
+      const consumeBlurSuppression = () => {
+        const shouldSuppress = suppressNextBlurLookup;
+        suppressNextBlurLookup = false;
+        return shouldSuppress;
+      };
+
+      const setError = (message, { keepPanel = false, registerCustomerPath = "", onRegisterCustomer = null } = {}) => {
+        errorBox.replaceChildren();
+
+        if (message) {
+          const messageNode = document.createElement("span");
+          messageNode.textContent = message;
+          errorBox.appendChild(messageNode);
+        }
+
+        if (registerCustomerPath || onRegisterCustomer) {
+          const registerLink = document.createElement("a");
+          registerLink.href = registerCustomerPath || "#";
+          registerLink.className = "transaction-customer-register-link";
+          registerLink.textContent = "Register customer";
+          registerLink.dataset.registerCustomerLink = "true";
+          if (onRegisterCustomer) {
+            registerLink.addEventListener("click", (event) => {
+              event.preventDefault();
+              onRegisterCustomer();
+            });
+          }
+          errorBox.appendChild(registerLink);
+        }
+
         errorBox.classList.remove("d-none");
         panel.classList.toggle("d-none", !keepPanel);
         placeholder.classList.toggle("d-none", keepPanel);
@@ -391,6 +541,7 @@
       return {
         clearPanel,
         clearError,
+        consumeBlurSuppression,
         setError,
         renderCustomer
       };
@@ -465,6 +616,7 @@
           const phoneNumber = phoneInput.value.replace(/\D/g, "");
 
           if (phoneNumber.length !== 10) {
+            registrationModal.cancelPendingOpen();
             currentCustomer = null;
             customerActive = false;
             card.clearPanel();
@@ -483,13 +635,23 @@
             if (lookupId !== activeLookup) return;
 
             if (!response.ok || !payload.found) {
+              const registrationPayload = {
+                lookupMode: "phone",
+                phoneNumber,
+                fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || ""
+              };
               currentCustomer = null;
               customerActive = false;
               resetVehicleSelect();
-              card.setError(payload.message || "Customer not found for that phone number.");
+              card.setError(payload.message || "Customer not found for that phone number.", {
+                registerCustomerPath: payload.register_customer_path,
+                onRegisterCustomer: () => registrationModal.openNow(registrationPayload)
+              });
+              registrationModal.scheduleOpen(registrationPayload);
               return;
             }
 
+            registrationModal.cancelPendingOpen();
             currentCustomer = payload.customer;
             customerActive = payload.customer.active;
             resetVehicleSelect();
@@ -523,6 +685,7 @@
             }
           } catch (_error) {
             if (lookupId !== activeLookup) return;
+            registrationModal.cancelPendingOpen();
             currentCustomer = null;
             customerActive = false;
             resetVehicleSelect();
@@ -533,11 +696,16 @@
         let lookupTimer;
 
         phoneInput.addEventListener("input", () => {
+          registrationModal.cancelPendingOpen();
           clearTimeout(lookupTimer);
           lookupTimer = setTimeout(loadCustomer, 300);
         });
 
-        phoneInput.addEventListener("blur", loadCustomer);
+        phoneInput.addEventListener("blur", () => {
+          if (card.consumeBlurSuppression()) return;
+
+          loadCustomer();
+        });
 
         vehicleSelect.addEventListener("change", () => {
           syncSubmitState();
@@ -547,6 +715,7 @@
         if (phoneInput.value.trim() !== "") {
           loadCustomer();
         } else {
+          registrationModal.cancelPendingOpen();
           card.clearPanel();
           resetVehicleSelect();
         }
@@ -624,6 +793,7 @@
           const vehicleNumber = vehicleNumberInput.value;
 
           if (vehicleNumber === "") {
+            registrationModal.cancelPendingOpen();
             currentMatches = [];
             selectedMatch = null;
             card.clearPanel();
@@ -632,6 +802,7 @@
           }
 
           if (!force && vehicleNumber.length < 6) {
+            registrationModal.cancelPendingOpen();
             currentMatches = [];
             selectedMatch = null;
             card.clearPanel();
@@ -650,13 +821,29 @@
             if (lookupId !== activeLookup) return;
 
             if (!response.ok || !payload.found) {
+              const registrationPayload = {
+                lookupMode: "vehicle",
+                vehicleNumber,
+                fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || ""
+              };
               currentMatches = [];
               selectedMatch = null;
               resetMatchSelect();
-              card.setError(payload.message || "No customer was found for that vehicle number.");
+              card.setError(payload.message || "No customer was found for that vehicle number.", {
+                registerCustomerPath: payload.register_customer_path,
+                onRegisterCustomer: () => registrationModal.openNow(registrationPayload)
+              });
+
+              if (vehicleNumberPattern.test(vehicleNumber)) {
+                registrationModal.scheduleOpen(registrationPayload);
+              } else {
+                registrationModal.cancelPendingOpen();
+              }
+
               return;
             }
 
+            registrationModal.cancelPendingOpen();
             currentMatches = payload.matches || [];
             selectedMatch = null;
             resetMatchSelect();
@@ -681,6 +868,7 @@
             applySelection();
           } catch (_error) {
             if (lookupId !== activeLookup) return;
+            registrationModal.cancelPendingOpen();
             currentMatches = [];
             selectedMatch = null;
             resetMatchSelect();
@@ -700,6 +888,7 @@
         let lookupTimer;
 
         vehicleNumberInput.addEventListener("input", () => {
+          registrationModal.cancelPendingOpen();
           vehicleNumberInput.value = normalizeVehicleNumberInput(vehicleNumberInput.value);
           syncVehicleNumberValidity();
           clearTimeout(lookupTimer);
@@ -708,6 +897,8 @@
 
         vehicleNumberInput.addEventListener("blur", () => {
           syncVehicleNumberValidity();
+          if (card.consumeBlurSuppression()) return;
+
           loadMatches({ force: true });
         });
 
@@ -719,6 +910,7 @@
           syncVehicleNumberValidity();
           loadMatches({ force: true });
         } else {
+          registrationModal.cancelPendingOpen();
           card.clearPanel();
           resetMatchSelect();
         }
