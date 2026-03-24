@@ -35,9 +35,9 @@
       <h2 class="h5 mb-0"><%= @full_history ? "Full Loyalty Activity" : "Last 5 Loyalty Activities" %></h2>
       <div class="page-actions">
         <% if @show_full_history_button %>
-          <%= link_to "Show Full History", loyalty_result_path(phone_number: @customer.phone_number, full_history: 1), class: "btn btn-outline-primary btn-sm" %>
+          <%= link_to "Show Full History", loyalty_result_path(lookup_token: @lookup_token, full_history: 1), class: "btn btn-outline-primary btn-sm" %>
         <% elsif @full_history %>
-          <%= link_to "Show Last 5", loyalty_result_path(phone_number: @customer.phone_number), class: "btn btn-outline-secondary btn-sm" %>
+          <%= link_to "Show Last 5", loyalty_result_path(lookup_token: @lookup_token), class: "btn btn-outline-secondary btn-sm" %>
         <% end %>
       </div>
     </div>

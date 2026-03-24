@@ -342,6 +342,11 @@ html[data-theme="dark"] body {
   z-index: 1040;
 }
 
+.theme-switch-inline {
+  display: inline-flex;
+  align-items: center;
+}
+
 .theme-switch-shell {
   display: inline-flex;
   align-items: center;
@@ -353,6 +358,25 @@ html[data-theme="dark"] body {
   color: var(--fl-gray-800);
   box-shadow: var(--fl-shadow);
   border: 1px solid var(--fl-gray-200);
+}
+
+.theme-switch-shell--compact {
+  gap: 0.4rem;
+  padding: 0.35rem 0.55rem;
+  box-shadow: none;
+}
+
+.theme-switch-shell--compact .theme-switch-text {
+  display: none;
+}
+
+.theme-switch-shell--compact .theme-switch-icon {
+  font-size: 0.85rem;
+}
+
+.theme-switch-shell--compact .theme-switch-input {
+  width: 2.15rem !important;
+  height: 1.15rem;
 }
 
 .theme-switch-icon {
@@ -1471,6 +1495,10 @@ html[data-theme="dark"] .customer-details-history-preview-action:active {
   border-radius: 0.9rem;
   background: linear-gradient(180deg, var(--fl-surface-elevated), var(--fl-surface));
   overflow: hidden;
+}
+
+.customer-details-vehicle-list--allow-overflow {
+  overflow: visible;
 }
 
 .customer-details-vehicle-row {
@@ -4327,6 +4355,10 @@ h4 {
 }
 
 @media (max-width: 991.98px) {
+  .app-shell-body .theme-switch-floating {
+    display: none;
+  }
+
   .customer-details-grid {
     grid-template-columns: 1fr;
   }

@@ -53,6 +53,7 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
 
     get customer_path(customers(:one))
     assert_response :success
+    assert_select ".customer-details-vehicle-list.customer-details-vehicle-list--allow-overflow"
     assert_select ".customer-details-hero__menu .customer-details-vehicle-row__menu-toggle", 1
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Edit Customer"
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Mark Inactive"

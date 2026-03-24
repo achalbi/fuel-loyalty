@@ -1,6 +1,8 @@
 require "test_helper"
 
 class LoyaltyControllerTest < ActionDispatch::IntegrationTest
+  include ActiveSupport::Testing::TimeHelpers
+
   test "renders public loyalty lookup form" do
     get new_loyalty_path
 
@@ -11,7 +13,7 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     )
     assert_not_nil response.headers["ETag"]
     assert_select "h1", "Loyalty Lookup"
-    assert_select "form[action='#{loyalty_result_path}'][method='get']", 1
+    assert_select "form[action='#{loyalty_path}'][method='post']", 1
     assert_select "link[rel='manifest'][href^='#{pwa_manifest_path}']"
     assert_select "link[href*='cdn.jsdelivr']", count: 0
     assert_select "link[href*='fonts.googleapis']", count: 0
@@ -26,6 +28,27 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pwa-install-status]", /Install Fuel Loyalty|Add Fuel Loyalty/
     assert_select "input[placeholder='10 digit phone number'][maxlength='10'][data-phone-number-field='true']", 1
     assert_includes response.body, 'pattern="\d{10}"'
+  end
+
+  test "allows supported mobile safari browsers" do
+    get new_loyalty_path, headers: { "User-Agent" => iphone_safari_user_agent }
+
+    assert_response :success
+    assert_select "h1", "Loyalty Lookup"
+  end
+
+  test "allows supported samsung internet browsers" do
+    get new_loyalty_path, headers: { "User-Agent" => samsung_internet_user_agent }
+
+    assert_response :success
+    assert_select "h1", "Loyalty Lookup"
+  end
+
+  test "blocks unsupported internet explorer browsers" do
+    get new_loyalty_path, headers: { "User-Agent" => internet_explorer_user_agent }
+
+    assert_response :not_acceptable
+    assert_includes response.body, "Your browser is not supported"
   end
 
   test "returns 304 for a fresh loyalty shell request" do
@@ -52,7 +75,9 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
 
     post loyalty_path, params: { loyalty: { phone_number: customers(:one).phone_number } }
 
-    assert_redirected_to loyalty_result_path(phone_number: customers(:one).phone_number)
+    assert_response :redirect
+    assert_predicate redirect_query["lookup_token"], :present?
+    assert_not_includes response.location, "phone_number="
   ensure
     ActionController::Base.allow_forgery_protection = original_value
   end
@@ -60,7 +85,8 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
   test "shows loyalty details for an existing customer" do
     customers(:one).points_ledgers.create!(points: -2, entry_type: :redeem)
 
-    get loyalty_result_path(phone_number: customers(:one).phone_number)
+    post loyalty_path, params: { loyalty: { phone_number: customers(:one).phone_number } }
+    follow_redirect!
 
     assert_response :success
     assert_select "h1", "Arun"
@@ -80,7 +106,7 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     customer = customers(:one)
     customer.points_ledgers.create!(points: 195, entry_type: :earn)
 
-    get loyalty_result_path(phone_number: customer.phone_number)
+    get loyalty_result_path(lookup_token: loyalty_lookup_token_for(customer.phone_number))
 
     assert_response :success
     assert_select ".loyalty-result-hero__value[data-loyalty-points-target='200'][aria-label='200 points']", "0"
@@ -91,21 +117,21 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     customer = customers(:one)
     customer.update!(name: "arun kumar")
 
-    get loyalty_result_path(phone_number: customer.phone_number)
+    get loyalty_result_path(lookup_token: loyalty_lookup_token_for(customer.phone_number))
 
     assert_response :success
     assert_select "h1", "Arun Kumar"
   end
 
   test "returns validation feedback when the customer is not found" do
-    get loyalty_result_path(phone_number: "9999999999")
+    get loyalty_result_path(lookup_token: loyalty_lookup_token_for("9999999999"))
 
     assert_response :unprocessable_entity
     assert_select ".alert", /No customer found/
   end
 
   test "returns validation feedback when the phone number is not 10 digits" do
-    get loyalty_result_path(phone_number: "12345")
+    post loyalty_path, params: { loyalty: { phone_number: "12345" } }
 
     assert_response :unprocessable_entity
     assert_select ".alert", /Phone number must be a 10 digit number/
@@ -118,10 +144,61 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
       customer.points_ledgers.create!(points: -(index + 1), entry_type: :redeem, created_at: Time.current + index.minutes)
     end
 
-    get loyalty_result_path(phone_number: customer.phone_number, full_history: 1)
+    post loyalty_path, params: { loyalty: { phone_number: customer.phone_number } }
+    assert_response :redirect
+
+    get loyalty_result_path(lookup_token: redirect_query.fetch("lookup_token"), full_history: 1)
 
     assert_response :success
+    assert_select "a[href*='lookup_token=']", minimum: 1
+    assert_select "a[href*='phone_number=']", count: 0
     assert_select "a", "Show Last 5"
     assert_select "[data-loyalty-activity]", minimum: 7
+  end
+
+  test "redirects to the lookup form when no phone number is stored" do
+    get loyalty_result_path
+
+    assert_redirected_to new_loyalty_path
+  end
+
+  test "redirects to the lookup form when the token is invalid" do
+    get loyalty_result_path(lookup_token: "invalid-token")
+
+    assert_redirected_to new_loyalty_path
+    follow_redirect!
+    assert_select ".alert", /lookup link has expired/
+  end
+
+  test "redirects to the lookup form when the token is expired" do
+    token = loyalty_lookup_token_for(customers(:one).phone_number)
+
+    travel LoyaltyLookupToken::EXPIRY + 1.second do
+      get loyalty_result_path(lookup_token: token)
+    end
+
+    assert_redirected_to new_loyalty_path
+  end
+
+  private
+
+  def loyalty_lookup_token_for(phone_number)
+    LoyaltyLookupToken.generate(phone_number)
+  end
+
+  def redirect_query
+    Rack::Utils.parse_nested_query(URI.parse(response.location).query)
+  end
+
+  def iphone_safari_user_agent
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
+  end
+
+  def samsung_internet_user_agent
+    "Mozilla/5.0 (Linux; Android 13; SAMSUNG SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/24.0 Chrome/117.0.0.0 Mobile Safari/537.36"
+  end
+
+  def internet_explorer_user_agent
+    "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)"
   end
 end

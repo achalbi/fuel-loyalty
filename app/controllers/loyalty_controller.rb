@@ -2,8 +2,9 @@ class LoyaltyController < ApplicationController
   PUBLIC_CACHE_FALLBACK_TIME = Time.utc(2024, 1, 1).freeze
 
   # Older cached loyalty shells may still submit POST /loyalty. Keep that
-  # compatibility path CSRF-free because it only normalizes the phone number
-  # and redirects to the read-only GET result page.
+  # compatibility path CSRF-free because it only validates the phone number,
+  # mints a short-lived signed lookup token, and redirects to the read-only GET
+  # result page.
   skip_forgery_protection only: :create
 
   def new
@@ -25,12 +26,16 @@ class LoyaltyController < ApplicationController
   end
 
   def show
-    @phone_number = Customer.normalize_phone_number(params[:phone_number])
+    @phone_number = LoyaltyLookupToken.verified_phone_number(params[:lookup_token])
+    return redirect_to(new_loyalty_path, alert: lookup_token_alert) if @phone_number.blank?
     return render_invalid_phone_number unless Customer.valid_phone_number?(@phone_number)
 
     @customer = Customer.find_by(phone_number: @phone_number)
 
     if @customer
+      # Rotate the token on each render so follow-up navigation doesn't keep
+      # reusing the original redirect token.
+      @lookup_token = LoyaltyLookupToken.generate(@phone_number)
       @total_points = @customer.total_points
       @redeemable_points = PointsRedeemer.max_redeemable_points(@total_points)
       @points_until_redeemable = [PointsRedeemer::REDEMPTION_INCREMENT - @total_points.to_i, 0].max
@@ -47,10 +52,18 @@ class LoyaltyController < ApplicationController
     @phone_number = Customer.normalize_phone_number(loyalty_params[:phone_number])
     return render_invalid_phone_number unless Customer.valid_phone_number?(@phone_number)
 
-    redirect_to loyalty_result_path(phone_number: @phone_number)
+    redirect_to loyalty_result_path(lookup_token: LoyaltyLookupToken.generate(@phone_number))
   end
 
   private
+
+  def lookup_token_alert
+    if params[:lookup_token].present?
+      "That lookup link has expired. Please enter your phone number again."
+    else
+      "Enter your phone number to continue."
+    end
+  end
 
   def render_invalid_phone_number
     flash.now[:alert] = "Phone number must be a 10 digit number."

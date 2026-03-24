@@ -44,6 +44,17 @@
         <div class="ms-auto d-flex align-items-center gap-2">
           <span class="badge rounded-pill text-bg-light border px-3 py-2 topbar-role-badge"><%= current_user.role.titleize %></span>
 
+          <div class="theme-switch-inline d-lg-none">
+            <div class="theme-switch-shell theme-switch-shell--compact" aria-label="Theme switch">
+              <i class="ti ti-sun-high theme-switch-icon"></i>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input theme-switch-input" type="checkbox" role="switch" data-theme-switch aria-label="Toggle light and dark mode">
+              </div>
+              <i class="ti ti-moon-stars theme-switch-icon"></i>
+              <span class="theme-switch-text" data-theme-label></span>
+            </div>
+          </div>
+
           <div class="dropdown">
             <a href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" class="avatar avatar-sm rounded-circle bg-primary-subtle text-primary text-decoration-none">
               <span class="avatar-initials"><%= current_user.avatar_initial %></span>
@@ -169,4 +180,3 @@
     </div>
   </body>
 </html>
- ̰

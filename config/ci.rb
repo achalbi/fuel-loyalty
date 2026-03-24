@@ -1,12 +1,17 @@
 # Run using bin/ci
 
+importmap_bin = File.expand_path("../bin/importmap", __dir__)
+importmap_config = File.expand_path("importmap.rb", __dir__)
+
 CI.run do
   step "Setup", "bin/setup --skip-server"
 
   step "Style: Ruby", "bin/rubocop"
 
   step "Security: Gem audit", "bin/bundler-audit"
-  step "Security: Importmap vulnerability audit", "bin/importmap audit"
+  if File.exist?(importmap_bin) && File.exist?(importmap_config)
+    step "Security: Importmap vulnerability audit", "bin/importmap audit"
+  end
   step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
   step "Tests: Rails", "bin/rails test"
   step "Tests: Seeds", "env RAILS_ENV=test bin/rails db:seed:replant"

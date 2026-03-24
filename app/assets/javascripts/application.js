@@ -17,7 +17,7 @@
     deferredPrompt: null
   };
 
-  const currentPagePath = () => `${window.location.pathname}${window.location.search}`;
+  const currentPagePath = () => window.location.pathname;
 
   const isStandaloneMode = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 

@@ -10,7 +10,7 @@ module Admin
       assert_select "h1", text: "Customers"
       assert_select "button.customer-details-quick-action.admin-customers-create-action[data-bs-toggle='modal'][data-bs-target='#addCustomerModal'][aria-label='Add Customer']", text: "+"
       assert_select "form.admin-customers-filter__form[action='#{admin_customers_path}']"
-      assert_select ".admin-customers-filter__input[placeholder='Search by name, 10 digit phone number, or vehicle number']"
+      assert_select ".admin-customers-filter__input[placeholder='Search by name, phone, or vehicle']"
       assert_select ".dashboard-filter-chip", text: "All"
       assert_select ".dashboard-filter-chip", text: "Active"
       assert_select ".dashboard-filter-chip", text: "Inactive"
@@ -30,6 +30,7 @@ module Admin
 
       get admin_customer_path(customers(:one))
       assert_response :success
+      assert_select ".customer-details-vehicle-list.customer-details-vehicle-list--allow-overflow"
       assert_select ".customer-details-hero__menu .customer-details-vehicle-row__menu-toggle", 1
       assert_select "#editCustomerModal"
       assert_select ".customer-details-hero__menu .dropdown-item", text: "Delete Customer"

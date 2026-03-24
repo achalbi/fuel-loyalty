@@ -21,6 +21,7 @@ RUN apt-get update -qq && \
       bash \
       ca-certificates \
       curl \
+      git \
       libpq5 \
       libvips \
       libyaml-0-2 \
