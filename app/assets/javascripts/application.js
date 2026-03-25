@@ -311,9 +311,9 @@
     if (pushPermissionState() === "denied") {
       button.classList.remove("btn-primary");
       button.classList.add("btn-outline-secondary");
-      button.querySelector("span").textContent = "Notifications Blocked";
-      status.textContent = "Notifications are blocked for this browser profile.";
-      help.textContent = "Enable notifications in your browser settings, then reload this page.";
+      button.querySelector("span").textContent = "Notifications Off";
+      status.textContent = "Notifications are currently turned off for this browser profile.";
+      help.textContent = "Turn notifications on in your browser or device settings, then reload this page.";
       help.classList.remove("d-none");
       return;
     }
@@ -367,6 +367,14 @@
 
           if (!result.ok && result.permission === "denied") {
             refreshPushPanels();
+            return;
+          }
+
+          if (!result.ok && result.permission === "default") {
+            refreshPushPanels({
+              message: "Notifications are not enabled on this device yet.",
+              helpText: "Tap Enable Notifications whenever you're ready to allow alerts."
+            });
             return;
           }
 

@@ -123,6 +123,14 @@
     <span class="small-muted" data-dashboard-fuel-type-label>Fuel type: <%= @dashboard_payload.dig(:meta, :fuel_type_label) %></span>
   </div>
 
+  <% if firebase_web_push_enabled? %>
+    <%= render "shared/push_opt_in_panel",
+      source: "admin_dashboard",
+      title: "Enable Notifications On This Device",
+      badge_label: "Recommended",
+      description: "Turn on push notifications here so this installed app can receive loyalty alerts and scheduled broadcasts." %>
+  <% end %>
+
   <section class="dashboard-section">
     <div class="dashboard-section__header">
       <div>

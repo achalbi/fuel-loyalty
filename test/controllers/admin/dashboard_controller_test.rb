@@ -5,7 +5,9 @@ module Admin
     test "admin can view the overview dashboard shell" do
       sign_in users(:one)
 
-      get admin_dashboard_path
+      with_firebase_web_push_env do
+        get admin_dashboard_path
+      end
 
       assert_response :success
       assert_select "[data-dashboard-root]", 1
@@ -26,6 +28,7 @@ module Admin
       assert_select "[data-dashboard-leaderboard='top_customers_by_transactions']", 1
       assert_select "[data-dashboard-leaderboard='top_customers_by_revenue']", 1
       assert_select "[data-dashboard-payload]", 1
+      assert_select "[data-push-opt-in-panel][data-push-source='admin_dashboard']", 1
     end
 
     test "admin can fetch dashboard data as json" do

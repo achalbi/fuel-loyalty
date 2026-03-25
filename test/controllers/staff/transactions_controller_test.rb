@@ -5,7 +5,9 @@ module Staff
     test "renders separate phone and vehicle transaction forms" do
       sign_in users(:two)
 
-      get new_staff_transaction_path
+      with_firebase_web_push_env do
+        get new_staff_transaction_path
+      end
 
       assert_response :success
       assert_select "#transactionEntryTabs"
@@ -35,6 +37,8 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[phone_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[vehicle_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_amount]']"
+      assert_select "[data-push-opt-in-panel][data-push-source='staff_transaction']", 1
+      assert_select "[data-push-opt-in-panel] [data-push-button] span", text: "Enable Notifications"
       assert_match(/data-transaction-phone-root.*data-customer-error.*Lookup by Phone/m, response.body)
       assert_match(/data-transaction-vehicle-root.*data-customer-error.*Lookup by Vehicle/m, response.body)
       assert_includes response.body, "registerCustomerPath: payload.register_customer_path"
