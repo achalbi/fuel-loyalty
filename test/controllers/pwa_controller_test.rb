@@ -45,6 +45,7 @@ class PwaControllerTest < ActionDispatch::IntegrationTest
       assert_includes response.body, "/manifest.json?v=test-release"
       assert_includes response.body, "/assets/bootstrap.min-"
       assert_includes response.body, "/assets/application-"
+      assert_includes response.body, "if (/\\b(?:private|no-store)\\b/i.test(cacheControl)) return;"
     end
   end
 end

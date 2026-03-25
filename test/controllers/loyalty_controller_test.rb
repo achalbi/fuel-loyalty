@@ -69,6 +69,15 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "does not publicly cache loyalty lookup when a user is signed in" do
+    sign_in users(:one)
+
+    get new_loyalty_path
+
+    assert_response :success
+    assert_equal "private, no-store", response.headers["Cache-Control"]
+  end
+
   test "legacy post lookup works without a csrf token" do
     original_value = ActionController::Base.allow_forgery_protection
     ActionController::Base.allow_forgery_protection = true
@@ -100,6 +109,22 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_select ".loyalty-activity-item__details .loyalty-activity-item__detail", 4
     assert_select ".loyalty-activity-item__detail strong", text: "TN01AA1111"
     assert_select ".loyalty-activity-item__detail strong", text: /\u20b9500\.00/
+  end
+
+  test "loyalty lookup ignores stale devise sign out notices" do
+    sign_in users(:one)
+
+    delete destroy_user_session_path
+    assert_response :redirect
+
+    post loyalty_path, params: { loyalty: { phone_number: customers(:one).phone_number } }
+    assert_response :redirect
+
+    follow_redirect!
+
+    assert_response :success
+    assert_select ".alert", text: /Signed out successfully\./, count: 0
+    assert_select "h1", "Arun"
   end
 
   test "shows redeemable points when the customer has enough balance" do
@@ -167,6 +192,7 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_loyalty_path
     follow_redirect!
+    assert_equal "private, no-store", response.headers["Cache-Control"]
     assert_select ".alert", /lookup link has expired/
   end
 

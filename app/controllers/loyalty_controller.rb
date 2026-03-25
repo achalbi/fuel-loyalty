@@ -6,8 +6,11 @@ class LoyaltyController < ApplicationController
   # mints a short-lived signed lookup token, and redirects to the read-only GET
   # result page.
   skip_forgery_protection only: :create
+  before_action :discard_devise_sign_out_notice
 
   def new
+    return unless public_loyalty_shell_cacheable?
+
     theme_setting = ThemeSetting.current
     cache_version = ENV.fetch("RELEASE_SHA", Rails.application.config.assets.version)
 
@@ -65,9 +68,24 @@ class LoyaltyController < ApplicationController
     end
   end
 
+  def public_loyalty_shell_cacheable?
+    # Only cache the anonymous shell. Signed-in chrome and flash banners are
+    # session-specific and should never be replayed from a shared cache.
+    !user_signed_in? && flash.empty?
+  end
+
   def render_invalid_phone_number
     flash.now[:alert] = "Phone number must be a 10 digit number."
     render :new, status: :unprocessable_entity
+  end
+
+  def discard_devise_sign_out_notice
+    signed_out_messages = [
+      I18n.t("devise.sessions.signed_out"),
+      I18n.t("devise.sessions.already_signed_out")
+    ]
+
+    flash.delete(:notice) if signed_out_messages.include?(flash[:notice])
   end
 
   def loyalty_params

@@ -153,6 +153,9 @@ async function preloadResponse(event) {
 
 async function cacheResponse(cache, request, response) {
   if (!response || !response.ok || response.type !== "basic") return;
+  const cacheControl = response.headers.get("Cache-Control") || "";
+
+  if (/\b(?:private|no-store)\b/i.test(cacheControl)) return;
 
   await cache.put(request, response.clone());
 }
