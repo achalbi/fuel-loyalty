@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_24_001000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_25_081000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -45,6 +45,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_24_001000) do
     t.index ["fuel_type"], name: "index_fuel_reward_rates_on_fuel_type", unique: true
   end
 
+  create_table "notification_schedules", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.integer "day_of_month"
+    t.integer "day_of_week"
+    t.string "frequency", null: false
+    t.datetime "last_sent_at"
+    t.text "message", null: false
+    t.date "scheduled_date"
+    t.string "scheduled_time", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_notification_schedules_on_active"
+    t.index ["frequency"], name: "index_notification_schedules_on_frequency"
+  end
+
   create_table "points_ledgers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "customer_id", null: false
@@ -54,6 +70,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_24_001000) do
     t.datetime "updated_at", null: false
     t.index ["customer_id"], name: "index_points_ledgers_on_customer_id"
     t.index ["transaction_id"], name: "index_points_ledgers_on_transaction_id"
+  end
+
+  create_table "push_subscriptions", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "last_used_at", null: false
+    t.string "platform", null: false
+    t.text "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_push_subscriptions_on_active"
+    t.index ["last_used_at"], name: "index_push_subscriptions_on_last_used_at"
+    t.index ["platform"], name: "index_push_subscriptions_on_platform"
+    t.index ["token"], name: "index_push_subscriptions_on_token", unique: true
   end
 
   create_table "theme_settings", force: :cascade do |t|

@@ -1,6 +1,7 @@
 (() => {
   const ANALYTICS_ENDPOINT = "/analytics/events";
   const THEME_STORAGE_KEY = "fuel-loyalty-theme";
+  const PUSH_TOKEN_STORAGE_KEY = "fuel-loyalty-fcm-token";
   const PWA_INSTALL_EVENT_NAMES = new Set([
     "pwa_install_cta_viewed",
     "pwa_install_prompt_available",
@@ -15,6 +16,10 @@
 
   const installPromptState = {
     deferredPrompt: null
+  };
+
+  const pushOptInState = {
+    syncing: null
   };
 
   const currentPagePath = () => window.location.pathname;
@@ -76,12 +81,12 @@
   };
 
   const registerServiceWorker = () => {
-    if (!("serviceWorker" in navigator)) return;
-    if (window.__fuelLoyaltyServiceWorkerRegistered) return;
+    if (!("serviceWorker" in navigator)) return Promise.resolve(null);
+    if (window.__fuelLoyaltyServiceWorkerRegistrationPromise) {
+      return window.__fuelLoyaltyServiceWorkerRegistrationPromise;
+    }
 
-    window.__fuelLoyaltyServiceWorkerRegistered = true;
-
-    const register = async () => {
+    window.__fuelLoyaltyServiceWorkerRegistrationPromise = (async () => {
       try {
         const registration = await navigator.serviceWorker.register("/service-worker.js", { scope: "/" });
 
@@ -103,12 +108,335 @@
             }
           });
         });
+
+        return registration;
       } catch (error) {
         console.error("Service worker registration failed", error);
+        return null;
       }
-    };
+    })();
 
-    register();
+    return window.__fuelLoyaltyServiceWorkerRegistrationPromise;
+  };
+
+  const pushSettings = () => window.fuelLoyaltyPushSettings || null;
+
+  const firebaseSdkReady = async () => {
+    const readyPromise = window.__fuelLoyaltyFirebaseReady;
+
+    if (readyPromise && typeof readyPromise.then === "function") {
+      try {
+        return await Promise.race([
+          readyPromise,
+          new Promise((resolve) => setTimeout(() => resolve(window.fuelLoyaltyFirebase || null), 1500))
+        ]);
+      } catch (_error) {
+        return window.fuelLoyaltyFirebase || null;
+      }
+    }
+
+    return window.fuelLoyaltyFirebase || null;
+  };
+
+  const pushNotificationsSupported = () => {
+    const settings = pushSettings();
+
+    return Boolean(settings?.firebaseConfig)
+      && Boolean(settings?.vapidKey)
+      && "Notification" in window
+      && "serviceWorker" in navigator;
+  };
+
+  const initializeFirebaseMessaging = async () => {
+    if (!pushNotificationsSupported()) return null;
+
+    const firebaseSdk = await firebaseSdkReady();
+    if (!firebaseSdk || typeof firebaseSdk.getToken !== "function") return null;
+
+    return firebaseSdk;
+  };
+
+  const detectPushPlatform = () => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+
+    if (/android/.test(userAgent)) return "android";
+    if (/iphone|ipad|ipod/.test(userAgent)) return "ios";
+    if (/macintosh|windows|linux/.test(userAgent)) return "desktop";
+
+    return "web";
+  };
+
+  const pushPermissionState = () => {
+    if (!("Notification" in window)) return "unsupported";
+
+    return window.Notification.permission;
+  };
+
+  const deactivatePushSubscriptionToken = async (token, { clearStoredToken = false } = {}) => {
+    const settings = pushSettings();
+    if (!settings?.subscriptionEndpoint || !token) return;
+
+    try {
+      await fetch(settings.subscriptionEndpoint, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || ""
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({ token })
+      });
+    } catch (_error) {
+      // Best effort cleanup only.
+    } finally {
+      if (clearStoredToken && localStorage.getItem(PUSH_TOKEN_STORAGE_KEY) === token) {
+        localStorage.removeItem(PUSH_TOKEN_STORAGE_KEY);
+      }
+    }
+  };
+
+  const savePushSubscription = async (token) => {
+    const settings = pushSettings();
+    if (!settings?.subscriptionEndpoint) throw new Error("Push subscription endpoint is not configured.");
+
+    const previousToken = localStorage.getItem(PUSH_TOKEN_STORAGE_KEY);
+    const response = await fetch(settings.subscriptionEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || ""
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        token,
+        platform: detectPushPlatform()
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to register notifications (${response.status})`);
+    }
+
+    localStorage.setItem(PUSH_TOKEN_STORAGE_KEY, token);
+    if (previousToken && previousToken !== token) {
+      await deactivatePushSubscriptionToken(previousToken);
+    }
+  };
+
+  const deactivateStoredPushSubscription = async () => {
+    const storedToken = localStorage.getItem(PUSH_TOKEN_STORAGE_KEY);
+    if (!storedToken) return;
+
+    await deactivatePushSubscriptionToken(storedToken, { clearStoredToken: true });
+  };
+
+  const syncPushSubscription = async ({ requestPermission = false } = {}) => {
+    if (!pushNotificationsSupported()) {
+      return { ok: false, reason: "unsupported" };
+    }
+
+    if (pushOptInState.syncing) return pushOptInState.syncing;
+
+    pushOptInState.syncing = (async () => {
+      if (requestPermission && pushPermissionState() === "default") {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          if (permission === "denied") await deactivateStoredPushSubscription();
+          return { ok: false, permission };
+        }
+      }
+
+      if (pushPermissionState() !== "granted") {
+        if (pushPermissionState() === "denied") {
+          await deactivateStoredPushSubscription();
+        }
+
+        return { ok: false, permission: pushPermissionState() };
+      }
+
+      const registration = await registerServiceWorker();
+      if (!registration) {
+        return { ok: false, reason: "service_worker_registration_failed" };
+      }
+
+      const firebaseSdk = await initializeFirebaseMessaging();
+      if (!firebaseSdk) {
+        return { ok: false, reason: "messaging_unavailable" };
+      }
+
+      const token = await firebaseSdk.getToken({
+        vapidKey: pushSettings().vapidKey,
+        serviceWorkerRegistration: registration
+      });
+
+      if (!token) {
+        return { ok: false, reason: "token_unavailable" };
+      }
+
+      await savePushSubscription(token);
+      return { ok: true, token };
+    })();
+
+    try {
+      return await pushOptInState.syncing;
+    } finally {
+      pushOptInState.syncing = null;
+    }
+  };
+
+  const setPushPanelState = (panel, state = {}) => {
+    const button = panel.querySelector("[data-push-button]");
+    const status = panel.querySelector("[data-push-status]");
+    const help = panel.querySelector("[data-push-help]");
+    if (!button || !status || !help) return;
+
+    if (!pushNotificationsSupported()) {
+      panel.classList.add("d-none");
+      return;
+    }
+
+    panel.classList.remove("d-none");
+    button.disabled = state.busy === true;
+
+    if (pushPermissionState() === "granted") {
+      button.classList.remove("btn-outline-primary");
+      button.classList.add("btn-primary");
+      button.querySelector("span").textContent = "Notifications Enabled";
+      status.textContent = state.message || "Push notifications are enabled on this device.";
+      help.classList.add("d-none");
+      help.textContent = "";
+      return;
+    }
+
+    if (pushPermissionState() === "denied") {
+      button.classList.remove("btn-primary");
+      button.classList.add("btn-outline-secondary");
+      button.querySelector("span").textContent = "Notifications Blocked";
+      status.textContent = "Notifications are blocked for this browser profile.";
+      help.textContent = "Enable notifications in your browser settings, then reload this page.";
+      help.classList.remove("d-none");
+      return;
+    }
+
+    button.classList.remove("btn-primary", "btn-outline-secondary");
+    button.classList.add("btn-outline-primary");
+    button.querySelector("span").textContent = "Enable Notifications";
+    status.textContent = state.message || status.dataset.defaultMessage || status.textContent;
+
+    if (state.helpText) {
+      help.textContent = state.helpText;
+      help.classList.remove("d-none");
+      return;
+    }
+
+    help.classList.add("d-none");
+    help.textContent = "";
+  };
+
+  const refreshPushPanels = (state = {}) => {
+    document.querySelectorAll("[data-push-opt-in-panel]").forEach((panel) => {
+      const status = panel.querySelector("[data-push-status]");
+      if (status && !status.dataset.defaultMessage) {
+        status.dataset.defaultMessage = status.textContent;
+      }
+
+      setPushPanelState(panel, state);
+    });
+  };
+
+  const initializePushOptIn = () => {
+    const panels = document.querySelectorAll("[data-push-opt-in-panel]");
+    if (panels.length === 0) return;
+
+    panels.forEach((panel) => {
+      const button = panel.querySelector("[data-push-button]");
+      if (!button) return;
+
+      if (panel.dataset.pushBound === "true") {
+        setPushPanelState(panel);
+        return;
+      }
+
+      panel.dataset.pushBound = "true";
+
+      button.addEventListener("click", async () => {
+        setPushPanelState(panel, { busy: true });
+
+        try {
+          const result = await syncPushSubscription({ requestPermission: true });
+
+          if (!result.ok && result.permission === "denied") {
+            refreshPushPanels();
+            return;
+          }
+
+          if (!result.ok) {
+            refreshPushPanels({
+              helpText: "We could not complete push registration on this device. Please try again."
+            });
+            return;
+          }
+
+          refreshPushPanels({
+            message: "Push notifications are enabled on this device."
+          });
+        } catch (_error) {
+          refreshPushPanels({
+            helpText: "We could not complete push registration on this device. Please try again."
+          });
+        } finally {
+          setPushPanelState(panel, { busy: false });
+        }
+      });
+
+      setPushPanelState(panel);
+    });
+
+    if (pushPermissionState() === "granted") {
+      syncPushSubscription().then((result) => {
+        if (result.ok) {
+          refreshPushPanels({
+            message: "Push notifications are enabled on this device."
+          });
+        }
+      }).catch(() => {});
+    } else if (pushPermissionState() === "denied") {
+      deactivateStoredPushSubscription().catch(() => {});
+    }
+  };
+
+  const syncNotificationScheduleFormVisibility = (form) => {
+    const frequencyInput = form.querySelector("[data-schedule-frequency]");
+    if (!frequencyInput) return;
+
+    const frequency = frequencyInput.value;
+
+    form.querySelectorAll("[data-schedule-field]").forEach((field) => {
+      const shouldShow = field.dataset.scheduleField === frequency;
+      field.classList.toggle("d-none", !shouldShow);
+      field.querySelectorAll("input, select").forEach((input) => {
+        input.disabled = !shouldShow;
+      });
+    });
+  };
+
+  const initializeNotificationScheduleForms = () => {
+    document.querySelectorAll("[data-notification-schedule-form]").forEach((form) => {
+      if (form.dataset.scheduleFormBound === "true") {
+        syncNotificationScheduleFormVisibility(form);
+        return;
+      }
+
+      form.dataset.scheduleFormBound = "true";
+      const frequencyInput = form.querySelector("[data-schedule-frequency]");
+      if (!frequencyInput) return;
+
+      frequencyInput.addEventListener("change", () => {
+        syncNotificationScheduleFormVisibility(form);
+      });
+
+      syncNotificationScheduleFormVisibility(form);
+    });
   };
 
   const preferredTheme = () => {
@@ -817,6 +1145,10 @@
   document.addEventListener("DOMContentLoaded", initializeLoyaltyPointsHero);
   document.addEventListener("turbo:load", initializeInstallPrompt);
   document.addEventListener("DOMContentLoaded", initializeInstallPrompt);
+  document.addEventListener("turbo:load", initializePushOptIn);
+  document.addEventListener("DOMContentLoaded", initializePushOptIn);
+  document.addEventListener("turbo:load", initializeNotificationScheduleForms);
+  document.addEventListener("DOMContentLoaded", initializeNotificationScheduleForms);
   bindInstallPromptEvents();
   registerServiceWorker();
 })();

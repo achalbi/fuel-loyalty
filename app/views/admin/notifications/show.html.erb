@@ -1,0 +1,191 @@
+<% content_for :title, "Notifications" %>
+
+<div class="mb-4 page-header d-flex flex-wrap align-items-start justify-content-between gap-3">
+  <div class="page-intro mb-0">
+    <h1>Notifications</h1>
+    <p>Broadcast messages instantly, manage saved schedules, and run the scheduler on demand without background workers.</p>
+  </div>
+
+  <%= button_to admin_run_schedules_path, method: :post, class: "btn btn-outline-primary" do %>
+    <i class="ti ti-player-play me-1" aria-hidden="true"></i>
+    Run Scheduler
+  <% end %>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h2 class="h5 mb-1">Send Now</h2>
+            <p class="small-muted mb-0">Send a push notification to every active device token right away.</p>
+          </div>
+          <span class="badge text-bg-light border">Live</span>
+        </div>
+
+        <%= form_with url: admin_send_notifications_path, method: :post, scope: :notification, local: true, class: "vstack gap-3" do |form| %>
+          <div>
+            <%= form.label :title, class: "form-label" %>
+            <%= form.text_field :title, class: "form-control", maxlength: 120, required: true %>
+          </div>
+
+          <div>
+            <%= form.label :message, class: "form-label" %>
+            <%= form.text_area :message, class: "form-control", rows: 4, maxlength: 240, required: true %>
+          </div>
+
+          <div class="d-flex justify-content-end">
+            <%= form.submit "Send Notification", class: "btn btn-primary" %>
+          </div>
+        <% end %>
+
+        <% if firebase_web_push_enabled? %>
+          <%= render "shared/push_opt_in_panel",
+            source: "admin_notifications",
+            title: "Enable Notifications On This Device",
+            badge_label: "Optional",
+            description: "Allow push notifications here to verify delivery from the real PWA flow and register this device token." %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-7">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <p class="small-muted mb-1">Active Tokens</p>
+            <h2 class="mb-0"><%= number_with_delimiter(@push_subscription_count) %></h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <p class="small-muted mb-1">Total Registrations</p>
+            <h2 class="mb-0"><%= number_with_delimiter(@push_subscription_total_count) %></h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <p class="small-muted mb-1">Saved Schedules</p>
+            <h2 class="mb-0"><%= number_with_delimiter(@notification_schedules.count) %></h2>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h2 class="h5 mb-1">Create Schedule</h2>
+            <p class="small-muted mb-0">Schedules are evaluated only when you click Run Scheduler or call the API endpoint.</p>
+          </div>
+          <span class="badge text-bg-light border">On demand</span>
+        </div>
+
+        <%= render "schedule_form",
+          schedule: @schedule,
+          form_url: admin_schedules_path,
+          form_method: :post,
+          submit_label: "Save Schedule" %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm mt-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+      <div>
+        <h2 class="h5 mb-1">Saved Schedules</h2>
+        <p class="small-muted mb-0">Edit, pause, or remove schedules. Due logic runs inside the web request, which keeps Cloud Run fully stateless.</p>
+      </div>
+      <div class="small text-end">
+        <% @push_subscription_platforms.each do |platform, count| %>
+          <span class="badge text-bg-light border me-1"><%= platform.titleize %>: <%= count %></span>
+        <% end %>
+      </div>
+    </div>
+
+    <% if @notification_schedules.any? %>
+      <div class="vstack gap-3">
+        <% @notification_schedules.each do |schedule| %>
+          <% modal_id = "editNotificationSchedule-#{schedule.id}" %>
+          <% edit_schedule = @edit_schedule&.id == schedule.id ? @edit_schedule : schedule %>
+
+          <div class="border rounded-4 p-3 bg-body-tertiary">
+            <div class="d-flex flex-wrap justify-content-between gap-3">
+              <div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                  <h3 class="h6 mb-0"><%= schedule.title %></h3>
+                  <span class="badge <%= schedule.active? ? "text-bg-success" : "text-bg-secondary" %>"><%= schedule.active? ? "Active" : "Paused" %></span>
+                  <span class="badge text-bg-light border"><%= schedule.frequency_label %></span>
+                </div>
+                <p class="mb-2"><%= schedule.message %></p>
+                <p class="small-muted mb-1"><strong>Schedule:</strong> <%= schedule.schedule_summary %></p>
+                <p class="small-muted mb-0"><strong>Last sent:</strong> <%= schedule.last_sent_at.present? ? l(schedule.last_sent_at, format: :long) : "Never" %></p>
+              </div>
+
+              <div class="d-flex align-items-start gap-2">
+                <%= button_tag type: "button",
+                  class: "btn btn-outline-secondary btn-sm",
+                  data: { bs_toggle: "modal", bs_target: "##{modal_id}" } do %>
+                  <i class="ti ti-pencil me-1" aria-hidden="true"></i>
+                  Edit
+                <% end %>
+
+                <%= button_to admin_schedule_path(schedule),
+                  method: :delete,
+                  class: "btn btn-outline-danger btn-sm",
+                  form: { data: { confirm_modal: true, confirm_message: "Delete this notification schedule?" } } do %>
+                  <i class="ti ti-trash me-1" aria-hidden="true"></i>
+                  Delete
+                <% end %>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="modal fade customer-details-modal"
+            id="<%= modal_id %>"
+            tabindex="-1"
+            aria-labelledby="<%= modal_id %>-label"
+            aria-hidden="true"
+            data-auto-open-modal="<%= @edit_schedule&.id == schedule.id && @edit_schedule.errors.any? %>">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+              <div class="modal-content confirm-modal-content customer-details-modal__content">
+                <div class="modal-header border-0 pb-0">
+                  <div>
+                    <h2 class="modal-title h5 mb-1" id="<%= modal_id %>-label">Edit Schedule</h2>
+                    <p class="text-muted mb-0 small">Update the notification content, cadence, or active state.</p>
+                  </div>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-3">
+                  <%= render "schedule_form",
+                    schedule: edit_schedule,
+                    form_url: admin_schedule_path(schedule),
+                    form_method: :patch,
+                    submit_label: "Update Schedule" %>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="border rounded-4 p-4 text-center bg-body-tertiary">
+        <h3 class="h6 mb-2">No schedules yet</h3>
+        <p class="small-muted mb-0">Create your first daily, weekly, monthly, or one-time notification schedule above.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

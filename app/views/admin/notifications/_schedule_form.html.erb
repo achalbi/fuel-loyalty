@@ -1,0 +1,64 @@
+<%= form_with model: schedule, url: form_url, method: form_method, local: true, class: "vstack gap-3", data: { notification_schedule_form: true } do |form| %>
+  <% if schedule.errors.any? %>
+    <div class="alert alert-danger border-0 shadow-sm mb-0">
+      <%= schedule.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :title, class: "form-label" %>
+    <%= form.text_field :title, class: "form-control", required: true, maxlength: 120 %>
+  </div>
+
+  <div>
+    <%= form.label :message, class: "form-label" %>
+    <%= form.text_area :message, class: "form-control", rows: 4, required: true, maxlength: 240 %>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <%= form.label :frequency, class: "form-label" %>
+      <%= form.select :frequency,
+        options_for_select(NotificationSchedule::FREQUENCIES.map { |value| [value.titleize, value] }, schedule.frequency || "daily"),
+        {},
+        class: "form-select",
+        data: { schedule_frequency: true } %>
+    </div>
+
+    <div class="col-md-4">
+      <%= form.label :scheduled_time, "Time", class: "form-label" %>
+      <%= form.time_field :scheduled_time, class: "form-control", required: true, step: 60 %>
+    </div>
+
+    <div class="col-md-4 d-flex align-items-end">
+      <div class="form-check form-switch">
+        <%= form.check_box :active, class: "form-check-input" %>
+        <%= form.label :active, class: "form-check-label" %>
+      </div>
+    </div>
+  </div>
+
+  <div class="<%= "d-none" unless schedule.frequency == "once" %>" data-schedule-field="once">
+    <%= form.label :scheduled_date, "Send on", class: "form-label" %>
+    <%= form.date_field :scheduled_date, class: "form-control" %>
+    <p class="small-muted mt-2 mb-0">One-time schedules auto-disable after the first successful run.</p>
+  </div>
+
+  <div class="<%= "d-none" unless schedule.frequency == "weekly" %>" data-schedule-field="weekly">
+    <%= form.label :day_of_week, "Day of week", class: "form-label" %>
+    <%= form.select :day_of_week,
+      options_for_select(NotificationSchedule::WEEKDAY_OPTIONS, schedule.day_of_week),
+      { include_blank: "Select a day" },
+      class: "form-select" %>
+  </div>
+
+  <div class="<%= "d-none" unless schedule.frequency == "monthly" %>" data-schedule-field="monthly">
+    <%= form.label :day_of_month, "Day of month", class: "form-label" %>
+    <%= form.number_field :day_of_month, class: "form-control", min: 1, max: 31 %>
+    <p class="small-muted mt-2 mb-0">If the chosen day does not exist in a month, the scheduler sends on that month's last day.</p>
+  </div>
+
+  <div class="d-flex justify-content-end">
+    <%= form.submit submit_label, class: "btn btn-primary" %>
+  </div>
+<% end %>

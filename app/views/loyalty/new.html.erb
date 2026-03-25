@@ -50,6 +50,14 @@
           </div>
         </div>
       </section>
+
+      <% if firebase_web_push_enabled? %>
+        <%= render "shared/push_opt_in_panel",
+          source: "loyalty_page",
+          title: "Enable Loyalty Alerts",
+          badge_label: "Optional",
+          description: "Turn on push notifications to receive loyalty updates and announcements on this device." %>
+      <% end %>
     </div>
   </div>
 </div>

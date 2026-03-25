@@ -16,6 +16,14 @@ services:
       RAILS_SERVE_STATIC_FILES: "1"
       APP_URL: ${APP_URL:-http://localhost:8080}
       MAILER_FROM: ${MAILER_FROM:-no-reply@fuel-loyalty.local}
+      FIREBASE_API_KEY: ${FIREBASE_API_KEY:-}
+      FIREBASE_AUTH_DOMAIN: ${FIREBASE_AUTH_DOMAIN:-}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_STORAGE_BUCKET: ${FIREBASE_STORAGE_BUCKET:-}
+      FIREBASE_MESSAGING_SENDER_ID: ${FIREBASE_MESSAGING_SENDER_ID:-}
+      FIREBASE_APP_ID: ${FIREBASE_APP_ID:-}
+      FIREBASE_MEASUREMENT_ID: ${FIREBASE_MEASUREMENT_ID:-}
+      FIREBASE_WEB_VAPID_KEY: ${FIREBASE_WEB_VAPID_KEY:-}
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:-local-production-secret-key}
       PORT: "8080"
     command: ["/bin/sh", "-lc", "bundle exec rails db:prepare && bundle exec puma -C config/puma.rb"]

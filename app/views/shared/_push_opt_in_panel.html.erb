@@ -1,0 +1,24 @@
+<section class="install-app-panel mt-4" data-push-opt-in-panel data-push-source="<%= source %>" aria-labelledby="<%= "#{source.parameterize}-push-title" %>">
+  <div class="d-flex align-items-start gap-3">
+    <div class="install-app-icon" aria-hidden="true">
+      <i class="ti ti-bell-ringing"></i>
+    </div>
+
+    <div class="flex-grow-1">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <h2 id="<%= "#{source.parameterize}-push-title" %>" class="h6 mb-0"><%= title %></h2>
+        <span class="badge text-bg-light border"><%= badge_label %></span>
+      </div>
+
+      <p class="small-muted mb-3" data-push-status><%= description %></p>
+
+      <div class="d-grid gap-2">
+        <button type="button" class="btn btn-outline-primary" data-push-button>
+          <i class="ti ti-bell-plus me-1"></i>
+          <span>Enable Notifications</span>
+        </button>
+        <p class="small-muted mb-0 d-none" data-push-help></p>
+      </div>
+    </div>
+  </div>
+</section>

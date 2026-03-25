@@ -69,6 +69,14 @@
           </div>
         </div>
       </section>
+
+      <% if firebase_web_push_enabled? %>
+        <%= render "shared/push_opt_in_panel",
+          source: "login_page",
+          title: "Enable Push Notifications",
+          badge_label: "Optional",
+          description: "Allow notifications so this device can receive loyalty updates and scheduled push messages." %>
+      <% end %>
     </div>
   </div>
 </div>

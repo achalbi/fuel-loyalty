@@ -30,6 +30,30 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'pattern="\d{10}"'
   end
 
+  test "renders firebase push configuration when web push is configured" do
+    with_firebase_web_push_env do
+      get new_loyalty_path
+
+      assert_response :success
+      assert_select "script[type='module']", text: /firebase-app\.js/
+      assert_includes response.body, "firebase-analytics.js"
+      assert_includes response.body, "firebase-messaging.js"
+      assert_includes response.body, "\"storageBucket\":\"fuel-loyalty.firebasestorage.app\""
+      assert_includes response.body, "\"measurementId\":\"G-TEST123\""
+      assert_includes response.body, "\"subscriptionEndpoint\":\"#{push_subscriptions_path}\""
+    end
+  end
+
+  test "renders the firebase sdk without push opt-in when only web config is present" do
+    with_firebase_web_push_env("FIREBASE_WEB_VAPID_KEY" => nil) do
+      get new_loyalty_path
+
+      assert_response :success
+      assert_select "script[type='module']", text: /firebase-app\.js/
+      assert_select "[data-push-opt-in-panel]", count: 0
+    end
+  end
+
   test "allows supported mobile safari browsers" do
     get new_loyalty_path, headers: { "User-Agent" => iphone_safari_user_agent }
 
@@ -210,6 +234,25 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
 
   def loyalty_lookup_token_for(phone_number)
     LoyaltyLookupToken.generate(phone_number)
+  end
+
+  def with_firebase_web_push_env(overrides = {})
+    defaults = {
+      "FIREBASE_API_KEY" => "test-api-key",
+      "FIREBASE_AUTH_DOMAIN" => "fuel-loyalty.firebaseapp.com",
+      "FIREBASE_PROJECT_ID" => "fuel-loyalty",
+      "FIREBASE_STORAGE_BUCKET" => "fuel-loyalty.firebasestorage.app",
+      "FIREBASE_MESSAGING_SENDER_ID" => "629935221011",
+      "FIREBASE_APP_ID" => "1:629935221011:web:test-app",
+      "FIREBASE_MEASUREMENT_ID" => "G-TEST123",
+      "FIREBASE_WEB_VAPID_KEY" => "test-vapid-key"
+    }.merge(overrides.transform_keys(&:to_s))
+
+    original_values = defaults.keys.index_with { |key| ENV[key] }
+    defaults.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    yield
+  ensure
+    original_values&.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
   end
 
   def redirect_query

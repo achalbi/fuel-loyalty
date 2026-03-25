@@ -50,13 +50,14 @@ steps:
         gcloud run jobs deploy ${_SERVICE_NAME}-migrate \
           --image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA \
           --region=$_DEPLOY_REGION \
+          --service-account=${_RUNTIME_SERVICE_ACCOUNT} \
           --command=bundle \
           --args=exec,rails,db:migrate \
           --max-retries=0 \
           --parallelism=1 \
           --tasks=1 \
           --task-timeout=900s \
-          --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE},RAILS_SERVE_STATIC_FILES=true,APP_URL=${_APP_URL},MAILER_FROM=${_MAILER_FROM},RELEASE_SHA=$COMMIT_SHA \
+          --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE},RAILS_SERVE_STATIC_FILES=true,APP_URL=${_APP_URL},MAILER_FROM=${_MAILER_FROM},FIREBASE_API_KEY=${_FIREBASE_API_KEY},FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN},FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},FIREBASE_STORAGE_BUCKET=${_FIREBASE_STORAGE_BUCKET},FIREBASE_MESSAGING_SENDER_ID=${_FIREBASE_MESSAGING_SENDER_ID},FIREBASE_APP_ID=${_FIREBASE_APP_ID},FIREBASE_MEASUREMENT_ID=${_FIREBASE_MEASUREMENT_ID},FIREBASE_WEB_VAPID_KEY=${_FIREBASE_WEB_VAPID_KEY},RELEASE_SHA=$COMMIT_SHA \
           --quiet
 
         gcloud run jobs execute ${_SERVICE_NAME}-migrate \
@@ -78,10 +79,11 @@ steps:
       - --image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
       - --region=$_DEPLOY_REGION
       - --platform=managed
+      - --service-account=$_RUNTIME_SERVICE_ACCOUNT
       - --quiet
 
       # Runtime configuration
-      - --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE},RAILS_SERVE_STATIC_FILES=true,APP_URL=${_APP_URL},MAILER_FROM=${_MAILER_FROM},RELEASE_SHA=$COMMIT_SHA
+      - --set-env-vars=RAILS_ENV=production,DATABASE_URL=${_DATABASE_URL},SECRET_KEY_BASE=${_SECRET_KEY_BASE},RAILS_SERVE_STATIC_FILES=true,APP_URL=${_APP_URL},MAILER_FROM=${_MAILER_FROM},FIREBASE_API_KEY=${_FIREBASE_API_KEY},FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN},FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},FIREBASE_STORAGE_BUCKET=${_FIREBASE_STORAGE_BUCKET},FIREBASE_MESSAGING_SENDER_ID=${_FIREBASE_MESSAGING_SENDER_ID},FIREBASE_APP_ID=${_FIREBASE_APP_ID},FIREBASE_MEASUREMENT_ID=${_FIREBASE_MEASUREMENT_ID},FIREBASE_WEB_VAPID_KEY=${_FIREBASE_WEB_VAPID_KEY},RELEASE_SHA=$COMMIT_SHA
 
 
       # Labels (traceability)
@@ -103,9 +105,18 @@ substitutions:
   _AR_REPOSITORY: cloud-run-source-deploy
   _AR_PROJECT_ID: thoughtbasics
   _SERVICE_NAME: fuel-loyalty-git
+  _RUNTIME_SERVICE_ACCOUNT: fuel-loyalty-push-runtime@thoughtbasics.iam.gserviceaccount.com
   REPO_NAME: achalbi-fuel-loyalty
   _APP_URL: 'https://fly.thoughtbasics.com'
   _MAILER_FROM: 'no-reply@fly.thoughtbasics.com'
+  _FIREBASE_API_KEY: 'AIzaSyD2GOiEjnrGWDPQt1chym04qtmQ3F5LCEQ'
+  _FIREBASE_AUTH_DOMAIN: 'fuel-loyalty.firebaseapp.com'
+  _FIREBASE_PROJECT_ID: 'fuel-loyalty'
+  _FIREBASE_STORAGE_BUCKET: 'fuel-loyalty.firebasestorage.app'
+  _FIREBASE_MESSAGING_SENDER_ID: '629935221011'
+  _FIREBASE_APP_ID: '1:629935221011:web:612bdd301126b28e8492e6'
+  _FIREBASE_MEASUREMENT_ID: 'G-K2Q0927ZJX'
+  _FIREBASE_WEB_VAPID_KEY: 'BM7ZYF-Ye-YL6sc9q7Te0wPoB_QMeTKrg_FCS6zoESZnK-3m8hRcT333tC-gC17dx3Yzfo5B-4XYU-NE1WIsVoE'
 
   # Set these in the Cloud Build trigger or replace them with Secret Manager integration
   # before deploying from this file.

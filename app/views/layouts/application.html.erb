@@ -19,6 +19,14 @@
     <link rel="icon" href="/icon.svg?v=<%= cache_buster %>" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon-192.png?v=<%= cache_buster %>">
     <link rel="manifest" href="<%= pwa_manifest_path(v: cache_buster) %>">
+    <% if firebase_browser_sdk_enabled? %>
+      <script>
+        window.fuelLoyaltyPushSettings = <%= raw(json_escape(firebase_web_push_settings.to_json)) %>;
+        window.__fuelLoyaltyFirebaseReady = window.__fuelLoyaltyFirebaseReady || new Promise((resolve) => {
+          window.__resolveFuelLoyaltyFirebaseReady = resolve;
+        });
+      </script>
+    <% end %>
     <%= javascript_include_tag "theme_boot", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "bootstrap.min", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "tabler-icons.min", "data-turbo-track": "reload" %>
@@ -98,6 +106,7 @@
             <li><%= link_to new_staff_redemption_path, class: "nav-link #{'active' if current_page?(new_staff_redemption_path)}" do %><i class="ti ti-gift-card"></i><span class="nav-text">Redeem Points</span><% end %></li>
             <li><%= link_to new_admin_points_adjustment_path, class: "nav-link #{'active' if current_page?(new_admin_points_adjustment_path)}" do %><i class="ti ti-arrows-diff"></i><span class="nav-text">Adjust Points</span><% end %></li>
             <li class="px-4 pt-4 pb-2"><small class="nav-section-label">App Management</small></li>
+            <li><%= link_to admin_notifications_path, class: "nav-link #{'active' if current_page?(admin_notifications_path)}" do %><i class="ti ti-bell-ringing"></i><span class="nav-text">Notifications</span><% end %></li>
             <li><%= link_to admin_theme_settings_path, class: "nav-link #{'active' if current_page?(admin_theme_settings_path)}" do %><i class="ti ti-palette"></i><span class="nav-text">Theme</span><% end %></li>
           <% else %>
             <li class="px-4 py-2"><small class="nav-section-label">Operations</small></li>
@@ -178,5 +187,9 @@
         </div>
       </div>
     </div>
+
+    <% if firebase_browser_sdk_enabled? %>
+      <%= render "shared/firebase_sdk" %>
+    <% end %>
   </body>
 </html>

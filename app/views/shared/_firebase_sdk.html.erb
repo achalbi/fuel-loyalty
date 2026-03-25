@@ -1,0 +1,45 @@
+<script type="module">
+  import { getApps, initializeApp } from "https://www.gstatic.com/firebasejs/<%= FirebaseAppConfig::FIREBASE_SDK_VERSION %>/firebase-app.js";
+  import { getAnalytics, isSupported as analyticsIsSupported } from "https://www.gstatic.com/firebasejs/<%= FirebaseAppConfig::FIREBASE_SDK_VERSION %>/firebase-analytics.js";
+  import { getMessaging, getToken as getMessagingToken, isSupported as messagingIsSupported } from "https://www.gstatic.com/firebasejs/<%= FirebaseAppConfig::FIREBASE_SDK_VERSION %>/firebase-messaging.js";
+
+  const settings = window.fuelLoyaltyPushSettings || {};
+  const firebaseConfig = settings.firebaseConfig || {};
+  const app = getApps()[0] || initializeApp(firebaseConfig);
+  let messagingPromise = null;
+
+  const firebaseBridge = {
+    app,
+    analytics: null,
+    async getMessaging() {
+      if (!settings.vapidKey) return null;
+
+      if (!messagingPromise) {
+        messagingPromise = messagingIsSupported()
+          .then((supported) => supported ? getMessaging(app) : null)
+          .catch(() => null);
+      }
+
+      return messagingPromise;
+    },
+    async getToken(options = {}) {
+      const messaging = await this.getMessaging();
+      if (!messaging) return null;
+
+      return getMessagingToken(messaging, options);
+    }
+  };
+
+  window.fuelLoyaltyFirebase = firebaseBridge;
+  window.__resolveFuelLoyaltyFirebaseReady?.(firebaseBridge);
+
+  if (firebaseConfig.measurementId) {
+    analyticsIsSupported()
+      .then((supported) => {
+        if (supported) {
+          firebaseBridge.analytics = getAnalytics(app);
+        }
+      })
+      .catch(() => {});
+  }
+</script>

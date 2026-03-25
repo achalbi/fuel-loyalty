@@ -2,7 +2,8 @@ require "useragent"
 
 class ApplicationController < ActionController::Base
   include Pundit::Authorization
-  helper_method :pwa_cache_buster, :customer_points_ledger_path_for, :customer_transaction_history_path_for
+  helper_method :pwa_cache_buster, :customer_points_ledger_path_for, :customer_transaction_history_path_for,
+                :firebase_browser_sdk_enabled?, :firebase_web_push_enabled?, :firebase_web_push_settings
 
   SUPPORTED_BROWSER_VERSIONS = {
     safari: UserAgent::Version.new("16.4"),
@@ -145,5 +146,24 @@ class ApplicationController < ActionController::Base
     else
       transaction_history_customer_path(customer, page:)
     end
+  end
+
+  def firebase_browser_sdk_enabled?
+    FirebaseAppConfig.web_configured?
+  end
+
+  def firebase_web_push_enabled?
+    FirebaseAppConfig.web_push_ready?
+  end
+
+  def firebase_web_push_settings
+    return {} unless firebase_browser_sdk_enabled?
+
+    {
+      firebaseConfig: FirebaseAppConfig.web_config,
+      vapidKey: FirebaseAppConfig.vapid_key,
+      subscriptionEndpoint: push_subscriptions_path,
+      defaultLink: FirebaseAppConfig.notification_link
+    }
   end
 end

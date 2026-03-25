@@ -9,6 +9,25 @@ class PwaControllerTest < ActionDispatch::IntegrationTest
     ENV["RELEASE_SHA"] = original_value
   end
 
+  def with_firebase_web_push_env(overrides = {})
+    defaults = {
+      "FIREBASE_API_KEY" => "test-api-key",
+      "FIREBASE_AUTH_DOMAIN" => "fuel-loyalty.firebaseapp.com",
+      "FIREBASE_PROJECT_ID" => "fuel-loyalty",
+      "FIREBASE_STORAGE_BUCKET" => "fuel-loyalty.firebasestorage.app",
+      "FIREBASE_MESSAGING_SENDER_ID" => "629935221011",
+      "FIREBASE_APP_ID" => "1:629935221011:web:test-app",
+      "FIREBASE_MEASUREMENT_ID" => "G-TEST123",
+      "FIREBASE_WEB_VAPID_KEY" => "test-vapid-key"
+    }.merge(overrides.transform_keys(&:to_s))
+
+    original_values = defaults.keys.index_with { |key| ENV[key] }
+    defaults.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    yield
+  ensure
+    original_values&.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+  end
+
   test "serves the web app manifest" do
     with_release_sha("test-release") do
       get pwa_manifest_path(v: "test-release")
@@ -46,6 +65,19 @@ class PwaControllerTest < ActionDispatch::IntegrationTest
       assert_includes response.body, "/assets/bootstrap.min-"
       assert_includes response.body, "/assets/application-"
       assert_includes response.body, "if (/\\b(?:private|no-store)\\b/i.test(cacheControl)) return;"
+    end
+  end
+
+  test "embeds firebase push config into the service worker when configured" do
+    with_release_sha("test-release") do
+      with_firebase_web_push_env do
+        get pwa_service_worker_path
+
+        assert_response :success
+        assert_includes response.body, "const FIREBASE_PUSH_ENABLED = true;"
+        assert_includes response.body, "\"storageBucket\":\"fuel-loyalty.firebasestorage.app\""
+        assert_includes response.body, "\"measurementId\":\"G-TEST123\""
+      end
     end
   end
 end
