@@ -38,6 +38,8 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
       assert_select "script[type='module']", text: /firebase-app\.js/
       assert_includes response.body, "firebase-analytics.js"
       assert_includes response.body, "firebase-messaging.js"
+      assert_includes response.body, "onForegroundMessage"
+      assert_includes response.body, "showForegroundNotification"
       assert_includes response.body, "\"storageBucket\":\"fuel-loyalty.firebasestorage.app\""
       assert_includes response.body, "\"measurementId\":\"G-TEST123\""
       assert_includes response.body, "\"subscriptionEndpoint\":\"#{push_subscriptions_path}\""

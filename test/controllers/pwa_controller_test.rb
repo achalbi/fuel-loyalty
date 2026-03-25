@@ -77,6 +77,7 @@ class PwaControllerTest < ActionDispatch::IntegrationTest
         assert_includes response.body, "const FIREBASE_PUSH_ENABLED = true;"
         assert_includes response.body, "\"storageBucket\":\"fuel-loyalty.firebasestorage.app\""
         assert_includes response.body, "\"measurementId\":\"G-TEST123\""
+        assert_match(/self\.addEventListener\("notificationclick".*importScripts/m, response.body)
       end
     end
   end

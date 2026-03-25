@@ -28,6 +28,28 @@ const CACHEABLE_NAVIGATION_PATHS = new Set(["/loyalty"]);
 const SENSITIVE_PREFIXES = ["/admin", "/staff", "/users", "/customers"];
 const SENSITIVE_PATHS = new Set(["/loyalty/result"]);
 
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const destination = event.notification.data?.link || DEFAULT_NOTIFICATION_LINK;
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(destination) && "focus" in client) {
+          return client.focus();
+        }
+      }
+
+      if (clients.openWindow) {
+        return clients.openWindow(destination);
+      }
+
+      return null;
+    })
+  );
+});
+
 if (FIREBASE_PUSH_ENABLED) {
   importScripts("https://www.gstatic.com/firebasejs/<%= FirebaseAppConfig::FIREBASE_SDK_VERSION %>/firebase-app-compat.js");
   importScripts("https://www.gstatic.com/firebasejs/<%= FirebaseAppConfig::FIREBASE_SDK_VERSION %>/firebase-messaging-compat.js");
@@ -84,28 +106,6 @@ self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") {
     self.skipWaiting();
   }
-});
-
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-
-  const destination = event.notification.data?.link || DEFAULT_NOTIFICATION_LINK;
-
-  event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes(destination) && "focus" in client) {
-          return client.focus();
-        }
-      }
-
-      if (clients.openWindow) {
-        return clients.openWindow(destination);
-      }
-
-      return null;
-    })
-  );
 });
 
 self.addEventListener("fetch", (event) => {
