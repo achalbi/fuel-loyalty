@@ -19,6 +19,14 @@ module Admin
       firebase_push_service_singleton.define_method(:new, original_new)
     end
 
+    def with_admin_notification_token(value)
+      original_value = ENV["ADMIN_NOTIFICATION_API_TOKEN"]
+      ENV["ADMIN_NOTIFICATION_API_TOKEN"] = value
+      yield
+    ensure
+      ENV["ADMIN_NOTIFICATION_API_TOKEN"] = original_value
+    end
+
     test "admin can create a schedule" do
       sign_in users(:one)
 
@@ -40,7 +48,7 @@ module Admin
 
     test "admin can run the scheduler manually" do
       sign_in users(:one)
-      NotificationSchedule.create!(
+      schedule = NotificationSchedule.create!(
         title: "Daily Reminder",
         message: "Come back soon",
         frequency: "daily",
@@ -63,7 +71,64 @@ module Admin
       end
 
       assert_redirected_to admin_notifications_path
-      assert NotificationSchedule.last.last_sent_at.present?
+      follow_redirect!
+      assert_match(/1 schedules sent, 0 failed/i, response.body)
+      assert schedule.reload.last_sent_at.present?
+    end
+
+    test "scheduler run explains when no schedules are due yet" do
+      sign_in users(:one)
+      schedule = NotificationSchedule.create!(
+        title: "Later Reminder",
+        message: "Come back tonight",
+        frequency: "daily",
+        scheduled_time: "23:00",
+        active: true
+      )
+
+      travel_to Time.zone.local(2026, 3, 25, 10, 0, 0) do
+        post admin_run_schedules_path
+      end
+
+      assert_redirected_to admin_notifications_path
+      follow_redirect!
+      assert_match(/No schedules are due right now/i, response.body)
+      refute schedule.reload.last_sent_at.present?
+    end
+
+    test "bearer token can run the scheduler as json" do
+      NotificationSchedule.create!(
+        title: "Daily Reminder",
+        message: "Come back soon",
+        frequency: "daily",
+        scheduled_time: "09:00",
+        active: true
+      )
+      result = FirebasePushService::Result.new(
+        requested: 1,
+        sent: 1,
+        failed: 0,
+        invalidated: 0,
+        batches: 1,
+        errors: []
+      )
+
+      travel_to Time.zone.local(2026, 3, 25, 10, 0, 0) do
+        with_admin_notification_token("push-secret") do
+          with_stubbed_push_service(result) do
+            post admin_run_schedules_path,
+                 headers: { "Authorization" => "Bearer push-secret" },
+                 as: :json
+          end
+        end
+      end
+
+      assert_response :success
+      payload = JSON.parse(response.body)
+      assert_equal 1, payload["sent"]
+      assert_equal 0, payload["failed"]
+      assert_equal true, payload["acquired"]
+      assert_equal false, payload["skipped"]
     end
 
     test "scheduler endpoint reports when another run is already in progress" do

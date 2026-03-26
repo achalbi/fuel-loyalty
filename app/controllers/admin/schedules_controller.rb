@@ -54,8 +54,7 @@ module Admin
       respond_to do |format|
         format.json { render json: result.as_json, status: :ok }
         format.html do
-          redirect_to admin_notifications_path,
-                      notice: scheduler_run_notice_for(result)
+          redirect_to admin_notifications_path, **scheduler_run_flash_for(result)
         end
       end
     end
@@ -95,7 +94,23 @@ module Admin
     def scheduler_run_notice_for(result)
       return result.message if result.skipped
 
-      "Scheduler run finished. #{result.sent} schedules sent, #{result.failed} failed."
+      base_message = "Scheduler run finished. #{result.sent} schedules sent, #{result.failed} failed."
+      first_error = Array(result.details).filter_map { |detail| detail[:error] || detail["error"] }.first
+      return base_message if first_error.blank?
+
+      "#{base_message} #{first_error}"
+    end
+
+    def scheduler_run_flash_for(result)
+      return { alert: result.message } if result.skipped
+      if result.due.to_i.zero?
+        return {
+          alert: "No schedules are due right now. Schedules run only after their scheduled IST time. Use Send Now to broadcast immediately."
+        }
+      end
+
+      flash_key = result.failed.to_i.positive? ? :alert : :notice
+      { flash_key => scheduler_run_notice_for(result) }
     end
 
     def respond_with_schedule_errors(schedule:, edit: false, status:)

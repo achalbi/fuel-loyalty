@@ -3,7 +3,7 @@
 <div class="mb-4 page-header d-flex flex-wrap align-items-start justify-content-between gap-3">
   <div class="page-intro mb-0">
     <h1>Notifications</h1>
-    <p>Broadcast messages instantly, manage saved schedules, and run the scheduler on demand without background workers.</p>
+    <p>Broadcast messages instantly, manage saved schedules, and run due schedules on demand without background workers.</p>
   </div>
 
   <%= button_to admin_run_schedules_path, method: :post, class: "btn btn-outline-primary" do %>
@@ -86,7 +86,7 @@
         <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
           <div>
             <h2 class="h5 mb-1">Create Schedule</h2>
-            <p class="small-muted mb-0">Schedules are evaluated only when you click Run Scheduler or call the API endpoint.</p>
+            <p class="small-muted mb-0">Schedules are evaluated only when you click Run Scheduler after the scheduled IST time or call the bearer-auth API endpoint.</p>
           </div>
           <span class="badge text-bg-light border">On demand</span>
         </div>

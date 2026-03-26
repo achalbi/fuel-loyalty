@@ -304,7 +304,13 @@ Recommended Cloud Scheduler settings:
 - URL: `https://your-app.example/admin/schedules/run`
 - Method: `POST`
 - Frequency: every 1 minute
-- Auth: bearer token using `ADMIN_NOTIFICATION_API_TOKEN`, or OIDC if you prefer Google-managed auth
+- Auth: custom `Authorization: Bearer <ADMIN_NOTIFICATION_API_TOKEN>` header only
+
+Important:
+
+- Do not configure OIDC or OAuth auth for this job unless the app is updated to verify Google-issued tokens.
+- If Cloud Scheduler is configured with OIDC or OAuth, Google sets the `Authorization` header itself and the app's shared bearer token auth will not match.
+- Manual `Run Scheduler` in the admin UI also sends only schedules that are already due in IST. Use `Send Now` for an immediate broadcast test.
 
 The scheduler runner now uses a database-backed lease in `scheduler_leases`, so overlapping or duplicate Cloud Scheduler invocations do not double-send notifications across Cloud Run instances.
 
