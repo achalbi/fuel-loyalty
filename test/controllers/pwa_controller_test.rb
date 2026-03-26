@@ -41,6 +41,7 @@ class PwaControllerTest < ActionDispatch::IntegrationTest
 
       manifest = JSON.parse(response.body)
       assert_equal "Fuel Loyalty", manifest["name"]
+      assert_equal "Fuel Loyalty", manifest["short_name"]
       assert_equal "/loyalty?source=pwa", manifest["start_url"]
       assert_includes manifest["icons"].map { |icon| icon["src"] }, "/icon-192.png?v=test-release"
       assert_includes manifest["icons"].map { |icon| icon["src"] }, "/icon.png?v=test-release"

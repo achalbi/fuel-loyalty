@@ -131,6 +131,73 @@ module Admin
       assert_equal false, payload["skipped"]
     end
 
+    test "admin can send a paused saved schedule immediately" do
+      sign_in users(:one)
+      schedule = NotificationSchedule.create!(
+        title: "Paused Reminder",
+        message: "Still send this now",
+        frequency: "daily",
+        scheduled_time: "18:00",
+        active: false
+      )
+      result = FirebasePushService::Result.new(
+        requested: 2,
+        sent: 2,
+        failed: 0,
+        invalidated: 0,
+        batches: 1,
+        errors: []
+      )
+
+      travel_to Time.zone.local(2026, 3, 25, 10, 0, 0) do
+        with_stubbed_push_service(result) do
+          post send_now_admin_schedule_path(schedule)
+        end
+      end
+
+      assert_redirected_to admin_notifications_path
+      follow_redirect!
+      assert_match(/Paused Reminder/i, response.body)
+      assert_match(/2 deliveries succeeded, 0 failed\./i, response.body)
+      assert schedule.reload.last_sent_at.present?
+      refute schedule.active?
+    end
+
+    test "bearer token can send a saved schedule immediately as json" do
+      schedule = NotificationSchedule.create!(
+        title: "Immediate Reminder",
+        message: "Send this now",
+        frequency: "weekly",
+        scheduled_time: "09:00",
+        day_of_week: 1,
+        active: true
+      )
+      result = FirebasePushService::Result.new(
+        requested: 1,
+        sent: 1,
+        failed: 0,
+        invalidated: 0,
+        batches: 1,
+        errors: []
+      )
+
+      travel_to Time.zone.local(2026, 3, 25, 10, 0, 0) do
+        with_admin_notification_token("push-secret") do
+          with_stubbed_push_service(result) do
+            post send_now_admin_schedule_path(schedule),
+                 headers: { "Authorization" => "Bearer push-secret" },
+                 as: :json
+          end
+        end
+      end
+
+      assert_response :success
+      payload = JSON.parse(response.body)
+      assert_equal schedule.id, payload.dig("schedule", "id")
+      assert_equal 1, payload.dig("delivery", "sent")
+      assert_equal 0, payload.dig("delivery", "failed")
+    end
+
     test "scheduler endpoint reports when another run is already in progress" do
       sign_in users(:one)
       SchedulerLease.create!(

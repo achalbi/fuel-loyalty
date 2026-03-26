@@ -37,7 +37,9 @@ Rails.application.routes.draw do
     resources :users, only: %i[index new create edit update]
     resource :fuel_reward_rates, only: %i[show update], controller: "fuel_reward_rates"
     resource :theme_settings, only: %i[show update], controller: "theme_settings"
-    resources :schedules, only: %i[index create update destroy]
+    resources :schedules, only: %i[index create update destroy] do
+      post :send_now, on: :member
+    end
     post "schedules/run", to: "schedules#run", as: :run_schedules
     resources :customers, only: %i[index show new create edit update destroy] do
       get :points_ledger, on: :member

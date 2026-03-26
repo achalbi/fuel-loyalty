@@ -45,6 +45,7 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
       assert_includes response.body, "\"storageBucket\":\"fuel-loyalty.firebasestorage.app\""
       assert_includes response.body, "\"measurementId\":\"G-TEST123\""
       assert_includes response.body, "\"subscriptionEndpoint\":\"#{push_subscriptions_path}\""
+      assert_select "[data-push-opt-in-panel] [data-push-disable-button] span", text: "Disable Notifications"
     end
   end
 

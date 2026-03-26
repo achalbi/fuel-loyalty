@@ -39,6 +39,7 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_amount]']"
       assert_select "[data-push-opt-in-panel][data-push-source='staff_transaction']", 1
       assert_select "[data-push-opt-in-panel] [data-push-button] span", text: "Enable Notifications"
+      assert_select "[data-push-opt-in-panel] [data-push-disable-button] span", text: "Disable Notifications"
       assert_match(/data-transaction-phone-root.*data-customer-error.*Lookup by Phone/m, response.body)
       assert_match(/data-transaction-vehicle-root.*data-customer-error.*Lookup by Vehicle/m, response.body)
       assert_includes response.body, "registerCustomerPath: payload.register_customer_path"

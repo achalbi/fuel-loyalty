@@ -2,6 +2,7 @@
   const ANALYTICS_ENDPOINT = "/analytics/events";
   const THEME_STORAGE_KEY = "fuel-loyalty-theme";
   const PUSH_TOKEN_STORAGE_KEY = "fuel-loyalty-fcm-token";
+  const PUSH_OPT_OUT_STORAGE_KEY = "fuel-loyalty-push-opt-out";
   const PWA_INSTALL_EVENT_NAMES = new Set([
     "pwa_install_cta_viewed",
     "pwa_install_prompt_available",
@@ -172,6 +173,17 @@
     return window.Notification.permission;
   };
 
+  const pushOptOutEnabled = () => localStorage.getItem(PUSH_OPT_OUT_STORAGE_KEY) === "true";
+
+  const setPushOptOutEnabled = (value) => {
+    if (value) {
+      localStorage.setItem(PUSH_OPT_OUT_STORAGE_KEY, "true");
+      return;
+    }
+
+    localStorage.removeItem(PUSH_OPT_OUT_STORAGE_KEY);
+  };
+
   const deactivatePushSubscriptionToken = async (token, { clearStoredToken = false } = {}) => {
     const settings = pushSettings();
     if (!settings?.subscriptionEndpoint || !token) return;
@@ -230,9 +242,19 @@
     await deactivatePushSubscriptionToken(storedToken, { clearStoredToken: true });
   };
 
+  const disablePushNotificationsInApp = async () => {
+    setPushOptOutEnabled(true);
+    await deactivateStoredPushSubscription();
+    return { ok: true };
+  };
+
   const syncPushSubscription = async ({ requestPermission = false } = {}) => {
     if (!pushNotificationsSupported()) {
       return { ok: false, reason: "unsupported" };
+    }
+
+    if (pushOptOutEnabled() && !requestPermission) {
+      return { ok: false, reason: "disabled_in_app" };
     }
 
     if (pushOptInState.syncing) return pushOptInState.syncing;
@@ -274,6 +296,7 @@
       }
 
       await savePushSubscription(token);
+      setPushOptOutEnabled(false);
       return { ok: true, token };
     })();
 
@@ -286,9 +309,10 @@
 
   const setPushPanelState = (panel, state = {}) => {
     const button = panel.querySelector("[data-push-button]");
+    const disableButton = panel.querySelector("[data-push-disable-button]");
     const status = panel.querySelector("[data-push-status]");
     const help = panel.querySelector("[data-push-help]");
-    if (!button || !status || !help) return;
+    if (!button || !disableButton || !status || !help) return;
 
     if (!pushNotificationsSupported()) {
       panel.classList.add("d-none");
@@ -297,8 +321,21 @@
 
     panel.classList.remove("d-none");
     button.disabled = state.busy === true;
+    disableButton.disabled = state.busy === true;
+
+    if (pushPermissionState() === "granted" && pushOptOutEnabled()) {
+      disableButton.classList.add("d-none");
+      button.classList.remove("btn-primary", "btn-outline-secondary");
+      button.classList.add("btn-outline-primary");
+      button.querySelector("span").textContent = "Enable Notifications";
+      status.textContent = state.message || "Notifications are turned off for this device in the app.";
+      help.textContent = state.helpText || "Tap Enable Notifications to subscribe this device again.";
+      help.classList.remove("d-none");
+      return;
+    }
 
     if (pushPermissionState() === "granted") {
+      disableButton.classList.remove("d-none");
       button.classList.remove("btn-outline-primary");
       button.classList.add("btn-primary");
       button.querySelector("span").textContent = "Notifications Enabled";
@@ -309,6 +346,7 @@
     }
 
     if (pushPermissionState() === "denied") {
+      disableButton.classList.add("d-none");
       button.classList.remove("btn-primary");
       button.classList.add("btn-outline-secondary");
       button.querySelector("span").textContent = "Notifications Off";
@@ -318,6 +356,7 @@
       return;
     }
 
+    disableButton.classList.add("d-none");
     button.classList.remove("btn-primary", "btn-outline-secondary");
     button.classList.add("btn-outline-primary");
     button.querySelector("span").textContent = "Enable Notifications";
@@ -350,7 +389,8 @@
 
     panels.forEach((panel) => {
       const button = panel.querySelector("[data-push-button]");
-      if (!button) return;
+      const disableButton = panel.querySelector("[data-push-disable-button]");
+      if (!button || !disableButton) return;
 
       if (panel.dataset.pushBound === "true") {
         setPushPanelState(panel);
@@ -397,17 +437,42 @@
         }
       });
 
+      disableButton.addEventListener("click", async () => {
+        setPushPanelState(panel, { busy: true });
+
+        try {
+          await disablePushNotificationsInApp();
+          refreshPushPanels({
+            message: "Notifications are turned off for this device in the app.",
+            helpText: "Tap Enable Notifications to subscribe this device again."
+          });
+        } catch (_error) {
+          refreshPushPanels({
+            helpText: "We could not turn off notifications on this device right now. Please try again."
+          });
+        } finally {
+          setPushPanelState(panel, { busy: false });
+        }
+      });
+
       setPushPanelState(panel);
     });
 
     if (pushPermissionState() === "granted") {
-      syncPushSubscription().then((result) => {
-        if (result.ok) {
-          refreshPushPanels({
-            message: "Push notifications are enabled on this device."
-          });
-        }
-      }).catch(() => {});
+      if (pushOptOutEnabled()) {
+        refreshPushPanels({
+          message: "Notifications are turned off for this device in the app.",
+          helpText: "Tap Enable Notifications to subscribe this device again."
+        });
+      } else {
+        syncPushSubscription().then((result) => {
+          if (result.ok) {
+            refreshPushPanels({
+              message: "Push notifications are enabled on this device."
+            });
+          }
+        }).catch(() => {});
+      }
     } else if (pushPermissionState() === "denied") {
       deactivateStoredPushSubscription().catch(() => {});
     }

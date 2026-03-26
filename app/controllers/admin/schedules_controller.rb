@@ -59,6 +59,26 @@ module Admin
       end
     end
 
+    def send_now
+      schedule = NotificationSchedule.find(params[:id])
+      result = FirebasePushService.new.broadcast(title: schedule.title, message: schedule.message)
+      schedule.update!(last_sent_at: Time.current) if result.sent.to_i.positive?
+
+      respond_to do |format|
+        format.json do
+          render json: {
+            schedule: serialize_schedule(schedule),
+            delivery: result.as_json
+          }, status: :ok
+        end
+        format.html do
+          redirect_to admin_notifications_path, **schedule_send_now_flash_for(schedule, result)
+        end
+      end
+    rescue FirebaseAppConfig::ConfigurationError => error
+      respond_with_broadcast_error(message: error.message, status: :unprocessable_entity)
+    end
+
     private
 
     def schedule_params
@@ -111,6 +131,30 @@ module Admin
 
       flash_key = result.failed.to_i.positive? ? :alert : :notice
       { flash_key => scheduler_run_notice_for(result) }
+    end
+
+    def schedule_send_now_notice_for(schedule, result)
+      if result.requested.to_i.zero?
+        return "No active device tokens are registered, so \"#{schedule.title}\" was not sent."
+      end
+
+      base_message = "Sent \"#{schedule.title}\" now. #{result.sent} deliveries succeeded, #{result.failed} failed."
+      first_error = Array(result.errors).filter_map { |error| error[:error] || error["error"] }.first
+      return base_message if first_error.blank?
+
+      "#{base_message} #{first_error}"
+    end
+
+    def schedule_send_now_flash_for(schedule, result)
+      flash_key = result.requested.to_i.zero? || result.failed.to_i.positive? ? :alert : :notice
+      { flash_key => schedule_send_now_notice_for(schedule, result) }
+    end
+
+    def respond_with_broadcast_error(message:, status:)
+      respond_to do |format|
+        format.json { render json: { error: message }, status: status }
+        format.html { redirect_to admin_notifications_path, alert: message }
+      end
     end
 
     def respond_with_schedule_errors(schedule:, edit: false, status:)
