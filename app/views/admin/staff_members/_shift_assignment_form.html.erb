@@ -1,0 +1,57 @@
+<% if shift_templates.any? %>
+  <%= form_with model: [:admin, staff_member, shift_assignment], url: admin_staff_member_shift_assignments_path(staff_member), class: "vstack gap-3", data: { shift_assignment_form: true } do |form| %>
+    <% if shift_assignment.errors.any? %>
+      <div class="alert alert-danger">
+        <%= shift_assignment.errors.full_messages.to_sentence %>
+      </div>
+    <% end %>
+
+    <div class="border rounded-4 p-3 bg-body-tertiary">
+      <p class="small text-uppercase fw-semibold text-muted mb-1">Current Shift</p>
+      <h3 class="h6 mb-1"><%= staff_member.current_shift_template&.name || "No shift assigned" %></h3>
+      <p class="small-muted mb-0">
+        <%= staff_member.current_shift_template.present? ? [staff_member.current_shift_template.schedule_label, staff_member.current_shift_cycle&.name].compact.join(" · ") : "Assign a shift so this staff member appears under the correct attendance roster." %>
+      </p>
+    </div>
+
+    <div>
+      <%= form.label :shift_template_id, "Shift", class: "form-label" %>
+      <%= form.select :shift_template_id,
+        options_for_select(
+          shift_templates.map do |shift_template|
+            [
+              [
+                shift_template.name,
+                shift_template.start_time_label,
+                shift_template.duration_label,
+                shift_template.current_shift_cycle_label
+              ].compact.join(" · "),
+              shift_template.id
+            ]
+          end,
+          shift_assignment.shift_template_id
+        ),
+        { include_blank: "Choose the shift this staff member should load under" },
+        class: "form-select" %>
+      <div class="form-text">Staff are assigned directly to a shift. Shift cycles stay linked to the shift itself so the wider rotation is still visible.</div>
+    </div>
+
+    <div>
+      <%= form.label :notes, "Assignment Notes (Optional)", class: "form-label" %>
+      <%= form.text_field :notes,
+        class: "form-control",
+        placeholder: "Explain why this shift is being assigned or changed" %>
+    </div>
+
+    <div class="d-flex gap-2">
+      <%= form.submit "Save Shift Assignment", class: "btn btn-primary" %>
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+    </div>
+  <% end %>
+<% else %>
+  <div class="border rounded-4 p-3 bg-body-tertiary">
+    <h3 class="h6 mb-2">No shifts yet</h3>
+    <p class="small-muted mb-3">Create a shift first, then come back here to assign it to this staff member.</p>
+    <%= link_to "Open Shifts", admin_shift_templates_path, class: "btn btn-outline-primary" %>
+  </div>
+<% end %>

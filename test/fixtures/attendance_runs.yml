@@ -1,0 +1,8 @@
+day_run:
+  shift_template: day_shift
+  starts_at: 2026-03-26 06:00:00
+  ends_at: 2026-03-26 18:00:00
+  shift_name_snapshot: Day Shift
+  duration_snapshot_minutes: 720
+  recorded_by: one
+

@@ -1,0 +1,100 @@
+<% content_for :title, "Attendance Details" %>
+
+<div class="mb-4 page-header admin-attendance-header">
+  <div class="page-intro admin-attendance-header__intro mb-0">
+    <div class="admin-attendance-header__topline">
+      <h1>Attendance Details</h1>
+      <div class="page-actions d-flex flex-wrap gap-2">
+        <%= link_to "Recorded", admin_attendance_runs_path, class: "btn btn-outline-secondary btn-sm" %>
+        <% if @attendance_run.stale? %>
+          <% if @attendance_run.can_mark_valid? %>
+            <%= button_to "Mark Valid", mark_valid_admin_attendance_run_path(@attendance_run), method: :patch, class: "btn btn-outline-primary btn-sm", form: { class: "d-inline-block" } %>
+          <% else %>
+            <%= button_tag "Mark Valid", type: "button", class: "btn btn-outline-secondary btn-sm", disabled: true, title: "Another attendance record already exists for this shift and time window." %>
+          <% end %>
+          <%= button_to admin_attendance_run_path(@attendance_run),
+            method: :delete,
+            class: "customer-details-history-preview-action admin-shift-item__delete",
+            form_class: "d-inline-block",
+            form: { data: { confirm_modal: true, confirm_message: "Delete this invalid attendance record?" } },
+            aria: { label: "Delete invalid attendance record #{@attendance_run.id}" },
+            title: "Delete invalid attendance" do %>
+            <i class="ti ti-trash" aria-hidden="true"></i>
+          <% end %>
+        <% else %>
+          <%= button_to "Invalidate", invalidate_admin_attendance_run_path(@attendance_run), method: :patch, class: "btn btn-outline-danger btn-sm", form: { class: "d-inline-block" }, data: { turbo_confirm: "Mark this attendance record invalid?" } %>
+        <% end %>
+      </div>
+    </div>
+    <p>Review the saved attendance window, who was scheduled, and who actually worked the shift.</p>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <p class="small-muted mb-1">Shift</p>
+        <h2 class="mb-0 h5"><%= @attendance_run.shift_name_snapshot %></h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <p class="small-muted mb-1">Window</p>
+        <h2 class="mb-0 h6"><%= "#{l(@attendance_run.starts_at, format: "%d %b · %I:%M %p")} to #{l(@attendance_run.ends_at, format: "%I:%M %p")}" %></h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <p class="small-muted mb-1">Recorded By</p>
+        <h2 class="mb-0 h6"><%= @attendance_run.recorded_by.display_name.to_s.titleize %></h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <p class="small-muted mb-1">Status</p>
+        <h2 class="mb-0 h6"><%= @attendance_run.record_state_label %></h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-attendance-status-list mb-4">
+  <% @status_counts.each do |status, count| %>
+    <div class="card shadow-sm admin-attendance-status-card">
+      <div class="card-body">
+        <p class="small-muted mb-1"><%= status.humanize %></p>
+        <h2 class="mb-0"><%= count %></h2>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<div class="card shadow-sm admin-attendance-card">
+  <div class="card-body">
+    <div class="admin-attendance-list">
+      <% @attendance_run.attendance_entries.each do |entry| %>
+        <div class="admin-attendance-item">
+          <div class="admin-attendance-item__main">
+            <div class="admin-attendance-item__heading">
+              <span class="admin-attendance-item__name"><%= entry.scheduled_user.display_name.to_s.titleize %></span>
+              <span class="badge text-bg-light border"><%= entry.status.humanize %></span>
+            </div>
+            <div class="admin-attendance-item__details">
+              <span><strong>Actual staff:</strong> <%= entry.worker_name.to_s.titleize %></span>
+              <span><strong>Check in:</strong> <%= entry.check_in_at.present? ? l(entry.check_in_at, format: "%d %b · %I:%M %p") : "Not recorded" %></span>
+              <span><strong>Check out:</strong> <%= entry.check_out_at.present? ? l(entry.check_out_at, format: "%d %b · %I:%M %p") : "Not recorded" %></span>
+              <span><strong>Notes:</strong> <%= entry.notes.presence || "None" %></span>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

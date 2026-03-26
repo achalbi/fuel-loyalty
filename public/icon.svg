@@ -13,9 +13,9 @@
     </linearGradient>
   </defs>
   <!-- Circle background -->
-  <circle cx="265" cy="245" r="240" fill="url(#bg)"></circle>
-  <text x="256" y="280" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="165" font-style="italic" font-weight="1000" fill="#ffffff" letter-spacing="0" transform="skewX(0)">
-    FLY
+  <circle cx="259" cy="265" r="240" fill="url(#bg)"></circle>
+  <text x="256" y="280" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="85" font-style="italic" font-weight="1000" fill="#ffffff" letter-spacing="0" transform="skewX(0)">
+    ACE Fuels
   </text>
   <text x="256" y="330" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="35" font-weight="1000" font-style="italic" fill="#ffffff" letter-spacing="5" transform="skewX(0)">
     FUEL LOYALTY

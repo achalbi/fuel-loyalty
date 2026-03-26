@@ -25,7 +25,7 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[placeholder='10 digit phone number']", 1
     assert_select "[data-pwa-install-panel][data-install-source='loyalty_page']", 1
     assert_select "[data-pwa-install-button]", text: /Install App/
-    assert_select "[data-pwa-install-status]", /Install Fuel Loyalty|Add Fuel Loyalty/
+    assert_select "[data-pwa-install-status]", /Install Ace Fuel Loyalty|Add Ace Fuel Loyalty/
     assert_select "input[placeholder='10 digit phone number'][maxlength='10'][data-phone-number-field='true']", 1
     assert_includes response.body, 'pattern="\d{10}"'
   end

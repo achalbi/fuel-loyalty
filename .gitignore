@@ -36,3 +36,4 @@
 # Ignore local tool caches and machine-specific artifacts.
 /.cache/
 /.local/
+.DS_Store

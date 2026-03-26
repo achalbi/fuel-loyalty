@@ -38,7 +38,7 @@
       return "Open your browser menu, then choose Install app or Add to Home Screen.";
     }
 
-    return "Use the install option in your browser menu or address bar to add Fuel Loyalty.";
+    return "Use the install option in your browser menu or address bar to add Ace Fuel Loyalty.";
   };
 
   const dispatchAnalyticsIntegrations = (name, properties) => {
@@ -509,6 +509,224 @@
       });
 
       syncNotificationScheduleFormVisibility(form);
+    });
+  };
+
+  const parseDateTimeLocal = (value) => {
+    if (!value) return null;
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const formatDateTimeLocal = (date) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+
+    const pad = (value) => value.toString().padStart(2, "0");
+    return [
+      date.getFullYear(),
+      pad(date.getMonth() + 1),
+      pad(date.getDate())
+    ].join("-") + `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const syncAttendancePlannerStart = (form, { force = false } = {}) => {
+    const shiftInput = form.querySelector("[data-attendance-shift-input]");
+    const startInput = form.querySelector("[data-attendance-start-input]");
+    if (!shiftInput || !startInput) return;
+
+    const selectedOption = shiftInput.options[shiftInput.selectedIndex];
+    const startTime = selectedOption?.dataset?.startTime || "";
+    if (!startTime) return;
+    if (!force && startInput.value) return;
+
+    const existingStart = parseDateTimeLocal(startInput.value);
+    const nextStart = existingStart || new Date();
+    const [hours, minutes] = startTime.split(":").map((value) => Number.parseInt(value, 10));
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return;
+
+    nextStart.setSeconds(0, 0);
+    nextStart.setHours(hours, minutes, 0, 0);
+    startInput.value = formatDateTimeLocal(nextStart);
+  };
+
+  const syncAttendancePlannerEnd = (form) => {
+    const shiftInput = form.querySelector("[data-attendance-shift-input]");
+    const startInput = form.querySelector("[data-attendance-start-input]");
+    const endInput = form.querySelector("[data-attendance-end-input]");
+    if (!shiftInput || !startInput || !endInput) return;
+
+    const selectedOption = shiftInput.options[shiftInput.selectedIndex];
+    const durationMinutes = Number.parseInt(selectedOption?.dataset?.durationMinutes || "", 10);
+    const startDate = parseDateTimeLocal(startInput.value);
+
+    if (!startDate || !Number.isFinite(durationMinutes)) {
+      endInput.value = "";
+      return;
+    }
+
+    endInput.value = formatDateTimeLocal(new Date(startDate.getTime() + (durationMinutes * 60 * 1000)));
+  };
+
+  const syncAttendanceReplacementVisibility = (row) => {
+    const statusInput = row.querySelector("[data-attendance-status-select]");
+    if (!statusInput) return;
+
+    const absent = statusInput.value === "absent";
+    row.querySelectorAll("[data-attendance-replacement-fields]").forEach((field) => {
+      field.classList.toggle("d-none", !absent);
+    });
+  };
+
+  const markAttendanceRowPresent = (row) => {
+    const statusInput = row.querySelector("[data-attendance-status-select]");
+    const actualUserInput = row.querySelector("select[name*='[actual_user_id]']");
+    const replacementInput = row.querySelector("[data-attendance-replacement-select]");
+    const externalReplacementInput = row.querySelector("input[name*='[external_replacement_name]']");
+    const scheduledUserId = row.dataset.scheduledUserId;
+
+    if (statusInput) statusInput.value = "present";
+    if (actualUserInput && scheduledUserId) actualUserInput.value = scheduledUserId;
+    if (replacementInput) replacementInput.value = "";
+    if (externalReplacementInput) externalReplacementInput.value = "";
+    syncAttendanceReplacementVisibility(row);
+  };
+
+  const initializeAttendancePlanner = () => {
+    document.querySelectorAll("[data-attendance-planner-form]").forEach((form) => {
+      if (form.dataset.bound === "true") {
+        syncAttendancePlannerStart(form);
+        syncAttendancePlannerEnd(form);
+        return;
+      }
+
+      form.dataset.bound = "true";
+      const shiftInput = form.querySelector("[data-attendance-shift-input]");
+      const startInput = form.querySelector("[data-attendance-start-input]");
+
+      const syncAndMaybeSubmit = () => {
+        syncAttendancePlannerEnd(form);
+        if (shiftInput?.value && startInput?.value) {
+          form.requestSubmit();
+        }
+      };
+
+      shiftInput?.addEventListener("change", () => {
+        syncAttendancePlannerStart(form, { force: true });
+        syncAndMaybeSubmit();
+      });
+      startInput?.addEventListener("change", syncAndMaybeSubmit);
+
+      syncAttendancePlannerStart(form);
+      syncAttendancePlannerEnd(form);
+    });
+
+    document.querySelectorAll("[data-attendance-entry-row]").forEach((row) => {
+      if (row.dataset.bound === "true") {
+        syncAttendanceReplacementVisibility(row);
+        return;
+      }
+
+      row.dataset.bound = "true";
+      const statusInput = row.querySelector("[data-attendance-status-select]");
+      const replacementInput = row.querySelector("[data-attendance-replacement-select]");
+      const actualUserInput = row.querySelector("select[name*='[actual_user_id]']");
+
+      statusInput?.addEventListener("change", () => {
+        syncAttendanceReplacementVisibility(row);
+      });
+
+      replacementInput?.addEventListener("change", () => {
+        if (actualUserInput && replacementInput.value) {
+          actualUserInput.value = replacementInput.value;
+        }
+      });
+
+      syncAttendanceReplacementVisibility(row);
+    });
+
+    document.querySelectorAll("[data-attendance-mark-all-present]").forEach((button) => {
+      if (button.dataset.bound === "true") return;
+
+      button.dataset.bound = "true";
+      button.addEventListener("click", () => {
+        document.querySelectorAll("[data-attendance-entry-row]").forEach((row) => {
+          markAttendanceRowPresent(row);
+        });
+      });
+    });
+  };
+
+  const syncShiftAssignmentTime = (container, { force = false } = {}) => {
+    const shiftInput = container.querySelector("[data-shift-assignment-template-input]");
+    const timeInput = container.querySelector("[data-shift-assignment-effective-time]");
+    if (!shiftInput || !timeInput) return;
+
+    let startTimes = {};
+    try {
+      startTimes = JSON.parse(shiftInput.dataset.shiftAssignmentStartTimes || "{}");
+    } catch (_error) {
+      startTimes = {};
+    }
+
+    const startTime = startTimes[shiftInput.value] || "";
+
+    if (!startTime) return;
+    if (!force && timeInput.value) return;
+
+    timeInput.value = startTime;
+    timeInput.setAttribute("value", startTime);
+  };
+
+  const initializeShiftAssignmentForms = () => {
+    document.querySelectorAll("[data-shift-assignment-form]").forEach((container) => {
+      if (container.dataset.bound === "true") {
+        syncShiftAssignmentTime(container);
+        return;
+      }
+
+      container.dataset.bound = "true";
+      const shiftInput = container.querySelector("[data-shift-assignment-template-input]");
+
+      shiftInput?.addEventListener("change", () => {
+        syncShiftAssignmentTime(container, { force: true });
+      });
+
+      syncShiftAssignmentTime(container);
+    });
+  };
+
+  const syncShiftCycleAddButtons = (form) => {
+    const addButton = form.querySelector("[data-shift-cycle-add-step]");
+    if (!addButton) return;
+
+    const hiddenField = form.querySelector("[data-shift-cycle-step-field].d-none");
+    addButton.classList.toggle("d-none", !hiddenField);
+  };
+
+  const initializeShiftCycleForms = () => {
+    document.querySelectorAll("[data-shift-cycle-form]").forEach((form) => {
+      if (form.dataset.shiftCycleBound === "true") {
+        syncShiftCycleAddButtons(form);
+        return;
+      }
+
+      form.dataset.shiftCycleBound = "true";
+      const addButton = form.querySelector("[data-shift-cycle-add-step]");
+
+      addButton?.addEventListener("click", () => {
+        const nextHiddenField = form.querySelector("[data-shift-cycle-step-field].d-none");
+        if (!nextHiddenField) {
+          syncShiftCycleAddButtons(form);
+          return;
+        }
+
+        nextHiddenField.classList.remove("d-none");
+        nextHiddenField.querySelector("select")?.focus();
+        syncShiftCycleAddButtons(form);
+      });
+
+      syncShiftCycleAddButtons(form);
     });
   };
 
@@ -1081,7 +1299,7 @@
     if (installPromptState.deferredPrompt) {
       button.classList.remove("btn-outline-primary");
       button.classList.add("btn-primary");
-      status.textContent = "Install Fuel Loyalty now for one-tap staff access from your home screen.";
+      status.textContent = "Install Ace Fuel Loyalty now for one-tap staff access from your home screen.";
       help.classList.add("d-none");
       help.textContent = "";
       return;
@@ -1089,7 +1307,7 @@
 
     button.classList.remove("btn-primary");
     button.classList.add("btn-outline-primary");
-    status.textContent = "Install Fuel Loyalty app to this device";
+    status.textContent = "Install Ace Fuel Loyalty app to this device";
 
     if (state.showManualInstructions) {
       help.textContent = installInstructionsForDevice();
@@ -1222,6 +1440,12 @@
   document.addEventListener("DOMContentLoaded", initializePushOptIn);
   document.addEventListener("turbo:load", initializeNotificationScheduleForms);
   document.addEventListener("DOMContentLoaded", initializeNotificationScheduleForms);
+  document.addEventListener("turbo:load", initializeAttendancePlanner);
+  document.addEventListener("DOMContentLoaded", initializeAttendancePlanner);
+  document.addEventListener("turbo:load", initializeShiftAssignmentForms);
+  document.addEventListener("DOMContentLoaded", initializeShiftAssignmentForms);
+  document.addEventListener("turbo:load", initializeShiftCycleForms);
+  document.addEventListener("DOMContentLoaded", initializeShiftCycleForms);
   bindInstallPromptEvents();
   registerServiceWorker();
 })();

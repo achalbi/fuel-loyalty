@@ -11,3 +11,4 @@ two:
   username: staff
   encrypted_password: <%= Devise::Encryptor.digest(User, "password123") %>
   role: 1
+  subtitle: Forecourt lead for the morning shift

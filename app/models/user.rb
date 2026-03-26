@@ -9,6 +9,17 @@ class User < ApplicationRecord
   enum :role, { admin: 0, staff: 1 }, default: :staff, validate: true
 
   has_many :transactions, dependent: :restrict_with_exception
+  has_many :shift_assignments, dependent: :restrict_with_exception
+  has_many :shift_templates, through: :shift_assignments
+  has_many :shift_cycles, through: :shift_assignments
+  has_many :recorded_attendance_runs, class_name: "AttendanceRun", foreign_key: :recorded_by_id, dependent: :restrict_with_exception
+  has_many :scheduled_attendance_entries, class_name: "AttendanceEntry", foreign_key: :scheduled_user_id, dependent: :restrict_with_exception
+  has_many :actual_attendance_entries, class_name: "AttendanceEntry", foreign_key: :actual_user_id, dependent: :restrict_with_exception
+  has_many :replacement_attendance_entries, class_name: "AttendanceEntry", foreign_key: :replacement_user_id, dependent: :restrict_with_exception
+  has_many :attendance_entry_changes, class_name: "AttendanceEntryChange", foreign_key: :changed_by_id, dependent: :restrict_with_exception
+  has_many :recorded_shift_swaps, class_name: "ShiftSwap", foreign_key: :recorded_by_id, dependent: :restrict_with_exception
+  has_many :shift_swaps_from, class_name: "ShiftSwap", foreign_key: :from_user_id, dependent: :restrict_with_exception
+  has_many :shift_swaps_to, class_name: "ShiftSwap", foreign_key: :to_user_id, dependent: :restrict_with_exception
 
   devise :database_authenticatable, :recoverable, :rememberable, :validatable
 
@@ -18,6 +29,8 @@ class User < ApplicationRecord
   validates :username, presence: true, uniqueness: { case_sensitive: false },
                        format: { with: /\A[a-zA-Z0-9_]+\z/ }
   validates :role, presence: true
+  validates :employee_code, uniqueness: { case_sensitive: false }, allow_blank: true, if: -> { has_attribute?(:employee_code) }
+  validates :subtitle, length: { maximum: 120 }, allow_blank: true, if: -> { has_attribute?(:subtitle) }
   validates :phone_number, uniqueness: true, allow_blank: true, if: :phone_number_attribute_available?
   validates :phone_number, format: { with: PHONE_NUMBER_FORMAT, message: PHONE_NUMBER_ERROR_MESSAGE }, allow_blank: true, if: :phone_number_attribute_available?
   validate :phone_number_required, if: :phone_number_required?
@@ -83,6 +96,10 @@ class User < ApplicationRecord
     normalize_phone_number(value).match?(PHONE_NUMBER_FORMAT)
   end
 
+  def self.active
+    where(active: true)
+  end
+
   def self.internal_email_for(phone_number)
     "user-#{normalize_phone_number(phone_number)}@#{INTERNAL_EMAIL_DOMAIN}"
   end
@@ -93,6 +110,19 @@ class User < ApplicationRecord
 
   def email_required?
     false
+  end
+
+  def current_shift_assignment(on: Time.current)
+    shift_assignments.active.effective_at(on).order(effective_from: :desc).first
+  end
+
+  def current_shift_template(on: Time.current)
+    current_shift_assignment(on:)&.resolved_shift_template(at: on)
+  end
+
+  def current_shift_cycle(on: Time.current)
+    assignment = current_shift_assignment(on:)
+    assignment&.shift_cycle || assignment&.shift_template&.current_shift_cycle(at: on)
   end
 
   private

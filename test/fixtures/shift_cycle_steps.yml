@@ -1,0 +1,19 @@
+day_night_cycle_step_one:
+  shift_cycle: day_night_cycle
+  shift_template: day_shift
+  position: 1
+
+day_night_cycle_step_two:
+  shift_cycle: day_night_cycle
+  shift_template: night_shift
+  position: 2
+
+week_long_cycle_step_one:
+  shift_cycle: week_long_cycle
+  shift_template: night_shift
+  position: 1
+
+week_long_cycle_step_two:
+  shift_cycle: week_long_cycle
+  shift_template: day_shift
+  position: 2

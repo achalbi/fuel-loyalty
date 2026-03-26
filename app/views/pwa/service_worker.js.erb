@@ -63,7 +63,7 @@ if (FIREBASE_PUSH_ENABLED) {
     const notification = payload.notification || {};
     const data = payload.data || {};
     const fcmOptions = payload.fcmOptions || {};
-    const title = notification.title || data.title || "Fuel Loyalty";
+    const title = notification.title || data.title || "Ace Fuel Loyalty";
 
     self.registration.showNotification(title, {
       body: notification.body || data.message || "",

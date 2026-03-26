@@ -1,0 +1,43 @@
+<%= form_with model: staff_member, url: admin_staff_member_path(staff_member), method: :patch, class: "vstack gap-3" do |form| %>
+  <% if staff_member.errors.any? %>
+    <div class="alert alert-danger">
+      <%= staff_member.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div class="border rounded-4 p-3 bg-body-tertiary">
+    <p class="small text-uppercase fw-semibold text-muted mb-1">Staff Member</p>
+    <h3 class="h6 mb-1"><%= staff_member.display_name.to_s.titleize %></h3>
+    <p class="small-muted mb-0"><%= staff_member.display_phone_number || "Mobile not set" %></p>
+  </div>
+
+  <div>
+    <%= form.label :employee_code, "Employee Code (Optional)", class: "form-label" %>
+    <%= form.text_field :employee_code,
+      class: "form-control",
+      placeholder: "Add an internal employee code only if your station uses one" %>
+    <div class="form-text">Useful for internal tracking without making it mandatory for every staff member.</div>
+  </div>
+
+  <div>
+    <%= form.label :subtitle, "Subtitle (Optional)", class: "form-label" %>
+    <%= form.text_field :subtitle,
+      class: "form-control",
+      placeholder: "Add a short subtitle that helps the team recognise this staff member" %>
+    <div class="form-text">This appears under the staff member's name on the Staff page when you want extra context.</div>
+  </div>
+
+  <div>
+    <%= form.label :active, "Access Status", class: "form-label" %>
+    <%= form.select :active,
+      options_for_select([["Active", true], ["Inactive", false]], staff_member.active?),
+      {},
+      class: "form-select" %>
+    <div class="form-text">Inactive staff stay in history but stop appearing in daily planning and attendance.</div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <%= form.submit "Save Profile", class: "btn btn-primary" %>
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+  </div>
+<% end %>

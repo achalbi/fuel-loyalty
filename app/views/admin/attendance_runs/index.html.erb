@@ -1,0 +1,96 @@
+<% content_for :title, "Attendance" %>
+
+<div class="mb-4 page-header admin-attendance-header">
+  <div class="page-intro admin-attendance-header__intro mb-0">
+    <div class="admin-attendance-header__topline">
+      <h1>Attendance</h1>
+      <div class="page-actions d-flex flex-wrap gap-2">
+        <%= link_to "New Attendance", new_admin_attendance_run_path, class: "btn btn-primary btn-sm" %>
+      </div>
+    </div>
+    <p>Review saved attendance windows, open any recorded shift, and start a new attendance run when needed.</p>
+  </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-4">
+  <span class="small-muted">Filter</span>
+  <%= link_to "All", admin_attendance_runs_path, class: "btn btn-sm #{@record_filter == 'all' ? 'btn-primary' : 'btn-outline-secondary'}" %>
+  <%= link_to "Valid", admin_attendance_runs_path(filter: :valid), class: "btn btn-sm #{@record_filter == 'valid' ? 'btn-primary' : 'btn-outline-secondary'}" %>
+  <%= link_to "Invalid", admin_attendance_runs_path(filter: :invalid), class: "btn btn-sm #{@record_filter == 'invalid' ? 'btn-primary' : 'btn-outline-secondary'}" %>
+</div>
+
+<% if @attendance_runs.any? %>
+  <div class="admin-attendance-run-list">
+    <% @attendance_runs.each do |attendance_run| %>
+      <% status_counts = AttendanceEntry.statuses.keys.index_with { |status| attendance_run.status_counts.fetch(status, 0) } %>
+      <% visible_status_summary = status_counts.filter_map { |status, count| "#{status.humanize} #{count}" if count.positive? } %>
+      <div class="card shadow-sm admin-attendance-run-card">
+        <div class="card-body">
+          <div class="admin-shift-item admin-attendance-run-item admin-shift-item--flush-details">
+            <div class="admin-shift-item__top">
+              <div class="admin-attendance-item__main">
+                <div class="admin-attendance-item__heading">
+                  <span class="admin-attendance-item__name"><%= attendance_run.shift_name_snapshot %></span>
+                  <span class="badge text-bg-light border"><%= pluralize(attendance_run.attendance_entries.size, "staff") %></span>
+                </div>
+                <p class="small-muted mb-0"><%= "#{l(attendance_run.starts_at, format: "%d %b · %I:%M %p")} to #{l(attendance_run.ends_at, format: "%d %b · %I:%M %p")}" %></p>
+              </div>
+              <div class="admin-attendance-run__actions">
+                <div class="admin-attendance-run__action-row">
+                  <%= link_to admin_attendance_run_path(attendance_run), class: "customer-details-history-preview-action admin-attendance-run__open", title: "Open attendance run", aria: { label: "Open attendance run #{attendance_run.id}" } do %>
+                    <i class="ti ti-eye" aria-hidden="true"></i>
+                  <% end %>
+                  <% if attendance_run.stale? %>
+                    <%= button_to admin_attendance_run_path(attendance_run),
+                      method: :delete,
+                      class: "customer-details-history-preview-action admin-shift-item__delete",
+                      form_class: "d-inline-block",
+                      form: { data: { confirm_modal: true, confirm_message: "Delete this invalid attendance record?" } },
+                      aria: { label: "Delete invalid attendance run #{attendance_run.id}" },
+                      title: "Delete invalid attendance" do %>
+                      <i class="ti ti-trash" aria-hidden="true"></i>
+                    <% end %>
+                  <% end %>
+                </div>
+                <% if attendance_run.stale? %>
+                  <span class="badge admin-attendance-run__state-badge">Invalid</span>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="admin-shift-item__details admin-shift-item__details--flush">
+              <div class="admin-shift-item__detail">
+                <span class="admin-shift-item__detail-label">Recorded By</span>
+                <strong class="admin-shift-item__detail-value"><%= attendance_run.recorded_by.display_name.to_s.titleize %></strong>
+              </div>
+
+              <div class="admin-shift-item__detail">
+                <span class="admin-shift-item__detail-label">Saved At</span>
+                <strong class="admin-shift-item__detail-value"><%= l(attendance_run.created_at, format: "%d %b · %I:%M %p") %></strong>
+              </div>
+
+              <div class="admin-shift-item__detail">
+                <span class="admin-shift-item__detail-label">Status</span>
+                <strong class="admin-shift-item__detail-value"><%= attendance_run.record_state_label %></strong>
+              </div>
+
+              <div class="admin-shift-item__detail">
+                <span class="admin-shift-item__detail-label">Status Summary</span>
+                <strong class="admin-shift-item__detail-value admin-attendance-run__summary">
+                  <%= visible_status_summary.join(" · ") %>
+                </strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h2 class="h5 mb-2">No attendance found for this filter</h2>
+      <p class="small-muted mb-0">Try another filter or start a new attendance run to see recorded shift windows here.</p>
+    </div>
+  </div>
+<% end %>

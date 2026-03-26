@@ -1,0 +1,6 @@
+day_run_staff:
+  attendance_run: day_run
+  scheduled_user: two
+  actual_user: two
+  status: 0
+  overridden: false

@@ -3,11 +3,11 @@
   <head>
     <% theme_setting = ThemeSetting.current %>
     <% cache_buster = pwa_cache_buster %>
-    <title><%= content_for(:title) || "Fuel Loyalty" %></title>
+    <title><%= content_for(:title) || "Ace Fuel Loyalty" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Fuel Loyalty">
-    <meta name="application-name" content="Fuel Loyalty">
+    <meta name="apple-mobile-web-app-title" content="Ace Fuel Loyalty">
+    <meta name="application-name" content="Ace Fuel Loyalty">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="<%= theme_setting.primary_color %>">
     <%= csrf_meta_tags %>
@@ -91,7 +91,7 @@
         <div class="logo-area">
           <%= link_to root_path, class: "brand-lockup" do %>
             <span class="brand-mark" aria-hidden="true"><%= image_tag "/icon.svg?v=#{cache_buster}", alt: "", class: "brand-mark-image" %></span>
-            <span class="logo-text">Fuel Loyalty</span>
+            <span class="logo-text">Ace Fuel Loyalty</span>
           <% end %>
         </div>
 
@@ -105,6 +105,11 @@
             <li><%= link_to admin_fuel_reward_rates_path, class: "nav-link #{'active' if current_page?(admin_fuel_reward_rates_path)}" do %><i class="ti ti-adjustments"></i><span class="nav-text">Reward Rates</span><% end %></li>
             <li><%= link_to new_staff_redemption_path, class: "nav-link #{'active' if current_page?(new_staff_redemption_path)}" do %><i class="ti ti-gift-card"></i><span class="nav-text">Redeem Points</span><% end %></li>
             <li><%= link_to new_admin_points_adjustment_path, class: "nav-link #{'active' if current_page?(new_admin_points_adjustment_path)}" do %><i class="ti ti-arrows-diff"></i><span class="nav-text">Adjust Points</span><% end %></li>
+            <li class="px-4 pt-4 pb-2"><small class="nav-section-label">Attendance</small></li>
+            <li><%= link_to admin_staff_members_path, class: "nav-link #{'active' if controller_path.in?(%w[admin/staff_members admin/shift_assignments])}" do %><i class="ti ti-users-group"></i><span class="nav-text">Staff</span><% end %></li>
+            <li><%= link_to admin_shift_templates_path, class: "nav-link #{'active' if controller_path == 'admin/shift_templates'}" do %><i class="ti ti-clock-hour-4"></i><span class="nav-text">Shifts</span><% end %></li>
+            <li><%= link_to admin_shift_cycles_path, class: "nav-link #{'active' if controller_path == 'admin/shift_cycles'}" do %><i class="ti ti-repeat"></i><span class="nav-text">Cycles</span><% end %></li>
+            <li><%= link_to admin_attendance_runs_path, class: "nav-link #{'active' if controller_path == 'admin/attendance_runs'}" do %><i class="ti ti-calendar-check"></i><span class="nav-text">Attendance</span><% end %></li>
             <li class="px-4 pt-4 pb-2"><small class="nav-section-label">App Management</small></li>
             <li><%= link_to admin_notifications_path, class: "nav-link #{'active' if current_page?(admin_notifications_path)}" do %><i class="ti ti-bell-ringing"></i><span class="nav-text">Notifications</span><% end %></li>
             <li><%= link_to admin_theme_settings_path, class: "nav-link #{'active' if current_page?(admin_theme_settings_path)}" do %><i class="ti ti-palette"></i><span class="nav-text">Theme</span><% end %></li>
@@ -136,7 +141,7 @@
           <div class="container">
             <%= link_to root_path, class: "brand-lockup" do %>
               <span class="brand-mark" aria-hidden="true"><%= image_tag "/icon.svg?v=#{cache_buster}", alt: "", class: "brand-mark-image" %></span>
-              <span class="logo-text">Fuel Loyalty</span>
+              <span class="logo-text">Ace Fuel Loyalty</span>
             <% end %>
 
             <div class="d-flex align-items-center gap-2">

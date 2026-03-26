@@ -1,0 +1,11 @@
+day_shift:
+  name: Day Shift
+  duration_minutes: 720
+  start_time: "06:00"
+  active: true
+
+night_shift:
+  name: Night Shift
+  duration_minutes: 1440
+  start_time: "18:00"
+  active: true

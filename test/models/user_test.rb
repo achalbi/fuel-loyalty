@@ -132,4 +132,16 @@ class UserTest < ActiveSupport::TestCase
       user.define_singleton_method(:has_attribute?) { |attribute_name| original_has_attribute.call(attribute_name) }
     end
   end
+
+  test "current shift template follows the assigned shift" do
+    travel_to Time.zone.parse("2026-03-26 08:00") do
+      assert_equal shift_templates(:day_shift), users(:two).current_shift_template
+      assert_equal shift_cycles(:day_night_cycle), users(:two).current_shift_cycle
+    end
+
+    travel_to Time.zone.parse("2026-03-26 20:00") do
+      assert_equal shift_templates(:day_shift), users(:two).current_shift_template
+      assert_equal shift_cycles(:day_night_cycle), users(:two).current_shift_cycle
+    end
+  end
 end

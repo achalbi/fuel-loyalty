@@ -1,0 +1,202 @@
+<% content_for :title, "Attendance" %>
+
+<div class="mb-4 page-header admin-attendance-header">
+  <div class="page-intro admin-attendance-header__intro mb-0">
+    <div class="admin-attendance-header__topline">
+      <h1>Attendance</h1>
+      <div class="page-actions d-flex flex-wrap gap-2">
+        <%= link_to "Recorded", admin_attendance_runs_path, class: "btn btn-outline-secondary btn-sm" %>
+        <%= link_to "Staff", admin_staff_members_path, class: "btn btn-outline-secondary btn-sm" %>
+        <%= link_to "Shifts", admin_shift_templates_path, class: "btn btn-outline-secondary btn-sm" %>
+      </div>
+    </div>
+    <p>Select a shift window, load the assigned staff, and record the shift attendance in one place.</p>
+  </div>
+</div>
+
+<div class="card shadow-sm admin-attendance-planner mb-4" data-attendance-planner-root>
+  <div class="card-body">
+    <%= form_with url: new_admin_attendance_run_path, method: :get, local: true, class: "admin-attendance-planner__form", data: { attendance_planner_form: true } do |form| %>
+      <div>
+        <label class="form-label" for="attendance-planner-shift">Shift</label>
+        <select id="attendance-planner-shift" name="shift_template_id" class="form-select" data-attendance-shift-input>
+          <option value="">Select a shift</option>
+          <% @shift_templates.each do |shift_template| %>
+            <option
+              value="<%= shift_template.id %>"
+              data-duration-minutes="<%= shift_template.duration_minutes %>"
+              data-start-time="<%= shift_template.start_time_input_value %>"
+              <%= "selected" if @selected_shift_template == shift_template %>>
+              <%= "#{shift_template.name} · #{shift_template.start_time_label} · #{shift_template.duration_label}" %>
+            </option>
+          <% end %>
+        </select>
+      </div>
+
+      <div>
+        <%= label_tag :starts_at, "Start Date Time", class: "form-label" %>
+        <%= text_field_tag :starts_at,
+          @planning_starts_at&.strftime("%Y-%m-%dT%H:%M"),
+          type: "datetime-local",
+          class: "form-control",
+          data: { attendance_start_input: true } %>
+      </div>
+
+      <div>
+        <%= label_tag :ends_at_display, "End Date Time", class: "form-label" %>
+        <%= text_field_tag :ends_at_display,
+          @planning_ends_at&.strftime("%Y-%m-%dT%H:%M"),
+          type: "datetime-local",
+          class: "form-control",
+          readonly: true,
+          data: { attendance_end_input: true } %>
+      </div>
+
+      <div class="admin-attendance-planner__actions">
+        <%= form.submit "Load Staff", class: "btn btn-primary w-100" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<% if @attendance_run.errors.any? %>
+  <div class="alert alert-danger">
+    <%= @attendance_run.errors.full_messages.to_sentence %>
+  </div>
+<% end %>
+
+<% if @selected_shift_template.present? && @attendance_run.attendance_entries.any? %>
+  <%= form_with model: [:admin, @attendance_run], local: true, class: "vstack gap-3" do |form| %>
+    <%= form.hidden_field :shift_template_id, value: @selected_shift_template.id %>
+    <%= form.hidden_field :starts_at, value: @planning_starts_at&.iso8601 %>
+    <%= form.hidden_field :ends_at, value: @planning_ends_at&.iso8601 %>
+
+    <div class="card shadow-sm admin-attendance-card">
+      <div class="card-body">
+        <div class="admin-attendance-card__header">
+          <div>
+            <h2 class="h5 mb-1">Attendance Entries</h2>
+            <p class="small-muted mb-0">Use Mark All Present for the quick path, then adjust individual rows only where needed.</p>
+          </div>
+          <div class="admin-attendance-card__side">
+            <div class="admin-attendance-card__summary" data-attendance-loaded-staff>
+              <span class="admin-attendance-card__summary-label">Loaded Staff</span>
+              <strong class="admin-attendance-card__summary-value"><%= @attendance_run.attendance_entries.size %></strong>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-attendance-mark-all-present>Mark All Present</button>
+          </div>
+        </div>
+
+        <div class="admin-attendance-entry-list">
+          <%= form.fields_for :attendance_entries do |entry_form| %>
+            <% entry = entry_form.object %>
+            <div class="border rounded-4 p-3 bg-body-tertiary admin-attendance-entry" data-attendance-entry-row data-scheduled-user-id="<%= entry.scheduled_user_id %>">
+              <%= entry_form.hidden_field :scheduled_user_id %>
+
+              <div class="admin-attendance-entry__header">
+                <div>
+                  <h3 class="h6 mb-1"><%= entry.scheduled_user.display_name.to_s.titleize %></h3>
+                  <p class="small-muted mb-0"><%= entry.scheduled_user.display_phone_number || "Mobile not set" %></p>
+                </div>
+                <span class="badge text-bg-light border"><%= @selected_shift_template.name %></span>
+              </div>
+
+              <div class="admin-attendance-entry__grid">
+                <div>
+                  <%= entry_form.label :status, class: "form-label" %>
+                  <%= entry_form.select :status,
+                    options_for_select(
+                      AttendanceEntry.statuses.keys.map { |status| [status.humanize, status] },
+                      entry.status
+                    ),
+                    {},
+                    class: "form-select",
+                    data: { attendance_status_select: true } %>
+                </div>
+
+                <div>
+                  <%= entry_form.label :actual_user_id, "Actual Staff", class: "form-label" %>
+                  <%= entry_form.select :actual_user_id,
+                    options_for_select(@active_staff_members.map { |staff_member| [staff_member.display_name.to_s.titleize, staff_member.id] }, entry.actual_user_id || entry.scheduled_user_id),
+                    {},
+                    class: "form-select" %>
+                </div>
+
+                <div data-attendance-replacement-fields class="<%= 'd-none' unless entry.absent? %>">
+                  <%= entry_form.label :replacement_user_id, "Replacement Staff", class: "form-label" %>
+                  <%= entry_form.select :replacement_user_id,
+                    options_for_select([["No internal replacement", nil]] + @active_staff_members.map { |staff_member| [staff_member.display_name.to_s.titleize, staff_member.id] }, entry.replacement_user_id),
+                    {},
+                    class: "form-select",
+                    data: { attendance_replacement_select: true } %>
+                </div>
+
+                <div data-attendance-replacement-fields class="<%= 'd-none' unless entry.absent? %>">
+                  <%= entry_form.label :external_replacement_name, "External Replacement", class: "form-label" %>
+                  <%= entry_form.text_field :external_replacement_name, class: "form-control", placeholder: "Temp cover name" %>
+                </div>
+
+                <div>
+                  <%= entry_form.label :check_in_at, "Check In", class: "form-label" %>
+                  <%= entry_form.text_field :check_in_at,
+                    value: entry.check_in_at&.strftime("%Y-%m-%dT%H:%M"),
+                    type: "datetime-local",
+                    class: "form-control" %>
+                </div>
+
+                <div>
+                  <%= entry_form.label :check_out_at, "Check Out", class: "form-label" %>
+                  <%= entry_form.text_field :check_out_at,
+                    value: entry.check_out_at&.strftime("%Y-%m-%dT%H:%M"),
+                    type: "datetime-local",
+                    class: "form-control" %>
+                </div>
+              </div>
+
+              <div class="mt-3">
+                <%= entry_form.label :notes, class: "form-label" %>
+                <%= entry_form.text_area :notes, rows: 2, class: "form-control", placeholder: "Optional note for this row" %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="form-check mb-3">
+          <%= form.check_box :stale, class: "form-check-input" %>
+          <%= form.label :stale, "Mark this as an invalid attendance record", class: "form-check-label" %>
+          <p class="small-muted mb-0 mt-1">Use this when attendance should stay on record but should not be treated as a valid attendance entry in the recorded list.</p>
+        </div>
+
+        <%= form.label :notes, "Run Notes", class: "form-label" %>
+        <%= form.text_area :notes, rows: 3, class: "form-control", placeholder: "Optional note for the full attendance run" %>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end">
+      <%= form.submit "Save Attendance", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% elsif @selected_shift_template.present? %>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <% if @attendance_run.errors.any? %>
+        <h2 class="h5 mb-2">Adjust the planned window</h2>
+        <p class="small-muted mb-0"><%= @attendance_run.errors.full_messages.to_sentence %></p>
+      <% else %>
+        <h2 class="h5 mb-2">No staff assigned yet</h2>
+        <p class="small-muted mb-0">This shift does not have any active staff assignments for the selected date. Assign staff first, then come back to attendance.</p>
+      <% end %>
+    </div>
+  </div>
+<% else %>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h2 class="h5 mb-2">Start by selecting a shift</h2>
+      <p class="small-muted mb-0">Choose the shift and start time above, and the staff roster for that window will load here.</p>
+    </div>
+  </div>
+<% end %>

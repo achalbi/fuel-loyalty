@@ -1,0 +1,171 @@
+<% content_for :title, "Shift Cycles" %>
+
+<div class="mb-4 page-header admin-shifts-header">
+  <div class="page-intro mb-0">
+    <h1>Shift Cycles</h1>
+    <p>Set the order in which shifts repeat, let each step run for its own saved duration, and keep that linked rotation available on the shifts used by staff.</p>
+  </div>
+
+  <div class="page-actions d-flex flex-wrap gap-2">
+    <%= link_to "Staff", admin_staff_members_path, class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "Shifts", admin_shift_templates_path, class: "btn btn-outline-secondary btn-sm" %>
+    <%= button_tag "+",
+      type: "button",
+      class: "customer-details-quick-action admin-shifts-create-action",
+      data: { bs_toggle: "modal", bs_target: "#addShiftCycleModal" },
+      aria: { label: "Add Shift Cycle" },
+      title: "Add Shift Cycle" %>
+  </div>
+</div>
+
+<% if @shift_cycles.any? %>
+  <div class="admin-shifts-card-grid">
+    <% @shift_cycles.each do |shift_cycle| %>
+      <% modal_id = "editShiftCycleModal-#{shift_cycle.id}" %>
+      <% edit_shift_cycle = (@edit_shift_cycle&.id == shift_cycle.id ? @edit_shift_cycle : shift_cycle) %>
+      <% step_template_ids = (@edit_shift_cycle&.id == shift_cycle.id ? @edit_shift_cycle_step_ids : shift_cycle.shift_cycle_steps.map(&:shift_template_id)) %>
+
+      <div class="card shadow-sm admin-shifts-card admin-shifts-card--cycle">
+        <div class="card-body">
+          <div class="customer-details-vehicle-row admin-shift-item admin-shift-item--cycle-card admin-shift-item--flush-details">
+            <div class="admin-shift-item__top">
+              <div class="admin-shift-item__heading">
+                <span class="admin-shift-item__name"><%= shift_cycle.name %></span>
+                <span class="admin-user-item__role <%= shift_cycle.active? ? "is-staff" : "" %>"><%= shift_cycle.active? ? "Active" : "Inactive" %></span>
+              </div>
+
+              <div class="admin-shift-item__side">
+                <%= button_tag type: "button",
+                  class: "customer-details-history-preview-action admin-shift-item__edit",
+                  data: { bs_toggle: "modal", bs_target: "##{modal_id}" },
+                  aria: { label: "Edit #{shift_cycle.name}" },
+                  title: "Edit cycle" do %>
+                  <i class="ti ti-pencil" aria-hidden="true"></i>
+                <% end %>
+
+                <% if shift_cycle.deletable? %>
+                  <%= button_to admin_shift_cycle_path(shift_cycle),
+                    method: :delete,
+                    class: "customer-details-history-preview-action admin-shift-item__delete",
+                    form: { data: { confirm_modal: true, confirm_message: "Delete this unused shift cycle?" } },
+                    aria: { label: "Delete #{shift_cycle.name}" },
+                    title: "Delete cycle" do %>
+                    <i class="ti ti-trash" aria-hidden="true"></i>
+                  <% end %>
+                <% elsif shift_cycle.active? %>
+                  <%= button_to deactivate_admin_shift_cycle_path(shift_cycle),
+                    method: :patch,
+                    class: "btn btn-outline-warning btn-sm" do %>
+                    <i class="ti ti-player-pause me-1" aria-hidden="true"></i>
+                    Deactivate
+                  <% end %>
+                <% else %>
+                  <%= button_to activate_admin_shift_cycle_path(shift_cycle),
+                    method: :patch,
+                    class: "btn btn-outline-success btn-sm" do %>
+                    <i class="ti ti-player-play me-1" aria-hidden="true"></i>
+                    Activate
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="admin-shift-item__details admin-shift-item__details--flush">
+              <div class="admin-shift-item__detail">
+                <span class="admin-shift-item__detail-label">Cycle Starts</span>
+                <strong class="admin-shift-item__detail-value"><%= shift_cycle.starts_at_label || l(shift_cycle.starts_on, format: "%d %b %Y") %></strong>
+              </div>
+              <div class="admin-shift-item__detail">
+                <span class="admin-shift-item__detail-label">Flow</span>
+                <strong class="admin-shift-item__detail-value"><%= shift_cycle.schedule_label %></strong>
+              </div>
+              <div class="admin-shift-item__detail">
+                <span class="admin-shift-item__detail-label">Full Cycle</span>
+                <strong class="admin-shift-item__detail-value"><%= shift_cycle.cycle_duration_label %></strong>
+              </div>
+              <div class="admin-shift-item__detail">
+                <span class="admin-shift-item__detail-label">Sequence</span>
+                <strong class="admin-shift-item__detail-value admin-shift-item__sequence">
+                  <% shift_cycle.shift_cycle_steps.each_with_index do |step, index| %>
+                    <span class="admin-shift-item__sequence-shift"><%= step.shift_template.name %></span>
+                    <% if index < shift_cycle.shift_cycle_steps.size - 1 %>
+                      <span class="admin-shift-item__sequence-arrow" aria-hidden="true">-&gt;</span>
+                    <% end %>
+                  <% end %>
+                </strong>
+              </div>
+              <div class="admin-shift-item__detail">
+                <span class="admin-shift-item__detail-label">Assigned Staff</span>
+                <strong class="admin-shift-item__detail-value"><%= shift_cycle.shift_assignments.count(&:active?) %></strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="modal fade customer-details-modal admin-shifts-modal"
+        id="<%= modal_id %>"
+        tabindex="-1"
+        aria-labelledby="<%= modal_id %>-label"
+        aria-hidden="true"
+        data-auto-open-modal="<%= @edit_shift_cycle&.id == shift_cycle.id %>">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+          <div class="modal-content confirm-modal-content customer-details-modal__content admin-shifts-modal__content">
+            <div class="modal-header border-0 pb-0">
+              <div>
+                <h2 class="modal-title h5 mb-1" id="<%= modal_id %>-label">Edit Shift Cycle</h2>
+                <p class="text-muted mb-0 small">Update the cycle order, start date, or active state. Each step will continue to hand off using its own duration.</p>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+              <%= render "form",
+                shift_cycle: edit_shift_cycle,
+                shift_templates: @shift_templates,
+                step_template_ids: step_template_ids,
+                form_url: admin_shift_cycle_path(shift_cycle),
+                form_method: :patch,
+                submit_label: "Update Cycle" %>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <div class="card shadow-sm admin-shifts-card">
+    <div class="card-body">
+      <p class="admin-users-empty mb-0">No shift cycles created yet.</p>
+    </div>
+  </div>
+<% end %>
+
+<div
+  class="modal fade customer-details-modal admin-shifts-modal"
+  id="addShiftCycleModal"
+  tabindex="-1"
+  aria-labelledby="addShiftCycleModalLabel"
+  aria-hidden="true"
+  data-auto-open-modal="<%= @shift_cycle.errors.any? %>">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content confirm-modal-content customer-details-modal__content admin-shifts-modal__content">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h2 class="modal-title h5 mb-1" id="addShiftCycleModalLabel">Add Shift Cycle</h2>
+          <p class="text-muted mb-0 small">Create a repeating shift order where each step flows into the next using the saved shift durations.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <%= render "form",
+          shift_cycle: @shift_cycle,
+          shift_templates: @shift_templates,
+          step_template_ids: @new_shift_cycle_step_ids,
+          form_url: admin_shift_cycles_path,
+          form_method: :post,
+          submit_label: "Create Cycle" %>
+      </div>
+    </div>
+  </div>
+</div>

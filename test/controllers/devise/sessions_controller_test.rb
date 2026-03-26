@@ -17,7 +17,7 @@ module Devise
       assert_select "a[href='#{new_loyalty_path}']", text: /Back to Loyalty Lookup/
       assert_select "[data-pwa-install-panel]", 1
       assert_select "[data-pwa-install-button]", text: /Install App/
-      assert_select "[data-pwa-install-status]", /Install Fuel Loyalty|Add Fuel Loyalty/
+      assert_select "[data-pwa-install-status]", /Install Ace Fuel Loyalty|Add Ace Fuel Loyalty/
     end
 
     test "sign in page uses cache-busted pwa asset links" do

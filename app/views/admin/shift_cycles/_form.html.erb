@@ -1,0 +1,62 @@
+<% if shift_cycle.errors.any? %>
+  <div class="alert alert-danger">
+    <%= shift_cycle.errors.full_messages.to_sentence %>
+  </div>
+<% end %>
+
+<%= form_with model: [:admin, shift_cycle], url: form_url, method: form_method, local: true, class: "vstack gap-3", data: { shift_cycle_form: true } do |form| %>
+  <div>
+    <%= form.label :name, "Cycle Name", class: "form-label" %>
+    <%= form.text_field :name, class: "form-control", maxlength: 80, required: true, placeholder: "Name this repeating shift cycle" %>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-sm-6">
+      <%= form.label :starts_on, "Cycle Starts On", class: "form-label" %>
+      <%= form.date_field :starts_on, class: "form-control", required: true %>
+    </div>
+
+    <div class="col-sm-6">
+      <label class="form-label">Keep Each Shift Active For</label>
+      <div class="border rounded-4 p-3 bg-body-tertiary h-100">
+        <p class="fw-semibold mb-1">Use the shift's own saved duration</p>
+        <p class="small-muted mb-0">Each step runs one after the other. If Shift 1 is 18 hours and Shift 2 is 6 hours, the cycle moves to Shift 2 after 18 hours, then keeps repeating through the remaining steps.</p>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <label class="form-label">Shift Order In The Cycle</label>
+    <% selected_count = step_template_ids.count(&:present?) %>
+    <% initial_visible_count = [[selected_count + 1, 3].max, step_template_ids.length].min %>
+    <div class="vstack gap-2">
+      <% step_template_ids.each_with_index do |selected_shift_template_id, index| %>
+        <div data-shift-cycle-step-field class="<%= 'd-none' if index >= initial_visible_count %>">
+          <label class="form-label small text-uppercase text-muted mb-1">Step <%= index + 1 %></label>
+          <%= select_tag "shift_cycle[step_shift_template_ids][]",
+            options_for_select(
+              [["Leave this step empty", nil]] + shift_templates.map { |shift_template| ["#{shift_template.name} · #{shift_template.start_time_label} · #{shift_template.duration_label}", shift_template.id] },
+              selected_shift_template_id
+            ),
+            class: "form-select" %>
+        </div>
+      <% end %>
+    </div>
+    <div class="form-text">Fill the shifts in the order they should repeat. Each step hands off to the next when that shift's duration ends, and the final step loops back to step 1.</div>
+    <button type="button" class="btn btn-outline-secondary btn-sm mt-3 <%= 'd-none' if initial_visible_count >= step_template_ids.length %>" data-shift-cycle-add-step>
+      Add Another Shift
+    </button>
+  </div>
+
+  <div>
+    <%= form.label :active, class: "form-label" %>
+    <%= form.select :active,
+      options_for_select([["Active", true], ["Inactive", false]], shift_cycle.active?),
+      {},
+      class: "form-select" %>
+  </div>
+
+  <div class="d-flex justify-content-end">
+    <%= form.submit submit_label, class: "btn btn-primary" %>
+  </div>
+<% end %>

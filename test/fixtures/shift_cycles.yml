@@ -1,0 +1,9 @@
+day_night_cycle:
+  name: Day and Night Rotation
+  starts_on: 2026-03-02
+  active: true
+
+week_long_cycle:
+  name: Weekly Relief Rotation
+  starts_on: 2026-04-01
+  active: true

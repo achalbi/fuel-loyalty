@@ -1,0 +1,12 @@
+staff_day_shift:
+  user: two
+  shift_template: day_shift
+  shift_cycle: day_night_cycle
+  effective_from: 2026-03-02 06:00:00
+  active: true
+
+staff_night_shift:
+  user: one
+  shift_template: night_shift
+  effective_from: 2026-03-01
+  active: false
