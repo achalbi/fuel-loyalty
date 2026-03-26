@@ -28,6 +28,7 @@
     <div class="col-md-4">
       <%= form.label :scheduled_time, "Time", class: "form-label" %>
       <%= form.time_field :scheduled_time, class: "form-control", required: true, step: 60 %>
+      <p class="small-muted mt-2 mb-0">Times use India Standard Time (IST). Schedules are sent when the scheduler is run after the due time.</p>
     </div>
 
     <div class="col-md-4 d-flex align-items-end">

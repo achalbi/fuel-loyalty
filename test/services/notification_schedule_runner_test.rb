@@ -33,6 +33,23 @@ class NotificationScheduleRunnerTest < ActiveSupport::TestCase
     end
   end
 
+  test "scheduled times use the application time zone" do
+    schedule = NotificationSchedule.new(
+      title: "Daily Check-in",
+      message: "Good morning",
+      frequency: "daily",
+      scheduled_time: "09:30",
+      active: true
+    )
+
+    scheduled_time = schedule.scheduled_at_on(Date.new(2026, 3, 25))
+
+    assert_equal "Asia/Kolkata", Time.zone.tzinfo.identifier
+    assert_equal 19_800, scheduled_time.utc_offset
+    assert_equal 9, scheduled_time.hour
+    assert_equal 30, scheduled_time.min
+  end
+
   test "is_due? respects weekly and monthly cadence fields" do
     travel_to Time.zone.local(2026, 3, 25, 11, 0, 0) do
       weekly_schedule = NotificationSchedule.new(
