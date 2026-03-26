@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_25_081000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_26_093000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -83,6 +83,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_081000) do
     t.index ["last_used_at"], name: "index_push_subscriptions_on_last_used_at"
     t.index ["platform"], name: "index_push_subscriptions_on_platform"
     t.index ["token"], name: "index_push_subscriptions_on_token", unique: true
+  end
+
+  create_table "scheduler_leases", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "finished_at"
+    t.string "key", null: false
+    t.datetime "last_heartbeat_at"
+    t.string "lease_token"
+    t.boolean "running", default: false, null: false
+    t.datetime "started_at"
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_scheduler_leases_on_key", unique: true
+    t.index ["running"], name: "index_scheduler_leases_on_running"
   end
 
   create_table "theme_settings", force: :cascade do |t|

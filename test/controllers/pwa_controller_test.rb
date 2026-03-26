@@ -61,6 +61,8 @@ class PwaControllerTest < ActionDispatch::IntegrationTest
       assert_includes response.body, "/icon-192.png?v=test-release"
       assert_includes response.body, "/icon.png?v=test-release"
       assert_includes response.body, "/icon.svg?v=test-release"
+      assert_includes response.body, "/notification-pump-icon.svg?v=test-release"
+      assert_includes response.body, "/notification-pump-badge.svg?v=test-release"
       assert_includes response.body, "/manifest.json?v=test-release"
       assert_includes response.body, "/assets/bootstrap.min-"
       assert_includes response.body, "/assets/application-"

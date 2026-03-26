@@ -7,6 +7,8 @@ const IMMEDIATE_ACTIVATION = <%= Rails.env.development? ? "true" : "false" %>;
 const ICON_192_URL = "/icon-192.png?v=<%= @cache_version %>";
 const ICON_512_URL = "/icon.png?v=<%= @cache_version %>";
 const ICON_SVG_URL = "/icon.svg?v=<%= @cache_version %>";
+const NOTIFICATION_ICON_URL = "/notification-pump-icon.svg?v=<%= @cache_version %>";
+const NOTIFICATION_BADGE_URL = "/notification-pump-badge.svg?v=<%= @cache_version %>";
 const MANIFEST_URL = "<%= pwa_manifest_path(v: @cache_version) %>";
 const DEFAULT_NOTIFICATION_LINK = "<%= FirebaseAppConfig.notification_link %>";
 const FIREBASE_PUSH_ENABLED = <%= FirebaseAppConfig.web_push_ready? ? "true" : "false" %>;
@@ -16,6 +18,8 @@ const PRECACHE_URLS = [
   ICON_192_URL,
   ICON_512_URL,
   ICON_SVG_URL,
+  NOTIFICATION_ICON_URL,
+  NOTIFICATION_BADGE_URL,
   MANIFEST_URL,
   "<%= asset_path('theme_boot.js') %>",
   "<%= asset_path('bootstrap.min.css') %>",
@@ -63,8 +67,8 @@ if (FIREBASE_PUSH_ENABLED) {
 
     self.registration.showNotification(title, {
       body: notification.body || data.message || "",
-      icon: notification.icon || ICON_192_URL,
-      badge: notification.badge || ICON_192_URL,
+      icon: notification.icon || NOTIFICATION_ICON_URL,
+      badge: notification.badge || NOTIFICATION_BADGE_URL,
       data: {
         link: fcmOptions.link || data.link || DEFAULT_NOTIFICATION_LINK
       }

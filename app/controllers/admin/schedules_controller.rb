@@ -55,7 +55,7 @@ module Admin
         format.json { render json: result.as_json, status: :ok }
         format.html do
           redirect_to admin_notifications_path,
-                      notice: "Scheduler run finished. #{result.sent} schedules sent, #{result.failed} failed."
+                      notice: scheduler_run_notice_for(result)
         end
       end
     end
@@ -90,6 +90,12 @@ module Admin
       ).merge(
         "schedule_summary" => schedule.schedule_summary
       )
+    end
+
+    def scheduler_run_notice_for(result)
+      return result.message if result.skipped
+
+      "Scheduler run finished. #{result.sent} schedules sent, #{result.failed} failed."
     end
 
     def respond_with_schedule_errors(schedule:, edit: false, status:)

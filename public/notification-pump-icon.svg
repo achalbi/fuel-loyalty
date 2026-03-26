@@ -1,0 +1,24 @@
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Fuel Loyalty notification icon</title>
+  <desc id="desc">A petrol pump icon on a rounded square background.</desc>
+  <defs>
+    <linearGradient id="bg" x1="14%" y1="100%" x2="86%" y2="0%">
+      <stop offset="0%" stop-color="#146c43" />
+      <stop offset="55%" stop-color="#1f9d7a" />
+      <stop offset="100%" stop-color="#1d6fd6" />
+    </linearGradient>
+    <linearGradient id="pump" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#dff5ee" />
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bg)" />
+  <rect x="34" y="24" width="38" height="72" rx="8" fill="url(#pump)" />
+  <rect x="40" y="32" width="26" height="18" rx="4" fill="#1d6fd6" opacity="0.95" />
+  <rect x="46" y="62" width="14" height="24" rx="3" fill="#146c43" opacity="0.9" />
+  <rect x="78" y="38" width="10" height="51" rx="5" fill="url(#pump)" />
+  <path d="M72 38c9 0 18 8 18 18v9c0 4 3 7 7 7h3v10h-4c-9 0-16-7-16-16V56c0-3-2-6-5-8l-3-2z" fill="url(#pump)" />
+  <circle cx="53" cy="41" r="4" fill="#ffffff" opacity="0.85" />
+  <rect x="30" y="96" width="62" height="8" rx="4" fill="#b8ece0" opacity="0.9" />
+</svg>

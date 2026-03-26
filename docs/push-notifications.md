@@ -294,6 +294,20 @@ curl -X POST https://your-app.example/admin/schedules/run \
   -H "Authorization: Bearer $ADMIN_NOTIFICATION_API_TOKEN"
 ```
 
+### Run the scheduler automatically with Cloud Scheduler
+
+Use one Cloud Scheduler job to call `POST /admin/schedules/run` every minute. The app checks all saved schedules and only sends the ones that are due, so you do not need separate jobs for daily, weekly, monthly, or one-time notifications.
+
+Recommended Cloud Scheduler settings:
+
+- Target: HTTP
+- URL: `https://your-app.example/admin/schedules/run`
+- Method: `POST`
+- Frequency: every 1 minute
+- Auth: bearer token using `ADMIN_NOTIFICATION_API_TOKEN`, or OIDC if you prefer Google-managed auth
+
+The scheduler runner now uses a database-backed lease in `scheduler_leases`, so overlapping or duplicate Cloud Scheduler invocations do not double-send notifications across Cloud Run instances.
+
 ## Scheduler Rules
 
 `NotificationScheduleRunner.is_due?(schedule, current_time)` supports:

@@ -1,12 +1,18 @@
 class NotificationScheduleRunner
-  Result = Struct.new(:checked, :due, :sent, :failed, :details, keyword_init: true) do
+  LEASE_KEY = "notification_schedule_runner".freeze
+  LEASE_TIMEOUT = 10.minutes
+
+  Result = Struct.new(:checked, :due, :sent, :failed, :details, :acquired, :skipped, :message, keyword_init: true) do
     def as_json(*)
       {
         checked: checked,
         due: due,
         sent: sent,
         failed: failed,
-        details: details
+        details: details,
+        acquired: acquired,
+        skipped: skipped,
+        message: message
       }
     end
   end
@@ -51,10 +57,34 @@ class NotificationScheduleRunner
 
   def run(current_time: Time.current)
     current_time = current_time.in_time_zone(Time.zone)
+    lease = acquire_lease(current_time)
+    unless lease
+      return Result.new(
+        checked: 0,
+        due: 0,
+        sent: 0,
+        failed: 0,
+        details: [],
+        acquired: false,
+        skipped: true,
+        message: "Scheduler run skipped because another run is already in progress."
+      )
+    end
+
     schedules = NotificationSchedule.active.recent_first.to_a
-    result = Result.new(checked: schedules.length, due: 0, sent: 0, failed: 0, details: [])
+    result = Result.new(
+      checked: schedules.length,
+      due: 0,
+      sent: 0,
+      failed: 0,
+      details: [],
+      acquired: true,
+      skipped: false,
+      message: "Scheduler run completed."
+    )
 
     schedules.each do |schedule|
+      heartbeat_lease!(lease)
       next unless self.class.is_due?(schedule, current_time)
 
       result.due += 1
@@ -79,5 +109,57 @@ class NotificationScheduleRunner
     end
 
     result
+  ensure
+    release_lease(lease, Time.current.in_time_zone(Time.zone)) if lease
+  end
+
+  private
+
+  def acquire_lease(current_time)
+    token = SecureRandom.uuid
+    lease = scheduler_lease_record
+
+    acquired = false
+    lease.with_lock do
+      if lease.running? && lease.last_heartbeat_at.present? && lease.last_heartbeat_at > current_time - LEASE_TIMEOUT
+        next
+      end
+
+      lease.update!(
+        running: true,
+        lease_token: token,
+        started_at: current_time,
+        last_heartbeat_at: current_time
+      )
+      acquired = true
+    end
+
+    acquired ? { record: lease, token: token } : nil
+  end
+
+  def heartbeat_lease!(lease)
+    SchedulerLease.where(id: lease.fetch(:record).id).update_all(last_heartbeat_at: Time.current.in_time_zone(Time.zone))
+  end
+
+  def release_lease(lease, current_time)
+    record = lease.fetch(:record)
+    token = lease.fetch(:token)
+
+    record.with_lock do
+      return unless record.lease_token == token
+
+      record.update!(
+        running: false,
+        lease_token: nil,
+        last_heartbeat_at: current_time,
+        finished_at: current_time
+      )
+    end
+  end
+
+  def scheduler_lease_record
+    SchedulerLease.find_or_create_by!(key: LEASE_KEY)
+  rescue ActiveRecord::RecordNotUnique
+    retry
   end
 end

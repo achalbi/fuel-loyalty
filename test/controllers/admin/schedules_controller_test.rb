@@ -65,5 +65,22 @@ module Admin
       assert_redirected_to admin_notifications_path
       assert NotificationSchedule.last.last_sent_at.present?
     end
+
+    test "scheduler endpoint reports when another run is already in progress" do
+      sign_in users(:one)
+      SchedulerLease.create!(
+        key: NotificationScheduleRunner::LEASE_KEY,
+        running: true,
+        lease_token: "existing-token",
+        started_at: Time.current,
+        last_heartbeat_at: Time.current
+      )
+
+      post admin_run_schedules_path
+
+      assert_redirected_to admin_notifications_path
+      follow_redirect!
+      assert_match(/already in progress/i, response.body)
+    end
   end
 end

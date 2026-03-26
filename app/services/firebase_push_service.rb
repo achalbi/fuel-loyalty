@@ -8,6 +8,8 @@ class FirebasePushService
   DEFAULT_BATCH_DELAY_SECONDS = 0.05
   DEFAULT_TIMEOUT_SECONDS = 15
   INVALID_TOKEN_CODES = %w[UNREGISTERED INVALID_ARGUMENT].freeze
+  NOTIFICATION_ICON_PATH = "/notification-pump-icon.svg".freeze
+  NOTIFICATION_BADGE_PATH = "/notification-pump-badge.svg".freeze
 
   Result = Struct.new(:requested, :sent, :failed, :invalidated, :batches, :errors, keyword_init: true) do
     def as_json(*)
@@ -119,10 +121,10 @@ class FirebasePushService
     {
       message: {
         token: subscription.token,
-        notification: {
-          title: title,
-          body: message
-        },
+          notification: {
+            title: title,
+            body: message
+          },
         data: {
           title: title,
           message: message,
@@ -137,8 +139,8 @@ class FirebasePushService
           notification: {
             title: title,
             body: message,
-            icon: asset_url("/icon-192.png"),
-            badge: asset_url("/icon-192.png"),
+            icon: asset_url(NOTIFICATION_ICON_PATH),
+            badge: asset_url(NOTIFICATION_BADGE_PATH),
             tag: "fuel-loyalty-broadcast"
           },
           fcm_options: {

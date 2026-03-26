@@ -8,6 +8,8 @@
   const app = getApps()[0] || initializeApp(firebaseConfig);
   let messagingPromise = null;
   let foregroundListenerAttached = false;
+  const defaultNotificationIcon = "/notification-pump-icon.svg";
+  const defaultNotificationBadge = "/notification-pump-badge.svg";
 
   const showForegroundNotification = async (payload) => {
     if (!("Notification" in window) || window.Notification.permission !== "granted") return;
@@ -19,8 +21,8 @@
     const body = notification.body || data.message || "";
     const options = {
       body,
-      icon: notification.icon || "/icon-192.png",
-      badge: notification.badge || "/icon-192.png",
+      icon: notification.icon || defaultNotificationIcon,
+      badge: notification.badge || defaultNotificationBadge,
       tag: data.notification_id || "fuel-loyalty-broadcast",
       data: {
         link: fcmOptions.link || data.link || settings.defaultLink || "/loyalty"
