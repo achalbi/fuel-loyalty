@@ -109,7 +109,7 @@ substitutions:
   REPO_NAME: achalbi-fuel-loyalty
   _APP_URL: 'https://fly.thoughtbasics.com'
   _MAILER_FROM: 'no-reply@fly.thoughtbasics.com'
-  _ADMIN_NOTIFICATION_API_TOKEN: '25b552261587328b9c2471afcf1ee99956a0a2ba173c88e087f273f2494b8cfd'
+  _ADMIN_NOTIFICATION_API_TOKEN: 'd95d8bc24135f6a1e0b090f691c6f947e023ee0dcf72fad90ec94dcfa65cad5c'
   _FIREBASE_API_KEY: 'AIzaSyD2GOiEjnrGWDPQt1chym04qtmQ3F5LCEQ'
   _FIREBASE_AUTH_DOMAIN: 'fuel-loyalty.firebaseapp.com'
   _FIREBASE_PROJECT_ID: 'fuel-loyalty'
