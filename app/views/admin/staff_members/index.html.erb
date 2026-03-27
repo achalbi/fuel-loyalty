@@ -74,7 +74,7 @@
 
                 <div class="admin-staff-member__main">
                   <div class="admin-staff-member__heading">
-                    <span class="admin-staff-member__name"><%= staff_member.display_name.to_s.titleize %></span>
+                    <span class="admin-staff-member__name"><%= staff_member.display_name %></span>
                   </div>
                   <% if staff_member.subtitle.present? %>
                     <p class="small-muted mb-0 admin-staff-member__subcopy"><%= staff_member.subtitle %></p>
@@ -85,12 +85,11 @@
               <div class="admin-staff-member__side">
                 <div class="admin-staff-member__actions">
                   <%= button_tag type: "button",
-                    class: "admin-staff-member__action admin-staff-member__action--neutral",
+                    class: "customer-details-history-preview-action admin-user-item__edit",
                     data: { bs_toggle: "modal", bs_target: "##{profile_modal_id}" },
                     aria: { label: "Edit profile for #{staff_member.display_name}" },
                     title: "Edit profile" do %>
                     <i class="ti ti-user-edit" aria-hidden="true"></i>
-                    <span>Profile</span>
                   <% end %>
 
                   <%= button_tag type: "button",
@@ -100,6 +99,16 @@
                     title: "Assign shift" do %>
                     <i class="ti ti-clock-hour-4" aria-hidden="true"></i>
                     <span>Shift</span>
+                  <% end %>
+
+                  <%= button_to admin_staff_member_path(staff_member),
+                    method: :delete,
+                    class: "customer-details-history-preview-action admin-shift-item__delete",
+                    form_class: "d-inline-block",
+                    form: { data: { confirm_modal: true, confirm_message: "Attempt soft delete for #{staff_member.display_name}? Historical records will be kept. Active users must be deactivated first." } },
+                    aria: { label: "Soft delete #{staff_member.display_name}" },
+                    title: "Soft delete" do %>
+                    <i class="ti ti-trash" aria-hidden="true"></i>
                   <% end %>
                 </div>
 

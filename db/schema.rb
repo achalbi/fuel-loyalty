@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_26_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_27_103000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -245,9 +245,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_26_230000) do
   create_table "users", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
+    t.datetime "deleted_at"
     t.string "email", default: "", null: false
     t.string "employee_code"
     t.string "encrypted_password", default: "", null: false
+    t.string "name", null: false
     t.string "phone_number"
     t.datetime "remember_created_at"
     t.datetime "reset_password_sent_at"
@@ -257,6 +259,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_26_230000) do
     t.datetime "updated_at", null: false
     t.string "username", null: false
     t.index ["active"], name: "index_users_on_active"
+    t.index ["deleted_at"], name: "index_users_on_deleted_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["employee_code"], name: "index_users_on_employee_code", unique: true
     t.index ["phone_number"], name: "index_users_on_phone_number", unique: true

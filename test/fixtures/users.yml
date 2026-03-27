@@ -1,5 +1,6 @@
 one:
   email: admin@example.com
+  name: Admin
   phone_number: 9000000011
   username: admin
   encrypted_password: <%= Devise::Encryptor.digest(User, "password123") %>
@@ -7,6 +8,7 @@ one:
 
 two:
   email: staff@example.com
+  name: Staff
   phone_number: 9000000022
   username: staff
   encrypted_password: <%= Devise::Encryptor.digest(User, "password123") %>

@@ -34,7 +34,7 @@ Rails.application.routes.draw do
     end
     resource :notifications, only: :show, controller: "notifications"
     post "notifications/send", to: "notification_deliveries#create", as: :send_notifications
-    resources :staff_members, only: %i[index update] do
+    resources :staff_members, only: %i[index update destroy] do
       resources :shift_assignments, only: :create
     end
     resources :shift_templates, only: %i[index create update]
@@ -46,7 +46,7 @@ Rails.application.routes.draw do
       patch :invalidate, on: :member
       patch :mark_valid, on: :member
     end
-    resources :users, only: %i[index new create edit update]
+    resources :users, only: %i[index new create show edit update]
     resource :fuel_reward_rates, only: %i[show update], controller: "fuel_reward_rates"
     resource :theme_settings, only: %i[show update], controller: "theme_settings"
     resources :schedules, only: %i[index create update destroy] do

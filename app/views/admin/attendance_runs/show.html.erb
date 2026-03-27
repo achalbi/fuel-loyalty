@@ -51,7 +51,7 @@
     <div class="card shadow-sm h-100">
       <div class="card-body">
         <p class="small-muted mb-1">Recorded By</p>
-        <h2 class="mb-0 h6"><%= @attendance_run.recorded_by.display_name.to_s.titleize %></h2>
+        <h2 class="mb-0 h6"><%= @attendance_run.recorded_by.display_name %></h2>
       </div>
     </div>
   </div>
@@ -83,11 +83,11 @@
         <div class="admin-attendance-item">
           <div class="admin-attendance-item__main">
             <div class="admin-attendance-item__heading">
-              <span class="admin-attendance-item__name"><%= entry.scheduled_user.display_name.to_s.titleize %></span>
+              <span class="admin-attendance-item__name"><%= entry.scheduled_user.display_name %></span>
               <span class="badge text-bg-light border"><%= entry.status.humanize %></span>
             </div>
             <div class="admin-attendance-item__details">
-              <span><strong>Actual staff:</strong> <%= entry.worker_name.to_s.titleize %></span>
+              <span><strong>Actual staff:</strong> <%= entry.worker_name %></span>
               <span><strong>Check in:</strong> <%= entry.check_in_at.present? ? l(entry.check_in_at, format: "%d %b · %I:%M %p") : "Not recorded" %></span>
               <span><strong>Check out:</strong> <%= entry.check_out_at.present? ? l(entry.check_out_at, format: "%d %b · %I:%M %p") : "Not recorded" %></span>
               <span><strong>Notes:</strong> <%= entry.notes.presence || "None" %></span>

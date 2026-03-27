@@ -6,9 +6,9 @@
     <p>Create staff accounts, promote users to admin, and manage who can access the station dashboard.</p>
   </div>
   <div class="page-actions">
-    <%= button_tag "+",
+    <%= button_tag "+ Add User",
       type: "button",
-      class: "customer-details-quick-action admin-users-create-action",
+      class: "admin-users-create-action",
       data: { bs_toggle: "modal", bs_target: "#addUserModal" },
       aria: { label: "Add User" },
       title: "Add User" %>
@@ -20,7 +20,7 @@
     <% if @users.any? %>
       <div class="customer-details-vehicle-list admin-users-list">
         <% @users.each do |user| %>
-          <% display_name = user.username.to_s.titleize %>
+          <% display_name = user.display_name %>
           <% modal_id = "editUserModal-#{user.id}" %>
           <% edit_form_user = (@edit_user&.id == user.id ? @edit_user : user) %>
           <div class="customer-details-vehicle-row admin-user-item">
@@ -34,7 +34,14 @@
                 <span class="admin-user-item__email"><%= user.explicit_email || "Email not set" %></span>
               </div>
             </div>
-            <div class="admin-user-item__side">
+            <div class="admin-user-item__side d-flex align-items-center gap-2">
+              <%= link_to admin_user_path(user),
+                class: "customer-details-history-preview-action admin-user-item__view",
+                aria: { label: "View #{display_name}" },
+                title: "View user" do %>
+                <i class="ti ti-eye" aria-hidden="true"></i>
+              <% end %>
+
               <%= button_tag type: "button",
                 class: "customer-details-history-preview-action admin-user-item__edit",
                 data: { bs_toggle: "modal", bs_target: "##{modal_id}" },
@@ -88,7 +95,9 @@
   tabindex="-1"
   aria-labelledby="addUserModalLabel"
   aria-hidden="true"
-  data-auto-open-modal="<%= @user.errors.any? %>">
+  data-auto-open-modal="<%= @user.errors.any? %>"
+  data-reset-on-close="reload"
+  data-reset-on-close-url="<%= admin_users_path %>">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content confirm-modal-content customer-details-modal__content admin-users-modal__content">
       <div class="modal-header border-0 pb-0">

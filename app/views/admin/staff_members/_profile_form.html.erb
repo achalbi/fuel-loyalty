@@ -7,8 +7,18 @@
 
   <div class="border rounded-4 p-3 bg-body-tertiary">
     <p class="small text-uppercase fw-semibold text-muted mb-1">Staff Member</p>
-    <h3 class="h6 mb-1"><%= staff_member.display_name.to_s.titleize %></h3>
+    <h3 class="h6 mb-1"><%= staff_member.display_name %></h3>
     <p class="small-muted mb-0"><%= staff_member.display_phone_number || "Mobile not set" %></p>
+  </div>
+
+  <div>
+    <%= form.label :name, class: "form-label" %>
+    <%= form.text_field :name,
+      class: "form-control",
+      required: true,
+      autocomplete: "name",
+      placeholder: "Full name" %>
+    <div class="form-text">This name is used across the app for staff lists, attendance, and activity history.</div>
   </div>
 
   <div>

@@ -9,12 +9,12 @@
   <div class="page-actions d-flex flex-wrap gap-2">
     <%= link_to "Staff", admin_staff_members_path, class: "btn btn-outline-secondary btn-sm" %>
     <%= link_to "Cycles", admin_shift_cycles_path, class: "btn btn-outline-secondary btn-sm" %>
-    <%= button_tag "+",
+    <%= button_tag "+ New Shift",
       type: "button",
-      class: "customer-details-quick-action admin-shifts-create-action",
+      class: "admin-shift-templates-create-action",
       data: { bs_toggle: "modal", bs_target: "#addShiftTemplateModal" },
-      aria: { label: "Add Shift" },
-      title: "Add Shift" %>
+      aria: { label: "New Shift" },
+      title: "New Shift" %>
   </div>
 </div>
 

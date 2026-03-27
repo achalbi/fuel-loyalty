@@ -28,6 +28,6 @@ class AttendanceRosterBuilder
       .effective_at(starts_at)
       .where(shift_template_id: shift_template.id)
       .joins(:user)
-      .merge(User.where(role: :staff, active: true).order(:username, :phone_number))
+      .merge(User.active.where(role: :staff).order(:name, :username, :phone_number))
   end
 end

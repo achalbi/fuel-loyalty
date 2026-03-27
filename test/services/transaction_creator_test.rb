@@ -2,7 +2,7 @@ require "test_helper"
 
 class TransactionCreatorTest < ActiveSupport::TestCase
   test "creates a transaction and ledger entry for an existing customer vehicle" do
-    user = User.create!(username: "staff_test", phone_number: "9011111111", password: "password123", password_confirmation: "password123", role: :staff)
+    user = User.create!(name: "Staff Test", username: "staff_test", phone_number: "9011111111", password: "password123", password_confirmation: "password123", role: :staff)
     customer = Customer.create!(name: "Ravi", phone_number: "9876543210")
     vehicle = customer.vehicles.create!(vehicle_number: "TN01AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
 
@@ -26,7 +26,7 @@ class TransactionCreatorTest < ActiveSupport::TestCase
   end
 
   test "rejects transactions for inactive customers" do
-    user = User.create!(username: "staff_inactive", phone_number: "9022222222", password: "password123", password_confirmation: "password123", role: :staff)
+    user = User.create!(name: "Staff Inactive", username: "staff_inactive", phone_number: "9022222222", password: "password123", password_confirmation: "password123", role: :staff)
     customer = Customer.create!(name: "Mohan", phone_number: "9876500000", active: false)
     vehicle = customer.vehicles.create!(vehicle_number: "TN10AB4321", fuel_type: :diesel, vehicle_kind: :lmv)
 
@@ -43,7 +43,7 @@ class TransactionCreatorTest < ActiveSupport::TestCase
   end
 
   test "rejects transactions when the phone number is not 10 digits" do
-    user = User.create!(username: "staff_invalid_phone", phone_number: "9033333333", password: "password123", password_confirmation: "password123", role: :staff)
+    user = User.create!(name: "Staff Invalid Phone", username: "staff_invalid_phone", phone_number: "9033333333", password: "password123", password_confirmation: "password123", role: :staff)
 
     error = assert_raises(ActiveRecord::RecordInvalid) do
       TransactionCreator.call(
@@ -58,7 +58,7 @@ class TransactionCreatorTest < ActiveSupport::TestCase
   end
 
   test "creates a transaction and ledger entry when recording by vehicle number" do
-    user = User.create!(username: "staff_vehicle_lookup", phone_number: "9044444444", password: "password123", password_confirmation: "password123", role: :staff)
+    user = User.create!(name: "Staff Vehicle Lookup", username: "staff_vehicle_lookup", phone_number: "9044444444", password: "password123", password_confirmation: "password123", role: :staff)
     customer = Customer.create!(name: "Priya", phone_number: "9765432109")
     vehicle = customer.vehicles.create!(vehicle_number: "KA01AB1234", fuel_type: :diesel, vehicle_kind: :lmv)
 
@@ -80,7 +80,7 @@ class TransactionCreatorTest < ActiveSupport::TestCase
   end
 
   test "rejects vehicle lookup when the vehicle number is invalid" do
-    user = User.create!(username: "staff_invalid_vehicle", phone_number: "9055555555", password: "password123", password_confirmation: "password123", role: :staff)
+    user = User.create!(name: "Staff Invalid Vehicle", username: "staff_invalid_vehicle", phone_number: "9055555555", password: "password123", password_confirmation: "password123", role: :staff)
 
     error = assert_raises(ActiveRecord::RecordInvalid) do
       TransactionCreator.call(
@@ -96,7 +96,7 @@ class TransactionCreatorTest < ActiveSupport::TestCase
   end
 
   test "rejects vehicle lookup when the selected vehicle does not match the entered number" do
-    user = User.create!(username: "staff_vehicle_mismatch", phone_number: "9066666666", password: "password123", password_confirmation: "password123", role: :staff)
+    user = User.create!(name: "Staff Vehicle Mismatch", username: "staff_vehicle_mismatch", phone_number: "9066666666", password: "password123", password_confirmation: "password123", role: :staff)
 
     error = assert_raises(ActiveRecord::RecordInvalid) do
       TransactionCreator.call(
@@ -112,7 +112,7 @@ class TransactionCreatorTest < ActiveSupport::TestCase
   end
 
   test "records a transaction for the selected customer when multiple customers share a vehicle number" do
-    user = User.create!(username: "staff_shared_vehicle", phone_number: "9077777777", password: "password123", password_confirmation: "password123", role: :staff)
+    user = User.create!(name: "Staff Shared Vehicle", username: "staff_shared_vehicle", phone_number: "9077777777", password: "password123", password_confirmation: "password123", role: :staff)
     other_customer = Customer.create!(name: "Shared Vehicle Owner", phone_number: "9888888888")
     duplicate_vehicle = other_customer.vehicles.create!(
       vehicle_number: vehicles(:one).vehicle_number,

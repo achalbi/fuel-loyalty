@@ -2,6 +2,7 @@ class User < ApplicationRecord
   PHONE_NUMBER_LENGTH = 10
   PHONE_NUMBER_FORMAT = /\A\d{#{PHONE_NUMBER_LENGTH}}\z/
   PHONE_NUMBER_ERROR_MESSAGE = "must be a 10 digit mobile number"
+  USERNAME_FORMAT = /\A\S+\z/
   INTERNAL_EMAIL_DOMAIN = "users.fuel-loyalty.local"
 
   attr_writer :login
@@ -23,11 +24,16 @@ class User < ApplicationRecord
 
   devise :database_authenticatable, :recoverable, :rememberable, :validatable
 
+  before_validation :normalize_name
+  before_validation :normalize_username
+  before_validation :normalize_email
   before_validation :normalize_phone_number, if: :phone_number_attribute_available?
   before_validation :sync_internal_email_from_phone_number, if: :phone_number_attribute_available?
+  after_validation :suppress_internal_email_uniqueness_error
 
+  validates :name, presence: true
   validates :username, presence: true, uniqueness: { case_sensitive: false },
-                       format: { with: /\A[a-zA-Z0-9_]+\z/ }
+                       format: { with: USERNAME_FORMAT }
   validates :role, presence: true
   validates :employee_code, uniqueness: { case_sensitive: false }, allow_blank: true, if: -> { has_attribute?(:employee_code) }
   validates :subtitle, length: { maximum: 120 }, allow_blank: true, if: -> { has_attribute?(:subtitle) }
@@ -36,12 +42,15 @@ class User < ApplicationRecord
   validate :phone_number_required, if: :phone_number_required?
   validate :must_keep_at_least_one_admin, if: :demoting_last_admin?
 
+  scope :kept, -> { where(deleted_at: nil) }
+  scope :soft_deleted, -> { where.not(deleted_at: nil) }
+
   def login
     @login || username || stored_phone_number || email
   end
 
   def display_name
-    username.presence || display_phone_number || "User"
+    name.presence || username.presence || display_phone_number || "User"
   end
 
   def display_contact
@@ -78,9 +87,9 @@ class User < ApplicationRecord
         bindings[:phone] = normalize_phone_number(login)
       end
 
-      where(conditions).find_by(query, bindings)
+      kept.where(conditions).find_by(query, bindings)
     else
-      find_by(conditions)
+      kept.find_by(conditions)
     end
   end
 
@@ -97,7 +106,7 @@ class User < ApplicationRecord
   end
 
   def self.active
-    where(active: true)
+    kept.where(active: true)
   end
 
   def self.internal_email_for(phone_number)
@@ -110,6 +119,34 @@ class User < ApplicationRecord
 
   def email_required?
     false
+  end
+
+  def active_for_authentication?
+    super && active? && !soft_deleted?
+  end
+
+  def inactive_message
+    return :inactive unless active? && !soft_deleted?
+
+    super
+  end
+
+  def soft_deleted?
+    deleted_at.present?
+  end
+
+  def soft_delete!(at: Time.current)
+    if admin?
+      errors.add(:base, "Only staff accounts can be soft deleted")
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    if active?
+      errors.add(:base, "User is in active state. Deactivate before soft deleting")
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    update!(active: false, deleted_at: at)
   end
 
   def current_shift_assignment(on: Time.current)
@@ -153,12 +190,31 @@ class User < ApplicationRecord
     self[:phone_number] = self.class.normalize_phone_number(stored_phone_number)
   end
 
+  def normalize_name
+    self[:name] = name.to_s.squish.presence
+  end
+
+  def normalize_username
+    self[:username] = username.to_s.strip.presence
+  end
+
+  def normalize_email
+    self.email = email.to_s.strip.downcase.presence
+  end
+
   def sync_internal_email_from_phone_number
     phone_number = stored_phone_number
     return if phone_number.blank?
     return unless email.blank? || self.class.internal_email?(email)
 
     self.email = self.class.internal_email_for(phone_number)
+  end
+
+  def suppress_internal_email_uniqueness_error
+    return unless email.present? && self.class.internal_email?(email)
+    return unless errors[:email].include?("has already been taken")
+
+    errors.delete(:email)
   end
 
   def must_keep_at_least_one_admin

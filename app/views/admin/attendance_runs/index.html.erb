@@ -12,11 +12,51 @@
   </div>
 </div>
 
-<div class="d-flex flex-wrap gap-2 align-items-center mb-4">
-  <span class="small-muted">Filter</span>
-  <%= link_to "All", admin_attendance_runs_path, class: "btn btn-sm #{@record_filter == 'all' ? 'btn-primary' : 'btn-outline-secondary'}" %>
-  <%= link_to "Valid", admin_attendance_runs_path(filter: :valid), class: "btn btn-sm #{@record_filter == 'valid' ? 'btn-primary' : 'btn-outline-secondary'}" %>
-  <%= link_to "Invalid", admin_attendance_runs_path(filter: :invalid), class: "btn btn-sm #{@record_filter == 'invalid' ? 'btn-primary' : 'btn-outline-secondary'}" %>
+<div class="card shadow-sm admin-transactions-filter mb-4">
+  <div class="card-body">
+    <%= form_with url: admin_attendance_runs_path, method: :get, local: true, class: "admin-transactions-filter__form admin-attendance-filter__form" do |form| %>
+      <%= hidden_field_tag :filter, @record_filter %>
+
+      <div class="admin-transactions-filter__topline admin-attendance-filter__topline">
+        <div class="admin-transactions-filter__group">
+          <span class="admin-transactions-filter__label">Record State</span>
+          <div class="dashboard-filter-chips">
+            <%= link_to "All",
+              admin_attendance_runs_path(filter: "all", start_date: @current_start_date&.iso8601, end_date: @current_end_date&.iso8601),
+              class: "dashboard-filter-chip #{'is-active' if @record_filter == 'all'}" %>
+            <%= link_to "Valid",
+              admin_attendance_runs_path(filter: "valid", start_date: @current_start_date&.iso8601, end_date: @current_end_date&.iso8601),
+              class: "dashboard-filter-chip #{'is-active' if @record_filter == 'valid'}" %>
+            <%= link_to "Invalid",
+              admin_attendance_runs_path(filter: "invalid", start_date: @current_start_date&.iso8601, end_date: @current_end_date&.iso8601),
+              class: "dashboard-filter-chip #{'is-active' if @record_filter == 'invalid'}" %>
+          </div>
+
+        </div>
+        <div class="admin-transactions-filter__group admin-transactions-filter__range admin-attendance-filter__range">
+          <span class="admin-transactions-filter__label">Attendance Date</span>
+          <div class="admin-transactions-filter__range-fields">
+            <div>
+              <%= form.label :start_date, "From", class: "visually-hidden" %>
+              <%= form.date_field :start_date,
+                value: @current_start_date&.iso8601,
+                max: Date.current.iso8601,
+                class: "form-control admin-transactions-filter__date",
+                onchange: "this.form.requestSubmit()" %>
+            </div>
+            <div>
+              <%= form.label :end_date, "To", class: "visually-hidden" %>
+              <%= form.date_field :end_date,
+                value: @current_end_date&.iso8601,
+                max: Date.current.iso8601,
+                class: "form-control admin-transactions-filter__date",
+                onchange: "this.form.requestSubmit()" %>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
 </div>
 
 <% if @attendance_runs.any? %>
@@ -61,7 +101,7 @@
             <div class="admin-shift-item__details admin-shift-item__details--flush">
               <div class="admin-shift-item__detail">
                 <span class="admin-shift-item__detail-label">Recorded By</span>
-                <strong class="admin-shift-item__detail-value"><%= attendance_run.recorded_by.display_name.to_s.titleize %></strong>
+                <strong class="admin-shift-item__detail-value"><%= attendance_run.recorded_by.display_name %></strong>
               </div>
 
               <div class="admin-shift-item__detail">
@@ -86,10 +126,53 @@
       </div>
     <% end %>
   </div>
+
+  <div class="customer-details-ledger-pagination admin-attendance-pagination">
+    <div class="customer-details-ledger-pagination__summary admin-attendance-pagination__summary">
+      Showing <strong><%= @showing_from %>-<%= @showing_to %></strong> of <strong><%= @total_attendance_runs %></strong> attendance records
+    </div>
+
+    <% if @total_pages > 1 %>
+      <div class="customer-details-ledger-pagination__actions admin-attendance-pagination__actions">
+        <% if @current_page > 1 %>
+          <%= link_to admin_attendance_runs_path(filter: @record_filter, start_date: @current_start_date&.iso8601, end_date: @current_end_date&.iso8601, page: @current_page - 1),
+            class: "admin-attendance-pagination__button" do %>
+            <i class="ti ti-chevron-left" aria-hidden="true"></i>
+            <span>Previous</span>
+          <% end %>
+        <% else %>
+          <span class="admin-attendance-pagination__button is-disabled" aria-disabled="true">
+            <i class="ti ti-chevron-left" aria-hidden="true"></i>
+            <span>Previous</span>
+          </span>
+        <% end %>
+
+        <span class="customer-details-ledger-pagination__status admin-attendance-pagination__status">
+          <span class="admin-attendance-pagination__status-label">Page</span>
+          <strong><%= @current_page %></strong>
+          <span class="admin-attendance-pagination__status-separator">of</span>
+          <span><%= @total_pages %></span>
+        </span>
+
+        <% if @current_page < @total_pages %>
+          <%= link_to admin_attendance_runs_path(filter: @record_filter, start_date: @current_start_date&.iso8601, end_date: @current_end_date&.iso8601, page: @current_page + 1),
+            class: "admin-attendance-pagination__button" do %>
+            <span>Next</span>
+            <i class="ti ti-chevron-right" aria-hidden="true"></i>
+          <% end %>
+        <% else %>
+          <span class="admin-attendance-pagination__button is-disabled" aria-disabled="true">
+            <span>Next</span>
+            <i class="ti ti-chevron-right" aria-hidden="true"></i>
+          </span>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
 <% else %>
   <div class="card shadow-sm">
     <div class="card-body">
-      <h2 class="h5 mb-2">No attendance found for this filter</h2>
+      <h2 class="h5 mb-2">No attendance found for the current filters</h2>
       <p class="small-muted mb-0">Try another filter or start a new attendance run to see recorded shift windows here.</p>
     </div>
   </div>

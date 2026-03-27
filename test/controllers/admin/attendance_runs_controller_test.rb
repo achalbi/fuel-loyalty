@@ -18,6 +18,9 @@ module Admin
       assert_select ".admin-attendance-run__summary", text: /Absent 0/, count: 0
       assert_select "a.admin-attendance-run__open[href='#{admin_attendance_run_path(attendance_runs(:day_run))}']"
       assert_select "a[href='#{admin_attendance_runs_path(filter: :invalid)}']", text: "Invalid"
+      assert_select ".admin-transactions-filter"
+      assert_select "input[name='start_date'][max='#{Date.current.iso8601}']"
+      assert_select "input[name='end_date'][max='#{Date.current.iso8601}']"
     end
 
     test "admin can filter recorded attendance by invalid flag" do
@@ -38,6 +41,85 @@ module Admin
       assert_select "form[action='#{admin_attendance_run_path(stale_run)}']"
       assert_select ".admin-shift-item__detail-value", text: "Invalid"
       assert_select ".admin-shift-item__detail-value", text: "Valid", count: 0
+    end
+
+    test "admin can filter recorded attendance by date range" do
+      sign_in users(:one)
+
+      older_run = create_attendance_run_for(
+        shift_template: shift_templates(:day_shift),
+        starts_at: Time.zone.parse("2026-03-10 06:00"),
+        ends_at: Time.zone.parse("2026-03-10 18:00")
+      )
+      in_range_run = create_attendance_run_for(
+        shift_template: shift_templates(:day_shift),
+        starts_at: Time.zone.parse("2026-03-20 06:00"),
+        ends_at: Time.zone.parse("2026-03-20 18:00")
+      )
+
+      get admin_attendance_runs_path, params: { start_date: "2026-03-18", end_date: "2026-03-22" }
+
+      assert_response :success
+      assert_select "input[name='start_date'][value='2026-03-18']"
+      assert_select "input[name='end_date'][value='2026-03-22']"
+      assert_select "a.admin-attendance-run__open[href='#{admin_attendance_run_path(in_range_run)}']"
+      assert_select "a.admin-attendance-run__open[href='#{admin_attendance_run_path(older_run)}']", count: 0
+    end
+
+    test "attendance date filter clamps future end dates to today" do
+      sign_in users(:one)
+
+      travel_to Time.zone.local(2026, 3, 27, 12, 0, 0) do
+        current_run = create_attendance_run_for(
+          shift_template: shift_templates(:day_shift),
+          starts_at: Time.zone.parse("2026-03-27 06:00"),
+          ends_at: Time.zone.parse("2026-03-27 18:00")
+        )
+        future_run = create_attendance_run_for(
+          shift_template: shift_templates(:day_shift),
+          starts_at: Time.zone.parse("2026-03-29 06:00"),
+          ends_at: Time.zone.parse("2026-03-29 18:00")
+        )
+
+        get admin_attendance_runs_path, params: { start_date: "2026-03-20", end_date: "2026-04-15" }
+
+        assert_response :success
+        assert_select "input[name='end_date'][value='2026-03-27'][max='2026-03-27']"
+        assert_select "a.admin-attendance-run__open[href='#{admin_attendance_run_path(current_run)}']"
+        assert_select "a.admin-attendance-run__open[href='#{admin_attendance_run_path(future_run)}']", count: 0
+      end
+    end
+
+    test "attendance records are paginated with 6 items per page" do
+      sign_in users(:one)
+
+      paged_runs = 7.times.map do |index|
+        day_number = index + 1
+        create_attendance_run_for(
+          shift_template: shift_templates(:day_shift),
+          starts_at: Time.zone.parse("2026-04-#{format('%02d', day_number)} 06:00"),
+          ends_at: Time.zone.parse("2026-04-#{format('%02d', day_number)} 18:00")
+        )
+      end
+
+      newest_run = paged_runs.last
+      oldest_paged_run = paged_runs.first
+
+      get admin_attendance_runs_path
+
+      assert_response :success
+      assert_select ".admin-attendance-run-card", count: 6
+      assert_select ".customer-details-ledger-pagination__status", text: /Page 1 of 2/
+      assert_select "a.admin-attendance-run__open[href='#{admin_attendance_run_path(newest_run)}']"
+      assert_select "a.admin-attendance-run__open[href='#{admin_attendance_run_path(oldest_paged_run)}']", count: 0
+
+      get admin_attendance_runs_path, params: { page: 2 }
+
+      assert_response :success
+      assert_operator css_select(".admin-attendance-run-card").size, :<=, 6
+      assert_select ".customer-details-ledger-pagination__status", text: /Page 2 of 2/
+      assert_select "a.admin-attendance-run__open[href='#{admin_attendance_run_path(oldest_paged_run)}']"
+      assert_select "a.admin-attendance-run__open[href='#{admin_attendance_run_path(newest_run)}']", count: 0
     end
 
     test "admin can view attendance planner with assigned staff" do

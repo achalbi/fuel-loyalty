@@ -862,6 +862,18 @@
       modalElement.dataset.autoOpenModalHandled = "true";
       bootstrap.Modal.getOrCreateInstance(modalElement).show();
     });
+
+    document.querySelectorAll("[data-reset-on-close='reload']").forEach((modalElement) => {
+      if (modalElement.dataset.resetOnCloseHandled === "true") return;
+
+      modalElement.dataset.resetOnCloseHandled = "true";
+      modalElement.addEventListener("hidden.bs.modal", () => {
+        if (modalElement.dataset.autoOpenModal !== "true") return;
+
+        const resetUrl = modalElement.dataset.resetOnCloseUrl || `${window.location.pathname}${window.location.search}`;
+        window.location.replace(resetUrl);
+      });
+    });
   };
 
   const initializeLazyPointsLedger = () => {

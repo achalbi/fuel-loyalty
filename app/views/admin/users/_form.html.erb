@@ -9,13 +9,19 @@
     <% end %>
 
     <div>
-      <%= form.label :username, class: "form-label" %>
+      <%= form.label :name, class: "form-label" %>
+      <%= form.text_field :name, class: "form-control", required: true, autocomplete: "name", placeholder: "Full name" %>
+    </div>
+
+    <div>
+      <%= form.label :username, "Username (Login)", class: "form-label" %>
       <%= form.text_field :username, class: "form-control", required: true, autocomplete: "username" %>
+      <div class="form-text">This is the login username shown on the sign-in page.</div>
     </div>
 
     <div>
       <%= form.label :phone_number, "Mobile Number", class: "form-label" %>
-      <div class="input-group">
+      <div class="input-group admin-users-form__phone-group">
         <span class="input-group-text phone-prefix">+91</span>
         <%= form.telephone_field :phone_number, class: "form-control", required: true, placeholder: "10 digit mobile number", inputmode: "numeric", autocomplete: "tel-national", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit mobile number", data: { phone_number_field: true } %>
       </div>
@@ -29,6 +35,15 @@
     <div>
       <%= form.label :role, class: "form-label" %>
       <%= form.select :role, User.roles.keys.map { |role| [role.titleize, role] }, {}, class: "form-select" %>
+    </div>
+
+    <div>
+      <%= form.label :active, "Access Status", class: "form-label" %>
+      <%= form.select :active,
+        options_for_select([["Active", true], ["Inactive", false]], user.active?),
+        {},
+        class: "form-select" %>
+      <div class="form-text">Inactive users stay in history but cannot sign in until reactivated.</div>
     </div>
 
     <div>

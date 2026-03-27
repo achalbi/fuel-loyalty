@@ -1,7 +1,7 @@
 module Admin
   class ShiftAssignmentsController < BaseController
     def create
-      @staff_member = User.where(role: :staff).find(params[:staff_member_id])
+      @staff_member = User.kept.where(role: :staff).find(params[:staff_member_id])
       @shift_assignment = @staff_member.shift_assignments.build(notes: shift_assignment_params[:notes], active: true)
       @shift_assignment.shift_template = ShiftTemplate.find_by(id: shift_assignment_params[:shift_template_id])
       @shift_assignment.effective_from = Time.zone.now.change(sec: 0)
@@ -17,7 +17,7 @@ module Admin
 
       redirect_to admin_staff_members_path, notice: "Shift assigned successfully."
     rescue ActiveRecord::RecordInvalid
-      @staff_members = User.where(role: :staff).includes(shift_assignments: [{ shift_template: { shift_cycles: { shift_cycle_steps: :shift_template } } }, { shift_cycle: { shift_cycle_steps: :shift_template } }]).order(:username, :phone_number)
+      @staff_members = User.kept.where(role: :staff).includes(shift_assignments: [{ shift_template: { shift_cycles: { shift_cycle_steps: :shift_template } } }, { shift_cycle: { shift_cycle_steps: :shift_template } }]).order(:name, :username, :phone_number)
       @edit_staff_member = nil
       @active_staff_count = @staff_members.count(&:active?)
       @inactive_staff_count = @staff_members.count { |staff_member| !staff_member.active? }

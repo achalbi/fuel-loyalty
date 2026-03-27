@@ -10,6 +10,11 @@ module Admin
       authorize @user
     end
 
+    def show
+      @user = User.kept.find(params[:id])
+      authorize @user
+    end
+
     def create
       @user = User.new
       authorize @user
@@ -24,12 +29,12 @@ module Admin
     end
 
     def edit
-      @user = User.find(params[:id])
+      @user = User.kept.find(params[:id])
       authorize @user
     end
 
     def update
-      @user = User.find(params[:id])
+      @user = User.kept.find(params[:id])
       authorize @user
 
       assign_user_attributes(@user, filtered_update_params)
@@ -45,13 +50,13 @@ module Admin
     private
 
     def load_index_state(new_user: User.new(role: :staff), edit_user: nil)
-      @users = User.order(:role, :username, :phone_number)
+      @users = User.kept.order(:role, :name, :username, :phone_number)
       @user = new_user
       @edit_user = edit_user
     end
 
     def user_params
-      params.require(:user).permit(:username, :phone_number, :email, :password, :password_confirmation)
+      params.require(:user).permit(:name, :username, :phone_number, :email, :active, :password, :password_confirmation)
     end
 
     def filtered_update_params

@@ -1,14 +1,26 @@
 module Admin
   class AttendanceRunsController < BaseController
+    ATTENDANCE_RUNS_PER_PAGE = 6
+
     before_action :load_shift_templates, :load_active_staff_members, only: %i[new create]
 
     def index
       authorize AttendanceRun
       @record_filter = normalized_record_filter
-      attendance_scope = AttendanceRun
-        .includes(:shift_template, :recorded_by, attendance_entries: %i[scheduled_user actual_user replacement_user])
+      @current_start_date, @current_end_date = normalized_date_range
+      attendance_scope = filtered_attendance_scope(AttendanceRun.all)
+      attendance_scope = filtered_by_date_range(attendance_scope)
+      attendance_scope = attendance_scope
         .order(starts_at: :desc, created_at: :desc)
-      @attendance_runs = filtered_attendance_scope(attendance_scope)
+      @total_attendance_runs = attendance_scope.count
+      @total_pages = @total_attendance_runs.zero? ? 1 : (@total_attendance_runs.to_f / ATTENDANCE_RUNS_PER_PAGE).ceil
+      @current_page = normalized_page(@total_pages)
+      @attendance_runs = attendance_scope
+        .includes(:shift_template, :recorded_by, attendance_entries: %i[scheduled_user actual_user replacement_user])
+        .offset((@current_page - 1) * ATTENDANCE_RUNS_PER_PAGE)
+        .limit(ATTENDANCE_RUNS_PER_PAGE)
+      @showing_from = @total_attendance_runs.zero? ? 0 : ((@current_page - 1) * ATTENDANCE_RUNS_PER_PAGE) + 1
+      @showing_to = @total_attendance_runs.zero? ? 0 : @showing_from + @attendance_runs.size - 1
     end
 
     def new
@@ -94,7 +106,7 @@ module Admin
     end
 
     def load_active_staff_members
-      @active_staff_members = User.where(role: :staff, active: true).order(:username, :phone_number)
+      @active_staff_members = User.active.where(role: :staff).order(:name, :username, :phone_number)
     end
 
     def apply_planning_state
@@ -237,6 +249,44 @@ module Admin
       else
         scope
       end
+    end
+
+    def filtered_by_date_range(scope)
+      scope = scope.where("starts_at >= ?", @current_start_date.beginning_of_day) if @current_start_date.present?
+      scope = scope.where("starts_at <= ?", @current_end_date.end_of_day) if @current_end_date.present?
+      scope
+    end
+
+    def normalized_date_range
+      start_date = clamp_to_today(parse_date(params[:start_date]))
+      end_date = clamp_to_today(parse_date(params[:end_date]))
+
+      if start_date.present? && end_date.present? && start_date > end_date
+        [end_date, start_date]
+      else
+        [start_date, end_date]
+      end
+    end
+
+    def clamp_to_today(date)
+      return if date.blank?
+
+      [date, Time.zone.today].min
+    end
+
+    def normalized_page(total_pages)
+      page = params[:page].to_i
+      page = 1 if page < 1
+      page = total_pages if page > total_pages
+      page
+    end
+
+    def parse_date(value)
+      return if value.blank?
+
+      Date.iso8601(value.to_s)
+    rescue ArgumentError
+      nil
     end
   end
 end

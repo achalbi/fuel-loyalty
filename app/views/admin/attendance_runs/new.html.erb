@@ -95,7 +95,7 @@
 
               <div class="admin-attendance-entry__header">
                 <div>
-                  <h3 class="h6 mb-1"><%= entry.scheduled_user.display_name.to_s.titleize %></h3>
+                  <h3 class="h6 mb-1"><%= entry.scheduled_user.display_name %></h3>
                   <p class="small-muted mb-0"><%= entry.scheduled_user.display_phone_number || "Mobile not set" %></p>
                 </div>
                 <span class="badge text-bg-light border"><%= @selected_shift_template.name %></span>
@@ -117,7 +117,7 @@
                 <div>
                   <%= entry_form.label :actual_user_id, "Actual Staff", class: "form-label" %>
                   <%= entry_form.select :actual_user_id,
-                    options_for_select(@active_staff_members.map { |staff_member| [staff_member.display_name.to_s.titleize, staff_member.id] }, entry.actual_user_id || entry.scheduled_user_id),
+                    options_for_select(@active_staff_members.map { |staff_member| [staff_member.display_name, staff_member.id] }, entry.actual_user_id || entry.scheduled_user_id),
                     {},
                     class: "form-select" %>
                 </div>
@@ -125,7 +125,7 @@
                 <div data-attendance-replacement-fields class="<%= 'd-none' unless entry.absent? %>">
                   <%= entry_form.label :replacement_user_id, "Replacement Staff", class: "form-label" %>
                   <%= entry_form.select :replacement_user_id,
-                    options_for_select([["No internal replacement", nil]] + @active_staff_members.map { |staff_member| [staff_member.display_name.to_s.titleize, staff_member.id] }, entry.replacement_user_id),
+                    options_for_select([["No internal replacement", nil]] + @active_staff_members.map { |staff_member| [staff_member.display_name, staff_member.id] }, entry.replacement_user_id),
                     {},
                     class: "form-select",
                     data: { attendance_replacement_select: true } %>
