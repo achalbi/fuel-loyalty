@@ -1,6 +1,8 @@
 (() => {
   const ANALYTICS_ENDPOINT = "/analytics/events";
   const THEME_STORAGE_KEY = "fuel-loyalty-theme";
+  const MOBILE_SIDEBAR_RAIL_STORAGE_KEY = "fuel-loyalty-mobile-sidebar-rail";
+  const MOBILE_SIDEBAR_RAIL_DOCUMENT_CLASS = "mobile-sidebar-rail-enabled";
   const PUSH_TOKEN_STORAGE_KEY = "fuel-loyalty-fcm-token";
   const PUSH_OPT_OUT_STORAGE_KEY = "fuel-loyalty-push-opt-out";
   const PWA_INSTALL_EVENT_NAMES = new Set([
@@ -24,8 +26,49 @@
   };
 
   const currentPagePath = () => window.location.pathname;
+  const mobileSidebarRailEnabled = () => localStorage.getItem(MOBILE_SIDEBAR_RAIL_STORAGE_KEY) === "true";
+  const syncSidebarRailDocumentClass = (enabled = mobileSidebarRailEnabled()) => {
+    document.documentElement.classList.toggle(MOBILE_SIDEBAR_RAIL_DOCUMENT_CLASS, enabled);
+  };
+  const persistMobileSidebarRailEnabled = (enabled) => {
+    if (enabled) {
+      localStorage.setItem(MOBILE_SIDEBAR_RAIL_STORAGE_KEY, "true");
+      syncSidebarRailDocumentClass(true);
+      return;
+    }
+
+    localStorage.removeItem(MOBILE_SIDEBAR_RAIL_STORAGE_KEY);
+    syncSidebarRailDocumentClass(false);
+  };
+  const desktopSidebarEnabled = () => window.innerWidth >= 992;
+  const applySidebarShellState = (scope = document, { railEnabled = mobileSidebarRailEnabled() } = {}) => {
+    const sidebar = scope.querySelector?.("#sidebar");
+    const content = scope.querySelector?.("#content");
+    const topbar = scope.querySelector?.("#topbar");
+    const overlay = scope.querySelector?.("#overlay");
+    if (!sidebar || !content || !topbar) return;
+
+    const shouldShowRail = !desktopSidebarEnabled() && railEnabled;
+    sidebar.classList.toggle("mobile-rail", shouldShowRail);
+    sidebar.classList.toggle("mobile-show", shouldShowRail);
+    sidebar.classList.toggle("collapsed", shouldShowRail);
+    content.classList.remove("full");
+    topbar.classList.remove("full");
+    content.classList.toggle("mobile-rail", shouldShowRail);
+    topbar.classList.toggle("mobile-rail", shouldShowRail);
+
+    if (shouldShowRail) {
+      overlay?.classList.remove("show");
+    }
+
+    scope.querySelectorAll?.("[data-sidebar-mode-switch]").forEach((input) => {
+      input.checked = railEnabled;
+    });
+  };
 
   const isStandaloneMode = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+  syncSidebarRailDocumentClass();
 
   const installInstructionsForDevice = () => {
     const userAgent = window.navigator.userAgent.toLowerCase();
@@ -769,7 +812,7 @@
     const sidebar = document.getElementById("sidebar");
     const content = document.getElementById("content");
     const topbar = document.getElementById("topbar");
-    const toggleBtn = document.getElementById("toggleBtn");
+    const sidebarModeSwitch = document.querySelector("[data-sidebar-mode-switch]");
     const mobileBtn = document.getElementById("mobileBtn");
     const overlay = document.getElementById("overlay");
     const closeMobileSidebar = () => {
@@ -778,17 +821,21 @@
     };
 
     if (!sidebar || !content || !topbar) return;
-    if (sidebar.dataset.bound === "true") return;
+    if (sidebar.__bound === true) return;
 
-    sidebar.dataset.bound = "true";
+    sidebar.__bound = true;
 
-    toggleBtn?.addEventListener("click", () => {
-      sidebar.classList.toggle("collapsed");
-      content.classList.toggle("full");
-      topbar.classList.toggle("full");
+    applySidebarShellState();
+
+    sidebarModeSwitch?.addEventListener("change", (event) => {
+      const enabled = event.target.checked;
+      persistMobileSidebarRailEnabled(enabled);
+      applySidebarShellState(document, { railEnabled: enabled });
     });
 
     mobileBtn?.addEventListener("click", () => {
+      if (mobileSidebarRailEnabled()) return;
+
       sidebar.classList.add("mobile-show");
       overlay?.classList.add("show");
     });
@@ -799,7 +846,7 @@
 
     sidebar.querySelectorAll("a").forEach((link) => {
       link.addEventListener("click", () => {
-        if (window.innerWidth < 992) closeMobileSidebar();
+        if (window.innerWidth < 992 && !mobileSidebarRailEnabled()) closeMobileSidebar();
       });
     });
 
@@ -809,6 +856,7 @@
 
     window.addEventListener("resize", () => {
       if (window.innerWidth >= 992) closeMobileSidebar();
+      applySidebarShellState();
     });
   };
 
@@ -1432,6 +1480,7 @@
 
   document.addEventListener("turbo:load", initializeTheme);
   document.addEventListener("DOMContentLoaded", initializeTheme);
+  document.addEventListener("turbo:before-render", (event) => applySidebarShellState(event.detail.newBody));
   document.addEventListener("turbo:load", initializeSidebar);
   document.addEventListener("DOMContentLoaded", initializeSidebar);
   document.addEventListener("turbo:load", initializeConfirmModal);

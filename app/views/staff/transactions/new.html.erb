@@ -6,16 +6,28 @@
 
 <div class="card shadow-sm mb-2 transaction-entry-shell">
   <div class="card-body">
-    <h1 class="h3 mb-2">Record Fuel Transaction</h1>
-    <p class="text-muted mb-3">Find the customer for this visit using a phone number or vehicle number, then record the fuel amount.</p>
+    <div class="transaction-entry-titlebar">
+      <div class="transaction-entry-titlebar__heading">
+        <h1 class="h3 mb-0">Record Fuel Transaction</h1>
+        <button
+          type="button"
+          class="transaction-entry-titlebar__hint-toggle"
+          data-bs-toggle="collapse"
+          data-bs-target="#transactionEntryHeadingHint"
+          aria-expanded="false"
+          aria-controls="transactionEntryHeadingHint"
+          aria-label="Show transaction help"
+          title="Show transaction help">
+          <i class="ti ti-info-circle" aria-hidden="true"></i>
+        </button>
+      </div>
 
-    <% if firebase_web_push_enabled? %>
-      <%= render "shared/push_opt_in_panel",
-        source: "staff_transaction",
-        title: "Enable Notifications On This Device",
-        badge_label: "Recommended",
-        description: "Turn on push notifications so this installed app can receive loyalty alerts and scheduled broadcasts." %>
-    <% end %>
+      <div class="collapse transaction-entry-titlebar__hint" id="transactionEntryHeadingHint">
+        <div class="transaction-entry-titlebar__hint-card">
+          Find the customer for this visit using a phone number or vehicle number, then record the fuel amount.
+        </div>
+      </div>
+    </div>
 
     <ul class="nav nav-pills transaction-entry-tabs" id="transactionEntryTabs" role="tablist">
       <li class="nav-item" role="presentation">
@@ -24,6 +36,8 @@
           id="transaction-phone-tab"
           data-bs-toggle="tab"
           data-bs-target="#transaction-phone-pane"
+          data-lookup-tab-focus-target="phone"
+          data-lookup-tab-description="Find the customer first, then choose a vehicle."
           type="button"
           role="tab"
           aria-controls="transaction-phone-pane"
@@ -34,7 +48,6 @@
             </span>
             <span class="transaction-entry-tabs__title">Phone Number</span>
           </span>
-          <span class="transaction-entry-tabs__meta">Find the customer first, then choose a vehicle.</span>
         </button>
       </li>
       <li class="nav-item" role="presentation">
@@ -43,6 +56,8 @@
           id="transaction-vehicle-tab"
           data-bs-toggle="tab"
           data-bs-target="#transaction-vehicle-pane"
+          data-lookup-tab-focus-target="vehicle"
+          data-lookup-tab-description="Match the vehicle plate to the right customer profile."
           type="button"
           role="tab"
           aria-controls="transaction-vehicle-pane"
@@ -53,10 +68,15 @@
             </span>
             <span class="transaction-entry-tabs__title">Vehicle Number</span>
           </span>
-          <span class="transaction-entry-tabs__meta">Match the vehicle plate to the right customer profile.</span>
         </button>
       </li>
     </ul>
+
+    <div class="transaction-entry-tabs__description" aria-live="polite">
+      <p class="mb-0 transaction-entry-tabs__description-text" data-lookup-tab-description-target>
+        <%= vehicle_tab_active ? "Match the vehicle plate to the right customer profile." : "Find the customer first, then choose a vehicle." %>
+      </p>
+    </div>
   </div>
 </div>
 
@@ -78,8 +98,28 @@
         <div class="col-lg-7">
           <div class="card shadow-sm">
             <div class="card-body">
-              <h2 class="h4 mb-3">Lookup by Phone</h2>
-              <p class="text-muted">Enter the customer's phone number to load the profile, then choose the vehicle for this visit.</p>
+              <div class="transaction-entry-titlebar">
+                <div class="transaction-entry-titlebar__heading">
+                  <h2 class="h4 mb-0">Lookup by Phone</h2>
+                  <button
+                    type="button"
+                    class="transaction-entry-titlebar__hint-toggle"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#transactionPhoneLookupHint"
+                    aria-expanded="false"
+                    aria-controls="transactionPhoneLookupHint"
+                    aria-label="Show phone lookup help"
+                    title="Show phone lookup help">
+                    <i class="ti ti-info-circle" aria-hidden="true"></i>
+                  </button>
+                </div>
+
+                <div class="collapse transaction-entry-titlebar__hint" id="transactionPhoneLookupHint">
+                  <div class="transaction-entry-titlebar__hint-card">
+                    Enter the customer's phone number to load the profile, then choose the vehicle for this visit. Customer must already exist. Use the customer screen to register a new customer or add more vehicles.
+                  </div>
+                </div>
+              </div>
 
               <% if phone_tab_active && @errors.present? %>
                 <div class="alert alert-danger"><%= @errors.to_sentence %></div>
@@ -102,9 +142,8 @@
                       maxlength: 10,
                       pattern: "\\d{10}",
                       title: "Enter a 10 digit phone number",
-                      data: { phone_input: true, phone_number_field: true } %>
+                      data: { phone_input: true, phone_number_field: true, lookup_focus_input: "phone" } %>
                   </div>
-                  <div class="form-text">Customer must already exist. Use the customer screen to register a new customer or add more vehicles.</div>
                 </div>
 
                 <div>
@@ -201,8 +240,28 @@
         <div class="col-lg-7">
           <div class="card shadow-sm">
             <div class="card-body">
-              <h2 class="h4 mb-3">Lookup by Vehicle</h2>
-              <p class="text-muted">Enter the vehicle number to find the customer. If multiple customers share the same vehicle number, choose the correct profile before saving.</p>
+              <div class="transaction-entry-titlebar">
+                <div class="transaction-entry-titlebar__heading">
+                  <h2 class="h4 mb-0">Lookup by Vehicle</h2>
+                  <button
+                    type="button"
+                    class="transaction-entry-titlebar__hint-toggle"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#transactionVehicleLookupHint"
+                    aria-expanded="false"
+                    aria-controls="transactionVehicleLookupHint"
+                    aria-label="Show vehicle lookup help"
+                    title="Show vehicle lookup help">
+                    <i class="ti ti-info-circle" aria-hidden="true"></i>
+                  </button>
+                </div>
+
+                <div class="collapse transaction-entry-titlebar__hint" id="transactionVehicleLookupHint">
+                  <div class="transaction-entry-titlebar__hint-card">
+                    Enter the vehicle number to find the customer. If multiple customers share the same vehicle number, choose the correct profile before saving.
+                  </div>
+                </div>
+              </div>
 
               <% if vehicle_tab_active && @errors.present? %>
                 <div class="alert alert-danger"><%= @errors.to_sentence %></div>
@@ -217,12 +276,13 @@
                     value: vehicle_tab_active ? @prefill_vehicle_number : nil,
                     class: "form-control transaction-entry-lookup-input",
                     required: true,
+                    autofocus: vehicle_tab_active,
                     placeholder: "Enter vehicle no.",
                     autocomplete: "off",
                     spellcheck: "false",
                     autocapitalize: "characters",
                     title: "Enter a valid vehicle number",
-                    data: { vehicle_number_input: true } %>
+                    data: { vehicle_number_input: true, lookup_focus_input: "vehicle" } %>
                   <div class="form-text">Use the full vehicle number as printed on the plate.</div>
                 </div>
 
@@ -557,8 +617,8 @@
 
     const initializePhoneLookup = () => {
       document.querySelectorAll("[data-transaction-phone-root]").forEach((root) => {
-        if (root.dataset.lookupBound === "true") return;
-        root.dataset.lookupBound = "true";
+        if (root.__lookupBound === true) return;
+        root.__lookupBound = true;
 
         const lookupUrl = root.dataset.lookupUrl;
         const preselectedVehicleId = root.dataset.selectedVehicleId;
@@ -569,6 +629,7 @@
         let activeLookup = 0;
         let customerActive = false;
         let currentCustomer = null;
+        let suppressVehicleSelectBlurLookup = false;
 
         const resetVehicleSelect = () => {
           vehicleSelect.innerHTML = "";
@@ -709,10 +770,21 @@
           lookupTimer = setTimeout(loadCustomer, 300);
         });
 
-        phoneInput.addEventListener("blur", () => {
+        phoneInput.addEventListener("blur", (event) => {
+          if (event.relatedTarget === vehicleSelect || suppressVehicleSelectBlurLookup) {
+            suppressVehicleSelectBlurLookup = false;
+            return;
+          }
+
           if (card.consumeBlurSuppression()) return;
 
           loadCustomer();
+        });
+
+        vehicleSelect.addEventListener("pointerdown", () => {
+          if (document.activeElement === phoneInput) {
+            suppressVehicleSelectBlurLookup = true;
+          }
         });
 
         vehicleSelect.addEventListener("change", () => {
@@ -732,8 +804,8 @@
 
     const initializeVehicleLookup = () => {
       document.querySelectorAll("[data-transaction-vehicle-root]").forEach((root) => {
-        if (root.dataset.lookupBound === "true") return;
-        root.dataset.lookupBound = "true";
+        if (root.__lookupBound === true) return;
+        root.__lookupBound = true;
 
         const lookupUrl = root.dataset.lookupUrl;
         const preselectedVehicleId = root.dataset.selectedVehicleId;
@@ -744,6 +816,21 @@
         let activeLookup = 0;
         let currentMatches = [];
         let selectedMatch = null;
+        let suppressMatchSelectBlurLookup = false;
+
+        const focusVehicleNumberInput = () => {
+          if (!vehicleNumberInput || !vehicleNumberInput.hasAttribute("autofocus")) return;
+
+          const activePane = root.closest(".tab-pane");
+          if (activePane && (!activePane.classList.contains("show") || !activePane.classList.contains("active"))) return;
+          if (document.activeElement && document.activeElement !== document.body) return;
+
+          window.requestAnimationFrame(() => {
+            vehicleNumberInput.focus({ preventScroll: true });
+            const cursorPosition = vehicleNumberInput.value.length;
+            vehicleNumberInput.setSelectionRange(cursorPosition, cursorPosition);
+          });
+        };
 
         const resetMatchSelect = () => {
           matchSelect.innerHTML = "";
@@ -903,14 +990,25 @@
           lookupTimer = setTimeout(() => loadMatches({ force: false }), 300);
         });
 
-        vehicleNumberInput.addEventListener("blur", () => {
+        vehicleNumberInput.addEventListener("blur", (event) => {
           syncVehicleNumberValidity();
+          if (event.relatedTarget === matchSelect || suppressMatchSelectBlurLookup) {
+            suppressMatchSelectBlurLookup = false;
+            return;
+          }
+
           if (card.consumeBlurSuppression()) return;
 
           loadMatches({ force: true });
         });
 
         vehicleNumberInput.addEventListener("invalid", syncVehicleNumberValidity);
+
+        matchSelect.addEventListener("pointerdown", () => {
+          if (document.activeElement === vehicleNumberInput) {
+            suppressMatchSelectBlurLookup = true;
+          }
+        });
 
         matchSelect.addEventListener("change", applySelection);
 
@@ -922,12 +1020,99 @@
           card.clearPanel();
           resetMatchSelect();
         }
+
+        focusVehicleNumberInput();
       });
+    };
+
+    const lookupFocusTimers = {};
+    const syncLookupTabDescription = (button) => {
+      const target = document.querySelector("[data-lookup-tab-description-target]");
+      if (!target || !button) return;
+
+      target.textContent = button.dataset.lookupTabDescription || "";
+    };
+
+    const focusLookupInputNow = (targetKey) => {
+      const input = document.querySelector(`[data-lookup-focus-input="${targetKey}"]`);
+      if (!input) return;
+
+      const activePane = input.closest(".tab-pane");
+      if (activePane) {
+        activePane.classList.add("active", "show");
+      }
+
+      try {
+        input.focus({ preventScroll: true });
+      } catch (_error) {
+        input.focus();
+      }
+
+      if (typeof input.setSelectionRange === "function") {
+        const cursorPosition = input.value.length;
+        input.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    };
+
+    const focusLookupInput = (targetKey, { preserveExistingFocus = false } = {}) => {
+      const input = document.querySelector(`[data-lookup-focus-input="${targetKey}"]`);
+      if (!input) return;
+
+      const activePane = input.closest(".tab-pane");
+      if (activePane && (!activePane.classList.contains("show") || !activePane.classList.contains("active"))) return;
+      if (preserveExistingFocus && document.activeElement && document.activeElement !== document.body) return;
+
+      window.requestAnimationFrame(() => {
+        try {
+          input.focus({ preventScroll: true });
+        } catch (_error) {
+          input.focus();
+        }
+
+        if (typeof input.setSelectionRange === "function") {
+          const cursorPosition = input.value.length;
+          input.setSelectionRange(cursorPosition, cursorPosition);
+        }
+      });
+    };
+
+    const queueLookupInputFocus = (targetKey, options = {}) => {
+      window.clearTimeout(lookupFocusTimers[targetKey]);
+      lookupFocusTimers[targetKey] = window.setTimeout(() => {
+        focusLookupInput(targetKey, options);
+      }, options.delay ?? 0);
+    };
+
+    const initializeLookupTabFocus = () => {
+      document.querySelectorAll("[data-lookup-tab-focus-target]").forEach((button) => {
+        if (button.__lookupFocusBound === true) return;
+        button.__lookupFocusBound = true;
+
+        const targetKey = button.dataset.lookupTabFocusTarget;
+
+        button.addEventListener("shown.bs.tab", () => {
+          syncLookupTabDescription(button);
+          queueLookupInputFocus(targetKey, { delay: 0 });
+        });
+
+        button.addEventListener("click", () => {
+          syncLookupTabDescription(button);
+          focusLookupInputNow(targetKey);
+          queueLookupInputFocus(targetKey, { delay: 90 });
+        });
+      });
+
+      const activeButton = document.querySelector("[data-lookup-tab-focus-target].active");
+      if (activeButton) {
+        syncLookupTabDescription(activeButton);
+        queueLookupInputFocus(activeButton.dataset.lookupTabFocusTarget, { preserveExistingFocus: true, delay: 0 });
+      }
     };
 
     const initLookupTabs = () => {
       initializePhoneLookup();
       initializeVehicleLookup();
+      initializeLookupTabFocus();
     };
 
     document.addEventListener("turbo:load", initLookupTabs);

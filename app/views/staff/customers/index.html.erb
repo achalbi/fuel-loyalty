@@ -1,17 +1,19 @@
 <% content_for :title, "Customers" %>
 
 <div class="mb-4 page-header admin-customers-header">
-  <div class="page-intro mb-0">
-    <h1>Customers</h1>
+  <div class="page-intro admin-customers-header__intro mb-0">
+    <div class="admin-customers-header__topline">
+      <h1>Customers</h1>
+      <div class="page-actions">
+        <%= button_tag "+ Add Customer",
+          type: "button",
+          class: "admin-customers-create-action",
+          data: { bs_toggle: "modal", bs_target: "#addCustomerModal" },
+          aria: { label: "Add Customer" },
+          title: "Add Customer" %>
+      </div>
+    </div>
     <p>Search by customer name or phone number to open the customer profile and manage vehicles quickly.</p>
-  </div>
-  <div class="page-actions">
-    <%= button_tag "+",
-      type: "button",
-      class: "customer-details-quick-action admin-customers-create-action",
-      data: { bs_toggle: "modal", bs_target: "#addCustomerModal" },
-      aria: { label: "Add Customer" },
-      title: "Add Customer" %>
   </div>
 </div>
 

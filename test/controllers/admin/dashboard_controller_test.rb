@@ -22,7 +22,9 @@ module Admin
       assert_select "[data-dashboard-download]", text: /Download PDF/
       assert_select "[data-dashboard-export-summary]", 1
       assert_select "input[type='submit'][value='Apply']", 0
-      assert_select ".theme-switch-inline .theme-switch-shell--compact [data-theme-switch]", 1
+      assert_select ".user-menu .theme-switch-inline .theme-switch-shell--compact [data-theme-switch]", 1
+      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
+      assert_select ".user-menu [data-sidebar-mode-switch][aria-label='Show side navbar as icon-only bar']", 1
       assert_select "[data-kpi-card='total_customers']", 1
       assert_select "[data-dashboard-chart='transactions_trend']", 1
       assert_select "[data-dashboard-leaderboard='top_customers_by_transactions']", 1

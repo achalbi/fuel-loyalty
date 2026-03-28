@@ -18,7 +18,7 @@ module Staff
       assert_response :success
       assert_equal "private, no-store", response.headers["Cache-Control"]
       assert_select "h1", "Customers"
-      assert_select "button.customer-details-quick-action.admin-customers-create-action[data-bs-toggle='modal'][data-bs-target='#addCustomerModal'][aria-label='Add Customer']", text: "+"
+      assert_select "button.admin-customers-create-action[data-bs-toggle='modal'][data-bs-target='#addCustomerModal'][aria-label='Add Customer']", text: /\+ Add Customer/
       assert_select "#addCustomerModal"
       assert_select ".admin-customer-item", 3
 

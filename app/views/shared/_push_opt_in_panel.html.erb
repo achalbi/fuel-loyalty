@@ -1,4 +1,6 @@
-<section class="install-app-panel mt-4" data-push-opt-in-panel data-push-source="<%= source %>" aria-labelledby="<%= "#{source.parameterize}-push-title" %>">
+<% panel_class = local_assigns.fetch(:panel_class, "mt-4") %>
+
+<section class="install-app-panel <%= panel_class %>" data-push-opt-in-panel data-push-source="<%= source %>" aria-labelledby="<%= "#{source.parameterize}-push-title" %>">
   <div class="d-flex align-items-start gap-3">
     <div class="install-app-icon" aria-hidden="true">
       <i class="ti ti-bell-ringing"></i>

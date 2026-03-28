@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   get "/loyalty/result", to: "loyalty#show", as: :loyalty_result
 
   namespace :staff do
+    resource :notifications, only: :show, controller: "notifications"
     resources :customers, only: %i[index new create] do
       get :lookup, on: :collection
       patch :activate, on: :member

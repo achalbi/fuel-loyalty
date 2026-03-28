@@ -9,7 +9,7 @@ module Admin
 
       assert_response :success
       assert_select "h1", text: "Transactions"
-      assert_select "a.customer-details-quick-action.admin-transactions-create-action[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", text: "+"
+      assert_select "a.admin-transactions-create-action[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", text: "+ New"
       assert_select ".admin-transactions-list"
       assert_select ".admin-transaction-item", minimum: 1
       assert_select ".admin-transaction-item__amount", text: /₹/

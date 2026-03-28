@@ -1,17 +1,18 @@
 <% content_for :title, "Transactions" %>
 
 <div class="mb-4 page-header admin-transactions-header">
-  <div class="page-intro mb-0">
-    <h1>Transactions</h1>
+  <div class="page-intro admin-transactions-header__intro mb-0">
+    <div class="admin-transactions-header__topline">
+      <h1>Transactions</h1>
+      <div class="page-actions">
+        <%= link_to "+ New",
+          new_staff_transaction_path,
+          class: "admin-transactions-create-action",
+          aria: { label: "New Transaction" },
+          title: "New Transaction" %>
+      </div>
+    </div>
     <p>Review recent fuel transactions, the associated customer, and the operator who handled each visit.</p>
-  </div>
-
-  <div class="page-actions">
-    <%= link_to "+",
-      new_staff_transaction_path,
-      class: "customer-details-quick-action admin-transactions-create-action",
-      aria: { label: "New Transaction" },
-      title: "New Transaction" %>
   </div>
 </div>
 

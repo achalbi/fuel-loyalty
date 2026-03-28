@@ -1,0 +1,63 @@
+<% content_for :title, "Notifications" %>
+
+<div class="mb-4 page-header">
+  <div class="page-intro mb-0">
+    <h1>Notifications</h1>
+    <p>Manage push alerts for this device so staff can receive loyalty updates and station broadcasts without cluttering the transaction screen.</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <% if firebase_web_push_enabled? %>
+          <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+            <div>
+              <h2 class="h5 mb-1">This Device</h2>
+              <p class="small-muted mb-0">Turn notifications on or off for the phone, tablet, or computer you are using right now.</p>
+            </div>
+            <span class="badge text-bg-light border">Recommended</span>
+          </div>
+
+          <%= render "shared/push_opt_in_panel",
+            source: "staff_notifications",
+            title: "Enable Notifications On This Device",
+            badge_label: "Recommended",
+            description: "Turn on push notifications so this installed app can receive loyalty alerts and scheduled broadcasts.",
+            panel_class: "mt-0" %>
+        <% else %>
+          <div class="text-center py-4">
+            <div class="install-app-icon mx-auto mb-3" aria-hidden="true">
+              <i class="ti ti-bell-off"></i>
+            </div>
+            <h2 class="h5 mb-2">Push Notifications Are Unavailable</h2>
+            <p class="small-muted mb-0">Web push is not configured for this app right now. Ask an admin to finish the notification setup and then reload this page.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Why Enable It?</h2>
+        <div class="vstack gap-3">
+          <div class="border rounded-4 p-3 bg-body-tertiary">
+            <strong class="d-block mb-1">Receive station broadcasts</strong>
+            <p class="small-muted mb-0">Get loyalty updates and scheduled announcements on this device as soon as they are sent.</p>
+          </div>
+          <div class="border rounded-4 p-3 bg-body-tertiary">
+            <strong class="d-block mb-1">Keep shared devices ready</strong>
+            <p class="small-muted mb-0">If this is a shared counter device, enable notifications after signing in to the station app so the active installation registers correctly.</p>
+          </div>
+          <div class="border rounded-4 p-3 bg-body-tertiary">
+            <strong class="d-block mb-1">Retry from one place</strong>
+            <p class="small-muted mb-0">If alerts stop arriving, reopen this page to disable and re-enable notifications without leaving your main workflow.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

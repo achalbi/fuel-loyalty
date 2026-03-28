@@ -5,22 +5,35 @@ module Staff
     test "renders separate phone and vehicle transaction forms" do
       sign_in users(:two)
 
-      with_firebase_web_push_env do
-        get new_staff_transaction_path
-      end
+      get new_staff_transaction_path
 
       assert_response :success
+      assert_select ".transaction-entry-titlebar__heading h1", text: "Record Fuel Transaction"
+      assert_select ".transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionEntryHeadingHint'][aria-controls='transactionEntryHeadingHint']", 1
+      assert_select "#transactionEntryHeadingHint.collapse .transaction-entry-titlebar__hint-card", text: /Find the customer for this visit using a phone number or vehicle number/
       assert_select "#transactionEntryTabs"
+      assert_select "#transaction-phone-tab[data-lookup-tab-focus-target='phone'][data-lookup-tab-description='Find the customer first, then choose a vehicle.']", 1
+      assert_select "#transaction-vehicle-tab[data-lookup-tab-focus-target='vehicle'][data-lookup-tab-description='Match the vehicle plate to the right customer profile.']", 1
+      assert_select ".transaction-entry-tabs__meta", 0
+      assert_select "[data-lookup-tab-description-target]", text: "Match the vehicle plate to the right customer profile."
       assert_select "#transaction-phone-pane form[action='#{staff_transactions_path}']"
       assert_select "#transaction-vehicle-pane form[action='#{staff_transactions_path}']"
+      assert_select "#transaction-phone-pane .transaction-entry-titlebar__heading h2", text: "Lookup by Phone"
+      assert_select "#transaction-phone-pane .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionPhoneLookupHint'][aria-controls='transactionPhoneLookupHint']", 1
+      assert_select "#transactionPhoneLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Enter the customer's phone number to load the profile.*Customer must already exist/m
+      assert_select "#transaction-phone-pane .form-text", text: /Customer must already exist/, count: 0
+      assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__heading h2", text: "Lookup by Vehicle"
+      assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionVehicleLookupHint'][aria-controls='transactionVehicleLookupHint']", 1
+      assert_select "#transactionVehicleLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Enter the vehicle number to find the customer/
       assert_select "input[name='transaction[lookup_mode]'][value='phone']", 1
       assert_select "input[name='transaction[lookup_mode]'][value='vehicle']", 1
       assert_select "#transaction-vehicle-tab.active[aria-selected='true']"
       assert_select "#transaction-vehicle-pane.show.active"
       assert_select "#transaction-phone-tab:not(.active)[aria-selected='false']"
-      assert_select "#transaction-phone-pane input[name='transaction[phone_number]'].transaction-entry-lookup-input"
+      assert_select "#transaction-phone-pane input[name='transaction[phone_number]'].transaction-entry-lookup-input[data-lookup-focus-input='phone']"
       assert_select "#transaction-phone-pane .transaction-entry-lookup-prefix", text: "+91"
-      assert_select "#transaction-vehicle-pane input[name='transaction[vehicle_number]'].transaction-entry-lookup-input"
+      assert_select "#transaction-vehicle-pane input[name='transaction[vehicle_number]'].transaction-entry-lookup-input[data-lookup-focus-input='vehicle']"
+      assert_select "#transaction-vehicle-pane input[name='transaction[vehicle_number]'].transaction-entry-lookup-input[autofocus]", 1
       assert_select "[data-transaction-phone-root]"
       assert_select "[data-transaction-vehicle-root]"
       assert_select "[data-customer-placeholder]", minimum: 2
@@ -37,13 +50,15 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[phone_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[vehicle_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_amount]']"
-      assert_select "[data-push-opt-in-panel][data-push-source='staff_transaction']", 1
-      assert_select "[data-push-opt-in-panel] [data-push-button] span", text: "Enable Notifications"
-      assert_select "[data-push-opt-in-panel] [data-push-disable-button] span", text: "Disable Notifications"
+      assert_select "[data-push-opt-in-panel]", 0
+      assert_select "a.nav-link[href='#{staff_notifications_path}']", text: /Notifications/
       assert_match(/data-transaction-phone-root.*data-customer-error.*Lookup by Phone/m, response.body)
       assert_match(/data-transaction-vehicle-root.*data-customer-error.*Lookup by Vehicle/m, response.body)
       assert_includes response.body, "registerCustomerPath: payload.register_customer_path"
       assert_includes response.body, "registrationModal.openNow(registrationPayload)"
+      assert_includes response.body, "shown.bs.tab"
+      assert_includes response.body, "event.relatedTarget === vehicleSelect || suppressVehicleSelectBlurLookup"
+      assert_includes response.body, "event.relatedTarget === matchSelect || suppressMatchSelectBlurLookup"
     end
 
     test "looks up a customer by vehicle number" do

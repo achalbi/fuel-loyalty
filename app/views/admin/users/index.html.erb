@@ -1,17 +1,19 @@
 <% content_for :title, "Users" %>
 
 <div class="mb-4 page-header admin-users-header">
-  <div class="page-intro mb-0">
-    <h1>Users</h1>
+  <div class="page-intro admin-users-header__intro mb-0">
+    <div class="admin-users-header__topline">
+      <h1>Users</h1>
+      <div class="page-actions">
+        <%= button_tag "+ Add User",
+          type: "button",
+          class: "admin-users-create-action",
+          data: { bs_toggle: "modal", bs_target: "#addUserModal" },
+          aria: { label: "Add User" },
+          title: "Add User" %>
+      </div>
+    </div>
     <p>Create staff accounts, promote users to admin, and manage who can access the station dashboard.</p>
-  </div>
-  <div class="page-actions">
-    <%= button_tag "+ Add User",
-      type: "button",
-      class: "admin-users-create-action",
-      data: { bs_toggle: "modal", bs_target: "#addUserModal" },
-      aria: { label: "Add User" },
-      title: "Add User" %>
   </div>
 </div>
 

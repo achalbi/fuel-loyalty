@@ -8,7 +8,7 @@ module Admin
       get admin_customers_path
       assert_response :success
       assert_select "h1", text: "Customers"
-      assert_select "button.customer-details-quick-action.admin-customers-create-action[data-bs-toggle='modal'][data-bs-target='#addCustomerModal'][aria-label='Add Customer']", text: "+"
+      assert_select "button.admin-customers-create-action[data-bs-toggle='modal'][data-bs-target='#addCustomerModal'][aria-label='Add Customer']", text: /\+ Add Customer/
       assert_select "form.admin-customers-filter__form[action='#{admin_customers_path}']"
       assert_select ".admin-customers-filter__input[placeholder='Search by name, phone, or vehicle']"
       assert_select ".dashboard-filter-chip", text: "All"

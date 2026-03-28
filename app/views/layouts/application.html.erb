@@ -41,27 +41,21 @@
       <div id="overlay" class="overlay"></div>
 
       <nav id="topbar" class="navbar bg-white border-bottom fixed-top topbar px-3">
-        <button id="toggleBtn" class="d-none d-lg-inline-flex btn btn-light btn-icon btn-sm">
-          <i class="ti ti-layout-sidebar-left-expand"></i>
-        </button>
-
         <button id="mobileBtn" class="btn btn-light btn-icon btn-sm d-lg-none me-2">
           <i class="ti ti-layout-sidebar-left-expand"></i>
         </button>
 
         <div class="ms-auto d-flex align-items-center gap-2">
-          <span class="badge rounded-pill text-bg-light border px-3 py-2 topbar-role-badge"><%= current_user.role.titleize %></span>
+          <% if current_user.staff? || current_user.admin? %>
+            <%= link_to new_staff_transaction_path,
+              class: "btn btn-light btn-icon btn-sm",
+              aria: { label: "New Transaction" },
+              title: "New Transaction" do %>
+              <i class="ti ti-gas-station" aria-hidden="true"></i>
+            <% end %>
+          <% end %>
 
-          <div class="theme-switch-inline d-lg-none">
-            <div class="theme-switch-shell theme-switch-shell--compact" aria-label="Theme switch">
-              <i class="ti ti-sun-high theme-switch-icon"></i>
-              <div class="form-check form-switch mb-0">
-                <input class="form-check-input theme-switch-input" type="checkbox" role="switch" data-theme-switch aria-label="Toggle light and dark mode">
-              </div>
-              <i class="ti ti-moon-stars theme-switch-icon"></i>
-              <span class="theme-switch-text" data-theme-label></span>
-            </div>
-          </div>
+          <span class="badge rounded-pill text-bg-light border px-3 py-2 topbar-role-badge"><%= current_user.role.titleize %></span>
 
           <div class="dropdown">
             <a href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" class="avatar avatar-sm rounded-circle bg-primary-subtle text-primary text-decoration-none">
@@ -76,6 +70,34 @@
                 <div>
                   <h4 class="mb-0 small fw-semibold"><%= current_user.display_name %></h4>
                   <p class="mb-0 small text-muted"><%= current_user.display_phone_number || "Mobile not set" %></p>
+                </div>
+              </div>
+              <div class="border-bottom px-3 py-2 d-lg-none d-flex flex-column align-items-center gap-2">
+                <div class="theme-switch-inline d-flex justify-content-center">
+                  <div class="theme-switch-shell theme-switch-shell--compact" aria-label="Theme switch">
+                    <i class="ti ti-sun-high theme-switch-icon"></i>
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input theme-switch-input" type="checkbox" role="switch" data-theme-switch aria-label="Toggle light and dark mode">
+                    </div>
+                    <i class="ti ti-moon-stars theme-switch-icon"></i>
+                    <span class="theme-switch-text" data-theme-label></span>
+                  </div>
+                </div>
+                <div class="dropdown-divider my-0 w-100"></div>
+                <div class="sidebar-mode-inline d-flex justify-content-center">
+                  <div class="sidebar-mode-shell" aria-label="Sidebar display mode">
+                    <i class="ti ti-layout-sidebar-left-collapse sidebar-mode-icon" aria-hidden="true"></i>
+                    <div class="form-check form-switch mb-0">
+                      <input
+                        class="form-check-input sidebar-mode-input"
+                        type="checkbox"
+                        role="switch"
+                        data-sidebar-mode-switch
+                        aria-label="Show side navbar as icon-only bar">
+                    </div>
+                    <i class="ti ti-layout-sidebar-left-expand sidebar-mode-icon" aria-hidden="true"></i>
+                    <span class="sidebar-mode-text">Icons</span>
+                  </div>
                 </div>
               </div>
               <div class="p-2 d-flex flex-column gap-1 small">
@@ -118,6 +140,7 @@
             <li><%= link_to new_staff_transaction_path, class: "nav-link #{'active' if current_page?(new_staff_transaction_path)}" do %><i class="ti ti-gas-station"></i><span class="nav-text">New Transaction</span><% end %></li>
             <li><%= link_to staff_customers_path, class: "nav-link #{'active' if current_page?(staff_customers_path)}" do %><i class="ti ti-users"></i><span class="nav-text">Customers</span><% end %></li>
             <li><%= link_to new_staff_redemption_path, class: "nav-link #{'active' if current_page?(new_staff_redemption_path)}" do %><i class="ti ti-gift-card"></i><span class="nav-text">Redeem Points</span><% end %></li>
+            <li><%= link_to staff_notifications_path, class: "nav-link #{'active' if current_page?(staff_notifications_path)}" do %><i class="ti ti-bell-ringing"></i><span class="nav-text">Notifications</span><% end %></li>
           <% end %>
 
           <li class="px-4 pt-4 pb-2"><small class="nav-section-label">Access</small></li>
