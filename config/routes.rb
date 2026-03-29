@@ -48,6 +48,8 @@ Rails.application.routes.draw do
       patch :mark_valid, on: :member
     end
     resources :users, only: %i[index new create show edit update]
+    resources :fuel_types, only: %i[index create edit update destroy]
+    resources :vehicle_types, only: %i[index create edit update destroy]
     resource :fuel_reward_rates, only: %i[show update], controller: "fuel_reward_rates"
     resource :theme_settings, only: %i[show update], controller: "theme_settings"
     resources :schedules, only: %i[index create update destroy] do

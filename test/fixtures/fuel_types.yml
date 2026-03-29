@@ -1,0 +1,14 @@
+petrol:
+  code: petrol
+  name: Petrol
+  active: true
+
+diesel:
+  code: diesel
+  name: Diesel
+  active: true
+
+cng_lpg:
+  code: cng_lpg
+  name: CNG / LPG
+  active: true

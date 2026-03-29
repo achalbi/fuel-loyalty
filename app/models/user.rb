@@ -191,7 +191,7 @@ class User < ApplicationRecord
   end
 
   def normalize_name
-    self[:name] = name.to_s.squish.presence
+    self[:name] = name.to_s.squish.titleize.presence
   end
 
   def normalize_username

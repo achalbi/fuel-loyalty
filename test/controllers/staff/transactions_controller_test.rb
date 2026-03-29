@@ -50,6 +50,8 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[phone_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[vehicle_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_amount]']"
+      assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[fuel_type]'][value='petrol']", 1
+      assert_select "#transactionAddCustomerModal select[name='customer[fuel_type]']", 0
       assert_select "[data-push-opt-in-panel]", 0
       assert_select "a.nav-link[href='#{staff_notifications_path}']", text: /Notifications/
       assert_match(/data-transaction-phone-root.*data-customer-error.*Lookup by Phone/m, response.body)

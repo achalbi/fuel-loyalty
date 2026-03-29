@@ -1,0 +1,34 @@
+<% selected = selected_value.to_s.presence %>
+<% required = local_assigns.fetch(:required, false) %>
+<% empty_message = local_assigns.fetch(:empty_message, "No options are available right now.") %>
+<% icons_by_value = local_assigns.fetch(:icons_by_value, {}) %>
+
+<fieldset>
+  <legend class="form-label mb-2"><%= legend %></legend>
+
+  <% if hint.present? %>
+    <div class="form-text mt-0 mb-2"><%= hint %></div>
+  <% end %>
+
+  <% if options.any? %>
+    <div class="fuel-type-radio-group">
+      <% options.each_with_index do |(option_label, option_value), index| %>
+        <% input_id = "#{field_id_prefix}_#{option_value}" %>
+        <% option_icon = icons_by_value[option_value.to_s] || icons_by_value[option_value] %>
+        <%= radio_button_tag input_name, option_value, selected == option_value.to_s, class: "btn-check", id: input_id, required: required && index.zero? %>
+        <%= label_tag input_id, class: "btn btn-outline-secondary" do %>
+          <% if option_icon.present? %>
+            <span class="fuel-type-radio-group__icon" aria-hidden="true"><i class="ti <%= option_icon %>"></i></span>
+          <% end %>
+          <span class="fuel-type-radio-group__text"><%= option_label %></span>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="alert alert-warning py-2 mb-0"><%= empty_message %></div>
+  <% end %>
+
+  <% if errors.any? %>
+    <div class="text-danger small mt-2"><%= errors.to_sentence %></div>
+  <% end %>
+</fieldset>

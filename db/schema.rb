@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_27_103000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_29_161500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -96,6 +96,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_27_103000) do
     t.integer "points_per_100", null: false
     t.datetime "updated_at", null: false
     t.index ["fuel_type"], name: "index_fuel_reward_rates_on_fuel_type", unique: true
+  end
+
+  create_table "fuel_types", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_fuel_types_on_active"
+    t.index ["code"], name: "index_fuel_types_on_code", unique: true
   end
 
   create_table "notification_schedules", force: :cascade do |t|
@@ -265,6 +275,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_27_103000) do
     t.index ["phone_number"], name: "index_users_on_phone_number", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["username"], name: "index_users_on_username", unique: true
+  end
+
+  create_table "vehicle_types", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "app_label_source", default: "short_name", null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "icon_name", null: false
+    t.string "name", null: false
+    t.string "short_name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_vehicle_types_on_active"
+    t.index ["code"], name: "index_vehicle_types_on_code", unique: true
   end
 
   create_table "vehicles", force: :cascade do |t|

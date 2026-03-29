@@ -38,6 +38,29 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "three_wheeler", vehicle.vehicle_kind
   end
 
+  test "edit vehicle keeps its inactive fuel type visible as a radio option" do
+    sign_in users(:two)
+    fuel_types(:petrol).update!(active: false)
+
+    get edit_customer_vehicle_path(customers(:one), vehicles(:one))
+
+    assert_response :success
+    assert_select "input[type='radio'][name='vehicle[fuel_type]'][value='petrol'][checked]", 1
+    assert_select "select[name='vehicle[fuel_type]']", 0
+  end
+
+  test "edit vehicle keeps its inactive vehicle type visible as a radio option" do
+    sign_in users(:two)
+    vehicle_types(:two_wheeler).update!(active: false)
+
+    get edit_customer_vehicle_path(customers(:one), vehicles(:one))
+
+    assert_response :success
+    assert_select "input[type='radio'][name='vehicle[vehicle_kind]'][value='two_wheeler'][checked]", 1
+    assert_select "label[for='vehicle_#{vehicles(:one).id}_vehicle_kind_two_wheeler'] i.ti.ti-bike", 1
+    assert_select "select[name='vehicle[vehicle_kind]']", 0
+  end
+
   test "staff can delete a vehicle without transaction history" do
     sign_in users(:two)
     vehicle = customers(:one).vehicles.create!(vehicle_number: "TN44AB9999", fuel_type: :petrol, vehicle_kind: :lmv)

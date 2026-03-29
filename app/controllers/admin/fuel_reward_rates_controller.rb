@@ -2,7 +2,7 @@ module Admin
   class FuelRewardRatesController < BaseController
     def show
       authorize FuelRewardRate
-      @fuel_reward_rates = FuelRewardRate.for_settings
+      load_settings
     end
 
     def update
@@ -18,26 +18,31 @@ module Admin
 
       redirect_to admin_fuel_reward_rates_path, notice: "Reward rates updated successfully."
     rescue ActiveRecord::RecordInvalid => e
-      @fuel_reward_rates = FuelRewardRate.for_settings
-      @fuel_reward_rates.each do |rate|
-        next unless rate.fuel_type == e.record.fuel_type
-
-        e.record.errors.each do |error|
-          rate.errors.add(error.attribute, error.message)
-        end
-      end
+      load_settings
+      attach_record_errors(e.record)
       flash.now[:alert] = e.record.errors.full_messages.to_sentence
       render :show, status: :unprocessable_entity
     end
 
     private
 
+    def load_settings
+      @fuel_reward_rates = FuelRewardRate.for_settings
+    end
+
+    def attach_record_errors(record)
+      target = @fuel_reward_rates.find { |rate| rate.fuel_type == record.fuel_type }
+      return if target.blank?
+
+      record.errors.each do |error|
+        target.errors.add(error.attribute, error.message)
+      end
+    end
+
     def permitted_rate_params
-      params.require(:fuel_reward_rates).permit(
-        petrol: [:points_per_100],
-        diesel: [:points_per_100],
-        cng_lpg: [:points_per_100]
-      ).to_h.deep_symbolize_keys
+      permitted_attributes = FuelRewardRate.setting_fuel_type_values.index_with { [:points_per_100] }
+
+      params.fetch(:fuel_reward_rates, ActionController::Parameters.new).permit(permitted_attributes).to_h.deep_symbolize_keys
     end
   end
 end

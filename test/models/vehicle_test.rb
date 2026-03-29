@@ -59,4 +59,77 @@ class VehicleTest < ActiveSupport::TestCase
     assert_not vehicle.valid?
     assert_includes vehicle.errors[:vehicle_number], "has already been taken"
   end
+
+  test "rejects an inactive fuel type for a new vehicle" do
+    fuel_types(:diesel).update!(active: false)
+
+    vehicle = Vehicle.new(
+      customer: customers(:one),
+      vehicle_number: "TN09AB1234",
+      fuel_type: :diesel,
+      vehicle_kind: :lmv
+    )
+
+    assert_not vehicle.valid?
+    assert_includes vehicle.errors[:fuel_type], "is not currently active"
+  end
+
+  test "allows keeping an inactive fuel type on an existing vehicle" do
+    fuel_types(:petrol).update!(active: false)
+    vehicle = vehicles(:one)
+    vehicle.vehicle_kind = :three_wheeler
+
+    assert vehicle.valid?
+  end
+
+  test "rejects an inactive vehicle type for a new vehicle" do
+    vehicle_types(:lmv).update!(active: false)
+
+    vehicle = Vehicle.new(
+      customer: customers(:one),
+      vehicle_number: "TN09AB5678",
+      fuel_type: :diesel,
+      vehicle_kind: :lmv
+    )
+
+    assert_not vehicle.valid?
+    assert_includes vehicle.errors[:vehicle_kind], "is not currently active"
+  end
+
+  test "allows keeping an inactive vehicle type on an existing vehicle" do
+    vehicle_types(:two_wheeler).update!(active: false)
+    vehicle = vehicles(:one)
+    vehicle.fuel_type = :diesel
+
+    assert vehicle.valid?
+  end
+
+  test "accepts a dynamically added fuel type" do
+    FuelType.create!(name: "EV Charging", active: true)
+
+    vehicle = Vehicle.new(
+      customer: customers(:one),
+      vehicle_number: "TN11EV1234",
+      fuel_type: "ev_charging",
+      vehicle_kind: :lmv
+    )
+
+    assert vehicle.valid?
+    assert_equal "EV Charging", vehicle.display_fuel_type
+  end
+
+  test "accepts a dynamically added vehicle type" do
+    VehicleType.create!(name: "Mini-Van", active: true)
+
+    vehicle = Vehicle.new(
+      customer: customers(:one),
+      vehicle_number: "TN11MV1234",
+      fuel_type: :diesel,
+      vehicle_kind: "mini-van"
+    )
+
+    assert vehicle.valid?
+    assert_equal "mini_van", vehicle.vehicle_kind
+    assert_equal "Mini-Van", vehicle.display_vehicle_kind
+  end
 end

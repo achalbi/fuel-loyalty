@@ -1,0 +1,32 @@
+<% autofocus = local_assigns.fetch(:autofocus, false) %>
+<% cancel_path = local_assigns[:cancel_path] %>
+
+<%= form_with model: [:admin, fuel_type], class: "vstack gap-3" do |form| %>
+  <% if fuel_type.errors.any? %>
+    <div class="alert alert-danger">
+      <%= fuel_type.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :name, "Fuel Type Name", class: "form-label" %>
+    <%= form.text_field :name, class: "form-control", required: true, autofocus: autofocus %>
+    <div class="form-text">The internal code is generated automatically the first time you save this fuel type.</div>
+  </div>
+
+  <div class="form-check form-switch reward-rate-toggle">
+    <%= form.check_box :active, class: "form-check-input" %>
+    <%= form.label :active, "Show in app", class: "form-check-label reward-rate-toggle__label" %>
+  </div>
+
+  <% if fuel_type.persisted? %>
+    <div class="form-text">Code: <code><%= fuel_type.code %></code></div>
+  <% end %>
+
+  <div class="d-flex gap-2">
+    <%= form.submit submit_label, class: "btn btn-primary" %>
+    <% if cancel_path.present? %>
+      <%= link_to "Cancel", cancel_path, class: "btn btn-outline-secondary" %>
+    <% end %>
+  </div>
+<% end %>

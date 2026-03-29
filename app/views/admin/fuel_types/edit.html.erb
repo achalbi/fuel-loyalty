@@ -1,0 +1,25 @@
+<% content_for :title, "Edit Fuel Type" %>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h3 mb-3">Edit Fuel Type</h1>
+        <p class="text-muted">Update the label and app availability for this fuel type. Reward points are managed in <%= link_to "Reward Rates", admin_fuel_reward_rates_path %>.</p>
+
+        <% vehicle_count = @fuel_type.vehicles.count %>
+        <% if vehicle_count.positive? %>
+          <div class="alert alert-light border">
+            This fuel type is currently used by <%= pluralize(vehicle_count, "vehicle") %>, so it cannot be removed until those vehicles are updated.
+          </div>
+        <% end %>
+
+        <%= render "form",
+          fuel_type: @fuel_type,
+          submit_label: "Save Fuel Type",
+          cancel_path: admin_fuel_types_path,
+          autofocus: true %>
+      </div>
+    </div>
+  </div>
+</div>

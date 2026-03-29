@@ -1478,6 +1478,75 @@
     });
   };
 
+  const normalizeVehicleTypeIconText = (value) => {
+    return String(value || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  };
+
+  const suggestedVehicleTypeIconName = (values = []) => {
+    const normalizedText = values
+      .map((value) => normalizeVehicleTypeIconText(value))
+      .filter(Boolean)
+      .join("_");
+
+    if (!normalizedText) return "ti-car";
+    if (/ambulance/.test(normalizedText)) return "ti-ambulance";
+    if (/firetruck|fire_truck|fire_engine/.test(normalizedText)) return "ti-firetruck";
+    if (/tractor/.test(normalizedText)) return "ti-tractor";
+    if (/bus|coach/.test(normalizedText)) return "ti-bus";
+    if (/caravan|camper|motorhome|rv/.test(normalizedText)) return "ti-caravan";
+    if (/forklift/.test(normalizedText)) return "ti-forklift";
+    if (/three_wheeler|three_wheel|rickshaw|auto|trike/.test(normalizedText)) return "ti-moped";
+    if (/pickup|delivery|cargo|goods|lorry|truck|hcv|mcv|lcv/.test(normalizedText)) return "ti-truck";
+    if (/suv|jeep|4wd|four_wheel_drive/.test(normalizedText)) return "ti-car-suv";
+    if (/motorbike|motor_cycle|motorcycle/.test(normalizedText)) return "ti-motorbike";
+    if (/moped/.test(normalizedText)) return "ti-moped";
+    if (/scooter|electric|ev/.test(normalizedText)) return "ti-scooter-electric";
+    if (/bike|bicycle|cycle|two_wheeler|two_wheel/.test(normalizedText)) return "ti-bike";
+
+    return "ti-car";
+  };
+
+  const initializeVehicleTypeIconPickers = () => {
+    document.querySelectorAll("[data-vehicle-type-icon-picker]").forEach((picker) => {
+      if (picker.dataset.bound === "true") return;
+      picker.dataset.bound = "true";
+
+      let manualSelection = picker.dataset.vehicleTypeIconAutoSuggest !== "true";
+      const sourceFields = Array.from(picker.querySelectorAll("[data-vehicle-type-icon-source]"));
+      const iconFields = Array.from(picker.querySelectorAll("[data-vehicle-type-icon-option]"));
+
+      if (iconFields.length === 0) return;
+
+      const applySuggestion = () => {
+        if (manualSelection) return;
+
+        const suggestedValue = suggestedVehicleTypeIconName(sourceFields.map((field) => field.value));
+        const suggestedField = iconFields.find((field) => field.value === suggestedValue);
+
+        if (suggestedField) {
+          suggestedField.checked = true;
+        }
+      };
+
+      iconFields.forEach((field) => {
+        field.addEventListener("change", () => {
+          manualSelection = true;
+        });
+      });
+
+      sourceFields.forEach((field) => {
+        field.addEventListener("input", applySuggestion);
+        field.addEventListener("change", applySuggestion);
+      });
+
+      applySuggestion();
+    });
+  };
+
   document.addEventListener("turbo:load", initializeTheme);
   document.addEventListener("DOMContentLoaded", initializeTheme);
   document.addEventListener("turbo:before-render", (event) => applySidebarShellState(event.detail.newBody));
@@ -1507,6 +1576,8 @@
   document.addEventListener("DOMContentLoaded", initializeShiftAssignmentForms);
   document.addEventListener("turbo:load", initializeShiftCycleForms);
   document.addEventListener("DOMContentLoaded", initializeShiftCycleForms);
+  document.addEventListener("turbo:load", initializeVehicleTypeIconPickers);
+  document.addEventListener("DOMContentLoaded", initializeVehicleTypeIconPickers);
   bindInstallPromptEvents();
   registerServiceWorker();
 })();

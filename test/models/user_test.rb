@@ -67,6 +67,27 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "user-9000000033@users.fuel-loyalty.local", user.email
   end
 
+  test "titleizes each word in the name when creating a user" do
+    user = User.create!(
+      name: "  raHul kumar  ",
+      username: "rahul_kumar",
+      phone_number: "9000000111",
+      password: "password123",
+      password_confirmation: "password123",
+      role: :staff
+    )
+
+    assert_equal "Rahul Kumar", user.name
+  end
+
+  test "titleizes each word in the name when updating a user" do
+    user = users(:two)
+
+    user.update!(name: "  shIfT cAptain  ")
+
+    assert_equal "Shift Captain", user.reload.name
+  end
+
   test "preserves an explicit email address when provided" do
     user = User.create!(
       name: "Staff With Email",

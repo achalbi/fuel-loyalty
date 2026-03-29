@@ -85,8 +85,74 @@ module Staff
       get new_staff_customer_path
 
       assert_response :success
+      assert_select "input[type='radio'][name='customer[fuel_type]'][value='petrol']", 1
+      assert_select "input[type='radio'][name='customer[fuel_type]'][value='diesel']", 1
+      assert_select "select[name='customer[fuel_type]']", 0
+      assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler']", 1
+      assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='lmv']", 1
+      assert_select "label[for='customer_vehicle_kind_two_wheeler'] i.ti.ti-bike", 1
+      assert_select "select[name='customer[vehicle_kind]']", 0
       assert_select "button[data-cancel-back-button='true'][data-fallback-path='#{staff_customers_path}']", text: "Cancel"
       assert_includes response.body, "window.history.back()"
+    end
+
+    test "staff new customer screen hides inactive fuel types" do
+      sign_in users(:two)
+      fuel_types(:diesel).update!(active: false)
+
+      get new_staff_customer_path
+
+      assert_response :success
+      assert_select "input[type='radio'][name='customer[fuel_type]'][value='petrol']", 1
+      assert_select "input[type='radio'][name='customer[fuel_type]'][value='diesel']", 0
+      assert_select "input[type='radio'][name='customer[fuel_type]'][value='cng_lpg']", 1
+    end
+
+    test "staff new customer screen hides inactive vehicle types" do
+      sign_in users(:two)
+      vehicle_types(:lmv).update!(active: false)
+
+      get new_staff_customer_path
+
+      assert_response :success
+      assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler']", 1
+      assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='lmv']", 0
+      assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='lcv']", 1
+      assert_select "select[name='customer[vehicle_kind]']", 0
+    end
+
+    test "staff new customer screen shows dynamically added vehicle types" do
+      sign_in users(:two)
+      VehicleType.create!(name: "Mini Van", short_name: "MV", app_label_source: "short_name", icon_name: "ti-car-suv", active: true)
+
+      get new_staff_customer_path
+
+      assert_response :success
+      assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='mini_van']", 1
+      assert_select "label[for='customer_vehicle_kind_mini_van']", text: "MV"
+      assert_select "label[for='customer_vehicle_kind_mini_van'] i.ti.ti-car-suv", 1
+    end
+
+    test "staff new customer screen can show full vehicle type name when configured" do
+      sign_in users(:two)
+      VehicleType.create!(name: "Pickup Truck", short_name: "PT", app_label_source: "name", icon_name: "ti-truck", active: true)
+
+      get new_staff_customer_path
+
+      assert_response :success
+      assert_select "label[for='customer_vehicle_kind_pickup_truck']", text: "Pickup Truck"
+      assert_select "label[for='customer_vehicle_kind_pickup_truck'] i.ti.ti-truck", 1
+    end
+
+    test "staff new customer screen shows dynamically added fuel types" do
+      sign_in users(:two)
+      FuelType.create!(name: "EV Charging", active: true)
+
+      get new_staff_customer_path
+
+      assert_response :success
+      assert_select "input[type='radio'][name='customer[fuel_type]'][value='ev_charging']", 1
+      assert_select "label[for='customer_fuel_type_ev_charging']", text: "EV Charging"
     end
 
     test "staff new customer screen prefills searched phone and vehicle values" do

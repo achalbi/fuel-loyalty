@@ -1,4 +1,18 @@
 <%= form_with model: [customer, vehicle], class: "vstack gap-2" do |form| %>
+  <% fuel_type_options = if vehicle.persisted?
+    FuelType.available_options(selected: vehicle.fuel_type)
+  else
+    FuelType.active_options
+  end %>
+  <% vehicle_type_options = if vehicle.persisted?
+    VehicleType.available_options(selected: vehicle.vehicle_kind)
+  else
+    VehicleType.active_options
+  end %>
+  <% vehicle_type_icons = VehicleType.icon_map_for(vehicle_type_options.map(&:last)) %>
+  <% fuel_type_field_prefix = "vehicle_#{vehicle.persisted? ? vehicle.id : "new"}_fuel_type" %>
+  <% vehicle_type_field_prefix = "vehicle_#{vehicle.persisted? ? vehicle.id : "new"}_vehicle_kind" %>
+
   <% if local_assigns[:context].present? %>
     <%= hidden_field_tag :vehicle_form_context, local_assigns[:context] %>
   <% end %>
@@ -13,13 +27,29 @@
   </div>
 
   <div>
-    <%= form.label :fuel_type, "Fuel Type", class: "form-label" %>
-    <%= form.select :fuel_type, Vehicle::FUEL_TYPE_OPTIONS, { prompt: "Select fuel type" }, class: "form-select", required: true %>
+    <%= render "shared/fuel_type_radio_group",
+      legend: "Fuel Type",
+      input_name: "vehicle[fuel_type]",
+      options: fuel_type_options,
+      selected_value: vehicle.fuel_type,
+      field_id_prefix: fuel_type_field_prefix,
+      errors: vehicle.errors[:fuel_type],
+      hint: "Inactive fuel types stay visible here only when the vehicle already uses them.",
+      required: true %>
   </div>
 
   <div>
-    <%= form.label :vehicle_kind, "Vehicle Type", class: "form-label" %>
-    <%= form.select :vehicle_kind, Vehicle::VEHICLE_KIND_OPTIONS, { prompt: "Select vehicle type" }, class: "form-select", required: true %>
+    <%= render "shared/fuel_type_radio_group",
+      legend: "Vehicle Type",
+      input_name: "vehicle[vehicle_kind]",
+      options: vehicle_type_options,
+      icons_by_value: vehicle_type_icons,
+      selected_value: vehicle.vehicle_kind,
+      field_id_prefix: vehicle_type_field_prefix,
+      errors: vehicle.errors[:vehicle_kind],
+      hint: "Inactive vehicle types stay visible here only when the vehicle already uses them.",
+      empty_message: "No active vehicle types are available right now.",
+      required: true %>
   </div>
 
   <%= form.submit submit_label, class: submit_class %>

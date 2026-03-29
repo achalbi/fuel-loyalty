@@ -447,8 +447,8 @@
       const nameField = modalElement.querySelector("[name='customer[name]']");
       const phoneField = modalElement.querySelector("[name='customer[phone_number]']");
       const vehicleField = modalElement.querySelector("[name='customer[vehicle_number]']");
-      const fuelTypeField = modalElement.querySelector("[name='customer[fuel_type]']");
-      const vehicleKindField = modalElement.querySelector("[name='customer[vehicle_kind]']");
+      const fuelTypeFields = modalElement.querySelectorAll("[name='customer[fuel_type]']");
+      const vehicleKindFields = modalElement.querySelectorAll("[name='customer[vehicle_kind]']");
       const lookupModeField = modalElement.querySelector("[name='transaction_lookup[lookup_mode]']");
       const lookupPhoneField = modalElement.querySelector("[name='transaction_lookup[phone_number]']");
       const lookupVehicleField = modalElement.querySelector("[name='transaction_lookup[vehicle_number]']");
@@ -478,8 +478,12 @@
         if (nameField) nameField.value = "";
         if (phoneField) phoneField.value = phoneNumber;
         if (vehicleField) vehicleField.value = vehicleNumber;
-        if (fuelTypeField) fuelTypeField.value = "";
-        if (vehicleKindField) vehicleKindField.value = "";
+        fuelTypeFields.forEach((field) => {
+          field.checked = false;
+        });
+        vehicleKindFields.forEach((field) => {
+          field.checked = false;
+        });
         if (lookupModeField) lookupModeField.value = lookupMode;
         if (lookupPhoneField) lookupPhoneField.value = phoneNumber;
         if (lookupVehicleField) lookupVehicleField.value = vehicleNumber;

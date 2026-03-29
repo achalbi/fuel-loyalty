@@ -86,6 +86,20 @@ module Admin
         end
       end
 
+      test "includes dynamically added fuel types in dashboard filters" do
+        FuelType.create!(name: "EV Charging", active: true)
+
+        report = OverviewReport.new(
+          start_date: 7.days.ago.to_date.iso8601,
+          end_date: Date.current.iso8601,
+          segment: "all"
+        )
+
+        filter_values = report.as_json.dig(:filters, :fuel_types).map { |item| item[:value] }
+
+        assert_includes filter_values, "ev_charging"
+      end
+
       test "groups redeemed points into 100-point slabs for the rewards chart" do
         travel_to Time.zone.local(2026, 6, 1, 10, 0, 0) do
           customer = Customer.create!(name: "Rewards Driver", phone_number: "9333333333", created_at: 20.days.ago)

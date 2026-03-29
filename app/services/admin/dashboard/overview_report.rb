@@ -13,9 +13,6 @@ module Admin
         "new" => "New customers",
         "repeat" => "Repeat customers"
       }.freeze
-      FUEL_TYPES = Vehicle::FUEL_TYPE_OPTIONS.each_with_object({ "all" => "Total" }) do |(label, value), options|
-        options[value] = label
-      end.freeze
       WEEKDAY_ORDER = {
         1 => "Mon",
         2 => "Tue",
@@ -29,8 +26,9 @@ module Admin
 
       def initialize(start_date:, end_date:, segment:, preset: nil, fuel_type: nil)
         @preset = QUICK_RANGES.key?(preset.to_s) ? preset.to_s : nil
-        @fuel_type = FUEL_TYPES.key?(fuel_type.to_s) ? fuel_type.to_s : "all"
         @segment = SEGMENTS.key?(segment.to_s) ? segment.to_s : "all"
+        @fuel_type_options = available_fuel_type_options
+        @fuel_type = @fuel_type_options.key?(fuel_type.to_s) ? fuel_type.to_s : "all"
 
         if @preset.present?
           @start_date, @end_date = dates_for_preset(@preset)
@@ -51,7 +49,7 @@ module Admin
           meta: {
             range_label: "#{start_date.strftime('%d %b %Y')} - #{end_date.strftime('%d %b %Y')}",
             segment_label: SEGMENTS.fetch(segment),
-            fuel_type_label: FUEL_TYPES.fetch(fuel_type),
+            fuel_type_label: fuel_type_options.fetch(fuel_type),
             generated_at: Time.current.iso8601
           }
         }
@@ -66,13 +64,13 @@ module Admin
           segment: segment,
           segments: SEGMENTS.map { |value, label| { value:, label: } },
           fuel_type: fuel_type,
-          fuel_types: FUEL_TYPES.map { |value, label| { value:, label: } }
+          fuel_types: fuel_type_options.map { |value, label| { value:, label: } }
         }
       end
 
       private
 
-      attr_reader :start_date, :end_date, :segment, :preset, :fuel_type
+      attr_reader :start_date, :end_date, :segment, :preset, :fuel_type, :fuel_type_options
 
       def parse_date(value)
         return if value.blank?
@@ -97,6 +95,14 @@ module Admin
             end_date: preset_end.iso8601
           }
         end
+      end
+
+      def available_fuel_type_options
+        { "all" => "Total" }.merge(
+          FuelType.for_settings.each_with_object({}) do |fuel_type_record, options|
+            options[fuel_type_record.code] = fuel_type_record.name
+          end
+        )
       end
 
       def dates_for_preset(value)
@@ -249,13 +255,15 @@ module Admin
           .group("vehicles.fuel_type")
           .sum(:fuel_amount)
 
-        Vehicle::FUEL_TYPE_OPTIONS.filter_map do |label, fuel_type|
-          amount = grouped_revenue[fuel_type].to_f
+        ordered_codes = (FuelType.for_settings.map(&:code) + grouped_revenue.keys.map(&:to_s)).uniq
+
+        ordered_codes.filter_map do |fuel_type_code|
+          amount = grouped_revenue[fuel_type_code].to_f
           next if amount.zero?
 
           {
-            key: fuel_type,
-            label: label,
+            key: fuel_type_code,
+            label: FuelType.label_for(fuel_type_code),
             value: amount.round(2),
             display_value: display_metric(amount, format: :currency)
           }

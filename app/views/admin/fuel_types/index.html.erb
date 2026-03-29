@@ -1,0 +1,71 @@
+<% content_for :title, "Fuel Types" %>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h1 class="h3 mb-3">Fuel Types</h1>
+        <p class="text-muted">Add fuel types shown across the app. Reward points are configured separately in <%= link_to "Reward Rates", admin_fuel_reward_rates_path %>.</p>
+
+        <%= render "form",
+          fuel_type: @fuel_type,
+          submit_label: "Add Fuel Type",
+          autofocus: true %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h2 class="h4 mb-1">Existing Fuel Types</h2>
+            <p class="text-muted mb-0">Edit names, hide fuel types from new selections, or remove unused ones.</p>
+          </div>
+          <span class="badge rounded-pill text-bg-light border"><%= pluralize(@fuel_types.count, "fuel type") %></span>
+        </div>
+
+        <% if @fuel_types.any? %>
+          <div class="reward-rates-form vstack gap-3">
+            <% @fuel_types.each do |fuel_type| %>
+              <% vehicle_count = fuel_type.vehicles.count %>
+
+              <div class="reward-rate-row">
+                <div class="reward-rate-copy">
+                  <div class="reward-rate-title"><%= fuel_type.name %></div>
+                  <p class="reward-rate-meta mb-0">
+                    Code: <code><%= fuel_type.code %></code>.
+                    <%= fuel_type.active? ? "Shown in app." : "Hidden from new selections." %>
+                    <%= vehicle_count.positive? ? "Used by #{pluralize(vehicle_count, 'vehicle')}." : "Not used by any vehicles yet." %>
+                  </p>
+                </div>
+
+                <div class="reward-rate-field d-flex flex-column align-items-end gap-2">
+                  <span class="badge rounded-pill <%= fuel_type.active? ? "text-bg-success" : "text-bg-secondary" %>"><%= fuel_type.active? ? "Active" : "Inactive" %></span>
+
+                  <div class="d-flex gap-2">
+                    <%= link_to "Edit", edit_admin_fuel_type_path(fuel_type), class: "btn btn-outline-secondary btn-sm" %>
+                    <%= button_to "Delete",
+                      admin_fuel_type_path(fuel_type),
+                      method: :delete,
+                      class: "btn btn-outline-danger btn-sm",
+                      form: {
+                        class: "d-inline-block",
+                        data: {
+                          confirm_modal: true,
+                          confirm_message: "Remove #{fuel_type.name}?"
+                        }
+                      } %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="alert alert-light border mb-0">No fuel types have been added yet.</div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

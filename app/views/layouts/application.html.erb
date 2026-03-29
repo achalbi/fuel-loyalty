@@ -124,6 +124,8 @@
             <li><%= link_to admin_users_path, class: "nav-link #{'active' if request.path.start_with?(admin_users_path)}" do %><i class="ti ti-user-cog"></i><span class="nav-text">Users</span><% end %></li>
             <li><%= link_to admin_customers_path, class: "nav-link #{'active' if current_page?(admin_customers_path)}" do %><i class="ti ti-users"></i><span class="nav-text">Customers</span><% end %></li>
             <li><%= link_to admin_transactions_path, class: "nav-link #{'active' if current_page?(admin_transactions_path)}" do %><i class="ti ti-receipt"></i><span class="nav-text">Transactions</span><% end %></li>
+            <li><%= link_to admin_fuel_types_path, class: "nav-link #{'active' if controller_path == 'admin/fuel_types'}" do %><i class="ti ti-gas-station"></i><span class="nav-text">Fuel Types</span><% end %></li>
+            <li><%= link_to admin_vehicle_types_path, class: "nav-link #{'active' if controller_path == 'admin/vehicle_types'}" do %><i class="ti ti-car"></i><span class="nav-text">Vehicle Types</span><% end %></li>
             <li><%= link_to admin_fuel_reward_rates_path, class: "nav-link #{'active' if current_page?(admin_fuel_reward_rates_path)}" do %><i class="ti ti-adjustments"></i><span class="nav-text">Reward Rates</span><% end %></li>
             <li><%= link_to new_staff_redemption_path, class: "nav-link #{'active' if current_page?(new_staff_redemption_path)}" do %><i class="ti ti-gift-card"></i><span class="nav-text">Redeem Points</span><% end %></li>
             <li><%= link_to new_admin_points_adjustment_path, class: "nav-link #{'active' if current_page?(new_admin_points_adjustment_path)}" do %><i class="ti ti-arrows-diff"></i><span class="nav-text">Adjust Points</span><% end %></li>

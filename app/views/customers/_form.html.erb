@@ -2,6 +2,11 @@
 <% show_back_cancel_button = local_assigns[:show_back_cancel_button] %>
 <% cancel_fallback_path = local_assigns[:cancel_fallback_path] %>
 <% hidden_fields = local_assigns[:hidden_fields] || {} %>
+<% selected_fuel_type = params.dig(customer.model_name.param_key, :fuel_type).presence %>
+<% selected_vehicle_kind = params.dig(customer.model_name.param_key, :vehicle_kind).presence %>
+<% fuel_type_options = FuelType.active_options %>
+<% vehicle_type_options = VehicleType.active_options %>
+<% vehicle_type_icons = VehicleType.icon_map_for(vehicle_type_options.map(&:last)) %>
 
 <% form_markup = capture do %>
   <%= form_with model: customer, url: form_url, method: form_method, class: "vstack gap-3" do |form| %>
@@ -32,13 +37,27 @@
       </div>
 
       <div>
-        <%= form.label :fuel_type, "Fuel Type", class: "form-label" %>
-        <%= form.select :fuel_type, Vehicle::FUEL_TYPE_OPTIONS, { prompt: "Select fuel type" }, class: "form-select" %>
+        <%= render "shared/fuel_type_radio_group",
+          legend: "Fuel Type",
+          input_name: "customer[fuel_type]",
+          options: fuel_type_options,
+          selected_value: selected_fuel_type,
+          field_id_prefix: "customer_fuel_type",
+          errors: customer.errors[:fuel_type],
+          hint: "Only active fuel types appear here." %>
       </div>
 
       <div>
-        <%= form.label :vehicle_kind, "Vehicle Type", class: "form-label" %>
-        <%= form.select :vehicle_kind, Vehicle::VEHICLE_KIND_OPTIONS, { prompt: "Select vehicle type" }, class: "form-select" %>
+        <%= render "shared/fuel_type_radio_group",
+          legend: "Vehicle Type",
+          input_name: "customer[vehicle_kind]",
+          options: vehicle_type_options,
+          icons_by_value: vehicle_type_icons,
+          selected_value: selected_vehicle_kind,
+          field_id_prefix: "customer_vehicle_kind",
+          errors: customer.errors[:vehicle_kind],
+          hint: "Only active vehicle types appear here.",
+          empty_message: "No active vehicle types are available right now." %>
       </div>
     <% end %>
 

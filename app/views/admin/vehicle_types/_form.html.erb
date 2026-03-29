@@ -1,0 +1,83 @@
+<% autofocus = local_assigns.fetch(:autofocus, false) %>
+<% cancel_path = local_assigns[:cancel_path] %>
+<% selected_icon_name = vehicle_type.icon_name.presence || VehicleType.suggested_icon_name_for(code: vehicle_type.code, name: vehicle_type.name) %>
+<% auto_suggest_icon = vehicle_type.new_record? && vehicle_type.icon_name.blank? %>
+
+<%= form_with model: [:admin, vehicle_type], class: "vstack gap-3", data: { vehicle_type_icon_picker: true, vehicle_type_icon_auto_suggest: auto_suggest_icon.to_s } do |form| %>
+  <% if vehicle_type.errors.any? %>
+    <div class="alert alert-danger">
+      <%= vehicle_type.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :name, "Vehicle Type Name", class: "form-label" %>
+    <%= form.text_field :name, class: "form-control", required: true, autofocus: autofocus, data: { vehicle_type_icon_source: "name" } %>
+    <div class="form-text">Full name used in admin and vehicle details.</div>
+  </div>
+
+  <div>
+    <%= form.label :short_name, "Short Name", class: "form-label" %>
+    <%= form.text_field :short_name, class: "form-control", placeholder: "LMV" %>
+    <div class="form-text">Optional shorter label you can choose to use across the app.</div>
+  </div>
+
+  <div>
+    <div class="form-label mb-2">App Label</div>
+    <div class="d-flex flex-wrap gap-3">
+      <div class="form-check">
+        <%= form.radio_button :app_label_source, "name", class: "form-check-input" %>
+        <%= form.label :app_label_source_name, "Use Vehicle Type Name", class: "form-check-label" %>
+      </div>
+      <div class="form-check">
+        <%= form.radio_button :app_label_source, "short_name", class: "form-check-input" %>
+        <%= form.label :app_label_source_short_name, "Use Short Name", class: "form-check-label" %>
+      </div>
+    </div>
+    <div class="form-text">This controls which label appears in customer, vehicle, and transaction vehicle-type displays.</div>
+  </div>
+
+  <% if vehicle_type.new_record? %>
+    <div>
+      <%= form.label :code, "Code", class: "form-label" %>
+      <%= form.text_field :code, class: "form-control", placeholder: "vehicle_type_code", pattern: "[a-z_]+", title: "Use lowercase letters and underscores only.", data: { vehicle_type_icon_source: "code" } %>
+      <div class="form-text">Optional. Leave blank to generate the code from the name. Use lowercase letters and underscores only. Once created, the code stays fixed.</div>
+    </div>
+  <% end %>
+
+  <div>
+    <div class="form-label mb-2">Icon</div>
+    <div class="vehicle-type-icon-picker">
+      <% VehicleType.icon_options.each do |icon_option| %>
+        <% input_id = "#{form.object_name}_icon_name_#{icon_option[:value].delete_prefix('ti-').tr('-', '_')}" %>
+        <%= form.radio_button :icon_name,
+          icon_option[:value],
+          class: "btn-check",
+          id: input_id,
+          checked: selected_icon_name == icon_option[:value],
+          data: { vehicle_type_icon_option: true } %>
+        <%= label_tag input_id, class: "btn btn-outline-secondary vehicle-type-icon-picker__option" do %>
+          <span class="vehicle-type-icon-picker__icon" aria-hidden="true"><i class="ti <%= icon_option[:value] %>"></i></span>
+          <span class="vehicle-type-icon-picker__label"><%= icon_option[:label] %></span>
+        <% end %>
+      <% end %>
+    </div>
+    <div class="form-text">Choose the icon shown for this vehicle type. On new records, the app will suggest one from the vehicle type name or code until you pick manually.</div>
+  </div>
+
+  <div class="form-check form-switch reward-rate-toggle">
+    <%= form.check_box :active, class: "form-check-input" %>
+    <%= form.label :active, "Show in app", class: "form-check-label reward-rate-toggle__label" %>
+  </div>
+
+  <% if vehicle_type.persisted? %>
+    <div class="form-text">Code: <code><%= vehicle_type.code %></code>. This stays fixed after creation.</div>
+  <% end %>
+
+  <div class="d-flex gap-2">
+    <%= form.submit submit_label, class: "btn btn-primary" %>
+    <% if cancel_path.present? %>
+      <%= link_to "Cancel", cancel_path, class: "btn btn-outline-secondary" %>
+    <% end %>
+  </div>
+<% end %>

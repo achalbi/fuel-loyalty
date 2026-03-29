@@ -1,0 +1,47 @@
+two_wheeler:
+  app_label_source: short_name
+  code: two_wheeler
+  icon_name: ti-bike
+  name: Two-Wheeler
+  short_name: Two-Wheeler
+  active: true
+
+three_wheeler:
+  app_label_source: short_name
+  code: three_wheeler
+  icon_name: ti-moped
+  name: Three-Wheeler
+  short_name: Three-Wheeler
+  active: true
+
+lmv:
+  app_label_source: short_name
+  code: lmv
+  icon_name: ti-car
+  name: LMV
+  short_name: LMV
+  active: true
+
+lcv:
+  app_label_source: short_name
+  code: lcv
+  icon_name: ti-truck
+  name: LCV
+  short_name: LCV
+  active: true
+
+mcv:
+  app_label_source: short_name
+  code: mcv
+  icon_name: ti-truck
+  name: MCV
+  short_name: MCV
+  active: true
+
+hcv:
+  app_label_source: short_name
+  code: hcv
+  icon_name: ti-truck
+  name: HCV
+  short_name: HCV
+  active: true
