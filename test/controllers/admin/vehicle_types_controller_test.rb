@@ -14,16 +14,33 @@ module Admin
       assert_select "input[type='radio'][name='vehicle_type[app_label_source]'][value='name']", 1
       assert_select "input[type='radio'][name='vehicle_type[app_label_source]'][value='short_name']", 1
       assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-car']", 1
-      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-moped']", 1
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='custom-tuk-tuk']", 1
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='custom-pickup-truck']", 1
       assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-truck']", 1
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='custom-big-truck']", 1
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-bus']", 1
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-tractor']", 1
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-motorbike']", 0
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-scooter']", 0
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-scooter-electric']", 0
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-car-suv']", 0
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-car-4wd']", 0
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-rv-truck']", 0
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-ambulance']", 0
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-firetruck']", 0
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-caravan']", 0
+      assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-forklift']", 0
       assert_select "label.vehicle-type-icon-picker__option", text: /Auto Rickshaw \/ 3 Wheeler/
+      assert_select ".vehicle-type-icon-picker__option [data-vehicle-type-icon='custom-tuk-tuk']", 1
+      assert_select ".vehicle-type-icon-picker__option [data-vehicle-type-icon='custom-pickup-truck']", 1
+      assert_select ".vehicle-type-icon-picker__option [data-vehicle-type-icon='custom-big-truck']", 1
       assert_select "input[name='vehicle_type[code]']", 1
       assert_select "input[name='vehicle_type[code]'][placeholder='vehicle_type_code']", 1
       assert_select "a.nav-link.active[href='#{admin_vehicle_types_path}']", text: /Vehicle Types/
       assert_select "a[href='#{edit_admin_vehicle_type_path(vehicle_types(:lmv))}']", text: "Edit"
       assert_select ".reward-rate-meta", text: /Short name:\s*LMV/
       assert_select ".reward-rate-meta", text: /App label:\s*Short Name/
-      assert_select ".reward-rate-meta", text: /Icon:\s*ti-car/
+      assert_select ".reward-rate-meta", text: /Icon:\s*Car/
     end
 
     test "admin can add a vehicle type with a custom code" do
@@ -36,7 +53,7 @@ module Admin
             short_name: "MV",
             app_label_source: "short_name",
             code: "mini_van_custom",
-            icon_name: "ti-car-suv",
+            icon_name: "ti-car",
             active: "1"
           }
         }
@@ -48,7 +65,7 @@ module Admin
       assert_equal "Mini Van", vehicle_type.name
       assert_equal "MV", vehicle_type.short_name
       assert_equal "short_name", vehicle_type.app_label_source
-      assert_equal "ti-car-suv", vehicle_type.icon_name
+      assert_equal "ti-car", vehicle_type.icon_name
       assert_equal "mini_van_custom", vehicle_type.code
       assert vehicle_type.active?
     end
@@ -74,7 +91,7 @@ module Admin
       assert_equal "pickup_truck", vehicle_type.code
       assert_equal "Pickup Truck", vehicle_type.short_name
       assert_equal "name", vehicle_type.app_label_source
-      assert_equal "ti-truck", vehicle_type.icon_name
+      assert_equal "custom-pickup-truck", vehicle_type.icon_name
     end
 
     test "admin cannot create a vehicle type with numbers in the code" do
@@ -102,7 +119,7 @@ module Admin
           name: "Light Motor Vehicle",
           short_name: "LMV",
           app_label_source: "name",
-          icon_name: "ti-car-suv",
+          icon_name: "ti-car",
           code: "light_motor_vehicle",
           active: "0"
         }
@@ -112,7 +129,7 @@ module Admin
       assert_equal "Light Motor Vehicle", vehicle_types(:lmv).reload.name
       assert_equal "LMV", vehicle_types(:lmv).short_name
       assert_equal "name", vehicle_types(:lmv).app_label_source
-      assert_equal "ti-car-suv", vehicle_types(:lmv).icon_name
+      assert_equal "ti-car", vehicle_types(:lmv).icon_name
       assert_not vehicle_types(:lmv).active?
       assert_equal "lmv", vehicle_types(:lmv).code
     end

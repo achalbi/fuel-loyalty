@@ -46,7 +46,12 @@ module Staff
       authorize Transaction
       result = TransactionCreator.call(user: current_user, **transaction_params.to_h.symbolize_keys)
 
-      redirect_to customer_path(result.customer), notice: "Transaction recorded. #{result.points_earned} points earned."
+      redirect_to customer_path(result.customer), flash: {
+        transaction_summary: {
+          points_earned: result.points_earned,
+          current_points: result.customer.total_points
+        }
+      }
     rescue ActiveRecord::RecordInvalid => e
       @errors = e.record.errors.full_messages
       assign_prefill_values

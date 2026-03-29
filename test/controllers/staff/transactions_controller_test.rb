@@ -122,6 +122,30 @@ module Staff
       assert_equal new_staff_customer_path(vehicle_number: "TN99AB9999"), payload["register_customer_path"]
     end
 
+    test "staff can record a transaction and see earned plus current points below the customer balance" do
+      sign_in users(:two)
+
+      assert_difference -> { Transaction.count }, 1 do
+        assert_difference -> { PointsLedger.count }, 1 do
+          post staff_transactions_path, params: {
+            transaction: {
+              lookup_mode: "phone",
+              phone_number: customers(:one).phone_number,
+              vehicle_id: vehicles(:one).id,
+              fuel_amount: "300"
+            }
+          }
+        end
+      end
+
+      assert_redirected_to customer_path(customers(:one))
+      follow_redirect!
+
+      assert_response :success
+      assert_select ".customer-details-hero__transaction-summary-copy", text: /\+6 reward points added\.\s*Balance updated to 11\./
+      assert_select ".alert.alert-success", 0
+    end
+
     test "staff can register a customer from vehicle lookup and return to transaction entry" do
       sign_in users(:two)
 

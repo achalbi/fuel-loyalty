@@ -1,6 +1,6 @@
 <% autofocus = local_assigns.fetch(:autofocus, false) %>
 <% cancel_path = local_assigns[:cancel_path] %>
-<% selected_icon_name = vehicle_type.icon_name.presence || VehicleType.suggested_icon_name_for(code: vehicle_type.code, name: vehicle_type.name) %>
+<% selected_icon_name = VehicleType.supported_icon_name_for(vehicle_type.icon_name, code: vehicle_type.code, name: vehicle_type.name).presence || VehicleType.suggested_icon_name_for(code: vehicle_type.code, name: vehicle_type.name) %>
 <% auto_suggest_icon = vehicle_type.new_record? && vehicle_type.icon_name.blank? %>
 
 <%= form_with model: [:admin, vehicle_type], class: "vstack gap-3", data: { vehicle_type_icon_picker: true, vehicle_type_icon_auto_suggest: auto_suggest_icon.to_s } do |form| %>
@@ -57,7 +57,7 @@
           checked: selected_icon_name == icon_option[:value],
           data: { vehicle_type_icon_option: true } %>
         <%= label_tag input_id, class: "btn btn-outline-secondary vehicle-type-icon-picker__option" do %>
-          <span class="vehicle-type-icon-picker__icon" aria-hidden="true"><i class="ti <%= icon_option[:value] %>"></i></span>
+          <span class="vehicle-type-icon-picker__icon" aria-hidden="true"><%= vehicle_type_icon_tag(icon_option[:value]) %></span>
           <span class="vehicle-type-icon-picker__label"><%= icon_option[:label] %></span>
         <% end %>
       <% end %>

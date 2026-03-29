@@ -12,6 +12,9 @@
 <% can_delete_customer = customer_policy.destroy? %>
 <% customer_menu_actions_available = can_edit_customer || can_activate_customer || can_deactivate_customer || can_delete_customer %>
 <% customer_update_path = @customer_update_path || customer_path(@customer) %>
+<% transaction_summary = flash[:transaction_summary].presence %>
+<% transaction_points_earned = transaction_summary&.dig("points_earned") || transaction_summary&.dig(:points_earned) %>
+<% transaction_current_points = transaction_summary&.dig("current_points") || transaction_summary&.dig(:current_points) %>
 
 <div class="customer-details-shell">
   <div class="card shadow-sm loyalty-result-card loyalty-result-hero customer-details-hero">
@@ -19,6 +22,14 @@
       <div class="loyalty-result-points customer-details-hero__points">
         <span class="small-muted">Current Points</span>
         <strong class="loyalty-result-hero__value customer-details-hero__value" aria-label="<%= @customer.total_points %> current points"><%= @customer.total_points %></strong>
+        <% if transaction_points_earned.present? && transaction_current_points.present? %>
+          <div class="customer-details-hero__transaction-summary" role="status" aria-live="polite">
+            <p class="customer-details-hero__transaction-summary-copy mb-0">
+              <strong>+<%= number_with_delimiter(transaction_points_earned) %></strong> reward points added.
+              Balance updated to <strong><%= number_with_delimiter(transaction_current_points) %></strong>.
+            </p>
+          </div>
+        <% end %>
         <div class="customer-details-hero__meta">
           <span class="customer-details-hero__chip"><strong><%= @customer.transactions.size %></strong> visits</span>
           <span class="customer-details-hero__chip"><strong><%= persisted_vehicles.size %></strong> vehicles</span>

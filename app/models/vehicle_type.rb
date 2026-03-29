@@ -10,24 +10,33 @@ class VehicleType < ApplicationRecord
   DEFAULT_CODES = DEFAULT_OPTIONS.map(&:last).freeze
   APP_LABEL_SOURCES = %w[name short_name].freeze
   DEFAULT_APP_LABEL_SOURCE = "short_name"
+  AUTO_RICKSHAW_ICON_NAME = "custom-tuk-tuk"
+  AUTO_RICKSHAW_ICON_LABEL = "Auto Rickshaw / 3 Wheeler"
+  PICKUP_TRUCK_ICON_NAME = "custom-pickup-truck"
+  PICKUP_TRUCK_ICON_LABEL = "Pickup Truck"
+  BIG_TRUCK_ICON_NAME = "custom-big-truck"
+  BIG_TRUCK_ICON_LABEL = "Big Truck"
+  REMOVED_ICON_REPLACEMENTS = {
+    "ti-car-suv" => "ti-car",
+    "ti-car-4wd" => "ti-car",
+    "ti-truck-delivery" => PICKUP_TRUCK_ICON_NAME,
+    "ti-truck-loading" => BIG_TRUCK_ICON_NAME,
+    "ti-rv-truck" => "ti-truck",
+    "ti-ambulance" => "ti-truck",
+    "ti-firetruck" => "ti-truck",
+    "ti-forklift" => "ti-truck",
+    "ti-caravan" => "ti-bus"
+  }.freeze
+  REMOVED_TWO_WHEELER_ICON_NAMES = %w[ti-motorbike ti-scooter ti-scooter-electric ti-moped].freeze
   ICON_OPTIONS = [
     { label: "Bike", value: "ti-bike" },
-    { label: "Motorbike", value: "ti-motorbike" },
-    { label: "Auto Rickshaw / 3 Wheeler", value: "ti-moped" },
-    { label: "Scooter", value: "ti-scooter" },
-    { label: "Electric Scooter", value: "ti-scooter-electric" },
+    { label: AUTO_RICKSHAW_ICON_LABEL, value: AUTO_RICKSHAW_ICON_NAME },
     { label: "Car", value: "ti-car" },
-    { label: "SUV", value: "ti-car-suv" },
-    { label: "4WD", value: "ti-car-4wd" },
+    { label: PICKUP_TRUCK_ICON_LABEL, value: PICKUP_TRUCK_ICON_NAME },
     { label: "Truck", value: "ti-truck" },
-    { label: "Delivery Truck", value: "ti-truck-delivery" },
-    { label: "RV Truck", value: "ti-rv-truck" },
+    { label: BIG_TRUCK_ICON_LABEL, value: BIG_TRUCK_ICON_NAME },
     { label: "Bus", value: "ti-bus" },
-    { label: "Ambulance", value: "ti-ambulance" },
-    { label: "Firetruck", value: "ti-firetruck" },
-    { label: "Tractor", value: "ti-tractor" },
-    { label: "Caravan", value: "ti-caravan" },
-    { label: "Forklift", value: "ti-forklift" }
+    { label: "Tractor", value: "ti-tractor" }
   ].freeze
   ICON_NAMES = ICON_OPTIONS.map { |option| option[:value] }.freeze
   DEFAULT_ICON_NAME = "ti-car"
@@ -108,11 +117,29 @@ class VehicleType < ApplicationRecord
     ICON_OPTIONS
   end
 
+  def self.supported_icon_name_for(icon_name, code: nil, name: nil)
+    normalized_icon_name = icon_name.to_s.squish.presence
+    return if normalized_icon_name.blank?
+
+    return suggested_icon_name_for(code: code, name: name) if REMOVED_TWO_WHEELER_ICON_NAMES.include?(normalized_icon_name)
+
+    REMOVED_ICON_REPLACEMENTS.fetch(normalized_icon_name, normalized_icon_name)
+  end
+
+  def self.icon_label_for(icon_name, code: nil, name: nil)
+    supported_icon_name = supported_icon_name_for(icon_name, code: code, name: name) || icon_name.to_s
+
+    ICON_OPTIONS.find { |option| option[:value] == supported_icon_name }&.fetch(:label, nil).presence || supported_icon_name
+  end
+
   def self.icon_name_for(code)
     normalized_code = normalize_code(code)
     return DEFAULT_ICON_NAME if normalized_code.blank?
 
-    find_by(code: normalized_code)&.icon_name.presence || suggested_icon_name_for(code: normalized_code)
+    record = find_by(code: normalized_code)
+
+    supported_icon_name_for(record&.icon_name, code: normalized_code, name: record&.name).presence ||
+      suggested_icon_name_for(code: normalized_code, name: record&.name)
   rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
     suggested_icon_name_for(code: normalized_code)
   end
@@ -124,7 +151,10 @@ class VehicleType < ApplicationRecord
     records = where(code: normalized_codes).index_by { |record| record.code.to_s }
 
     normalized_codes.index_with do |code|
-      records[code]&.icon_name.presence || suggested_icon_name_for(code: code)
+      record = records[code]
+
+      supported_icon_name_for(record&.icon_name, code: code, name: record&.name).presence ||
+        suggested_icon_name_for(code: code, name: record&.name)
     end
   rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
     normalized_codes.index_with { |code| suggested_icon_name_for(code: code) }
@@ -157,31 +187,23 @@ class VehicleType < ApplicationRecord
     return DEFAULT_ICON_NAME if normalized_text.blank?
 
     case normalized_text
-    when /ambulance/
-      "ti-ambulance"
-    when /firetruck|fire_truck|fire_engine/
-      "ti-firetruck"
+    when /ambulance|firetruck|fire_truck|fire_engine|forklift/
+      "ti-truck"
     when /tractor/
       "ti-tractor"
-    when /bus|coach/
+    when /bus|coach|caravan|camper|motorhome|rv/
       "ti-bus"
-    when /caravan|camper|motorhome|rv/
-      "ti-caravan"
-    when /forklift/
-      "ti-forklift"
     when /three_wheeler|three_wheel|rickshaw|auto|trike/
-      "ti-moped"
-    when /pickup|delivery|cargo|goods|lorry|truck|hcv|mcv|lcv/
+      AUTO_RICKSHAW_ICON_NAME
+    when /pickup/
+      PICKUP_TRUCK_ICON_NAME
+    when /big_truck|big_trucks|heavy_truck|heavy_trucks|delivery|cargo|goods|lorry|hcv|mcv|lcv/
+      BIG_TRUCK_ICON_NAME
+    when /truck/
       "ti-truck"
     when /suv|jeep|4wd|four_wheel_drive/
-      "ti-car-suv"
-    when /motorbike|motor_cycle|motorcycle/
-      "ti-motorbike"
-    when /moped/
-      "ti-moped"
-    when /scooter|electric|ev/
-      "ti-scooter-electric"
-    when /bike|bicycle|cycle|two_wheeler|two_wheel/
+      "ti-car"
+    when /motorbike|motor_cycle|motorcycle|moped|scooter|electric|ev|bike|bicycle|cycle|two_wheeler|two_wheel/
       "ti-bike"
     else
       DEFAULT_ICON_NAME
@@ -239,7 +261,7 @@ class VehicleType < ApplicationRecord
   end
 
   def normalize_icon_name
-    self.icon_name = icon_name.to_s.squish.presence
+    self.icon_name = self.class.supported_icon_name_for(icon_name, code: code, name: name)
   end
 
   def assign_short_name_from_name

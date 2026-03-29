@@ -18,7 +18,7 @@
         <%= radio_button_tag input_name, option_value, selected == option_value.to_s, class: "btn-check", id: input_id, required: required && index.zero? %>
         <%= label_tag input_id, class: "btn btn-outline-secondary" do %>
           <% if option_icon.present? %>
-            <span class="fuel-type-radio-group__icon" aria-hidden="true"><i class="ti <%= option_icon %>"></i></span>
+            <span class="fuel-type-radio-group__icon" aria-hidden="true"><%= vehicle_type_icon_tag(option_icon) %></span>
           <% end %>
           <span class="fuel-type-radio-group__text"><%= option_label %></span>
         <% end %>

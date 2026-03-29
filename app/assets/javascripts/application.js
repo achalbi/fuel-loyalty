@@ -1493,19 +1493,15 @@
       .join("_");
 
     if (!normalizedText) return "ti-car";
-    if (/ambulance/.test(normalizedText)) return "ti-ambulance";
-    if (/firetruck|fire_truck|fire_engine/.test(normalizedText)) return "ti-firetruck";
+    if (/ambulance|firetruck|fire_truck|fire_engine|forklift/.test(normalizedText)) return "ti-truck";
     if (/tractor/.test(normalizedText)) return "ti-tractor";
-    if (/bus|coach/.test(normalizedText)) return "ti-bus";
-    if (/caravan|camper|motorhome|rv/.test(normalizedText)) return "ti-caravan";
-    if (/forklift/.test(normalizedText)) return "ti-forklift";
-    if (/three_wheeler|three_wheel|rickshaw|auto|trike/.test(normalizedText)) return "ti-moped";
-    if (/pickup|delivery|cargo|goods|lorry|truck|hcv|mcv|lcv/.test(normalizedText)) return "ti-truck";
-    if (/suv|jeep|4wd|four_wheel_drive/.test(normalizedText)) return "ti-car-suv";
-    if (/motorbike|motor_cycle|motorcycle/.test(normalizedText)) return "ti-motorbike";
-    if (/moped/.test(normalizedText)) return "ti-moped";
-    if (/scooter|electric|ev/.test(normalizedText)) return "ti-scooter-electric";
-    if (/bike|bicycle|cycle|two_wheeler|two_wheel/.test(normalizedText)) return "ti-bike";
+    if (/bus|coach|caravan|camper|motorhome|rv/.test(normalizedText)) return "ti-bus";
+    if (/three_wheeler|three_wheel|rickshaw|auto|trike/.test(normalizedText)) return "custom-tuk-tuk";
+    if (/pickup/.test(normalizedText)) return "custom-pickup-truck";
+    if (/big_truck|big_trucks|heavy_truck|heavy_trucks|delivery|cargo|goods|lorry|hcv|mcv|lcv/.test(normalizedText)) return "custom-big-truck";
+    if (/truck/.test(normalizedText)) return "ti-truck";
+    if (/suv|jeep|4wd|four_wheel_drive/.test(normalizedText)) return "ti-car";
+    if (/motorbike|motor_cycle|motorcycle|moped|scooter|electric|ev|bike|bicycle|cycle|two_wheeler|two_wheel/.test(normalizedText)) return "ti-bike";
 
     return "ti-car";
   };

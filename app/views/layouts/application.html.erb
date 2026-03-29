@@ -37,6 +37,7 @@
   </head>
 
   <body class="<%= user_signed_in? ? "app-shell-body" : "public-shell-body" %>">
+    <% flash_messages = flash.to_hash.except("transaction_summary") %>
     <% if user_signed_in? %>
       <div id="overlay" class="overlay"></div>
 
@@ -151,8 +152,8 @@
       </aside>
 
       <main id="content" class="content py-10">
-        <div class="container-fluid <%= flash.any? ? 'pt-0 pb-3 has-flash' : 'py-3' %>">
-          <% flash.each do |type, message| %>
+        <div class="container-fluid <%= flash_messages.any? ? 'pt-0 pb-3 has-flash' : 'py-3' %>">
+          <% flash_messages.each do |type, message| %>
             <% bootstrap_type = type.to_s == "notice" ? "success" : "danger" %>
             <div class="alert alert-<%= bootstrap_type %> border-0 shadow-sm"><%= message %></div>
           <% end %>
@@ -179,7 +180,7 @@
 
       <main class="<%= devise_controller? ? '' : 'public-main py-3' %>">
         <div class="container">
-          <% flash.each do |type, message| %>
+          <% flash_messages.each do |type, message| %>
             <% bootstrap_type = type.to_s == "notice" ? "success" : "danger" %>
             <div class="alert alert-<%= bootstrap_type %> border-0 shadow-sm"><%= message %></div>
           <% end %>

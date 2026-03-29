@@ -9,7 +9,7 @@ two_wheeler:
 three_wheeler:
   app_label_source: short_name
   code: three_wheeler
-  icon_name: ti-moped
+  icon_name: custom-tuk-tuk
   name: Three-Wheeler
   short_name: Three-Wheeler
   active: true

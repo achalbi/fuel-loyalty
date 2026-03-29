@@ -33,14 +33,48 @@ class VehicleTypeTest < ActiveSupport::TestCase
   test "defaults icon from the vehicle type when blank" do
     vehicle_type = VehicleType.create!(name: "Pickup Truck", code: "pickup_truck", short_name: "Pickup Truck", icon_name: "", active: true)
 
-    assert_equal "ti-truck", vehicle_type.icon_name
+    assert_equal "custom-pickup-truck", vehicle_type.icon_name
+  end
+
+  test "defaults big truck icon for heavy truck types when blank" do
+    vehicle_type = VehicleType.create!(name: "Big Truck", code: "heavy_truck", short_name: "Big Truck", icon_name: "", active: true)
+
+    assert_equal "custom-big-truck", vehicle_type.icon_name
   end
 
   test "defaults auto rickshaw and three wheeler types to the dedicated icon" do
     auto_rickshaw = VehicleType.create!(name: "Auto Rickshaw", code: "auto_rickshaw", short_name: "Auto", icon_name: "", active: true)
     three_wheeler = VehicleType.create!(name: "3 Wheeler", code: "three_wheeler_goods", short_name: "3 Wheeler", icon_name: "", active: true)
 
-    assert_equal "ti-moped", auto_rickshaw.icon_name
-    assert_equal "ti-moped", three_wheeler.icon_name
+    assert_equal "custom-tuk-tuk", auto_rickshaw.icon_name
+    assert_equal "custom-tuk-tuk", three_wheeler.icon_name
+  end
+
+  test "maps removed two wheeler icon types back to bike" do
+    motorbike = VehicleType.create!(name: "Motorbike", code: "motorbike", short_name: "Motorbike", icon_name: "", active: true)
+    scooter = VehicleType.create!(name: "Electric Scooter", code: "electric_scooter", short_name: "E Scooter", icon_name: "", active: true)
+
+    assert_equal "ti-bike", motorbike.icon_name
+    assert_equal "ti-bike", scooter.icon_name
+  end
+
+  test "maps removed specialized vehicle icon types to supported icons" do
+    suv = VehicleType.create!(name: "SUV", code: "suv", short_name: "SUV", icon_name: "", active: true)
+    ambulance = VehicleType.create!(name: "Ambulance", code: "ambulance", short_name: "Ambulance", icon_name: "", active: true)
+    caravan = VehicleType.create!(name: "Caravan", code: "caravan", short_name: "Caravan", icon_name: "", active: true)
+
+    assert_equal "ti-car", suv.icon_name
+    assert_equal "ti-truck", ambulance.icon_name
+    assert_equal "ti-bus", caravan.icon_name
+  end
+
+  test "normalizes removed legacy icon selections to supported icons" do
+    suv = VehicleType.create!(name: "SUV", code: "sport_utility_vehicle", short_name: "SUV", icon_name: "ti-car-suv", active: true)
+    forklift = VehicleType.create!(name: "Forklift", code: "forklift", short_name: "Forklift", icon_name: "ti-forklift", active: true)
+    caravan = VehicleType.create!(name: "Caravan", code: "caravan", short_name: "Caravan", icon_name: "ti-caravan", active: true)
+
+    assert_equal "ti-car", suv.icon_name
+    assert_equal "ti-truck", forklift.icon_name
+    assert_equal "ti-bus", caravan.icon_name
   end
 end
