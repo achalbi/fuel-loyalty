@@ -489,4 +489,5 @@
 
   document.addEventListener("turbo:load", initializePlateScanners);
   document.addEventListener("DOMContentLoaded", initializePlateScanners);
+  initializePlateScanners();
 })();
