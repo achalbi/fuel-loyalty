@@ -8,7 +8,7 @@ module Staff
       get new_staff_transaction_path
 
       assert_response :success
-      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path(plate_scanner: 1)}'][aria-label='Scan Vehicle Plate']", 1
+      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path(plate_scanner: 1)}'][aria-label='Scan Vehicle Plate'][data-topbar-plate-scanner-link='true'][data-turbo='false']", 1
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
       assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
       assert_select ".transaction-entry-titlebar__heading h1", text: "Record Fuel Transaction"
@@ -45,6 +45,8 @@ module Staff
       assert_select "[data-plate-scanner-root][data-input-id='vehicle_transaction_transaction_vehicle_number'][data-auto-open='false']", 1
       assert_select "button.transaction-plate-scanner__toggle[data-plate-scanner-open][aria-controls='transactionPlateScannerPanel']", text: /Capture Plate/
       assert_select "input#vehicle_transaction_transaction_vehicle_number[name='transaction[vehicle_number]'][data-plate-scanner-input='true'][data-vehicle-number-input='true']", 1
+      assert_select "input[type='file'][data-plate-scanner-file-input][accept='image/*'][capture='environment']", 1
+      assert_select "button[data-plate-scanner-file-trigger]", text: /Use Camera App/
       assert_select ".transaction-plate-scanner__result.d-none[data-plate-scanner-result]", 1
       assert_select "#transactionPlateScannerPanel.transaction-plate-scanner[hidden][data-plate-scanner-panel]", 1
       assert_select "[data-plate-scanner-video]", 1

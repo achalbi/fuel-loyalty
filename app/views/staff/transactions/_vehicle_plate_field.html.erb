@@ -70,8 +70,17 @@
         Align the vehicle number plate inside the guide, then capture the photo.
       </p>
 
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        class="visually-hidden"
+        data-plate-scanner-file-input
+        tabindex="-1">
+
       <div class="transaction-plate-scanner__actions">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-plate-scanner-start hidden>Open Camera</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-plate-scanner-file-trigger>Use Camera App</button>
         <button type="button" class="btn btn-primary btn-sm" data-plate-scanner-capture disabled>Capture</button>
         <button type="button" class="btn btn-outline-secondary btn-sm" data-plate-scanner-retake hidden>Retake</button>
         <button type="button" class="btn btn-primary btn-sm" data-plate-scanner-use hidden>Use Photo</button>

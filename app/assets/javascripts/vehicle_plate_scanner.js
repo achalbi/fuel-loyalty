@@ -222,15 +222,70 @@
 
   const humanizeCameraError = (error) => {
     if (error?.name === "NotAllowedError" || error?.name === "SecurityError") {
-      return "Camera permission was denied. Enable camera access or type the vehicle number manually.";
+      return "Camera permission was denied. Enable camera access, use Camera App, or type the vehicle number manually.";
     }
 
     if (error?.name === "NotFoundError" || error?.name === "OverconstrainedError") {
-      return "A rear camera is not available on this device. Type the vehicle number manually instead.";
+      return "A rear camera is not available on this device. Use Camera App or type the vehicle number manually instead.";
     }
 
-    return "Camera preview could not be started right now. Type the vehicle number manually or try again.";
+    return "Camera preview could not be started right now. Try Camera App or type the vehicle number manually.";
   };
+
+  const prepareVideoPreview = (video) => {
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("autoplay", "autoplay");
+    video.setAttribute("muted", "muted");
+    video.setAttribute("playsinline", "playsinline");
+  };
+
+  const waitForVideoReady = (video) =>
+    new Promise((resolve) => {
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        resolve();
+        return;
+      }
+
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        video.removeEventListener("loadedmetadata", finish);
+        video.removeEventListener("loadeddata", finish);
+        resolve();
+      };
+
+      video.addEventListener("loadedmetadata", finish, { once: true });
+      video.addEventListener("loadeddata", finish, { once: true });
+      window.setTimeout(finish, 800);
+    });
+
+  const loadImageFileToCanvas = (file) =>
+    new Promise((resolve, reject) => {
+      if (!file) {
+        reject(new Error("No photo selected."));
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+
+      image.onload = () => {
+        const imageCanvas = createPreviewCanvas(image.naturalWidth || image.width, image.naturalHeight || image.height);
+        imageCanvas.getContext("2d").drawImage(image, 0, 0, imageCanvas.width, imageCanvas.height);
+        URL.revokeObjectURL(objectUrl);
+        resolve(imageCanvas);
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("The selected image could not be read."));
+      };
+
+      image.src = objectUrl;
+    });
 
   const initPlateScanner = (root) => {
     if (!root || root.__plateScannerBound === true) return;
@@ -240,6 +295,8 @@
     const panel = root.querySelector("[data-plate-scanner-panel]");
     const openButton = root.querySelector("[data-plate-scanner-open]");
     const startButton = root.querySelector("[data-plate-scanner-start]");
+    const fileTriggerButton = root.querySelector("[data-plate-scanner-file-trigger]");
+    const fileInput = root.querySelector("[data-plate-scanner-file-input]");
     const captureButton = root.querySelector("[data-plate-scanner-capture]");
     const retakeButton = root.querySelector("[data-plate-scanner-retake]");
     const useButton = root.querySelector("[data-plate-scanner-use]");
@@ -254,12 +311,14 @@
     const rawTarget = root.querySelector("[data-plate-scanner-raw]");
     const confidenceTarget = root.querySelector("[data-plate-scanner-confidence]");
 
-    if (!input || !panel || !openButton || !captureButton || !retakeButton || !useButton || !closeButton || !video || !canvas || !status) {
+    if (!input || !panel || !openButton || !fileTriggerButton || !fileInput || !captureButton || !retakeButton || !useButton || !closeButton || !video || !canvas || !status) {
       return;
     }
 
     let stream = null;
     let capturedCanvas = null;
+    let autoOpenScheduled = false;
+    let cameraStartInFlight = null;
 
     const setStatus = (message, tone = "neutral") => {
       status.textContent = message;
@@ -299,36 +358,74 @@
       }
     };
 
-    const startCamera = async () => {
-      if (!cameraSupported()) {
-        setStatus("Camera-based plate capture is not available in this browser. Type the vehicle number manually.", "warning");
-        startButton.hidden = false;
-        captureButton.disabled = true;
+    const launchCameraAppFallback = ({ message, automatic = false } = {}) => {
+      stopStream();
+      startButton.hidden = false;
+      captureButton.disabled = true;
+
+      if (automatic) {
+        setStatus(`${message} Opening Camera App instead…`, "warning");
+        fileInput.click();
+        window.setTimeout(() => {
+          if (!(fileInput.files && fileInput.files.length > 0)) {
+            setStatus(`${message} If Camera App does not open automatically, tap Use Camera App.`, "warning");
+          }
+        }, 600);
         return;
       }
 
-      setStatus("Starting the rear camera…", "neutral");
+      setStatus(message, "warning");
+    };
 
-      try {
-        stopStream();
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }
+    const startCamera = async ({ automaticFallback = false } = {}) => {
+      if (cameraStartInFlight) return cameraStartInFlight;
+
+      if (!cameraSupported()) {
+        launchCameraAppFallback({
+          message: "Camera-based plate capture is not available in this browser. Use Camera App or type the vehicle number manually.",
+          automatic: automaticFallback
         });
-
-        video.srcObject = stream;
-        await video.play();
-        resetPreview();
-        setStatus("Align the vehicle number plate inside the guide, then tap Capture.", "neutral");
-      } catch (error) {
-        setStatus(humanizeCameraError(error), "warning");
-        startButton.hidden = false;
-        captureButton.disabled = true;
+        return;
       }
+
+      cameraStartInFlight = (async () => {
+        setStatus("Starting the rear camera…", "neutral");
+
+        try {
+          stopStream();
+          prepareVideoPreview(video);
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              facingMode: { ideal: "environment" },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            }
+          });
+
+          video.srcObject = stream;
+          await waitForVideoReady(video);
+
+          try {
+            await video.play();
+          } catch (_playError) {
+            // Some mobile browsers reject autoplay even with an active camera stream.
+            // Keep the stream attached and let the visible panel remain usable.
+          }
+
+          resetPreview();
+          setStatus("Align the vehicle number plate inside the guide, then tap Capture.", "neutral");
+        } catch (error) {
+          launchCameraAppFallback({
+            message: humanizeCameraError(error),
+            automatic: automaticFallback
+          });
+        } finally {
+          cameraStartInFlight = null;
+        }
+      })();
+
+      return cameraStartInFlight;
     };
 
     const drawCapturedCanvas = (sourceCanvas) => {
@@ -341,6 +438,17 @@
       context.drawImage(sourceCanvas, 0, 0);
     };
 
+    const showCapturedPreview = (sourceCanvas, message) => {
+      capturedCanvas = sourceCanvas;
+      drawCapturedCanvas(sourceCanvas);
+      stopStream();
+      captureButton.hidden = true;
+      retakeButton.hidden = false;
+      useButton.hidden = false;
+      startButton.hidden = true;
+      setStatus(message, "neutral");
+    };
+
     const captureFrame = () => {
       if (!video.videoWidth || !video.videoHeight) {
         setStatus("Camera preview is still warming up. Please try again.", "warning");
@@ -349,14 +457,7 @@
 
       const frameCanvas = createPreviewCanvas(video.videoWidth, video.videoHeight);
       frameCanvas.getContext("2d").drawImage(video, 0, 0, frameCanvas.width, frameCanvas.height);
-      capturedCanvas = frameCanvas;
-      drawCapturedCanvas(frameCanvas);
-      stopStream();
-      captureButton.hidden = true;
-      retakeButton.hidden = false;
-      useButton.hidden = false;
-      startButton.hidden = true;
-      setStatus("Review the photo, then use it for OCR or retake if the plate is not clear.", "neutral");
+      showCapturedPreview(frameCanvas, "Review the photo, then use it for OCR or retake if the plate is not clear.");
     };
 
     const fillInput = (value) => {
@@ -399,6 +500,7 @@
     const toggleBusy = (busy) => {
       openButton.disabled = busy;
       startButton.disabled = busy;
+      fileTriggerButton.disabled = busy;
       captureButton.disabled = busy || !stream;
       retakeButton.disabled = busy;
       useButton.disabled = busy;
@@ -449,11 +551,16 @@
 
     openButton.addEventListener("click", () => {
       setPanelOpen(true);
-      startCamera();
+      startCamera({ automaticFallback: true });
     });
 
     startButton.addEventListener("click", () => {
-      startCamera();
+      startCamera({ automaticFallback: true });
+    });
+
+    fileTriggerButton.addEventListener("click", () => {
+      stopStream();
+      fileInput.click();
     });
 
     captureButton.addEventListener("click", () => {
@@ -462,11 +569,30 @@
 
     retakeButton.addEventListener("click", () => {
       setPanelOpen(true);
-      startCamera();
+      startCamera({ automaticFallback: true });
     });
 
     useButton.addEventListener("click", () => {
       useCapturedPhoto();
+    });
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      toggleBusy(true);
+      setPanelOpen(true);
+      setStatus("Preparing the selected photo…", "neutral");
+
+      try {
+        const imageCanvas = await loadImageFileToCanvas(file);
+        showCapturedPreview(imageCanvas, "Review the photo, then use it for OCR or choose another photo if needed.");
+      } catch (_error) {
+        setStatus("The selected photo could not be opened. Please try again or type the vehicle number manually.", "warning");
+      } finally {
+        fileInput.value = "";
+        toggleBusy(false);
+      }
     });
 
     closeButton.addEventListener("click", () => {
@@ -477,9 +603,22 @@
     document.addEventListener("turbo:before-cache", stopStream);
     window.addEventListener("pagehide", stopStream);
 
-    if (root.dataset.autoOpen === "true") {
+    const autoOpenScanner = () => {
+      if (autoOpenScheduled) return;
+      autoOpenScheduled = true;
       setPanelOpen(true);
-      startCamera();
+      window.setTimeout(() => {
+        startCamera();
+      }, 220);
+    };
+
+    if (root.dataset.autoOpen === "true") {
+      if (document.readyState === "complete") {
+        autoOpenScanner();
+      } else {
+        window.addEventListener("load", autoOpenScanner, { once: true });
+        window.addEventListener("pageshow", autoOpenScanner, { once: true });
+      }
     }
   };
 
