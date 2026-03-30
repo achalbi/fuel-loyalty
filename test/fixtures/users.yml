@@ -8,6 +8,7 @@ one:
 
 two:
   email: staff@example.com
+  fuel_pump: one
   name: Staff
   phone_number: 9000000022
   username: staff

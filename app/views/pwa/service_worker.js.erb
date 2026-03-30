@@ -2,6 +2,7 @@ const CACHE_VERSION = "<%= @cache_version %>";
 const STATIC_CACHE = `fuel-loyalty-static-${CACHE_VERSION}`;
 const PAGE_CACHE = `fuel-loyalty-pages-${CACHE_VERSION}`;
 const API_CACHE = `fuel-loyalty-api-${CACHE_VERSION}`;
+const OCR_CACHE = `fuel-loyalty-ocr-${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline.html";
 const IMMEDIATE_ACTIVATION = <%= Rails.env.development? ? "true" : "false" %>;
 const ICON_192_URL = "/icon-192.png?v=<%= @cache_version %>";
@@ -26,11 +27,17 @@ const PRECACHE_URLS = [
   "<%= asset_path('tabler-icons.min.css') %>",
   "<%= asset_path('application.css') %>",
   "<%= asset_path('bootstrap.bundle.min.js') %>",
-  "<%= asset_path('application.js') %>"
+  "<%= asset_path('application.js') %>",
+  "<%= asset_path('vehicle_plate_scanner.js') %>"
 ];
 const CACHEABLE_NAVIGATION_PATHS = new Set(["/loyalty"]);
 const SENSITIVE_PREFIXES = ["/admin", "/staff", "/users", "/customers"];
 const SENSITIVE_PATHS = new Set(["/loyalty/result"]);
+const OCR_ASSET_ORIGINS = new Set([
+  "https://cdn.jsdelivr.net",
+  "https://unpkg.com",
+  "https://tessdata.projectnaptha.com"
+]);
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
@@ -87,7 +94,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  const activeCaches = new Set([STATIC_CACHE, PAGE_CACHE, API_CACHE]);
+  const activeCaches = new Set([STATIC_CACHE, PAGE_CACHE, API_CACHE, OCR_CACHE]);
 
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -119,6 +126,12 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   const requestCacheKey = `${url.pathname}${url.search}`;
+
+  if (cacheableOcrAsset(url)) {
+    event.respondWith(cacheFirst(request, OCR_CACHE));
+    return;
+  }
+
   if (url.origin !== self.location.origin) return;
 
   if (url.pathname.startsWith("/assets/") || PRECACHE_URLS.includes(requestCacheKey)) {
@@ -146,6 +159,15 @@ function cacheableNavigation(pathname) {
   if (SENSITIVE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return false;
 
   return CACHEABLE_NAVIGATION_PATHS.has(pathname);
+}
+
+function cacheableOcrAsset(url) {
+  if (!OCR_ASSET_ORIGINS.has(url.origin)) return false;
+
+  return url.pathname.includes("tesseract")
+    || url.pathname.includes("@tesseract.js-data")
+    || url.pathname.endsWith(".traineddata.gz")
+    || url.pathname.includes("worker.min.js");
 }
 
 async function cacheFirst(request, cacheName) {
@@ -203,7 +225,14 @@ async function preloadResponse(event) {
 }
 
 async function cacheResponse(cache, request, response) {
-  if (!response || !response.ok || response.type !== "basic") return;
+  if (!response) return;
+
+  if (response.type === "opaque") {
+    await cache.put(request, response.clone());
+    return;
+  }
+
+  if (!response.ok || !["basic", "cors"].includes(response.type)) return;
   const cacheControl = response.headers.get("Cache-Control") || "";
 
   if (/\b(?:private|no-store)\b/i.test(cacheControl)) return;

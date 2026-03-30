@@ -1,0 +1,84 @@
+<% selected_nozzle_id = local_assigns[:selected_nozzle_id].presence&.to_s %>
+<% transaction_fuel_pump = local_assigns[:transaction_fuel_pump] %>
+<% transaction_fuel_pump_nozzles = Array(local_assigns[:transaction_fuel_pump_nozzles]) %>
+<% dom_prefix = local_assigns.fetch(:dom_prefix) %>
+<% auto_selected_nozzle_id = selected_nozzle_id.presence || (transaction_fuel_pump_nozzles.one? ? transaction_fuel_pump_nozzles.first.id.to_s : nil) %>
+<% pump_hint_id = "#{dom_prefix}_pump_hint" %>
+
+<div class="transaction-pump-card">
+  <div class="transaction-pump-card__header">
+    <div>
+      <div class="transaction-entry-titlebar__heading">
+        <h2 class="h4 mb-0">My Pump</h2>
+        <button
+          type="button"
+          class="transaction-entry-titlebar__hint-toggle"
+          data-bs-toggle="collapse"
+          data-bs-target="#<%= pump_hint_id %>"
+          aria-expanded="false"
+          aria-controls="<%= pump_hint_id %>"
+          aria-label="Show My Pump help"
+          title="Show My Pump help">
+          <i class="ti ti-info-circle" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="collapse transaction-entry-titlebar__hint mt-2" id="<%= pump_hint_id %>">
+        <div class="transaction-entry-titlebar__hint-card">
+          Your selected pump can be changed by clicking the change icon on top-right. Choose the nozzle used for this transaction.
+        </div>
+      </div>
+    </div>
+    <%= link_to my_pump_path,
+      class: "transaction-pump-card__change-link customer-details-vehicle-row__menu-toggle",
+      aria: { label: "Change My Pump" },
+      title: "Change My Pump" do %>
+      <i class="ti ti-edit" aria-hidden="true"></i>
+      <span class="visually-hidden">Change My Pump</span>
+    <% end %>
+  </div>
+
+  <% if transaction_fuel_pump.present? && transaction_fuel_pump_nozzles.any? %>
+    <div class="transaction-pump-card__pump">
+      <span class="transaction-pump-card__pump-label">Selected Pump</span>
+      <strong class="transaction-pump-card__pump-value"><%= transaction_fuel_pump.display_name %></strong>
+      <span class="transaction-pump-card__pump-meta"><%= pluralize(transaction_fuel_pump_nozzles.size, "assigned nozzle") %> ready for use</span>
+    </div>
+
+    <fieldset>
+      <legend class="mb-2 transaction-pump-card__nozzle-legend">
+        Nozzle
+        <span class="text-muted fw-normal">- Pick the nozzle used for this fuel sale.</span>
+      </legend>
+
+      <div class="transaction-pump-card__nozzles">
+        <% transaction_fuel_pump_nozzles.each_with_index do |nozzle, index| %>
+          <% input_id = "#{dom_prefix}_fuel_pump_nozzle_#{nozzle.id}" %>
+          <div class="transaction-pump-card__nozzle-option" data-transaction-nozzle-option>
+            <%= form.radio_button :fuel_pump_nozzle_id,
+              nozzle.id,
+              id: input_id,
+              checked: auto_selected_nozzle_id == nozzle.id.to_s,
+              required: index.zero?,
+              class: "transaction-pump-card__nozzle-input",
+              data: { transaction_nozzle_input: true } %>
+            <%= label_tag input_id, class: "transaction-pump-card__nozzle" do %>
+              <span class="transaction-pump-card__nozzle-copy">
+                <strong><%= nozzle.display_name %></strong>
+                <span><%= nozzle.fuel_type_name %></span>
+              </span>
+              <span class="transaction-pump-card__nozzle-meta">
+                <span class="badge rounded-pill text-bg-light border"><%= nozzle.fuel_type_name %></span>
+              </span>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </fieldset>
+  <% else %>
+    <div class="alert alert-warning mb-0">
+      Set up My Pump with at least one active nozzle before recording transactions.
+      <%= link_to "Open My Pump", my_pump_path, class: "alert-link" %>
+    </div>
+  <% end %>
+</div>

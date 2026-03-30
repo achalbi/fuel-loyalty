@@ -48,6 +48,32 @@ class PointsRedeemerTest < ActiveSupport::TestCase
     assert_includes error.record.errors.full_messages.to_sentence, "must have at least 100 available points to redeem"
   end
 
+  test "rejects redemption below the configured vehicle type minimum" do
+    vehicle_types(:lcv).update!(minimum_redeemable_points: 300)
+    customer = Customer.create!(name: "Redeem Threshold User", phone_number: "9666666677")
+    customer.vehicles.create!(vehicle_number: "TN10AB1234", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code)
+    customer.points_ledgers.create!(points: 450, entry_type: :earn)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      PointsRedeemer.call(phone_number: customer.phone_number, points: 200)
+    end
+
+    assert_includes error.record.errors.full_messages.to_sentence, "must be at least 300 points"
+  end
+
+  test "rejects redemption when the configured vehicle type minimum has not been reached yet" do
+    vehicle_types(:lcv).update!(minimum_redeemable_points: 300)
+    customer = Customer.create!(name: "Redeem Locked User", phone_number: "9666666688")
+    customer.vehicles.create!(vehicle_number: "TN10AB4321", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code)
+    customer.points_ledgers.create!(points: 250, entry_type: :earn)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      PointsRedeemer.call(phone_number: customer.phone_number, points: 300)
+    end
+
+    assert_includes error.record.errors.full_messages.to_sentence, "must have at least 300 available points to redeem"
+  end
+
   test "rejects redemption when the phone number is not 10 digits" do
     error = assert_raises(ActiveRecord::RecordInvalid) do
       PointsRedeemer.call(phone_number: "12345", points: 100)

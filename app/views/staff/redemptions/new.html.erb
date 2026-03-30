@@ -72,6 +72,10 @@
 
           <div class="redemption-customer-card__stats">
             <div class="redemption-customer-card__stat">
+              <span class="redemption-customer-card__stat-label">Minimum Redeemable</span>
+              <strong class="redemption-customer-card__stat-value" data-customer-minimum-redeemable></strong>
+            </div>
+            <div class="redemption-customer-card__stat">
               <span class="redemption-customer-card__stat-label">Max Redeemable</span>
               <strong class="redemption-customer-card__stat-value" data-customer-max-redeemable></strong>
             </div>
@@ -108,17 +112,19 @@
       const pointsTarget = root.querySelector("[data-customer-points]");
       const statusTarget = root.querySelector("[data-customer-status]");
       const redeemNoteTarget = root.querySelector("[data-customer-redeem-note]");
+      const minimumRedeemableTarget = root.querySelector("[data-customer-minimum-redeemable]");
       const maxRedeemableTarget = root.querySelector("[data-customer-max-redeemable]");
       const vehiclesCountTarget = root.querySelector("[data-customer-vehicles-count]");
       let availablePoints = 0;
+      let minimumRedeemablePoints = <%= VehicleType::DEFAULT_MINIMUM_REDEEMABLE_POINTS %>;
       let maxRedeemablePoints = 0;
       let customerLoaded = false;
       let activeLookup = 0;
       const numberFormatter = new Intl.NumberFormat("en-IN");
 
-      const populateRedeemableOptions = (maxPoints, selectedValue = "") => {
+      const populateRedeemableOptions = (minimumPoints, maxPoints, selectedValue = "") => {
         const normalizedSelectedValue = String(selectedValue || "").trim();
-        const placeholderLabel = maxPoints >= 100 ? "Select redeemable points" : "No redeemable points available";
+        const placeholderLabel = maxPoints >= minimumPoints ? "Select redeemable points" : "No redeemable points available";
 
         pointsSelect.innerHTML = "";
 
@@ -127,25 +133,36 @@
         placeholderOption.textContent = placeholderLabel;
         pointsSelect.appendChild(placeholderOption);
 
-        for (let points = 100; points <= maxPoints; points += 100) {
+        for (let points = minimumPoints; points <= maxPoints; points += 100) {
           const option = document.createElement("option");
           option.value = String(points);
           option.textContent = String(points);
           pointsSelect.appendChild(option);
         }
 
-        if (normalizedSelectedValue !== "" && Number(normalizedSelectedValue) <= maxPoints && Number(normalizedSelectedValue) % 100 === 0) {
+        if (
+          normalizedSelectedValue !== "" &&
+          Number(normalizedSelectedValue) >= minimumPoints &&
+          Number(normalizedSelectedValue) <= maxPoints &&
+          Number(normalizedSelectedValue) % 100 === 0
+        ) {
           pointsSelect.value = normalizedSelectedValue;
         } else {
           pointsSelect.value = "";
         }
 
-        pointsSelect.disabled = !customerLoaded || maxPoints < 100;
+        pointsSelect.disabled = !customerLoaded || maxPoints < minimumPoints;
       };
 
       const updateSubmitState = () => {
         const requestedPoints = Number(pointsSelect.value || 0);
-        submitButton.disabled = !customerLoaded || pointsSelect.disabled || requestedPoints <= 0 || requestedPoints > maxRedeemablePoints;
+        submitButton.disabled =
+          !customerLoaded ||
+          pointsSelect.disabled ||
+          requestedPoints <= 0 ||
+          requestedPoints < minimumRedeemablePoints ||
+          requestedPoints > maxRedeemablePoints ||
+          (requestedPoints % 100) !== 0;
       };
 
       const showError = (message, { keepPanel = false } = {}) => {
@@ -174,12 +191,14 @@
         statusTarget.className = "redemption-customer-card__status";
         redeemNoteTarget.textContent = "";
         redeemNoteTarget.className = "redemption-customer-card__note is-pending";
+        minimumRedeemableTarget.textContent = "";
         maxRedeemableTarget.textContent = "";
         vehiclesCountTarget.textContent = "";
         customerLoaded = false;
         availablePoints = 0;
+        minimumRedeemablePoints = <%= VehicleType::DEFAULT_MINIMUM_REDEEMABLE_POINTS %>;
         maxRedeemablePoints = 0;
-        populateRedeemableOptions(0);
+        populateRedeemableOptions(minimumRedeemablePoints, 0);
         updateSubmitState();
       };
 
@@ -214,25 +233,27 @@
           pointsTarget.textContent = numberFormatter.format(payload.customer.total_points || 0);
           statusTarget.textContent = payload.customer.status_label;
           statusTarget.className = `redemption-customer-card__status ${payload.customer.active ? "is-active" : "is-inactive"}`;
+          minimumRedeemablePoints = Number(payload.customer.minimum_redeemable_points || <%= VehicleType::DEFAULT_MINIMUM_REDEEMABLE_POINTS %>);
+          minimumRedeemableTarget.textContent = `${numberFormatter.format(minimumRedeemablePoints)} pts`;
           maxRedeemableTarget.textContent = `${numberFormatter.format(payload.customer.max_redeemable_points || 0)} pts`;
           vehiclesCountTarget.textContent = String(payload.customer.vehicles.length);
           availablePoints = Number(payload.customer.total_points || 0);
           maxRedeemablePoints = Number(payload.customer.max_redeemable_points || 0);
           customerLoaded = true;
-          populateRedeemableOptions(maxRedeemablePoints, pointsSelect.dataset.prefillValue || pointsSelect.value);
+          populateRedeemableOptions(minimumRedeemablePoints, maxRedeemablePoints, pointsSelect.dataset.prefillValue || pointsSelect.value);
           pointsSelect.dataset.prefillValue = "";
 
-          if (maxRedeemablePoints >= 100) {
-            redeemNoteTarget.textContent = `Ready to redeem up to ${numberFormatter.format(maxRedeemablePoints)} points`;
+          if (maxRedeemablePoints >= minimumRedeemablePoints) {
+            redeemNoteTarget.textContent = `Ready to redeem from ${numberFormatter.format(minimumRedeemablePoints)} to ${numberFormatter.format(maxRedeemablePoints)} points`;
             redeemNoteTarget.className = "redemption-customer-card__note is-redeemable";
           } else {
-            const pointsNeeded = Math.max(100 - availablePoints, 0);
-            redeemNoteTarget.textContent = `${numberFormatter.format(pointsNeeded)} more points needed to unlock rewards`;
+            const pointsNeeded = Math.max(minimumRedeemablePoints - availablePoints, 0);
+            redeemNoteTarget.textContent = `${numberFormatter.format(pointsNeeded)} more points needed to unlock ${numberFormatter.format(minimumRedeemablePoints)}-point rewards`;
             redeemNoteTarget.className = "redemption-customer-card__note is-pending";
           }
 
-          if (maxRedeemablePoints < 100) {
-            showError("This customer does not have enough redeemable points. Minimum redemption is 100 points.", { keepPanel: true });
+          if (maxRedeemablePoints < minimumRedeemablePoints) {
+            showError(`This customer does not have enough redeemable points yet. Minimum redemption for this customer is ${numberFormatter.format(minimumRedeemablePoints)} points.`, { keepPanel: true });
             return;
           }
 

@@ -30,8 +30,26 @@ class Customer < ApplicationRecord
     points_ledgers.sum(:points)
   end
 
+  def minimum_redeemable_points
+    VehicleType.minimum_redeemable_points_for_codes(registered_vehicle_type_codes)
+  end
+
+  def max_redeemable_points
+    PointsRedeemer.max_redeemable_points(
+      total_points,
+      minimum_redeemable_points: minimum_redeemable_points
+    )
+  end
+
+  def points_until_redeemable
+    [minimum_redeemable_points - total_points.to_i, 0].max
+  end
+
   def recent_transactions(limit = 5)
-    transactions.includes(:vehicle, :user).order(created_at: :desc).limit(limit)
+    transactions
+      .includes(:fuel_pump, :vehicle, :user, fuel_pump_nozzle: %i[fuel_pump fuel_type_record])
+      .order(created_at: :desc)
+      .limit(limit)
   end
 
   def loyalty_activities(limit: 5)
@@ -55,5 +73,13 @@ class Customer < ApplicationRecord
 
   def normalize_phone_number
     self.phone_number = self.class.normalize_phone_number(phone_number)
+  end
+
+  def registered_vehicle_type_codes
+    if association(:vehicles).loaded?
+      vehicles.map(&:vehicle_kind)
+    else
+      vehicles.distinct.pluck(:vehicle_kind)
+    end
   end
 end

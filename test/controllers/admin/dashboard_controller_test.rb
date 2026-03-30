@@ -23,7 +23,10 @@ module Admin
       assert_select "[data-dashboard-export-summary]", 1
       assert_select "input[type='submit'][value='Apply']", 0
       assert_select ".user-menu .theme-switch-inline .theme-switch-shell--compact [data-theme-switch]", 1
+      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path(plate_scanner: 1)}'][aria-label='Scan Vehicle Plate']", 1
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
+      assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
+      assert_select "a.nav-link[href='#{my_pump_path}']", text: /My Pump/
       assert_select ".user-menu [data-sidebar-mode-switch][aria-label='Show side navbar as icon-only bar']", 1
       assert_select "[data-kpi-card='total_customers']", 1
       assert_select "[data-dashboard-chart='transactions_trend']", 1

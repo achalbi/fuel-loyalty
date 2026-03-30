@@ -40,8 +40,9 @@ class LoyaltyController < ApplicationController
       # reusing the original redirect token.
       @lookup_token = LoyaltyLookupToken.generate(@phone_number)
       @total_points = @customer.total_points
-      @redeemable_points = PointsRedeemer.max_redeemable_points(@total_points)
-      @points_until_redeemable = [PointsRedeemer::REDEMPTION_INCREMENT - @total_points.to_i, 0].max
+      @minimum_redeemable_points = @customer.minimum_redeemable_points
+      @redeemable_points = @customer.max_redeemable_points
+      @points_until_redeemable = @customer.points_until_redeemable
       @full_history = params[:full_history] == "1"
       @activities = @customer.loyalty_activities(limit: @full_history ? nil : 5)
       @show_full_history_button = !@full_history && @customer.loyalty_activities_count > 5

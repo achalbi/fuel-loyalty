@@ -18,6 +18,7 @@ module Devise
       assert_select "[data-pwa-install-panel]", 1
       assert_select "[data-pwa-install-button]", text: /Install App/
       assert_select "[data-pwa-install-status]", /Install Ace Fuel Loyalty|Add Ace Fuel Loyalty/
+      assert_select "[data-push-opt-in-panel]", 0
     end
 
     test "sign in page uses cache-busted pwa asset links" do

@@ -1543,6 +1543,95 @@
     });
   };
 
+  const initializeFuelPumpForms = () => {
+    document.querySelectorAll("[data-fuel-pump-form]").forEach((form) => {
+      if (form.dataset.nozzleBound === "true") return;
+
+      const list = form.querySelector("[data-fuel-pump-nozzle-list]");
+      const template = form.querySelector("[data-fuel-pump-nozzle-template]");
+      const addButton = form.querySelector("[data-fuel-pump-nozzle-add]");
+
+      if (!list || !template || !addButton) return;
+
+      form.dataset.nozzleBound = "true";
+
+      const nextIndex = () => `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+      const nozzleMarkup = () => template.innerHTML.trim();
+
+      addButton.addEventListener("click", () => {
+        const markup = nozzleMarkup();
+        if (!markup) return;
+
+        list.insertAdjacentHTML("beforeend", markup.replace(/NEW_RECORD/g, nextIndex()));
+      });
+
+      form.addEventListener("click", (event) => {
+        const removeButton = event.target.closest("[data-fuel-pump-nozzle-remove]");
+        if (!removeButton) return;
+
+        event.preventDefault();
+
+        const row = removeButton.closest("[data-fuel-pump-nozzle-row]");
+        if (!row) return;
+
+        const destroyField = row.querySelector("[data-fuel-pump-nozzle-destroy-field]");
+
+        if (row.dataset.persisted === "true" && destroyField) {
+          destroyField.value = "1";
+          row.classList.add("d-none");
+          return;
+        }
+
+        row.remove();
+      });
+    });
+  };
+
+  const initializeMyPumpForms = () => {
+    document.querySelectorAll("[data-my-pump-form]").forEach((form) => {
+      if (form.dataset.myPumpBound === "true") return;
+
+      const pumpSelect = form.querySelector("[data-my-pump-select]");
+      const nozzleGroups = Array.from(form.querySelectorAll("[data-my-pump-nozzle-group]"));
+      const emptyState = form.querySelector("[data-my-pump-nozzle-empty-state]");
+
+      if (!pumpSelect) return;
+
+      form.dataset.myPumpBound = "true";
+
+      form.querySelectorAll("[data-my-pump-nozzle-option]").forEach((option) => {
+        option.addEventListener("click", (event) => {
+          const input = option.querySelector("[data-my-pump-nozzle-input]");
+          if (!input || input.disabled) return;
+
+          event.preventDefault();
+          input.checked = !input.checked;
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      });
+
+      const syncNozzleGroups = () => {
+        const selectedPumpId = pumpSelect.value;
+
+        nozzleGroups.forEach((group) => {
+          const isActiveGroup = selectedPumpId !== "" && group.dataset.pumpId === selectedPumpId;
+          group.classList.toggle("d-none", !isActiveGroup);
+
+          group.querySelectorAll("input").forEach((input) => {
+            input.disabled = !isActiveGroup;
+          });
+        });
+
+        if (emptyState) {
+          emptyState.classList.toggle("d-none", selectedPumpId !== "");
+        }
+      };
+
+      pumpSelect.addEventListener("change", syncNozzleGroups);
+      syncNozzleGroups();
+    });
+  };
+
   document.addEventListener("turbo:load", initializeTheme);
   document.addEventListener("DOMContentLoaded", initializeTheme);
   document.addEventListener("turbo:before-render", (event) => applySidebarShellState(event.detail.newBody));
@@ -1574,6 +1663,10 @@
   document.addEventListener("DOMContentLoaded", initializeShiftCycleForms);
   document.addEventListener("turbo:load", initializeVehicleTypeIconPickers);
   document.addEventListener("DOMContentLoaded", initializeVehicleTypeIconPickers);
+  document.addEventListener("turbo:load", initializeFuelPumpForms);
+  document.addEventListener("DOMContentLoaded", initializeFuelPumpForms);
+  document.addEventListener("turbo:load", initializeMyPumpForms);
+  document.addEventListener("DOMContentLoaded", initializeMyPumpForms);
   bindInstallPromptEvents();
   registerServiceWorker();
 })();

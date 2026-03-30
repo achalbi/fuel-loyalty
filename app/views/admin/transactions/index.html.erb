@@ -87,10 +87,19 @@
           <% vehicle_number = transaction.vehicle&.vehicle_number || "Vehicle not linked" %>
           <% fuel_type_label = transaction.vehicle&.display_fuel_type || "Fuel type unavailable" %>
           <% vehicle_kind_label = transaction.vehicle&.display_vehicle_kind || "Vehicle type unavailable" %>
+          <% pump_name = transaction_pump_name(transaction) %>
+          <% nozzle_name = transaction_nozzle_name(transaction) %>
+          <% pump_nozzle_summary = transaction_pump_nozzle_summary(transaction) %>
           <div class="customer-details-vehicle-row admin-transaction-item">
             <div class="customer-details-vehicle-row__main admin-transaction-item__main">
               <span class="admin-transaction-item__name"><%= customer_name %></span>
               <span class="admin-transaction-item__time"><%= l(transaction.created_at, format: "%d %b %Y · %I:%M %p") %></span>
+              <% if pump_nozzle_summary.present? %>
+                <span class="transaction-location-meta admin-transaction-item__location">
+                  <i class="ti ti-gas-station" aria-hidden="true"></i>
+                  <span><%= pump_nozzle_summary %></span>
+                </span>
+              <% end %>
             </div>
 
             <div class="admin-transaction-item__side">
@@ -146,40 +155,34 @@
                     </div>
                   </div>
 
-                  <div class="admin-transaction-modal__details">
-                    <div class="admin-transaction-modal__detail">
-                      <span class="admin-transaction-modal__detail-icon">
-                        <i class="ti ti-device-mobile" aria-hidden="true"></i>
-                      </span>
-                      <div class="admin-transaction-modal__detail-body">
-                        <span class="admin-transaction-modal__label">Phone Number</span>
-                        <strong class="admin-transaction-modal__value">+91 <%= transaction.customer.phone_number %></strong>
-                      </div>
+                  <div class="admin-shift-item__details admin-shift-item__details--flush admin-transaction-modal__details">
+                    <div class="admin-shift-item__detail admin-transaction-modal__detail">
+                      <span class="admin-shift-item__detail-label admin-transaction-modal__label">Phone Number</span>
+                      <strong class="admin-shift-item__detail-value admin-transaction-modal__value">+91 <%= transaction.customer.phone_number %></strong>
                     </div>
-                    <div class="admin-transaction-modal__detail">
-                      <span class="admin-transaction-modal__detail-icon admin-transaction-modal__detail-icon--plate" aria-hidden="true"></span>
-                      <div class="admin-transaction-modal__detail-body">
-                        <span class="admin-transaction-modal__label">Vehicle Number</span>
-                        <strong class="admin-transaction-modal__value"><%= vehicle_number %></strong>
-                      </div>
+                    <div class="admin-shift-item__detail admin-transaction-modal__detail">
+                      <span class="admin-shift-item__detail-label admin-transaction-modal__label">Vehicle Number</span>
+                      <strong class="admin-shift-item__detail-value admin-transaction-modal__value"><%= vehicle_number %></strong>
                     </div>
-                    <div class="admin-transaction-modal__detail">
-                      <span class="admin-transaction-modal__detail-icon">
-                        <i class="ti ti-gas-station" aria-hidden="true"></i>
-                      </span>
-                      <div class="admin-transaction-modal__detail-body">
-                        <span class="admin-transaction-modal__label">Fuel / Type</span>
-                        <strong class="admin-transaction-modal__value"><%= "#{fuel_type_label} · #{vehicle_kind_label}" %></strong>
-                      </div>
+                    <div class="admin-shift-item__detail admin-transaction-modal__detail">
+                      <span class="admin-shift-item__detail-label admin-transaction-modal__label">Fuel / Type</span>
+                      <strong class="admin-shift-item__detail-value admin-transaction-modal__value"><%= "#{fuel_type_label} · #{vehicle_kind_label}" %></strong>
                     </div>
-                    <div class="admin-transaction-modal__detail">
-                      <span class="admin-transaction-modal__detail-icon">
-                        <i class="ti ti-user-circle" aria-hidden="true"></i>
-                      </span>
-                      <div class="admin-transaction-modal__detail-body">
-                        <span class="admin-transaction-modal__label">Handled By</span>
-                        <strong class="admin-transaction-modal__value"><%= transaction.user.display_name %></strong>
+                    <% if pump_name.present? %>
+                      <div class="admin-shift-item__detail admin-transaction-modal__detail">
+                        <span class="admin-shift-item__detail-label admin-transaction-modal__label">Pump</span>
+                        <strong class="admin-shift-item__detail-value admin-transaction-modal__value"><%= pump_name %></strong>
                       </div>
+                    <% end %>
+                    <% if nozzle_name.present? %>
+                      <div class="admin-shift-item__detail admin-transaction-modal__detail">
+                        <span class="admin-shift-item__detail-label admin-transaction-modal__label">Nozzle</span>
+                        <strong class="admin-shift-item__detail-value admin-transaction-modal__value"><%= nozzle_name %></strong>
+                      </div>
+                    <% end %>
+                    <div class="admin-shift-item__detail admin-transaction-modal__detail">
+                      <span class="admin-shift-item__detail-label admin-transaction-modal__label">Handled By</span>
+                      <strong class="admin-shift-item__detail-value admin-transaction-modal__value"><%= transaction.user.display_name %></strong>
                     </div>
                   </div>
                 </div>

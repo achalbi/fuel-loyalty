@@ -48,7 +48,8 @@ module Staff
             active: customer.active?,
             status_label: customer.status_label,
             total_points: customer.total_points,
-            max_redeemable_points: PointsRedeemer.max_redeemable_points(customer.total_points),
+            minimum_redeemable_points: customer.minimum_redeemable_points,
+            max_redeemable_points: customer.max_redeemable_points,
             vehicles: customer.vehicles.map do |vehicle|
               {
                 id: vehicle.id,

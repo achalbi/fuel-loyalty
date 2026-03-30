@@ -1,0 +1,81 @@
+<% content_for :title, "Fuel Pumps" %>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h1 class="h3 mb-3">Fuel Dispensing Units / Pumps</h1>
+        <p class="text-muted">Add pumps as running numbers and configure the nozzles available on each unit.</p>
+
+        <%= render "form",
+          fuel_pump: @fuel_pump,
+          submit_label: "Add Pump" %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h2 class="h4 mb-1">Existing Pumps</h2>
+            <p class="text-muted mb-0">Edit availability, add or remove nozzles, or remove old pump definitions.</p>
+          </div>
+          <span class="badge rounded-pill text-bg-light border"><%= pluralize(@fuel_pumps.count, "pump") %></span>
+        </div>
+
+        <% if @fuel_pumps.any? %>
+          <div class="reward-rates-form vstack gap-3">
+            <% @fuel_pumps.each do |fuel_pump| %>
+              <div class="reward-rate-row">
+                <div class="reward-rate-copy">
+                  <div class="reward-rate-title d-flex align-items-center gap-2">
+                    <i class="ti ti-gas-station" aria-hidden="true"></i>
+                    <span><%= fuel_pump.display_name %></span>
+                  </div>
+                  <p class="reward-rate-meta mb-0">
+                    <%= pluralize(fuel_pump.nozzles.size, "nozzle") %> configured.
+                    <%= pluralize(fuel_pump.active_nozzles_count, "active nozzle") %>.
+                    <%= fuel_pump.active? ? "Shown in app." : "Hidden from new selections." %>
+                  </p>
+
+                  <% if fuel_pump.nozzles.any? %>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                      <% fuel_pump.nozzles.each do |nozzle| %>
+                        <span class="badge rounded-pill text-bg-light border">
+                          <%= nozzle.display_name %> • <%= nozzle.fuel_type_name %><%= nozzle.active? ? "" : " • Inactive" %>
+                        </span>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+
+                <div class="reward-rate-field d-flex flex-column align-items-end gap-2">
+                  <span class="badge rounded-pill <%= fuel_pump.active? ? "text-bg-success" : "text-bg-secondary" %>"><%= fuel_pump.active? ? "Active" : "Inactive" %></span>
+
+                  <div class="d-flex gap-2">
+                    <%= link_to "Edit", edit_admin_fuel_pump_path(fuel_pump), class: "btn btn-outline-secondary btn-sm" %>
+                    <%= button_to "Delete",
+                      admin_fuel_pump_path(fuel_pump),
+                      method: :delete,
+                      class: "btn btn-outline-danger btn-sm",
+                      form: {
+                        class: "d-inline-block",
+                        data: {
+                          confirm_modal: true,
+                          confirm_message: "Remove #{fuel_pump.display_name}?"
+                        }
+                      } %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="alert alert-light border mb-0">No pumps have been added yet.</div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

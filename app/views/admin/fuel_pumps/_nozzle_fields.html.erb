@@ -1,0 +1,50 @@
+<% nozzle = nozzle_form.object %>
+<% fuel_type_options = FuelType.available_options(selected: nozzle.fuel_type_code) %>
+
+<div class="border rounded-4 p-3 bg-body-tertiary" data-fuel-pump-nozzle-row data-persisted="<%= nozzle.persisted? %>">
+  <%= nozzle_form.hidden_field :id if nozzle.persisted? %>
+  <%= nozzle_form.hidden_field :_destroy, value: "0", data: { fuel_pump_nozzle_destroy_field: true } %>
+
+  <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+    <div>
+      <h3 class="h6 mb-1"><%= nozzle.display_name %></h3>
+      <p class="small-muted mb-0">
+        <% if nozzle.persisted? %>
+          Sequence <strong>#<%= nozzle.sequence_number %></strong> for this pump.
+        <% else %>
+          Sequence number will be assigned automatically when this pump is saved.
+        <% end %>
+      </p>
+    </div>
+
+    <button type="button" class="btn btn-outline-danger btn-sm" data-fuel-pump-nozzle-remove>
+      <i class="ti ti-trash me-1" aria-hidden="true"></i>
+      <span><%= nozzle.persisted? ? "Remove" : "Discard" %></span>
+    </button>
+  </div>
+
+  <% if nozzle.errors.any? %>
+    <div class="alert alert-danger py-2 px-3 mb-3">
+      <%= nozzle.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div class="row g-3 align-items-end">
+    <div class="col-md-8">
+      <%= nozzle_form.label :fuel_type_code, "Fuel Type", class: "form-label" %>
+      <%= nozzle_form.select :fuel_type_code,
+        options_for_select(fuel_type_options, nozzle.fuel_type_code),
+        { prompt: "Select fuel type" },
+        class: "form-select",
+        required: true %>
+      <div class="form-text">Inactive fuel types stay visible here only when the nozzle already uses them.</div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="form-check form-switch reward-rate-toggle mt-md-4">
+        <%= nozzle_form.check_box :active, class: "form-check-input" %>
+        <%= nozzle_form.label :active, "Active nozzle", class: "form-check-label reward-rate-toggle__label" %>
+      </div>
+    </div>
+  </div>
+</div>

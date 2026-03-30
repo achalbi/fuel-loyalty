@@ -57,11 +57,11 @@ module Admin
     end
 
     def vehicle_type_create_params
-      params.require(:vehicle_type).permit(:name, :short_name, :app_label_source, :code, :icon_name, :active)
+      params.require(:vehicle_type).permit(:name, :short_name, :app_label_source, :code, :icon_name, :minimum_redeemable_points, :active)
     end
 
     def vehicle_type_update_params
-      params.require(:vehicle_type).permit(:name, :short_name, :app_label_source, :icon_name, :active)
+      params.require(:vehicle_type).permit(:name, :short_name, :app_label_source, :icon_name, :minimum_redeemable_points, :active)
     end
   end
 end

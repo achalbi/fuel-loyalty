@@ -8,6 +8,7 @@ Rails.application.routes.draw do
   post "/push/subscriptions", to: "push_subscriptions#create", as: :push_subscriptions, defaults: { format: :json }
   delete "/push/subscriptions", to: "push_subscriptions#destroy", defaults: { format: :json }
   resource :password, only: %i[edit update]
+  resource :my_pump, only: %i[show update], controller: "my_pumps"
 
   root "dashboard#show"
 
@@ -49,6 +50,7 @@ Rails.application.routes.draw do
     end
     resources :users, only: %i[index new create show edit update]
     resources :fuel_types, only: %i[index create edit update destroy]
+    resources :fuel_pumps, only: %i[index create edit update destroy]
     resources :vehicle_types, only: %i[index create edit update destroy]
     resource :fuel_reward_rates, only: %i[show update], controller: "fuel_reward_rates"
     resource :theme_settings, only: %i[show update], controller: "theme_settings"

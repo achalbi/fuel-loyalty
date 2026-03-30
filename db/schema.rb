@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_29_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_29_203000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -88,6 +88,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_170000) do
     t.datetime "updated_at", null: false
     t.string "vehicle_number"
     t.index ["phone_number"], name: "index_customers_on_phone_number", unique: true
+  end
+
+  create_table "fuel_pump_nozzles", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.bigint "fuel_pump_id", null: false
+    t.string "fuel_type_code", null: false
+    t.integer "sequence_number", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_fuel_pump_nozzles_on_active"
+    t.index ["fuel_pump_id", "sequence_number"], name: "index_fuel_pump_nozzles_on_fuel_pump_id_and_sequence_number", unique: true
+    t.index ["fuel_pump_id"], name: "index_fuel_pump_nozzles_on_fuel_pump_id"
+    t.index ["fuel_type_code"], name: "index_fuel_pump_nozzles_on_fuel_type_code"
+  end
+
+  create_table "fuel_pumps", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.integer "sequence_number", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_fuel_pumps_on_active"
+    t.index ["sequence_number"], name: "index_fuel_pumps_on_sequence_number", unique: true
   end
 
   create_table "fuel_reward_rates", force: :cascade do |t|
@@ -244,12 +266,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_170000) do
     t.datetime "created_at", null: false
     t.bigint "customer_id", null: false
     t.decimal "fuel_amount", precision: 10, scale: 2, null: false
+    t.bigint "fuel_pump_id"
+    t.bigint "fuel_pump_nozzle_id"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.bigint "vehicle_id"
     t.index ["customer_id"], name: "index_transactions_on_customer_id"
+    t.index ["fuel_pump_id"], name: "index_transactions_on_fuel_pump_id"
+    t.index ["fuel_pump_nozzle_id"], name: "index_transactions_on_fuel_pump_nozzle_id"
     t.index ["user_id"], name: "index_transactions_on_user_id"
     t.index ["vehicle_id"], name: "index_transactions_on_vehicle_id"
+  end
+
+  create_table "user_pump_nozzle_assignments", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "fuel_pump_nozzle_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["fuel_pump_nozzle_id"], name: "index_user_pump_nozzle_assignments_on_fuel_pump_nozzle_id"
+    t.index ["user_id", "fuel_pump_nozzle_id"], name: "index_user_pump_nozzle_assignments_on_user_and_nozzle", unique: true
+    t.index ["user_id"], name: "index_user_pump_nozzle_assignments_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -259,6 +295,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_170000) do
     t.string "email", default: "", null: false
     t.string "employee_code"
     t.string "encrypted_password", default: "", null: false
+    t.bigint "fuel_pump_id"
     t.string "name", null: false
     t.string "phone_number"
     t.datetime "remember_created_at"
@@ -272,6 +309,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_170000) do
     t.index ["deleted_at"], name: "index_users_on_deleted_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["employee_code"], name: "index_users_on_employee_code", unique: true
+    t.index ["fuel_pump_id"], name: "index_users_on_fuel_pump_id"
     t.index ["phone_number"], name: "index_users_on_phone_number", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["username"], name: "index_users_on_username", unique: true
@@ -283,6 +321,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_170000) do
     t.string "code", null: false
     t.datetime "created_at", null: false
     t.string "icon_name", null: false
+    t.integer "minimum_redeemable_points", default: 100, null: false
     t.string "name", null: false
     t.string "short_name", null: false
     t.datetime "updated_at", null: false
@@ -311,6 +350,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_170000) do
   add_foreign_key "attendance_entry_changes", "users", column: "changed_by_id"
   add_foreign_key "attendance_runs", "shift_templates"
   add_foreign_key "attendance_runs", "users", column: "recorded_by_id"
+  add_foreign_key "fuel_pump_nozzles", "fuel_pumps"
+  add_foreign_key "fuel_pump_nozzles", "fuel_types", column: "fuel_type_code", primary_key: "code"
   add_foreign_key "points_ledgers", "customers"
   add_foreign_key "points_ledgers", "transactions"
   add_foreign_key "shift_assignments", "shift_cycles"
@@ -324,7 +365,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_170000) do
   add_foreign_key "shift_swaps", "users", column: "recorded_by_id"
   add_foreign_key "shift_swaps", "users", column: "to_user_id"
   add_foreign_key "transactions", "customers"
+  add_foreign_key "transactions", "fuel_pump_nozzles"
+  add_foreign_key "transactions", "fuel_pumps"
   add_foreign_key "transactions", "users"
   add_foreign_key "transactions", "vehicles"
+  add_foreign_key "user_pump_nozzle_assignments", "fuel_pump_nozzles"
+  add_foreign_key "user_pump_nozzle_assignments", "users"
+  add_foreign_key "users", "fuel_pumps"
   add_foreign_key "vehicles", "customers"
 end

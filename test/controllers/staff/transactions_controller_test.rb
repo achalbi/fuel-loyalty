@@ -8,16 +8,33 @@ module Staff
       get new_staff_transaction_path
 
       assert_response :success
+      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path(plate_scanner: 1)}'][aria-label='Scan Vehicle Plate']", 1
+      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
+      assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
       assert_select ".transaction-entry-titlebar__heading h1", text: "Record Fuel Transaction"
       assert_select ".transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionEntryHeadingHint'][aria-controls='transactionEntryHeadingHint']", 1
-      assert_select "#transactionEntryHeadingHint.collapse .transaction-entry-titlebar__hint-card", text: /Find the customer for this visit using a phone number or vehicle number/
+      assert_select "#transactionEntryHeadingHint.collapse .transaction-entry-titlebar__hint-card [data-lookup-tab-description-target]", text: "Match the vehicle plate to the right customer profile."
       assert_select "#transactionEntryTabs"
       assert_select "#transaction-phone-tab[data-lookup-tab-focus-target='phone'][data-lookup-tab-description='Find the customer first, then choose a vehicle.']", 1
       assert_select "#transaction-vehicle-tab[data-lookup-tab-focus-target='vehicle'][data-lookup-tab-description='Match the vehicle plate to the right customer profile.']", 1
       assert_select ".transaction-entry-tabs__meta", 0
-      assert_select "[data-lookup-tab-description-target]", text: "Match the vehicle plate to the right customer profile."
+      assert_select ".transaction-entry-tabs__description", 0
       assert_select "#transaction-phone-pane form[action='#{staff_transactions_path}']"
       assert_select "#transaction-vehicle-pane form[action='#{staff_transactions_path}']"
+      assert_select ".transaction-pump-card", 2
+      assert_select ".transaction-pump-card .transaction-entry-titlebar__heading h2.h4", text: "My Pump", count: 2
+      assert_select ".transaction-pump-card__pump-value", text: "Pump 1", count: 2
+      assert_select ".transaction-pump-card__nozzles", 2
+      assert_select ".transaction-pump-card__nozzle-option[data-transaction-nozzle-option]", minimum: 4
+      assert_select ".transaction-pump-card__nozzle", minimum: 4
+      assert_select "input.transaction-pump-card__nozzle-input[type='radio'][name='transaction[fuel_pump_nozzle_id]'][value='#{fuel_pump_nozzles(:one).id}']", 2
+      assert_select "input.transaction-pump-card__nozzle-input[type='radio'][name='transaction[fuel_pump_nozzle_id]'][value='#{fuel_pump_nozzles(:two).id}']", 2
+      assert_select "a.transaction-pump-card__change-link.customer-details-vehicle-row__menu-toggle[href='#{my_pump_path}'][aria-label='Change My Pump']", minimum: 2
+      assert_select ".transaction-pump-card__change-link .ti.ti-edit", minimum: 2
+      assert_select ".transaction-pump-card .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#phone_transaction_pump_hint'][aria-controls='phone_transaction_pump_hint'][aria-label='Show My Pump help']", 1
+      assert_select ".transaction-pump-card .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#vehicle_transaction_pump_hint'][aria-controls='vehicle_transaction_pump_hint'][aria-label='Show My Pump help']", 1
+      assert_select "#phone_transaction_pump_hint.collapse .transaction-entry-titlebar__hint-card", text: /Your selected pump can be changed by clicking the change icon on top-right/
+      assert_select "#vehicle_transaction_pump_hint.collapse .transaction-entry-titlebar__hint-card", text: /Your selected pump can be changed by clicking the change icon on top-right/
       assert_select "#transaction-phone-pane .transaction-entry-titlebar__heading h2", text: "Lookup by Phone"
       assert_select "#transaction-phone-pane .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionPhoneLookupHint'][aria-controls='transactionPhoneLookupHint']", 1
       assert_select "#transactionPhoneLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Enter the customer's phone number to load the profile.*Customer must already exist/m
@@ -25,6 +42,14 @@ module Staff
       assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__heading h2", text: "Lookup by Vehicle"
       assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionVehicleLookupHint'][aria-controls='transactionVehicleLookupHint']", 1
       assert_select "#transactionVehicleLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Enter the vehicle number to find the customer/
+      assert_select "[data-plate-scanner-root][data-input-id='vehicle_transaction_transaction_vehicle_number'][data-auto-open='false']", 1
+      assert_select "button.transaction-plate-scanner__toggle[data-plate-scanner-open][aria-controls='transactionPlateScannerPanel']", text: /Capture Plate/
+      assert_select "input#vehicle_transaction_transaction_vehicle_number[name='transaction[vehicle_number]'][data-plate-scanner-input='true'][data-vehicle-number-input='true']", 1
+      assert_select ".transaction-plate-scanner__result.d-none[data-plate-scanner-result]", 1
+      assert_select "#transactionPlateScannerPanel.transaction-plate-scanner[hidden][data-plate-scanner-panel]", 1
+      assert_select "[data-plate-scanner-video]", 1
+      assert_select "canvas[data-plate-scanner-canvas][hidden]", 1
+      assert_select "[data-plate-scanner-guide]", 1
       assert_select "input[name='transaction[lookup_mode]'][value='phone']", 1
       assert_select "input[name='transaction[lookup_mode]'][value='vehicle']", 1
       assert_select "#transaction-vehicle-tab.active[aria-selected='true']"
@@ -50,17 +75,44 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[phone_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[vehicle_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_amount]']"
+      assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_pump_nozzle_id]']"
       assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[fuel_type]'][value='petrol']", 1
       assert_select "#transactionAddCustomerModal select[name='customer[fuel_type]']", 0
       assert_select "[data-push-opt-in-panel]", 0
       assert_select "a.nav-link[href='#{staff_notifications_path}']", text: /Notifications/
       assert_match(/data-transaction-phone-root.*data-customer-error.*Lookup by Phone/m, response.body)
       assert_match(/data-transaction-vehicle-root.*data-customer-error.*Lookup by Vehicle/m, response.body)
+      assert_match(/vehicle_plate_scanner(?:-[^"]+)?\.js/, response.body)
       assert_includes response.body, "registerCustomerPath: payload.register_customer_path"
       assert_includes response.body, "registrationModal.openNow(registrationPayload)"
+      assert_includes response.body, "const bindTransactionNozzleOptions = (root, onChange) => {"
+      assert_includes response.body, "fuelPumpNozzleId: selectedNozzleInput()?.value || \"\""
       assert_includes response.body, "shown.bs.tab"
       assert_includes response.body, "event.relatedTarget === vehicleSelect || suppressVehicleSelectBlurLookup"
       assert_includes response.body, "event.relatedTarget === matchSelect || suppressMatchSelectBlurLookup"
+
+      phone_fuel_amount_index = response.body.index('id="phone_transaction_fuel_amount"')
+      phone_pump_hint_index = response.body.index('id="phone_transaction_pump_hint"')
+      vehicle_fuel_amount_index = response.body.index('id="vehicle_transaction_fuel_amount"')
+      vehicle_pump_hint_index = response.body.index('id="vehicle_transaction_pump_hint"')
+
+      refute_nil phone_fuel_amount_index
+      refute_nil phone_pump_hint_index
+      refute_nil vehicle_fuel_amount_index
+      refute_nil vehicle_pump_hint_index
+      assert_operator phone_fuel_amount_index, :<, phone_pump_hint_index
+      assert_operator vehicle_fuel_amount_index, :<, vehicle_pump_hint_index
+    end
+
+    test "scanner shortcut auto opens the vehicle plate capture panel" do
+      sign_in users(:two)
+
+      get new_staff_transaction_path, params: { plate_scanner: "1" }
+
+      assert_response :success
+      assert_select "#transaction-vehicle-tab.active[aria-selected='true']", 1
+      assert_select "#transaction-vehicle-pane.show.active", 1
+      assert_select "[data-plate-scanner-root][data-input-id='vehicle_transaction_transaction_vehicle_number'][data-auto-open='true']", 1
     end
 
     test "looks up a customer by vehicle number" do
@@ -132,7 +184,8 @@ module Staff
               lookup_mode: "phone",
               phone_number: customers(:one).phone_number,
               vehicle_id: vehicles(:one).id,
-              fuel_amount: "300"
+              fuel_amount: "300",
+              fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id
             }
           }
         end
@@ -162,7 +215,8 @@ module Staff
             transaction_lookup: {
               lookup_mode: "vehicle",
               vehicle_number: "TN30AB1234",
-              fuel_amount: "650"
+              fuel_amount: "650",
+              fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id
             }
           }
         end
@@ -176,7 +230,8 @@ module Staff
           lookup_mode: "vehicle",
           vehicle_number: vehicle.vehicle_number,
           vehicle_id: vehicle.id,
-          fuel_amount: "650"
+          fuel_amount: "650",
+          fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id
         }
       )
     end
@@ -193,13 +248,14 @@ module Staff
             fuel_type: "",
             vehicle_kind: ""
           },
-          transaction_lookup: {
-            lookup_mode: "phone",
-            phone_number: "1234567890",
-            fuel_amount: "500"
+            transaction_lookup: {
+              lookup_mode: "phone",
+              phone_number: "1234567890",
+              fuel_amount: "500",
+              fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id
+            }
           }
-        }
-      end
+        end
 
       assert_response :unprocessable_entity
       assert_select "#transactionAddCustomerModal[data-auto-open-modal='true']"

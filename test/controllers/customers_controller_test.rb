@@ -53,6 +53,7 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
 
     get customer_path(customers(:one))
     assert_response :success
+    assert_select "a[href='#{new_staff_redemption_path(redemption: { phone_number: customers(:one).phone_number })}']", text: /Redeem Points/
     assert_select ".customer-details-vehicle-list.customer-details-vehicle-list--allow-overflow"
     assert_select ".customer-details-hero__menu .customer-details-vehicle-row__menu-toggle", 1
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Edit Customer"
@@ -87,6 +88,8 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
         user:,
         vehicle:,
         fuel_amount: 100 + index,
+        fuel_pump: fuel_pumps(:one),
+        fuel_pump_nozzle: fuel_pump_nozzles(:one),
         created_at: Time.current + index.minutes
       )
     end
@@ -94,12 +97,14 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     get customer_path(customer)
     assert_response :success
     assert_select ".customer-details-history-row", 3
+    assert_select ".customer-details-history-row__location", text: /Pump 1.*Nozzle 1.*Petrol/m, count: 3
     assert_select "[data-bs-target='#transactionHistoryModal']"
     assert_select "[data-transaction-history-panel][data-transaction-history-url='#{transaction_history_customer_path(customer, page: 1)}']"
 
     get transaction_history_customer_path(customer, page: 1)
     assert_response :success
     assert_select ".customer-details-history-row", 5
+    assert_select ".customer-details-history-row__location", text: /Pump 1.*Nozzle 1.*Petrol/m, count: 5
     assert_match "Showing <strong>1-5</strong> of <strong>5</strong> more transactions", response.body
   end
 end

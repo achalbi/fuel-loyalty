@@ -48,11 +48,25 @@
 
         <div class="ms-auto d-flex align-items-center gap-2">
           <% if current_user.staff? || current_user.admin? %>
+            <%= link_to new_staff_transaction_path(plate_scanner: 1),
+              class: "btn btn-light btn-icon btn-sm",
+              aria: { label: "Scan Vehicle Plate" },
+              title: "Scan Vehicle Plate" do %>
+              <i class="ti ti-camera" aria-hidden="true"></i>
+            <% end %>
+
             <%= link_to new_staff_transaction_path,
               class: "btn btn-light btn-icon btn-sm",
               aria: { label: "New Transaction" },
               title: "New Transaction" do %>
               <i class="ti ti-gas-station" aria-hidden="true"></i>
+            <% end %>
+
+            <%= link_to new_loyalty_path,
+              class: "btn btn-light btn-icon btn-sm",
+              aria: { label: "Loyalty Lookup" },
+              title: "Loyalty Lookup" do %>
+              <i class="ti ti-search" aria-hidden="true"></i>
             <% end %>
           <% end %>
 
@@ -126,6 +140,7 @@
             <li><%= link_to admin_customers_path, class: "nav-link #{'active' if current_page?(admin_customers_path)}" do %><i class="ti ti-users"></i><span class="nav-text">Customers</span><% end %></li>
             <li><%= link_to admin_transactions_path, class: "nav-link #{'active' if current_page?(admin_transactions_path)}" do %><i class="ti ti-receipt"></i><span class="nav-text">Transactions</span><% end %></li>
             <li><%= link_to admin_fuel_types_path, class: "nav-link #{'active' if controller_path == 'admin/fuel_types'}" do %><i class="ti ti-gas-station"></i><span class="nav-text">Fuel Types</span><% end %></li>
+            <li><%= link_to admin_fuel_pumps_path, class: "nav-link #{'active' if controller_path == 'admin/fuel_pumps'}" do %><i class="ti ti-gas-station"></i><span class="nav-text">Pumps</span><% end %></li>
             <li><%= link_to admin_vehicle_types_path, class: "nav-link #{'active' if controller_path == 'admin/vehicle_types'}" do %><i class="ti ti-car"></i><span class="nav-text">Vehicle Types</span><% end %></li>
             <li><%= link_to admin_fuel_reward_rates_path, class: "nav-link #{'active' if current_page?(admin_fuel_reward_rates_path)}" do %><i class="ti ti-adjustments"></i><span class="nav-text">Reward Rates</span><% end %></li>
             <li><%= link_to new_staff_redemption_path, class: "nav-link #{'active' if current_page?(new_staff_redemption_path)}" do %><i class="ti ti-gift-card"></i><span class="nav-text">Redeem Points</span><% end %></li>
@@ -148,6 +163,7 @@
 
           <li class="px-4 pt-4 pb-2"><small class="nav-section-label">Access</small></li>
           <li><%= link_to new_loyalty_path, class: "nav-link #{'active' if current_page?(new_loyalty_path)}" do %><i class="ti ti-search"></i><span class="nav-text">Loyalty Lookup</span><% end %></li>
+          <li><%= link_to my_pump_path, class: "nav-link #{'active' if current_page?(my_pump_path)}" do %><i class="ti ti-gas-station"></i><span class="nav-text">My Pump</span><% end %></li>
         </ul>
       </aside>
 

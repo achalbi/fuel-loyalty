@@ -32,6 +32,7 @@ module Admin
 
       get admin_customer_path(customers(:one))
       assert_response :success
+      assert_select "a[href='#{new_staff_redemption_path(redemption: { phone_number: customers(:one).phone_number })}']", text: /Redeem Points/
       assert_select ".customer-details-vehicle-list.customer-details-vehicle-list--allow-overflow"
       assert_select ".customer-details-hero__menu .customer-details-vehicle-row__menu-toggle", 1
       assert_select "#editCustomerModal"
@@ -193,6 +194,8 @@ module Admin
           user: users(:one),
           vehicle:,
           fuel_amount: 200 + index,
+          fuel_pump: fuel_pumps(:one),
+          fuel_pump_nozzle: fuel_pump_nozzles(:two),
           created_at: Time.current + index.minutes
         )
       end
@@ -200,11 +203,13 @@ module Admin
       get admin_customer_path(customer)
       assert_response :success
       assert_select ".customer-details-history-row", 3
+      assert_select ".customer-details-history-row__location", text: /Pump 1.*Nozzle 2.*Diesel/m, count: 3
       assert_select "[data-transaction-history-panel][data-transaction-history-url='#{transaction_history_admin_customer_path(customer, page: 1)}']"
 
       get transaction_history_admin_customer_path(customer, page: 2)
       assert_response :success
       assert_select ".customer-details-history-row", 2
+      assert_select ".customer-details-history-row__location", text: /Pump 1.*Nozzle 2.*Diesel/m, count: 2
       assert_match "Showing <strong>6-7</strong> of <strong>7</strong> more transactions", response.body
     end
   end

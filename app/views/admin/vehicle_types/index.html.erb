@@ -42,6 +42,7 @@
                     Short name: <strong><%= vehicle_type.short_name %></strong>.
                     App label: <strong><%= vehicle_type.app_label_source_short_name? ? "Short Name" : "Vehicle Type Name" %></strong>.
                     Icon: <strong><%= VehicleType.icon_label_for(vehicle_type.icon_name, code: vehicle_type.code, name: vehicle_type.name) %></strong>.
+                    Minimum redeemable: <strong><%= number_with_delimiter(vehicle_type.minimum_redeemable_points) %> points</strong>.
                     Code: <code><%= vehicle_type.code %></code>.
                     <%= vehicle_type.active? ? "Shown in app." : "Hidden from new selections." %>
                     <%= vehicle_count.positive? ? "Used by #{pluralize(vehicle_count, 'vehicle')}." : "Not used by any vehicles yet." %>

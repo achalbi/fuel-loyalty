@@ -222,6 +222,25 @@ class UserTest < ActiveSupport::TestCase
     assert_includes user.errors[:role], "must leave at least one admin user"
   end
 
+  test "requires at least one assigned nozzle when a pump is selected" do
+    user = users(:two)
+    user.assign_attributes(fuel_pump_id: fuel_pumps(:one).id, assigned_fuel_pump_nozzle_ids: [])
+
+    assert_not user.valid?(:pump_assignment)
+    assert_includes user.errors[:assigned_fuel_pump_nozzle_ids], "must include at least one nozzle"
+  end
+
+  test "transaction pump nozzles only includes active assigned nozzles from the active pump" do
+    user = users(:two)
+    inactive_nozzle = fuel_pumps(:one).nozzles.create!(fuel_type_code: "petrol", active: false)
+
+    user.update!(fuel_pump_id: fuel_pumps(:one).id, assigned_fuel_pump_nozzle_ids: [fuel_pump_nozzles(:one).id])
+    user.pump_nozzle_assignments.create!(fuel_pump_nozzle: inactive_nozzle)
+
+    assert_equal fuel_pumps(:one), user.transaction_fuel_pump
+    assert_equal [fuel_pump_nozzles(:one)], user.transaction_fuel_pump_nozzles.to_a
+  end
+
   test "login and display phone number do not raise when phone number attribute is unavailable" do
     user = User.new(name: "Admin", username: "admin", email: "admin@example.com")
     original_has_attribute = user.method(:has_attribute?)

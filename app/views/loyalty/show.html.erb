@@ -11,13 +11,15 @@
         data-loyalty-points-value
         data-loyalty-points-target="<%= @total_points %>"
         aria-label="<%= @total_points %> points">0</strong>
-      <% if @redeemable_points >= PointsRedeemer::REDEMPTION_INCREMENT %>
+      <% if @redeemable_points >= @minimum_redeemable_points %>
         <span class="loyalty-result-points__status is-redeemable" data-loyalty-redeem-status>
-          Rewards unlocked: <strong><%= @redeemable_points %> points</strong>
+          Rewards unlocked: <strong><%= @redeemable_points %> points</strong>.
+          Minimum redemption: <strong><%= @minimum_redeemable_points %> points</strong>.
         </span>
       <% else %>
         <span class="loyalty-result-points__status is-pending" data-loyalty-redeem-status>
-          <strong><%= @points_until_redeemable %> points more</strong> to unlock rewards
+          <strong><%= @points_until_redeemable %> points more</strong> to unlock rewards.
+          Minimum redemption: <strong><%= @minimum_redeemable_points %> points</strong>.
         </span>
       <% end %>
     </div>

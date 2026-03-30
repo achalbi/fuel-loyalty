@@ -9,12 +9,14 @@ class FuelType < ApplicationRecord
 
   has_many :vehicles, foreign_key: :fuel_type, primary_key: :code, inverse_of: false
   has_many :fuel_reward_rates, foreign_key: :fuel_type, primary_key: :code, inverse_of: false
+  has_many :fuel_pump_nozzles, foreign_key: :fuel_type_code, primary_key: :code, inverse_of: false
 
   before_validation :normalize_name
   before_validation :assign_code_from_name
   before_validation :normalize_code
 
   before_destroy :ensure_not_used_by_vehicles
+  before_destroy :ensure_not_used_by_nozzles
   before_destroy :destroy_reward_rates
 
   scope :active, -> { where(active: true) }
@@ -80,6 +82,10 @@ class FuelType < ApplicationRecord
     "cannot be removed while vehicles still use it"
   end
 
+  def nozzle_remove_error_message
+    "cannot be removed while pump nozzles still use it"
+  end
+
   def self.options_for(codes)
     normalized_codes = codes.filter_map { |code| normalize_code_value(code) }.uniq
     return [] if normalized_codes.empty?
@@ -123,6 +129,13 @@ class FuelType < ApplicationRecord
     return if removable?
 
     errors.add(:base, remove_error_message)
+    throw :abort
+  end
+
+  def ensure_not_used_by_nozzles
+    return unless fuel_pump_nozzles.exists?
+
+    errors.add(:base, nozzle_remove_error_message)
     throw :abort
   end
 

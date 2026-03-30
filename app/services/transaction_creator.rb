@@ -5,20 +5,28 @@ class TransactionCreator
     new(...).call
   end
 
-  def initialize(user:, fuel_amount:, vehicle_id:, lookup_mode: "phone", phone_number: nil, vehicle_number: nil)
+  def initialize(user:, fuel_amount:, vehicle_id:, fuel_pump_nozzle_id:, lookup_mode: "phone", phone_number: nil, vehicle_number: nil)
     @user = user
     @lookup_mode = lookup_mode
     @phone_number = phone_number
     @vehicle_number = vehicle_number
     @fuel_amount = fuel_amount
     @vehicle_id = vehicle_id
+    @fuel_pump_nozzle_id = fuel_pump_nozzle_id
   end
 
   def call
     ActiveRecord::Base.transaction do
       customer, vehicle = resolve_customer_and_vehicle!
+      fuel_pump, fuel_pump_nozzle = resolve_fuel_pump_and_nozzle!(vehicle)
 
-      transaction = customer.transactions.create!(user: user, vehicle: vehicle, fuel_amount: fuel_amount)
+      transaction = customer.transactions.create!(
+        user: user,
+        vehicle: vehicle,
+        fuel_amount: fuel_amount,
+        fuel_pump: fuel_pump,
+        fuel_pump_nozzle: fuel_pump_nozzle
+      )
       points = PointsCalculator.call(fuel_amount, fuel_type: vehicle.fuel_type)
 
       customer.points_ledgers.create!(
@@ -33,7 +41,7 @@ class TransactionCreator
 
   private
 
-  attr_reader :fuel_amount, :lookup_mode, :phone_number, :user, :vehicle_id, :vehicle_number
+  attr_reader :fuel_amount, :fuel_pump_nozzle_id, :lookup_mode, :phone_number, :user, :vehicle_id, :vehicle_number
 
   def resolve_customer_and_vehicle!
     if vehicle_lookup?
@@ -119,5 +127,37 @@ class TransactionCreator
     customer.vehicles.find(vehicle_id)
   rescue ActiveRecord::RecordNotFound
     raise ActiveRecord::RecordInvalid.new(Transaction.new.tap { |transaction| transaction.errors.add(:vehicle, "must belong to the selected customer") })
+  end
+
+  def resolve_fuel_pump_and_nozzle!(vehicle)
+    fuel_pump = user.transaction_fuel_pump
+
+    unless fuel_pump
+      raise ActiveRecord::RecordInvalid.new(
+        Transaction.new.tap do |transaction|
+          transaction.errors.add(:base, "Set up My Pump with at least one active nozzle before recording a transaction")
+        end
+      )
+    end
+
+    fuel_pump_nozzle = user.transaction_fuel_pump_nozzles.find_by(id: fuel_pump_nozzle_id)
+
+    unless fuel_pump_nozzle
+      raise ActiveRecord::RecordInvalid.new(
+        Transaction.new.tap do |transaction|
+          transaction.errors.add(:fuel_pump_nozzle, "must be selected from your assigned nozzles")
+        end
+      )
+    end
+
+    if fuel_pump_nozzle.fuel_type_code != vehicle.fuel_type
+      raise ActiveRecord::RecordInvalid.new(
+        Transaction.new.tap do |transaction|
+          transaction.errors.add(:fuel_pump_nozzle, "must match the selected vehicle's fuel type")
+        end
+      )
+    end
+
+    [fuel_pump, fuel_pump_nozzle]
   end
 end

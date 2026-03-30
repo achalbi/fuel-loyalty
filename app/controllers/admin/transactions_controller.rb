@@ -23,7 +23,7 @@ module Admin
     private
 
     def filtered_transactions
-      scope = Transaction.includes(:customer, :user, :vehicle)
+      scope = Transaction.includes(:customer, :fuel_pump, :user, :vehicle, fuel_pump_nozzle: %i[fuel_pump fuel_type_record])
 
       if @current_start_date.present? || @current_end_date.present?
         scope = scope.where("created_at >= ?", @current_start_date.beginning_of_day) if @current_start_date.present?

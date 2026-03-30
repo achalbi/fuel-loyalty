@@ -3,6 +3,8 @@ module Staff
     def new
       authorize Transaction
       assign_prefill_values
+      @auto_open_plate_scanner = params[:plate_scanner].present? && @active_lookup_mode == "vehicle"
+      load_transaction_pump_state
       prepare_registration_modal
     end
 
@@ -55,6 +57,7 @@ module Staff
     rescue ActiveRecord::RecordInvalid => e
       @errors = e.record.errors.full_messages
       assign_prefill_values
+      load_transaction_pump_state
       prepare_registration_modal
       render :new, status: :unprocessable_entity
     end
@@ -71,6 +74,7 @@ module Staff
         redirect_to new_staff_transaction_path(transaction: transaction_prefill_for_registered_customer(customer, saved_vehicle)), notice:
       else
         assign_prefill_values
+        load_transaction_pump_state
         prepare_registration_modal(customer:, open: true)
         render :new, status: :unprocessable_entity
       end
@@ -79,7 +83,7 @@ module Staff
     private
 
     def transaction_params
-      params.require(:transaction).permit(:lookup_mode, :phone_number, :vehicle_number, :vehicle_id, :fuel_amount)
+      params.require(:transaction).permit(:lookup_mode, :phone_number, :vehicle_number, :vehicle_id, :fuel_amount, :fuel_pump_nozzle_id)
     end
 
     def assign_prefill_values
@@ -92,6 +96,7 @@ module Staff
       @prefill_vehicle_number = prefill_source[:vehicle_number]
       @prefill_vehicle_id = prefill_source[:vehicle_id]
       @prefill_fuel_amount = prefill_source[:fuel_amount]
+      @prefill_fuel_pump_nozzle_id = prefill_source[:fuel_pump_nozzle_id]
     end
 
     def transaction_prefill_source
@@ -114,12 +119,17 @@ module Staff
       @transaction_registration_modal_open = open
     end
 
+    def load_transaction_pump_state
+      @transaction_fuel_pump = current_user.transaction_fuel_pump
+      @transaction_fuel_pump_nozzles = current_user.transaction_fuel_pump_nozzles.to_a
+    end
+
     def registration_customer_params
       params.require(:customer).permit(:name, :phone_number, :vehicle_number, :fuel_type, :vehicle_kind)
     end
 
     def transaction_lookup_params
-      params.require(:transaction_lookup).permit(:lookup_mode, :phone_number, :vehicle_number, :fuel_amount)
+      params.require(:transaction_lookup).permit(:lookup_mode, :phone_number, :vehicle_number, :fuel_amount, :fuel_pump_nozzle_id)
     end
 
     def build_registration_customer
@@ -155,20 +165,23 @@ module Staff
     def transaction_prefill_for_registered_customer(customer, vehicle)
       fuel_amount = transaction_lookup_params[:fuel_amount]
       lookup_mode = normalized_lookup_mode(transaction_lookup_params[:lookup_mode])
+      fuel_pump_nozzle_id = transaction_lookup_params[:fuel_pump_nozzle_id]
 
       if lookup_mode == "vehicle" && vehicle.present?
         {
           lookup_mode: "vehicle",
           vehicle_number: vehicle.vehicle_number,
           vehicle_id: vehicle.id,
-          fuel_amount:
+          fuel_amount:,
+          fuel_pump_nozzle_id:
         }.compact_blank
       else
         {
           lookup_mode: "phone",
           phone_number: customer.phone_number,
           vehicle_id: vehicle&.id,
-          fuel_amount:
+          fuel_amount:,
+          fuel_pump_nozzle_id:
         }.compact_blank
       end
     end

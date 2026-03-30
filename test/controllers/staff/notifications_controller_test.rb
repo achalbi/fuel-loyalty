@@ -12,7 +12,10 @@ module Staff
       assert_response :success
       assert_select "h1", text: "Notifications"
       assert_select "a.nav-link.active[href='#{staff_notifications_path}']", text: /Notifications/
+      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path(plate_scanner: 1)}'][aria-label='Scan Vehicle Plate']", 1
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
+      assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
+      assert_select "a.nav-link[href='#{my_pump_path}']", text: /My Pump/
       assert_select ".user-menu [data-sidebar-mode-switch][aria-label='Show side navbar as icon-only bar']", 1
       assert_select ".page-actions a.btn[href='#{new_staff_transaction_path}']", 0
       assert_select "[data-push-opt-in-panel][data-push-source='staff_notifications']", 1
@@ -27,7 +30,10 @@ module Staff
       get staff_notifications_path
 
       assert_response :success
+      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path(plate_scanner: 1)}'][aria-label='Scan Vehicle Plate']", 1
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
+      assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
+      assert_select "a.nav-link[href='#{my_pump_path}']", text: /My Pump/
       assert_select ".user-menu [data-sidebar-mode-switch][aria-label='Show side navbar as icon-only bar']", 1
       assert_select ".page-actions a.btn[href='#{new_staff_transaction_path}']", 0
       assert_select "[data-push-opt-in-panel]", 0

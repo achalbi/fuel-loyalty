@@ -1,6 +1,6 @@
 class Vehicle < ApplicationRecord
-  STANDARD_VEHICLE_NUMBER_REGEX = /\A[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}\z/
-  BH_VEHICLE_NUMBER_REGEX = /\A[0-9]{2}BH[0-9]{4}[A-Z]{2}\z/
+  STANDARD_VEHICLE_NUMBER_REGEX = VehiclePlateText::STANDARD_REGEX
+  BH_VEHICLE_NUMBER_REGEX = VehiclePlateText::BH_REGEX
 
   belongs_to :customer
   has_many :transactions, dependent: :restrict_with_exception
@@ -19,12 +19,15 @@ class Vehicle < ApplicationRecord
   validate :vehicle_number_format
 
   def self.normalize_vehicle_number(value)
-    value.to_s.upcase.gsub(/[^A-Z0-9]/, "")
+    VehiclePlateText.normalize(value)
   end
 
   def self.valid_vehicle_number?(value)
-    normalized_value = normalize_vehicle_number(value)
-    normalized_value.match?(STANDARD_VEHICLE_NUMBER_REGEX) || normalized_value.match?(BH_VEHICLE_NUMBER_REGEX)
+    VehiclePlateText.valid?(value)
+  end
+
+  def self.normalize_detected_vehicle_number(value)
+    VehiclePlateText.normalize_detected(value)
   end
 
   def display_fuel_type

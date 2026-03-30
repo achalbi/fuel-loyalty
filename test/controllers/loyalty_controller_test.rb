@@ -167,6 +167,18 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-loyalty-redeem-status]", /Rewards unlocked:\s*200 points/
   end
 
+  test "shows the configured vehicle type minimum when rewards are still locked" do
+    vehicle_types(:lcv).update!(minimum_redeemable_points: 300)
+    customer = Customer.create!(name: "Threshold User", phone_number: "9123456789")
+    customer.vehicles.create!(vehicle_number: "TN30AB1234", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code)
+    customer.points_ledgers.create!(points: 250, entry_type: :earn)
+
+    get loyalty_result_path(lookup_token: loyalty_lookup_token_for(customer.phone_number))
+
+    assert_response :success
+    assert_select "[data-loyalty-redeem-status]", /50 points more.*Minimum redemption:\s*300 points/
+  end
+
   test "titleizes the customer name in the loyalty hero" do
     customer = customers(:one)
     customer.update!(name: "arun kumar")

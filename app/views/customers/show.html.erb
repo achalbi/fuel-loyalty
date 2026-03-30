@@ -10,6 +10,7 @@
 <% can_activate_customer = customer_policy.activate? && !@customer.active? %>
 <% can_deactivate_customer = customer_policy.deactivate? && @customer.active? %>
 <% can_delete_customer = customer_policy.destroy? %>
+<% can_redeem_points = policy(PointsLedger).redeem? %>
 <% customer_menu_actions_available = can_edit_customer || can_activate_customer || can_deactivate_customer || can_delete_customer %>
 <% customer_update_path = @customer_update_path || customer_path(@customer) %>
 <% transaction_summary = flash[:transaction_summary].presence %>
@@ -34,6 +35,13 @@
           <span class="customer-details-hero__chip"><strong><%= @customer.transactions.size %></strong> visits</span>
           <span class="customer-details-hero__chip"><strong><%= persisted_vehicles.size %></strong> vehicles</span>
           <span class="customer-details-hero__chip">Joined <strong><%= @customer.created_at.strftime("%b %Y") %></strong></span>
+          <% if can_redeem_points %>
+            <%= link_to new_staff_redemption_path(redemption: { phone_number: @customer.phone_number }),
+              class: "customer-details-hero__chip customer-details-hero__chip--action" do %>
+              <i class="ti ti-gift-card" aria-hidden="true"></i>
+              <span>Redeem Points</span>
+            <% end %>
+          <% end %>
         </div>
       </div>
 
@@ -273,6 +281,7 @@
           <% if recent_transactions.any? %>
             <div class="customer-details-vehicle-list customer-details-history-list">
               <% recent_transactions.each do |transaction| %>
+                <% pump_nozzle_summary = transaction_pump_nozzle_summary(transaction) %>
                 <div class="customer-details-vehicle-row customer-details-history-row">
                   <div class="customer-details-vehicle-row__main customer-details-history-row__main">
                     <div class="customer-details-vehicle-row__number customer-details-history-row__vehicle">
@@ -281,6 +290,12 @@
                     <div class="customer-details-history-row__handled-by">
                       Handled by <strong><%= transaction.user.display_name %></strong>
                     </div>
+                    <% if pump_nozzle_summary.present? %>
+                      <div class="transaction-location-meta customer-details-history-row__location">
+                        <i class="ti ti-gas-station" aria-hidden="true"></i>
+                        <span><%= pump_nozzle_summary %></span>
+                      </div>
+                    <% end %>
                   </div>
                   <div class="customer-details-history-row__side">
                     <span class="customer-details-history-item__amount"><%= number_to_currency(transaction.fuel_amount, unit: "₹") %></span>

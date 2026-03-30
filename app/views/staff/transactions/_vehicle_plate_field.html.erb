@@ -1,0 +1,81 @@
+<% input_id = "vehicle_transaction_transaction_vehicle_number" %>
+
+<div
+  class="transaction-plate-scanner-shell"
+  data-plate-scanner-root
+  data-input-id="<%= input_id %>"
+  data-auto-open="<%= auto_open %>">
+  <div class="transaction-plate-scanner__field-header">
+    <%= form.label :vehicle_number, "Vehicle Number", for: input_id, class: "form-label mb-0" %>
+    <button
+      type="button"
+      class="transaction-plate-scanner__toggle"
+      data-plate-scanner-open
+      aria-controls="transactionPlateScannerPanel"
+      aria-expanded="false">
+      <i class="ti ti-camera" aria-hidden="true"></i>
+      <span>Capture Plate</span>
+    </button>
+  </div>
+
+  <%= form.text_field :vehicle_number,
+    id: input_id,
+    value: vehicle_tab_active ? prefill_vehicle_number : nil,
+    class: "form-control transaction-entry-lookup-input",
+    required: true,
+    autofocus: vehicle_tab_active,
+    placeholder: "Enter vehicle no.",
+    autocomplete: "off",
+    spellcheck: "false",
+    autocapitalize: "characters",
+    title: "Enter a valid vehicle number",
+    data: { vehicle_number_input: true, lookup_focus_input: "vehicle", plate_scanner_input: true } %>
+  <div class="form-text">Use the full vehicle number as printed on the plate, or capture it with the camera.</div>
+
+  <div class="transaction-plate-scanner__result d-none" data-plate-scanner-result role="status" aria-live="polite">
+    <div class="transaction-plate-scanner__result-header">
+      <div>
+        <div class="transaction-plate-scanner__result-label">Detected Plate</div>
+        <strong class="transaction-plate-scanner__result-value" data-plate-scanner-cleaned></strong>
+      </div>
+      <span class="transaction-plate-scanner__result-confidence" data-plate-scanner-confidence></span>
+    </div>
+    <p class="transaction-plate-scanner__result-note mb-0" data-plate-scanner-note></p>
+    <p class="transaction-plate-scanner__result-raw mb-0" data-plate-scanner-raw></p>
+  </div>
+
+  <div
+    class="transaction-plate-scanner card shadow-sm"
+    id="transactionPlateScannerPanel"
+    data-plate-scanner-panel
+    hidden>
+    <div class="card-body">
+      <div class="transaction-plate-scanner__preview-shell">
+        <video
+          class="transaction-plate-scanner__video"
+          data-plate-scanner-video
+          playsinline
+          muted
+          aria-label="Live camera preview"></video>
+        <canvas
+          class="transaction-plate-scanner__canvas"
+          data-plate-scanner-canvas
+          hidden
+          aria-label="Captured vehicle plate preview"></canvas>
+        <div class="transaction-plate-scanner__guide" data-plate-scanner-guide aria-hidden="true"></div>
+      </div>
+
+      <p class="transaction-plate-scanner__status mb-0" data-plate-scanner-status role="status" aria-live="polite">
+        Align the vehicle number plate inside the guide, then capture the photo.
+      </p>
+
+      <div class="transaction-plate-scanner__actions">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-plate-scanner-start hidden>Open Camera</button>
+        <button type="button" class="btn btn-primary btn-sm" data-plate-scanner-capture disabled>Capture</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-plate-scanner-retake hidden>Retake</button>
+        <button type="button" class="btn btn-primary btn-sm" data-plate-scanner-use hidden>Use Photo</button>
+        <button type="button" class="btn btn-light btn-sm" data-plate-scanner-close>Close</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -17,6 +17,22 @@ module ApplicationHelper
     end
   end
 
+  def transaction_pump_name(transaction)
+    transaction.fuel_pump&.display_name.presence ||
+      transaction.fuel_pump_nozzle&.fuel_pump&.display_name.presence
+  end
+
+  def transaction_nozzle_name(transaction)
+    nozzle = transaction.fuel_pump_nozzle
+    return if nozzle.blank?
+
+    [nozzle.display_name, nozzle.fuel_type_name].compact.join(" · ").presence
+  end
+
+  def transaction_pump_nozzle_summary(transaction)
+    [transaction_pump_name(transaction), transaction_nozzle_name(transaction)].compact.join(" · ").presence
+  end
+
   def dynamic_theme_style_tag(theme_setting = ThemeSetting.current)
     css = [
       ":root { #{css_variable_string(theme_setting.light_css_variables)} }",

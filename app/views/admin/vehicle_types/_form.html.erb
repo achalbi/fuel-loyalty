@@ -65,6 +65,16 @@
     <div class="form-text">Choose the icon shown for this vehicle type. On new records, the app will suggest one from the vehicle type name or code until you pick manually.</div>
   </div>
 
+  <div>
+    <%= form.label :minimum_redeemable_points, "Minimum Redeemable Points", class: "form-label" %>
+    <%= form.number_field :minimum_redeemable_points,
+      class: "form-control",
+      min: VehicleType::MINIMUM_REDEEMABLE_POINTS_STEP,
+      step: VehicleType::MINIMUM_REDEEMABLE_POINTS_STEP,
+      required: true %>
+    <div class="form-text">Admin only. Customers with this vehicle type can redeem only from this point level onward, in multiples of <%= VehicleType::MINIMUM_REDEEMABLE_POINTS_STEP %>.</div>
+  </div>
+
   <div class="form-check form-switch reward-rate-toggle">
     <%= form.check_box :active, class: "form-check-input" %>
     <%= form.label :active, "Show in app", class: "form-check-label reward-rate-toggle__label" %>

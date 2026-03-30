@@ -14,6 +14,25 @@ class VehicleTypeTest < ActiveSupport::TestCase
     assert_equal "Light Motor Vehicle", vehicle_type.short_name
   end
 
+  test "defaults minimum redeemable points to 100" do
+    vehicle_type = VehicleType.create!(name: "Mini Van", code: "mini_van", short_name: "Mini Van", active: true)
+
+    assert_equal 100, vehicle_type.minimum_redeemable_points
+  end
+
+  test "requires minimum redeemable points in multiples of 100" do
+    vehicle_type = VehicleType.new(
+      name: "Mini Van",
+      code: "mini_van",
+      short_name: "Mini Van",
+      minimum_redeemable_points: 250,
+      active: true
+    )
+
+    assert_not vehicle_type.valid?
+    assert_includes vehicle_type.errors[:minimum_redeemable_points], "must be in multiples of 100"
+  end
+
   test "uses the configured app label source" do
     vehicle_type = VehicleType.create!(
       name: "Light Motor Vehicle",

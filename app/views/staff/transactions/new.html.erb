@@ -1,4 +1,7 @@
 <% content_for :title, "New Transaction" %>
+<% content_for :head do %>
+  <%= javascript_include_tag "vehicle_plate_scanner", "data-turbo-track": "reload", defer: true %>
+<% end %>
 <% active_lookup_mode = @active_lookup_mode.presence_in(%w[phone vehicle]) || "vehicle" %>
 <% phone_tab_active = active_lookup_mode == "phone" %>
 <% vehicle_tab_active = active_lookup_mode == "vehicle" %>
@@ -24,7 +27,9 @@
 
       <div class="collapse transaction-entry-titlebar__hint" id="transactionEntryHeadingHint">
         <div class="transaction-entry-titlebar__hint-card">
-          Find the customer for this visit using a phone number or vehicle number, then record the fuel amount.
+          <p class="mb-0 transaction-entry-tabs__description-text" data-lookup-tab-description-target>
+            <%= vehicle_tab_active ? "Match the vehicle plate to the right customer profile." : "Find the customer first, then choose a vehicle." %>
+          </p>
         </div>
       </div>
     </div>
@@ -71,12 +76,6 @@
         </button>
       </li>
     </ul>
-
-    <div class="transaction-entry-tabs__description" aria-live="polite">
-      <p class="mb-0 transaction-entry-tabs__description-text" data-lookup-tab-description-target>
-        <%= vehicle_tab_active ? "Match the vehicle plate to the right customer profile." : "Find the customer first, then choose a vehicle." %>
-      </p>
-    </div>
   </div>
 </div>
 
@@ -155,6 +154,13 @@
                   <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
                   <%= form.number_field :fuel_amount, value: phone_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
                 </div>
+
+                <%= render "pump_selection_fields",
+                  form: form,
+                  transaction_fuel_pump: @transaction_fuel_pump,
+                  transaction_fuel_pump_nozzles: @transaction_fuel_pump_nozzles,
+                  selected_nozzle_id: @prefill_fuel_pump_nozzle_id,
+                  dom_prefix: "phone_transaction" %>
 
                 <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
               <% end %>
@@ -270,21 +276,11 @@
               <%= form_with scope: :transaction, namespace: :vehicle_transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
                 <%= form.hidden_field :lookup_mode, value: "vehicle" %>
 
-                <div>
-                  <%= form.label :vehicle_number, "Vehicle Number", class: "form-label" %>
-                  <%= form.text_field :vehicle_number,
-                    value: vehicle_tab_active ? @prefill_vehicle_number : nil,
-                    class: "form-control transaction-entry-lookup-input",
-                    required: true,
-                    autofocus: vehicle_tab_active,
-                    placeholder: "Enter vehicle no.",
-                    autocomplete: "off",
-                    spellcheck: "false",
-                    autocapitalize: "characters",
-                    title: "Enter a valid vehicle number",
-                    data: { vehicle_number_input: true, lookup_focus_input: "vehicle" } %>
-                  <div class="form-text">Use the full vehicle number as printed on the plate.</div>
-                </div>
+                <%= render "vehicle_plate_field",
+                  form: form,
+                  prefill_vehicle_number: @prefill_vehicle_number,
+                  vehicle_tab_active: vehicle_tab_active,
+                  auto_open: @auto_open_plate_scanner && vehicle_tab_active %>
 
                 <div>
                   <%= form.label :vehicle_id, "Matching Customer", class: "form-label" %>
@@ -295,6 +291,13 @@
                   <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
                   <%= form.number_field :fuel_amount, value: vehicle_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
                 </div>
+
+                <%= render "pump_selection_fields",
+                  form: form,
+                  transaction_fuel_pump: @transaction_fuel_pump,
+                  transaction_fuel_pump_nozzles: @transaction_fuel_pump_nozzles,
+                  selected_nozzle_id: @prefill_fuel_pump_nozzle_id,
+                  dom_prefix: "vehicle_transaction" %>
 
                 <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
               <% end %>
@@ -394,7 +397,8 @@
             "transaction_lookup[lookup_mode]" => active_lookup_mode,
             "transaction_lookup[phone_number]" => @prefill_phone_number,
             "transaction_lookup[vehicle_number]" => @prefill_vehicle_number,
-            "transaction_lookup[fuel_amount]" => @prefill_fuel_amount
+            "transaction_lookup[fuel_amount]" => @prefill_fuel_amount,
+            "transaction_lookup[fuel_pump_nozzle_id]" => @prefill_fuel_pump_nozzle_id
           } %>
       </div>
     </div>
@@ -453,6 +457,7 @@
       const lookupPhoneField = modalElement.querySelector("[name='transaction_lookup[phone_number]']");
       const lookupVehicleField = modalElement.querySelector("[name='transaction_lookup[vehicle_number]']");
       const lookupFuelAmountField = modalElement.querySelector("[name='transaction_lookup[fuel_amount]']");
+      const lookupFuelPumpNozzleField = modalElement.querySelector("[name='transaction_lookup[fuel_pump_nozzle_id]']");
       let focusTarget = null;
       let openTimer = null;
 
@@ -471,7 +476,7 @@
         cancelPendingOpen();
       });
 
-      const showNow = ({ lookupMode, phoneNumber = "", vehicleNumber = "", fuelAmount = "" }) => {
+      const showNow = ({ lookupMode, phoneNumber = "", vehicleNumber = "", fuelAmount = "", fuelPumpNozzleId = "" }) => {
         form?.reset();
         modalElement.querySelector(".alert.alert-danger")?.remove();
 
@@ -488,6 +493,7 @@
         if (lookupPhoneField) lookupPhoneField.value = phoneNumber;
         if (lookupVehicleField) lookupVehicleField.value = vehicleNumber;
         if (lookupFuelAmountField) lookupFuelAmountField.value = fuelAmount;
+        if (lookupFuelPumpNozzleField) lookupFuelPumpNozzleField.value = fuelPumpNozzleId;
 
         focusTarget = nameField || phoneField || vehicleField;
         bootstrap.Modal.getOrCreateInstance(modalElement).show();
@@ -510,6 +516,34 @@
     };
 
     const registrationModal = createRegistrationModalController();
+
+    const bindTransactionNozzleOptions = (root, onChange) => {
+      const nozzleInputs = Array.from(root.querySelectorAll("[data-transaction-nozzle-input]"));
+      const nozzleOptions = Array.from(root.querySelectorAll("[data-transaction-nozzle-option]"));
+
+      nozzleInputs.forEach((input) => {
+        input.addEventListener("change", onChange);
+      });
+
+      nozzleOptions.forEach((option) => {
+        option.addEventListener("click", (event) => {
+          const input = option.querySelector("[data-transaction-nozzle-input]");
+          if (!input || input.disabled) return;
+
+          event.preventDefault();
+
+          if (!input.checked) {
+            input.checked = true;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            return;
+          }
+
+          onChange();
+        });
+      });
+
+      return nozzleInputs;
+    };
 
     const createCustomerCardController = (root) => {
       const placeholder = root.querySelector("[data-customer-placeholder]");
@@ -647,9 +681,11 @@
         };
 
         const selectedVehicle = () => currentCustomer?.vehicles.find((vehicle) => String(vehicle.id) === String(vehicleSelect.value || ""));
+        const nozzleInputs = bindTransactionNozzleOptions(root, () => syncSubmitState());
+        const selectedNozzleInput = () => nozzleInputs.find((input) => input.checked);
 
         const syncSubmitState = () => {
-          submitButton.disabled = vehicleSelect.value === "" || !customerActive;
+          submitButton.disabled = vehicleSelect.value === "" || !customerActive || !selectedNozzleInput();
         };
 
         const syncCustomerCard = () => {
@@ -711,7 +747,8 @@
               const registrationPayload = {
                 lookupMode: "phone",
                 phoneNumber,
-                fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || ""
+                fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || "",
+                fuelPumpNozzleId: selectedNozzleInput()?.value || ""
               };
               currentCustomer = null;
               customerActive = false;
@@ -847,8 +884,11 @@
           submitButton.disabled = true;
         };
 
+        const nozzleInputs = bindTransactionNozzleOptions(root, () => syncSubmitState());
+        const selectedNozzleInput = () => nozzleInputs.find((input) => input.checked);
+
         const syncSubmitState = () => {
-          submitButton.disabled = !selectedMatch || !selectedMatch.customer.active;
+          submitButton.disabled = !selectedMatch || !selectedMatch.customer.active || !selectedNozzleInput();
         };
 
         const syncCustomerCard = () => {
@@ -923,7 +963,8 @@
               const registrationPayload = {
                 lookupMode: "vehicle",
                 vehicleNumber,
-                fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || ""
+                fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || "",
+                fuelPumpNozzleId: selectedNozzleInput()?.value || ""
               };
               currentMatches = [];
               selectedMatch = null;

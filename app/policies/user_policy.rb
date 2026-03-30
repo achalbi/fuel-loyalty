@@ -18,4 +18,8 @@ class UserPolicy < ApplicationPolicy
   def destroy?
     user&.admin? && record.is_a?(User) && record.staff?
   end
+
+  def manage_pump?
+    user.present? && record == user && (user.admin? || user.staff?)
+  end
 end

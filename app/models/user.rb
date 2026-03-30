@@ -10,6 +10,9 @@ class User < ApplicationRecord
   enum :role, { admin: 0, staff: 1 }, default: :staff, validate: true
 
   has_many :transactions, dependent: :restrict_with_exception
+  belongs_to :assigned_fuel_pump, class_name: "FuelPump", foreign_key: :fuel_pump_id, inverse_of: :assigned_users, optional: true
+  has_many :pump_nozzle_assignments, class_name: "UserPumpNozzleAssignment", dependent: :destroy, inverse_of: :user
+  has_many :assigned_fuel_pump_nozzles, through: :pump_nozzle_assignments, source: :fuel_pump_nozzle
   has_many :shift_assignments, dependent: :restrict_with_exception
   has_many :shift_templates, through: :shift_assignments
   has_many :shift_cycles, through: :shift_assignments
@@ -29,6 +32,7 @@ class User < ApplicationRecord
   before_validation :normalize_email
   before_validation :normalize_phone_number, if: :phone_number_attribute_available?
   before_validation :sync_internal_email_from_phone_number, if: :phone_number_attribute_available?
+  before_validation :clear_assigned_nozzles_without_pump, on: :pump_assignment
   after_validation :suppress_internal_email_uniqueness_error
 
   validates :name, presence: true
@@ -41,6 +45,10 @@ class User < ApplicationRecord
   validates :phone_number, format: { with: PHONE_NUMBER_FORMAT, message: PHONE_NUMBER_ERROR_MESSAGE }, allow_blank: true, if: :phone_number_attribute_available?
   validate :phone_number_required, if: :phone_number_required?
   validate :must_keep_at_least_one_admin, if: :demoting_last_admin?
+  validate :assigned_fuel_pump_must_be_active, on: :pump_assignment
+  validate :assigned_fuel_pump_nozzles_required_when_pump_selected, on: :pump_assignment
+  validate :assigned_fuel_pump_nozzles_must_belong_to_selected_pump, on: :pump_assignment
+  validate :assigned_fuel_pump_nozzles_must_be_active, on: :pump_assignment
 
   scope :kept, -> { where(deleted_at: nil) }
   scope :soft_deleted, -> { where.not(deleted_at: nil) }
@@ -162,6 +170,25 @@ class User < ApplicationRecord
     assignment&.shift_cycle || assignment&.shift_template&.current_shift_cycle(at: on)
   end
 
+  def transaction_fuel_pump
+    pump = assigned_fuel_pump
+    pump if pump&.active?
+  end
+
+  def transaction_fuel_pump_nozzles
+    pump = transaction_fuel_pump
+    return FuelPumpNozzle.none unless pump
+
+    FuelPumpNozzle
+      .includes(:fuel_type_record)
+      .where(id: assigned_fuel_pump_nozzle_ids, fuel_pump_id: pump.id, active: true)
+      .ordered
+  end
+
+  def transaction_pump_ready?
+    transaction_fuel_pump.present? && transaction_fuel_pump_nozzles.exists?
+  end
+
   private
 
   def phone_number_attribute_available?
@@ -210,6 +237,10 @@ class User < ApplicationRecord
     self.email = self.class.internal_email_for(phone_number)
   end
 
+  def clear_assigned_nozzles_without_pump
+    self.assigned_fuel_pump_nozzle_ids = [] if fuel_pump_id.blank?
+  end
+
   def suppress_internal_email_uniqueness_error
     return unless email.present? && self.class.internal_email?(email)
     return unless errors[:email].include?("has already been taken")
@@ -221,5 +252,35 @@ class User < ApplicationRecord
     return if self.class.where(role: :admin).where.not(id: id).exists?
 
     errors.add(:role, "must leave at least one admin user")
+  end
+
+  def assigned_fuel_pump_must_be_active
+    return if fuel_pump_id.blank?
+    return if assigned_fuel_pump&.active?
+
+    errors.add(:fuel_pump_id, "must be active")
+  end
+
+  def assigned_fuel_pump_nozzles_required_when_pump_selected
+    return if fuel_pump_id.blank?
+    return if assigned_fuel_pump_nozzles.any?
+
+    errors.add(:assigned_fuel_pump_nozzle_ids, "must include at least one nozzle")
+  end
+
+  def assigned_fuel_pump_nozzles_must_belong_to_selected_pump
+    return if fuel_pump_id.blank?
+
+    invalid_nozzles = assigned_fuel_pump_nozzles.reject { |nozzle| nozzle.fuel_pump_id == fuel_pump_id }
+    return if invalid_nozzles.empty?
+
+    errors.add(:assigned_fuel_pump_nozzle_ids, "must belong to the selected pump")
+  end
+
+  def assigned_fuel_pump_nozzles_must_be_active
+    inactive_nozzles = assigned_fuel_pump_nozzles.reject(&:active?)
+    return if inactive_nozzles.empty?
+
+    errors.add(:assigned_fuel_pump_nozzle_ids, "must all be active")
   end
 end

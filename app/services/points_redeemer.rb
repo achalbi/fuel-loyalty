@@ -6,8 +6,12 @@ class PointsRedeemer
     new(...).call
   end
 
-  def self.max_redeemable_points(available_points)
-    (available_points.to_i / REDEMPTION_INCREMENT) * REDEMPTION_INCREMENT
+  def self.max_redeemable_points(available_points, minimum_redeemable_points: REDEMPTION_INCREMENT)
+    normalized_available_points = available_points.to_i
+    normalized_minimum_points = [minimum_redeemable_points.to_i, REDEMPTION_INCREMENT].max
+    return 0 if normalized_available_points < normalized_minimum_points
+
+    (normalized_available_points / REDEMPTION_INCREMENT) * REDEMPTION_INCREMENT
   end
 
   def initialize(phone_number:, points:)
@@ -18,10 +22,14 @@ class PointsRedeemer
   def call
     customer = find_customer!
     points_to_redeem = normalized_points
-    max_redeemable_points = self.class.max_redeemable_points(customer.total_points)
+    minimum_redeemable_points = customer.minimum_redeemable_points
+    max_redeemable_points = self.class.max_redeemable_points(
+      customer.total_points,
+      minimum_redeemable_points: minimum_redeemable_points
+    )
 
-    if max_redeemable_points < REDEMPTION_INCREMENT
-      invalid_redemption!(customer, points_to_redeem, "must have at least #{REDEMPTION_INCREMENT} available points to redeem")
+    if max_redeemable_points < minimum_redeemable_points
+      invalid_redemption!(customer, points_to_redeem, "must have at least #{minimum_redeemable_points} available points to redeem")
     end
 
     if points_to_redeem <= 0
@@ -30,6 +38,10 @@ class PointsRedeemer
 
     if (points_to_redeem % REDEMPTION_INCREMENT) != 0
       invalid_redemption!(customer, points_to_redeem, "must be in multiples of #{REDEMPTION_INCREMENT}")
+    end
+
+    if points_to_redeem < minimum_redeemable_points
+      invalid_redemption!(customer, points_to_redeem, "must be at least #{minimum_redeemable_points} points")
     end
 
     if points_to_redeem > max_redeemable_points

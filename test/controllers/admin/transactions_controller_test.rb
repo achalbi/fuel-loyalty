@@ -15,9 +15,33 @@ module Admin
       assert_select ".admin-transaction-item__amount", text: /₹/
       assert_select ".admin-transaction-item__view[aria-label=?]", "View details for Arun"
       assert_select ".admin-transaction-modal"
+      assert_select ".admin-transaction-modal__details.admin-shift-item__details.admin-shift-item__details--flush"
       assert_select ".admin-transactions-filter"
       assert_select ".dashboard-filter-chip", text: "Today"
       assert_select "select[name='sort']"
+    end
+
+    test "admin transactions list and details show pump and nozzle when available" do
+      sign_in users(:one)
+
+      create_transaction_for(
+        name: "Pump Detail User",
+        phone_number: "9777777771",
+        vehicle_number: "TN11AA1111",
+        fuel_amount: 780,
+        created_at: Time.zone.now.change(hour: 13, min: 20),
+        fuel_pump: fuel_pumps(:one),
+        fuel_pump_nozzle: fuel_pump_nozzles(:one)
+      )
+
+      get admin_transactions_path, params: { range: "today" }
+
+      assert_response :success
+      assert_select ".admin-transaction-item__location", text: /Pump 1.*Nozzle 1.*Petrol/m
+      assert_select ".admin-transaction-modal__label", text: "Pump"
+      assert_select ".admin-transaction-modal__value", text: "Pump 1"
+      assert_select ".admin-transaction-modal__label", text: "Nozzle"
+      assert_select ".admin-transaction-modal__value", text: "Nozzle 1 · Petrol"
     end
 
     test "admin can filter transactions to today" do
@@ -134,7 +158,7 @@ module Admin
 
     private
 
-    def create_transaction_for(name:, phone_number:, vehicle_number:, fuel_amount:, created_at:)
+    def create_transaction_for(name:, phone_number:, vehicle_number:, fuel_amount:, created_at:, fuel_pump: nil, fuel_pump_nozzle: nil)
       customer = Customer.create!(name: name, phone_number: phone_number)
       vehicle = customer.vehicles.create!(
         vehicle_number: vehicle_number,
@@ -147,6 +171,8 @@ module Admin
         user: users(:two),
         vehicle: vehicle,
         fuel_amount: fuel_amount,
+        fuel_pump: fuel_pump,
+        fuel_pump_nozzle: fuel_pump_nozzle,
         created_at: created_at,
         updated_at: created_at
       )

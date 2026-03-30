@@ -20,6 +20,7 @@ module Admin
       assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='custom-big-truck']", 1
       assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-bus']", 1
       assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-tractor']", 1
+      assert_select "input[name='vehicle_type[minimum_redeemable_points]']", 1
       assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-motorbike']", 0
       assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-scooter']", 0
       assert_select "input[type='radio'][name='vehicle_type[icon_name]'][value='ti-scooter-electric']", 0
@@ -41,6 +42,7 @@ module Admin
       assert_select ".reward-rate-meta", text: /Short name:\s*LMV/
       assert_select ".reward-rate-meta", text: /App label:\s*Short Name/
       assert_select ".reward-rate-meta", text: /Icon:\s*Car/
+      assert_select ".reward-rate-meta", text: /Minimum redeemable:\s*100 points/
     end
 
     test "admin can add a vehicle type with a custom code" do
@@ -54,6 +56,7 @@ module Admin
             app_label_source: "short_name",
             code: "mini_van_custom",
             icon_name: "ti-car",
+            minimum_redeemable_points: "300",
             active: "1"
           }
         }
@@ -67,6 +70,7 @@ module Admin
       assert_equal "short_name", vehicle_type.app_label_source
       assert_equal "ti-car", vehicle_type.icon_name
       assert_equal "mini_van_custom", vehicle_type.code
+      assert_equal 300, vehicle_type.minimum_redeemable_points
       assert vehicle_type.active?
     end
 
@@ -80,6 +84,7 @@ module Admin
             short_name: "",
             app_label_source: "name",
             code: "",
+            minimum_redeemable_points: "400",
             active: "1"
           }
         }
@@ -92,6 +97,7 @@ module Admin
       assert_equal "Pickup Truck", vehicle_type.short_name
       assert_equal "name", vehicle_type.app_label_source
       assert_equal "custom-pickup-truck", vehicle_type.icon_name
+      assert_equal 400, vehicle_type.minimum_redeemable_points
     end
 
     test "admin cannot create a vehicle type with numbers in the code" do
@@ -120,6 +126,7 @@ module Admin
           short_name: "LMV",
           app_label_source: "name",
           icon_name: "ti-car",
+          minimum_redeemable_points: "500",
           code: "light_motor_vehicle",
           active: "0"
         }
@@ -130,6 +137,7 @@ module Admin
       assert_equal "LMV", vehicle_types(:lmv).short_name
       assert_equal "name", vehicle_types(:lmv).app_label_source
       assert_equal "ti-car", vehicle_types(:lmv).icon_name
+      assert_equal 500, vehicle_types(:lmv).minimum_redeemable_points
       assert_not vehicle_types(:lmv).active?
       assert_equal "lmv", vehicle_types(:lmv).code
     end

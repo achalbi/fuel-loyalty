@@ -40,6 +40,8 @@ class VehicleType < ApplicationRecord
   ].freeze
   ICON_NAMES = ICON_OPTIONS.map { |option| option[:value] }.freeze
   DEFAULT_ICON_NAME = "ti-car"
+  DEFAULT_MINIMUM_REDEEMABLE_POINTS = 100
+  MINIMUM_REDEEMABLE_POINTS_STEP = 100
   CODE_FORMAT = /\A[a-z]+(?:_[a-z]+)*\z/
 
   has_many :vehicles, foreign_key: :vehicle_kind, primary_key: :code, inverse_of: false
@@ -53,6 +55,8 @@ class VehicleType < ApplicationRecord
   before_validation :normalize_code
   before_validation :normalize_icon_name
   before_validation :assign_icon_name
+  before_validation :normalize_minimum_redeemable_points
+  before_validation :assign_default_minimum_redeemable_points
 
   before_destroy :ensure_not_used_by_vehicles
 
@@ -66,7 +70,13 @@ class VehicleType < ApplicationRecord
   validates :short_name, presence: true
   validates :app_label_source, inclusion: { in: APP_LABEL_SOURCES }
   validates :icon_name, presence: true, inclusion: { in: ICON_NAMES }
+  validates :minimum_redeemable_points,
+    numericality: {
+      only_integer: true,
+      greater_than_or_equal_to: MINIMUM_REDEEMABLE_POINTS_STEP
+    }
   validates :active, inclusion: { in: [true, false] }
+  validate :minimum_redeemable_points_must_match_redemption_step
 
   def self.supported_codes
     DEFAULT_CODES
@@ -86,6 +96,7 @@ class VehicleType < ApplicationRecord
         short_name: label,
         app_label_source: DEFAULT_APP_LABEL_SOURCE,
         icon_name: suggested_icon_name_for(code: code, name: label),
+        minimum_redeemable_points: DEFAULT_MINIMUM_REDEEMABLE_POINTS,
         active: true
       )
     end
@@ -168,6 +179,16 @@ class VehicleType < ApplicationRecord
     record&.app_label.presence || record&.name.presence || default_label_for(normalized_code) || normalized_code.humanize
   rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
     default_label_for(normalized_code) || normalized_code.humanize
+  end
+
+  def self.minimum_redeemable_points_for_codes(codes)
+    normalized_codes = codes.filter_map { |code| normalize_code(code) }.uniq
+    return DEFAULT_MINIMUM_REDEEMABLE_POINTS if normalized_codes.empty?
+
+    minimum_points = where(code: normalized_codes).minimum(:minimum_redeemable_points)
+    minimum_points.present? ? minimum_points.to_i : DEFAULT_MINIMUM_REDEEMABLE_POINTS
+  rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
+    DEFAULT_MINIMUM_REDEEMABLE_POINTS
   end
 
   def app_label
@@ -264,6 +285,11 @@ class VehicleType < ApplicationRecord
     self.icon_name = self.class.supported_icon_name_for(icon_name, code: code, name: name)
   end
 
+  def normalize_minimum_redeemable_points
+    normalized_value = minimum_redeemable_points.to_s.delete(",").squish
+    self.minimum_redeemable_points = normalized_value.presence&.to_i
+  end
+
   def assign_short_name_from_name
     self.short_name = name if short_name.blank? && name.present?
   end
@@ -280,6 +306,10 @@ class VehicleType < ApplicationRecord
     self.icon_name = self.class.suggested_icon_name_for(code: code, name: name) if icon_name.blank?
   end
 
+  def assign_default_minimum_redeemable_points
+    self.minimum_redeemable_points = DEFAULT_MINIMUM_REDEEMABLE_POINTS if minimum_redeemable_points.blank?
+  end
+
   def preferred_app_label
     if app_label_source_short_name?
       short_name
@@ -293,5 +323,12 @@ class VehicleType < ApplicationRecord
 
     errors.add(:base, remove_error_message)
     throw :abort
+  end
+
+  def minimum_redeemable_points_must_match_redemption_step
+    return if minimum_redeemable_points.blank?
+    return if (minimum_redeemable_points % MINIMUM_REDEEMABLE_POINTS_STEP).zero?
+
+    errors.add(:minimum_redeemable_points, "must be in multiples of #{MINIMUM_REDEEMABLE_POINTS_STEP}")
   end
 end

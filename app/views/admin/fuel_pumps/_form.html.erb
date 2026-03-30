@@ -1,0 +1,57 @@
+<% cancel_path = local_assigns[:cancel_path] %>
+<% pending_display_name = fuel_pump.sequence_number.present? ? fuel_pump.display_name : FuelPump.next_display_name %>
+
+<%= form_with model: [:admin, fuel_pump], class: "vstack gap-3", data: { fuel_pump_form: true } do |form| %>
+  <% if fuel_pump.errors.any? %>
+    <div class="alert alert-danger">
+      <%= fuel_pump.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div class="alert alert-light border mb-0">
+    <strong><%= pending_display_name %></strong>
+    <% if fuel_pump.persisted? %>
+      is this pump's fixed running name.
+    <% else %>
+      will be assigned automatically when you save this pump.
+    <% end %>
+  </div>
+
+  <div class="form-check form-switch reward-rate-toggle">
+    <%= form.check_box :active, class: "form-check-input" %>
+    <%= form.label :active, "Show in app", class: "form-check-label reward-rate-toggle__label" %>
+  </div>
+
+  <div>
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+      <div>
+        <div class="form-label mb-1">Nozzles</div>
+        <div class="form-text mt-0">Add the nozzles for this pump and assign the fuel type each nozzle dispenses.</div>
+      </div>
+
+      <button type="button" class="btn btn-outline-primary btn-sm" data-fuel-pump-nozzle-add>
+        <i class="ti ti-plus me-1" aria-hidden="true"></i>
+        <span>Add Nozzle</span>
+      </button>
+    </div>
+
+    <div class="vstack gap-3" data-fuel-pump-nozzle-list>
+      <%= form.fields_for :nozzles do |nozzle_form| %>
+        <%= render "nozzle_fields", nozzle_form: nozzle_form %>
+      <% end %>
+    </div>
+
+    <template data-fuel-pump-nozzle-template>
+      <%= form.fields_for :nozzles, FuelPumpNozzle.new(active: true), child_index: "NEW_RECORD" do |nozzle_form| %>
+        <%= render "nozzle_fields", nozzle_form: nozzle_form %>
+      <% end %>
+    </template>
+  </div>
+
+  <div class="d-flex gap-2">
+    <%= form.submit submit_label, class: "btn btn-primary" %>
+    <% if cancel_path.present? %>
+      <%= link_to "Cancel", cancel_path, class: "btn btn-outline-secondary" %>
+    <% end %>
+  </div>
+<% end %>

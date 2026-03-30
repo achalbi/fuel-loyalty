@@ -4,6 +4,8 @@ module Staff
   class CustomersLookupControllerTest < ActionDispatch::IntegrationTest
     test "returns customer details and vehicles for a valid phone number" do
       sign_in users(:two)
+      vehicle_types(:two_wheeler).update!(minimum_redeemable_points: 200)
+      vehicle_types(:lmv).update!(minimum_redeemable_points: 300)
       customers(:one).points_ledgers.create!(points: 195, entry_type: :earn)
 
       get lookup_staff_customers_path, params: { phone_number: customers(:one).phone_number }, as: :json
@@ -15,6 +17,7 @@ module Staff
       assert_equal "Arun", payload.dig("customer", "name")
       assert_equal true, payload.dig("customer", "active")
       assert_equal "Active", payload.dig("customer", "status_label")
+      assert_equal 200, payload.dig("customer", "minimum_redeemable_points")
       assert_equal 200, payload.dig("customer", "max_redeemable_points")
       assert_equal 2, payload.dig("customer", "vehicles").size
       assert_equal "Petrol", payload.dig("customer", "vehicles", 0, "fuel_type")

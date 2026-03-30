@@ -13,6 +13,7 @@ module Staff
       assert_select "[data-customer-panel].d-none"
       assert_select "[data-customer-points]"
       assert_select "[data-customer-redeem-note]"
+      assert_select "[data-customer-minimum-redeemable]"
       assert_select "[data-customer-max-redeemable]"
       assert_select "[data-customer-vehicles-count]"
     end
@@ -51,6 +52,19 @@ module Staff
 
       assert_response :unprocessable_entity
       assert_match "must be in multiples of 100", response.body
+    end
+
+    test "shows validation feedback when the vehicle type requires a higher minimum redemption" do
+      sign_in users(:two)
+      vehicle_types(:lcv).update!(minimum_redeemable_points: 300)
+      customer = Customer.create!(name: "Redeem Controller Threshold User", phone_number: "9999999997")
+      customer.vehicles.create!(vehicle_number: "TN20AB1234", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code)
+      customer.points_ledgers.create!(points: 450, entry_type: :earn)
+
+      post staff_redemptions_path, params: { redemption: { phone_number: customer.phone_number, points: 200 } }
+
+      assert_response :unprocessable_entity
+      assert_match "must be at least 300 points", response.body
     end
   end
 end

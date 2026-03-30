@@ -1,0 +1,11 @@
+one:
+  fuel_pump: one
+  sequence_number: 1
+  fuel_type_code: petrol
+  active: true
+
+two:
+  fuel_pump: one
+  sequence_number: 2
+  fuel_type_code: diesel
+  active: true

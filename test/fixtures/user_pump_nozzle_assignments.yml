@@ -1,0 +1,7 @@
+staff_petrol:
+  user: two
+  fuel_pump_nozzle: one
+
+staff_diesel:
+  user: two
+  fuel_pump_nozzle: two
