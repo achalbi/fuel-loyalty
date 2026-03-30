@@ -1632,7 +1632,72 @@
     });
   };
 
+  const TOPBAR_PLATE_SCANNER_IMAGE_KEY = "fuel_loyalty_topbar_plate_scanner_image";
+
+  const directMobileCapturePreferred = () => {
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches;
+    return coarsePointer || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  };
+
+  const fileToDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Unable to read the selected image."));
+      reader.readAsDataURL(file);
+    });
+
+  const optimizeCapturedPlateImage = async (file) => {
+    const source = await fileToDataUrl(file);
+
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+
+      image.onload = () => {
+        const maxWidth = 1600;
+        const maxHeight = 1200;
+        const scale = Math.min(1, maxWidth / image.width, maxHeight / image.height);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.86));
+      };
+
+      image.onerror = () => reject(new Error("Unable to prepare the captured image."));
+      image.src = source;
+    });
+  };
+
   const initializeTopbarPlateScannerShortcut = () => {
+    const fileInput = document.querySelector("[data-topbar-plate-scanner-file-input]");
+    if (fileInput && fileInput.dataset.topbarPlateScannerInputBound !== "true") {
+      fileInput.dataset.topbarPlateScannerInputBound = "true";
+
+      fileInput.addEventListener("change", async () => {
+        const destination = fileInput.dataset.destination;
+        const file = fileInput.files?.[0];
+        fileInput.value = "";
+
+        if (!destination) return;
+        if (!file) return;
+
+        try {
+          const optimizedImage = await optimizeCapturedPlateImage(file);
+          sessionStorage.setItem(TOPBAR_PLATE_SCANNER_IMAGE_KEY, optimizedImage);
+        } catch (_error) {
+          try {
+            sessionStorage.removeItem(TOPBAR_PLATE_SCANNER_IMAGE_KEY);
+          } catch (_storageError) {
+            // Ignore storage cleanup failures.
+          }
+        } finally {
+          delete fileInput.dataset.destination;
+          window.location.href = destination;
+        }
+      });
+    }
+
     document.querySelectorAll("[data-topbar-plate-scanner-link]").forEach((link) => {
       if (link.dataset.topbarPlateScannerBound === "true") return;
       link.dataset.topbarPlateScannerBound = "true";
@@ -1644,6 +1709,14 @@
 
         const destination = link.href;
         if (!destination) return;
+
+        if (fileInput && directMobileCapturePreferred()) {
+          event.preventDefault();
+          fileInput.dataset.destination = destination;
+          fileInput.click();
+          return;
+        }
+
         if (!navigator.mediaDevices?.getUserMedia) return;
         if (!window.isSecureContext && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") return;
 

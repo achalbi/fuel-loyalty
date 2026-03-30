@@ -7,6 +7,7 @@
   const STANDARD_PLATE_PATTERN = /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/;
   const BH_PLATE_PATTERN = /^[0-9]{2}BH[0-9]{4}[A-Z]{2}$/;
   const MAX_SAFE_OCR_REPLACEMENTS = 3;
+  const TOPBAR_PLATE_SCANNER_IMAGE_KEY = "fuel_loyalty_topbar_plate_scanner_image";
   const LETTER_SUBSTITUTIONS = {
     "0": "O",
     "1": "I",
@@ -287,6 +288,35 @@
       image.src = objectUrl;
     });
 
+  const loadImageDataUrlToCanvas = (source) =>
+    new Promise((resolve, reject) => {
+      if (!source) {
+        reject(new Error("No image source was provided."));
+        return;
+      }
+
+      const image = new Image();
+
+      image.onload = () => {
+        const imageCanvas = createPreviewCanvas(image.naturalWidth || image.width, image.naturalHeight || image.height);
+        imageCanvas.getContext("2d").drawImage(image, 0, 0, imageCanvas.width, imageCanvas.height);
+        resolve(imageCanvas);
+      };
+
+      image.onerror = () => reject(new Error("The saved image could not be opened."));
+      image.src = source;
+    });
+
+  const consumeTopbarCapturedImage = () => {
+    try {
+      const value = sessionStorage.getItem(TOPBAR_PLATE_SCANNER_IMAGE_KEY);
+      sessionStorage.removeItem(TOPBAR_PLATE_SCANNER_IMAGE_KEY);
+      return value;
+    } catch (_error) {
+      return null;
+    }
+  };
+
   const initPlateScanner = (root) => {
     if (!root || root.__plateScannerBound === true) return;
     root.__plateScannerBound = true;
@@ -319,6 +349,7 @@
     let capturedCanvas = null;
     let autoOpenScheduled = false;
     let cameraStartInFlight = null;
+    const stagedTopbarImage = consumeTopbarCapturedImage();
 
     const setStatus = (message, tone = "neutral") => {
       status.textContent = message;
@@ -612,7 +643,27 @@
       }, 220);
     };
 
-    if (root.dataset.autoOpen === "true") {
+    const openStagedTopbarImage = async () => {
+      setPanelOpen(true);
+      setStatus("Loading the captured photo…", "neutral");
+
+      try {
+        const imageCanvas = await loadImageDataUrlToCanvas(stagedTopbarImage);
+        showCapturedPreview(imageCanvas, "Reading the captured photo…");
+        await useCapturedPhoto();
+      } catch (_error) {
+        setStatus("The captured photo could not be opened. Please use Camera App again or type the vehicle number manually.", "warning");
+      }
+    };
+
+    if (stagedTopbarImage) {
+      if (document.readyState === "complete") {
+        openStagedTopbarImage();
+      } else {
+        window.addEventListener("load", openStagedTopbarImage, { once: true });
+        window.addEventListener("pageshow", openStagedTopbarImage, { once: true });
+      }
+    } else if (root.dataset.autoOpen === "true") {
       if (document.readyState === "complete") {
         autoOpenScanner();
       } else {
