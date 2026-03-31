@@ -95,6 +95,7 @@ module Staff
       assert_includes response.body, "const bindTransactionNozzleOptions = (root, onChange) => {"
       assert_includes response.body, "fuelPumpNozzleId: selectedNozzleInput()?.value || \"\""
       assert_includes response.body, "shown.bs.tab"
+      assert_includes response.body, "const shouldSkipLookupFocus = (targetKey) => targetKey === \"vehicle\" && vehicleScannerFocusLockActive();"
       assert_includes response.body, "event.relatedTarget === vehicleSelect || suppressVehicleSelectBlurLookup"
       assert_includes response.body, "event.relatedTarget === matchSelect || suppressMatchSelectBlurLookup"
 

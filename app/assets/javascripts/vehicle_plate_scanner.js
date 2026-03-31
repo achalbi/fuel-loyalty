@@ -290,6 +290,10 @@
   const initPlateScanner = (root) => {
     if (!root || root.__plateScannerBound === true) return;
 
+    if (root.dataset.autoOpen === "true" && root.dataset.autoOpenPending !== "false") {
+      root.dataset.autoOpenPending = "true";
+    }
+
     const input = document.getElementById(root.dataset.inputId || "");
     const panel = root.querySelector("[data-plate-scanner-panel]");
     const openButton = root.querySelector("[data-plate-scanner-open]");
@@ -393,6 +397,10 @@
       panel.hidden = !open;
       openButton.setAttribute("aria-expanded", open ? "true" : "false");
       root.classList.toggle("is-open", open);
+
+      if (open) {
+        root.dataset.autoOpenPending = "false";
+      }
 
       if (!open) {
         stopStream();

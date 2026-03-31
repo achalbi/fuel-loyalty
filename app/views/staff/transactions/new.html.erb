@@ -861,6 +861,7 @@
 
         const focusVehicleNumberInput = () => {
           if (!vehicleNumberInput || !vehicleNumberInput.hasAttribute("autofocus")) return;
+          if (vehicleScannerFocusLockActive()) return;
 
           const activePane = root.closest(".tab-pane");
           if (activePane && (!activePane.classList.contains("show") || !activePane.classList.contains("active"))) return;
@@ -1071,6 +1072,16 @@
     };
 
     const lookupFocusTimers = {};
+    const vehicleScannerFocusLockActive = () => {
+      const scannerRoot = document.querySelector("[data-plate-scanner-root]");
+      if (!scannerRoot) return false;
+      if (scannerRoot.classList.contains("is-open")) return true;
+
+      return scannerRoot.dataset.autoOpenPending === "true" ||
+        (scannerRoot.dataset.autoOpen === "true" && scannerRoot.dataset.autoOpenPending !== "false");
+    };
+
+    const shouldSkipLookupFocus = (targetKey) => targetKey === "vehicle" && vehicleScannerFocusLockActive();
     const syncLookupTabDescription = (button) => {
       const target = document.querySelector("[data-lookup-tab-description-target]");
       if (!target || !button) return;
@@ -1079,6 +1090,8 @@
     };
 
     const focusLookupInputNow = (targetKey) => {
+      if (shouldSkipLookupFocus(targetKey)) return;
+
       const input = document.querySelector(`[data-lookup-focus-input="${targetKey}"]`);
       if (!input) return;
 
@@ -1100,6 +1113,8 @@
     };
 
     const focusLookupInput = (targetKey, { preserveExistingFocus = false } = {}) => {
+      if (shouldSkipLookupFocus(targetKey)) return;
+
       const input = document.querySelector(`[data-lookup-focus-input="${targetKey}"]`);
       if (!input) return;
 
@@ -1122,6 +1137,8 @@
     };
 
     const queueLookupInputFocus = (targetKey, options = {}) => {
+      if (shouldSkipLookupFocus(targetKey)) return;
+
       window.clearTimeout(lookupFocusTimers[targetKey]);
       lookupFocusTimers[targetKey] = window.setTimeout(() => {
         focusLookupInput(targetKey, options);
