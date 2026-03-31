@@ -289,7 +289,6 @@
 
   const initPlateScanner = (root) => {
     if (!root || root.__plateScannerBound === true) return;
-    root.__plateScannerBound = true;
 
     const input = document.getElementById(root.dataset.inputId || "");
     const panel = root.querySelector("[data-plate-scanner-panel]");
@@ -311,9 +310,37 @@
     const rawTarget = root.querySelector("[data-plate-scanner-raw]");
     const confidenceTarget = root.querySelector("[data-plate-scanner-confidence]");
 
-    if (!input || !panel || !openButton || !fileTriggerButton || !fileInput || !captureButton || !retakeButton || !useButton || !closeButton || !video || !canvas || !status) {
+    const requiredNodes = {
+      input,
+      panel,
+      openButton,
+      startButton,
+      fileTriggerButton,
+      fileInput,
+      captureButton,
+      retakeButton,
+      useButton,
+      closeButton,
+      video,
+      canvas,
+      guide,
+      status,
+      result,
+      cleanedTarget,
+      noteTarget,
+      rawTarget,
+      confidenceTarget
+    };
+    const missingRequiredNodes = Object.entries(requiredNodes)
+      .filter(([_name, node]) => !node)
+      .map(([name]) => name);
+
+    if (missingRequiredNodes.length > 0) {
+      console.warn("[plate-scanner] Missing required elements:", missingRequiredNodes.join(", "));
       return;
     }
+
+    root.__plateScannerBound = true;
 
     let stream = null;
     let capturedCanvas = null;
@@ -325,15 +352,7 @@
       status.dataset.tone = tone;
     };
 
-    const stopStream = () => {
-      if (!stream) return;
-
-      stream.getTracks().forEach((track) => track.stop());
-      stream = null;
-      video.srcObject = null;
-    };
-
-    const resetPreview = () => {
+    const showLiveVideoShell = () => {
       canvas.hidden = true;
       canvas.width = 0;
       canvas.height = 0;
@@ -343,8 +362,31 @@
       retakeButton.hidden = true;
       useButton.hidden = true;
       captureButton.hidden = false;
+    };
+
+    const showPlayablePreviewState = () => {
+      showLiveVideoShell();
       captureButton.disabled = !stream;
       startButton.hidden = Boolean(stream);
+    };
+
+    const showGestureRetryState = (message) => {
+      showLiveVideoShell();
+      startButton.hidden = false;
+      captureButton.disabled = true;
+      setStatus(message, "warning");
+    };
+
+    const stopStream = () => {
+      if (!stream) return;
+
+      stream.getTracks().forEach((track) => track.stop());
+      stream = null;
+      video.srcObject = null;
+    };
+
+    const resetPreview = () => {
+      showPlayablePreviewState();
     };
 
     const setPanelOpen = (open) => {
@@ -366,8 +408,36 @@
       setStatus(message, "warning");
     };
 
+    const ensureVideoPlayback = async ({ allowGestureFallback = true } = {}) => {
+      try {
+        await video.play();
+        resetPreview();
+        setStatus("Align the vehicle number plate inside the guide, then tap Capture.", "neutral");
+        return true;
+      } catch (error) {
+        console.warn("[plate-scanner] video.play() rejected", error);
+
+        if (!allowGestureFallback) {
+          launchCameraAppFallback({
+            message: humanizeCameraError(error)
+          });
+          return false;
+        }
+
+        showGestureRetryState("Live preview is ready but needs one more tap. Tap Open Camera to continue, or use Camera App instead.");
+        return false;
+      }
+    };
+
     const startCamera = async () => {
       if (cameraStartInFlight) return cameraStartInFlight;
+
+      if (stream) {
+        prepareVideoPreview(video);
+        video.srcObject = stream;
+        await waitForVideoReady(video);
+        return ensureVideoPlayback({ allowGestureFallback: false });
+      }
 
       if (!cameraSupported()) {
         launchCameraAppFallback({
@@ -393,16 +463,7 @@
 
           video.srcObject = stream;
           await waitForVideoReady(video);
-
-          try {
-            await video.play();
-          } catch (_playError) {
-            // Some mobile browsers reject autoplay even with an active camera stream.
-            // Keep the stream attached and let the visible panel remain usable.
-          }
-
-          resetPreview();
-          setStatus("Align the vehicle number plate inside the guide, then tap Capture.", "neutral");
+          await ensureVideoPlayback();
         } catch (error) {
           launchCameraAppFallback({
             message: humanizeCameraError(error)

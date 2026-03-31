@@ -45,9 +45,14 @@ module Staff
       assert_select "[data-plate-scanner-root][data-input-id='vehicle_transaction_transaction_vehicle_number'][data-auto-open='false']", 1
       assert_select "button.transaction-plate-scanner__toggle[data-plate-scanner-open][aria-controls='transactionPlateScannerPanel']", text: /Capture Plate/
       assert_select "input#vehicle_transaction_transaction_vehicle_number[name='transaction[vehicle_number]'][data-plate-scanner-input='true'][data-vehicle-number-input='true']", 1
+      assert_select "button[data-plate-scanner-start]", text: /Open Camera/
       assert_select "input[type='file'][data-plate-scanner-file-input][accept='image/*'][capture='environment']", 1
       assert_select "button[data-plate-scanner-file-trigger]", text: /Use Camera App/
       assert_select ".transaction-plate-scanner__result.d-none[data-plate-scanner-result]", 1
+      assert_select "[data-plate-scanner-cleaned]", 1
+      assert_select "[data-plate-scanner-note]", 1
+      assert_select "[data-plate-scanner-raw]", 1
+      assert_select "[data-plate-scanner-confidence]", 1
       assert_select "#transactionPlateScannerPanel.transaction-plate-scanner[hidden][data-plate-scanner-panel]", 1
       assert_select "[data-plate-scanner-video]", 1
       assert_select "canvas[data-plate-scanner-canvas][hidden]", 1

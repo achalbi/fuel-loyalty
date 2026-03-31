@@ -130,3 +130,7 @@ The repo now includes an FCM-backed PWA push notification system with:
 - no cron or background workers
 
 Setup details, environment variables, and example requests live in [docs/push-notifications.md](/Users/achalindiresh/workspace/fuel-loyalty/docs/push-notifications.md).
+
+## Vehicle plate scanner
+
+Implementation notes for the camera and OCR flow used on the new transaction screen live in [docs/vehicle-plate-scanner.md](/Users/achalindiresh/workspace/fuel-loyalty/docs/vehicle-plate-scanner.md).
