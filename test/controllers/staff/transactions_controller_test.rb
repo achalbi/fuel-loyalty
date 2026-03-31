@@ -42,7 +42,7 @@ module Staff
       assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__heading h2", text: "Lookup by Vehicle"
       assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionVehicleLookupHint'][aria-controls='transactionVehicleLookupHint']", 1
       assert_select "#transactionVehicleLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Enter the vehicle number to find the customer/
-      assert_select "[data-plate-scanner-root][data-auto-open='false']", 1
+      assert_select "[data-plate-scanner-root][data-auto-open='false'][data-recognize-url='#{recognize_plate_staff_transactions_path}'][data-server-recognizer-available='false']", 1
       assert_select "button.transaction-plate-scanner__toggle[data-plate-scanner-open][aria-controls='transactionPlateScannerPanel']", text: /Capture Plate/
       assert_select "input[name='transaction[vehicle_number]'][data-plate-scanner-input='true'][data-vehicle-number-input='true']", 1
       assert_select "button[data-plate-scanner-start]", text: /Open Camera/
@@ -137,6 +137,58 @@ module Staff
       assert_equal vehicles(:one).id, payload["matches"].first["vehicle_id"]
       assert_equal vehicles(:one).vehicle_number, payload["matches"].first["vehicle_number"]
       assert_equal customers(:one).phone_number, payload["matches"].first.dig("customer", "phone_number")
+    end
+
+    test "recognizes a vehicle plate through the server-side service" do
+      sign_in users(:two)
+
+      original_call = VehiclePlateRecognizer.method(:call)
+      VehiclePlateRecognizer.singleton_class.define_method(:call) do |image_data:|
+        assert_match(/^data:image\/jpeg;base64,/, image_data)
+        VehiclePlateRecognizer::Result.new(
+          found: true,
+          plate: "TN01AA1234",
+          raw: "TN01AA1234",
+          confidence: 94,
+          valid: true,
+          corrected: false,
+          provider: "plate_recognizer",
+          candidates: []
+        )
+      end
+
+      post recognize_plate_staff_transactions_path,
+        params: { plate_scan: { image_data: "data:image/jpeg;base64,ZmFrZQ==" } },
+        as: :json
+
+      assert_response :success
+      payload = JSON.parse(response.body)
+      assert_equal true, payload["found"]
+      assert_equal "TN01AA1234", payload["plate"]
+      assert_equal 94, payload["confidence"]
+    ensure
+      VehiclePlateRecognizer.singleton_class.define_method(:call, original_call)
+    end
+
+    test "returns service unavailable when the server-side recognizer is not configured" do
+      sign_in users(:two)
+
+      original_call = VehiclePlateRecognizer.method(:call)
+      VehiclePlateRecognizer.singleton_class.define_method(:call) do |image_data:|
+        assert_match(/^data:image\/jpeg;base64,/, image_data)
+        raise VehiclePlateRecognizer::ConfigurationError, "Plate recognition service is not configured."
+      end
+
+      post recognize_plate_staff_transactions_path,
+        params: { plate_scan: { image_data: "data:image/jpeg;base64,ZmFrZQ==" } },
+        as: :json
+
+      assert_response :service_unavailable
+      payload = JSON.parse(response.body)
+      assert_equal false, payload["found"]
+      assert_equal "Plate recognition service is not configured.", payload["message"]
+    ensure
+      VehiclePlateRecognizer.singleton_class.define_method(:call, original_call)
     end
 
     test "returns multiple matches when a vehicle number belongs to more than one customer" do

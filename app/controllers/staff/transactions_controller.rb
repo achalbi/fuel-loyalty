@@ -62,6 +62,23 @@ module Staff
       render :new, status: :unprocessable_entity
     end
 
+    def recognize_plate
+      authorize Transaction, :new?
+
+      image_data = params.dig(:plate_scan, :image_data).presence || params[:image_data]
+      result = VehiclePlateRecognizer.call(image_data: image_data)
+
+      if result.found
+        render json: result.as_json
+      else
+        render json: { found: false, message: "No clear vehicle number could be recognized. Please retake the photo." }, status: :unprocessable_entity
+      end
+    rescue VehiclePlateRecognizer::ConfigurationError => error
+      render json: { found: false, message: error.message }, status: :service_unavailable
+    rescue VehiclePlateRecognizer::RecognitionError => error
+      render json: { found: false, message: error.message }, status: :bad_gateway
+    end
+
     def register_customer
       customer = build_registration_customer
       was_new_record = customer.new_record?

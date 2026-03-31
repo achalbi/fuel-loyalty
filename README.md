@@ -5,6 +5,8 @@
 ```bash
 export APP_UID="$(id -u)"
 export APP_GID="$(id -g)"
+export PLATE_RECOGNIZER_API_TOKEN=your-plate-recognizer-token
+export PLATE_RECOGNIZER_REGION=in
 docker compose up --build
 ```
 
@@ -33,6 +35,9 @@ FIREBASE_MESSAGING_SENDER_ID=629935221011
 FIREBASE_APP_ID=1:629935221011:web:612bdd301126b28e8492e6
 FIREBASE_MEASUREMENT_ID=G-K2Q0927ZJX
 FIREBASE_WEB_VAPID_KEY=your-public-web-push-vapid-key
+PLATE_RECOGNIZER_API_TOKEN=your-plate-recognizer-token
+PLATE_RECOGNIZER_REGION=in
+PLATE_RECOGNIZER_API_URL=https://api.platerecognizer.com/v1/plate-reader/
 SECRET_KEY_BASE=replace-with-a-real-secret
 DATABASE_URL=postgresql://user:password@host:5432/app_production
 REDIS_URL=redis://host:6379/0
@@ -45,6 +50,9 @@ Notes:
 - `FIREBASE_API_KEY`, `FIREBASE_PROJECT_ID`, `FIREBASE_MESSAGING_SENDER_ID`, and `FIREBASE_APP_ID` come from your Firebase web app config.
 - `FIREBASE_AUTH_DOMAIN`, `FIREBASE_STORAGE_BUCKET`, and `FIREBASE_MEASUREMENT_ID` are optional pass-through values from the same Firebase config.
 - `FIREBASE_WEB_VAPID_KEY` is the public web push key used by the browser to obtain FCM tokens.
+- `PLATE_RECOGNIZER_API_TOKEN` enables server-side number plate recognition for the transaction scanner.
+- `PLATE_RECOGNIZER_REGION` defaults to `in` and should usually stay that way for Indian registrations.
+- `PLATE_RECOGNIZER_API_URL` is optional and only needed if you want to override the default Plate Recognizer endpoint.
 - `SECRET_KEY_BASE` must be a real secret in production. The compose default is only for local testing.
 - If you cannot provide `APP_URL`, you can use `APP_HOST` and `APP_PROTOCOL` instead.
 
@@ -88,6 +96,9 @@ gcloud run jobs deploy "${SERVICE}-migrate" \
   --set-env-vars RAILS_SERVE_STATIC_FILES=true \
   --set-env-vars APP_URL=https://your-app.example.com \
   --set-env-vars MAILER_FROM=no-reply@your-app.example.com \
+  --set-env-vars PLATE_RECOGNIZER_API_TOKEN='your-plate-recognizer-token' \
+  --set-env-vars PLATE_RECOGNIZER_REGION='in' \
+  --set-env-vars PLATE_RECOGNIZER_API_URL='https://api.platerecognizer.com/v1/plate-reader/' \
   --set-env-vars DATABASE_URL='your-production-database-url' \
   --set-env-vars SECRET_KEY_BASE='your-production-secret-key'
 

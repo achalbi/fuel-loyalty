@@ -287,6 +287,8 @@
       image.src = objectUrl;
     });
 
+  const canvasToDataUrl = (sourceCanvas) => sourceCanvas.toDataURL("image/jpeg", 0.88);
+
   const initPlateScanner = (root) => {
     if (!root || root.__plateScannerBound === true) return;
 
@@ -313,6 +315,9 @@
     const noteTarget = root.querySelector("[data-plate-scanner-note]");
     const rawTarget = root.querySelector("[data-plate-scanner-raw]");
     const confidenceTarget = root.querySelector("[data-plate-scanner-confidence]");
+    const recognizeUrl = root.dataset.recognizeUrl || "";
+    const serverRecognizerAvailable = root.dataset.serverRecognizerAvailable === "true";
+    const csrfToken = document.querySelector("meta[name='csrf-token']")?.content || "";
 
     const requiredNodes = {
       input,
@@ -455,7 +460,7 @@
       }
 
       cameraStartInFlight = (async () => {
-        setStatus("Starting the rear camera…", "neutral");
+        setStatus("Starting the rear camera...", "neutral");
 
         try {
           stopStream();
@@ -553,6 +558,50 @@
       rawTarget.textContent = raw ? `Raw OCR: ${raw}` : "Raw OCR: unavailable";
     };
 
+    const applyRecognizedPlate = ({ cleaned, raw, confidence, valid, corrected, provider }) => {
+      if (!cleaned) {
+        renderResult({ cleaned: "", raw, confidence, valid: false, corrected: false });
+        setStatus("The photo was unclear. Please retake the image or type the number manually.", "warning");
+        return false;
+      }
+
+      fillInput(cleaned);
+      renderResult({ cleaned, raw, confidence, valid, corrected });
+      setStatus(
+        valid && confidence >= 70
+          ? `Vehicle number added from ${provider}. Review it and continue.`
+          : `Recognition completed with ${provider}. Please verify the detected number before saving.`,
+        valid && confidence >= 70 ? "success" : "warning"
+      );
+      return true;
+    };
+
+    const recognizeViaBackend = async () => {
+      if (!capturedCanvas || !recognizeUrl) return null;
+
+      const response = await fetch(recognizeUrl, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          plate_scan: {
+            image_data: canvasToDataUrl(capturedCanvas)
+          }
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.message || "Plate recognition failed.");
+      }
+
+      return payload;
+    };
+
     const toggleBusy = (busy) => {
       openButton.disabled = busy;
       startButton.disabled = busy;
@@ -567,37 +616,44 @@
       if (!capturedCanvas) return;
 
       toggleBusy(true);
-      setStatus("Reading the number plate…", "neutral");
+      setStatus("Reading the number plate...", "neutral");
 
       try {
+        if (recognizeUrl && serverRecognizerAvailable) {
+          try {
+            const recognizedPlate = await recognizeViaBackend();
+
+            if (recognizedPlate?.found) {
+              const applied = applyRecognizedPlate({
+                cleaned: recognizedPlate.plate || "",
+                raw: normalizePlateText(recognizedPlate.raw || recognizedPlate.plate || ""),
+                confidence: recognizedPlate.confidence || 0,
+                valid: recognizedPlate.valid !== false,
+                corrected: Boolean(recognizedPlate.corrected),
+                provider: "Plate Recognizer"
+              });
+
+              if (applied) return;
+            }
+          } catch (backendError) {
+            setStatus(`${backendError.message || "Server-side plate recognition was unavailable."} Falling back to on-device OCR...`, "warning");
+          }
+        }
+
         const tesseract = await loadTesseract();
         const processedCanvas = preprocessPlateCanvas(capturedCanvas);
         const ocrResult = await tesseract.recognize(processedCanvas, "eng");
         const rawText = (ocrResult?.data?.text || "").trim();
         const normalized = normalizeDetectedPlate(rawText);
-        const cleaned = normalized.cleaned || normalized.raw;
         const confidence = averageConfidence(ocrResult?.data || {});
-
-        if (!cleaned) {
-          renderResult({ cleaned: "", raw: normalizePlateText(rawText), confidence, valid: false, corrected: false });
-          setStatus("The photo was unclear. Please retake the image or type the number manually.", "warning");
-          return;
-        }
-
-        fillInput(cleaned);
-        renderResult({
-          cleaned,
+        applyRecognizedPlate({
+          cleaned: normalized.cleaned || normalized.raw,
           raw: normalizePlateText(rawText),
           confidence,
           valid: normalized.valid,
-          corrected: normalized.corrected
+          corrected: normalized.corrected,
+          provider: "on-device OCR"
         });
-        setStatus(
-          normalized.valid && confidence >= 70
-            ? "Vehicle number added to the field. Review it and continue."
-            : "OCR completed. Please verify the detected number before saving.",
-          normalized.valid && confidence >= 70 ? "success" : "warning"
-        );
       } catch (_error) {
         setStatus("OCR failed on this image. Please retake the photo or type the vehicle number manually.", "warning");
       } finally {
@@ -638,7 +694,7 @@
 
       toggleBusy(true);
       setPanelOpen(true);
-      setStatus("Preparing the selected photo…", "neutral");
+      setStatus("Preparing the selected photo...", "neutral");
 
       try {
         const imageCanvas = await loadImageFileToCanvas(file);

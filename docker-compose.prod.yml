@@ -24,6 +24,9 @@ services:
       FIREBASE_APP_ID: ${FIREBASE_APP_ID:-}
       FIREBASE_MEASUREMENT_ID: ${FIREBASE_MEASUREMENT_ID:-}
       FIREBASE_WEB_VAPID_KEY: ${FIREBASE_WEB_VAPID_KEY:-}
+      PLATE_RECOGNIZER_API_TOKEN: ${PLATE_RECOGNIZER_API_TOKEN:-}
+      PLATE_RECOGNIZER_REGION: ${PLATE_RECOGNIZER_REGION:-in}
+      PLATE_RECOGNIZER_API_URL: ${PLATE_RECOGNIZER_API_URL:-}
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:-local-production-secret-key}
       PORT: "8080"
     command: ["/bin/sh", "-lc", "bundle exec rails db:prepare && bundle exec puma -C config/puma.rb"]

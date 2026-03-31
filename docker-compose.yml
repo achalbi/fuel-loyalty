@@ -23,6 +23,9 @@ services:
       FIREBASE_APP_ID: ${FIREBASE_APP_ID:-}
       FIREBASE_MEASUREMENT_ID: ${FIREBASE_MEASUREMENT_ID:-}
       FIREBASE_WEB_VAPID_KEY: ${FIREBASE_WEB_VAPID_KEY:-}
+      PLATE_RECOGNIZER_API_TOKEN: ${PLATE_RECOGNIZER_API_TOKEN:-72a6004aaf66c7b2fa9ea7af91880f3c492111bb}
+      PLATE_RECOGNIZER_REGION: ${PLATE_RECOGNIZER_REGION:-in}
+      PLATE_RECOGNIZER_API_URL: ${PLATE_RECOGNIZER_API_URL:-https://api.platerecognizer.com/v1/plate-reader/}
     volumes:
       - .:/app
       - bundle:/usr/local/bundle

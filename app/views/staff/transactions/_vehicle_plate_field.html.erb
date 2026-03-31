@@ -1,6 +1,8 @@
 <div
   class="transaction-plate-scanner-shell"
   data-plate-scanner-root
+  data-recognize-url="<%= recognize_plate_staff_transactions_path %>"
+  data-server-recognizer-available="<%= VehiclePlateRecognizer.available? %>"
   data-auto-open="<%= auto_open %>">
   <div class="transaction-plate-scanner__field-header">
     <%= form.label :vehicle_number, "Vehicle Number", class: "form-label mb-0" %>

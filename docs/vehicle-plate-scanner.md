@@ -1,6 +1,6 @@
 # Vehicle Plate Scanner
 
-This document explains the camera and OCR flow used on the staff transaction screen to capture a vehicle number plate, read the text in the browser, and prefill the vehicle number field.
+This document explains the camera and OCR flow used on the staff transaction screen to capture a vehicle number plate, read the text, and prefill the vehicle number field.
 
 ## Purpose
 
@@ -9,7 +9,8 @@ The feature helps staff start a transaction from a number plate instead of typin
 - open directly from the new transaction page or the topbar camera shortcut
 - use the device camera when live preview is available
 - fall back to the native camera app or gallery upload when browser camera access is unavailable
-- run OCR fully in the browser
+- prefer server-side plate recognition when configured
+- fall back to browser OCR when the server-side recognizer is unavailable
 - normalize noisy OCR output into an Indian vehicle registration format before lookup continues
 
 ## Main entry points
@@ -22,13 +23,16 @@ The feature is spread across a small set of files:
   - preflights camera permission from the topbar shortcut before navigating to the scanner screen
 - `app/controllers/staff/transactions_controller.rb`
   - sets `@auto_open_plate_scanner` when `plate_scanner=1` is present
+  - exposes the `/staff/transactions/recognize_plate` endpoint for server-side recognition
 - `app/views/staff/transactions/new.html.erb`
   - includes `vehicle_plate_scanner.js`
   - renders the vehicle lookup tab and passes the `auto_open` flag into the scanner partial
 - `app/views/staff/transactions/_vehicle_plate_field.html.erb`
-  - defines the scanner UI: camera preview, guide overlay, camera-app fallback input, OCR result area, and action buttons
+  - defines the scanner UI: camera preview, guide overlay, camera-app fallback input, OCR result area, action buttons, and server-recognizer availability flags
 - `app/assets/javascripts/vehicle_plate_scanner.js`
-  - owns camera startup, frame capture, OCR loading, preprocessing, text normalization, and field prefilling
+  - owns camera startup, frame capture, server recognition, OCR fallback, text normalization, and field prefilling
+- `app/services/vehicle_plate_recognizer.rb`
+  - calls Plate Recognizer from Rails and returns normalized plate candidates
 - `test/controllers/staff/transactions_controller_test.rb`
   - covers the server-rendered contract for the scanner shell and auto-open flag
 
@@ -49,7 +53,8 @@ The feature is spread across a small set of files:
 3. The scanner panel opens and requests rear-camera access.
 4. The user captures a frame and reviews the preview.
 5. The user taps `Use Photo`.
-6. The browser runs OCR and fills the vehicle number field.
+6. The app tries server-side plate recognition first and falls back to browser OCR if needed.
+7. The vehicle number field is filled and remains editable.
 
 ### 3. Camera-app fallback flow
 
@@ -63,7 +68,7 @@ The hidden file input uses `accept="image/*"` with `capture="environment"` so th
 
 ## Server-side behavior
 
-The server-side part is intentionally small.
+The server-side part now handles the preferred recognition path.
 
 ### `Staff::TransactionsController#new`
 
@@ -73,7 +78,26 @@ The controller does three scanner-related things:
 - decides which lookup tab should be active
 - enables scanner auto-open when `params[:plate_scanner]` is present and the active lookup mode is `vehicle`
 
-The OCR itself does not run on the server. No image is uploaded to Rails for recognition.
+### `Staff::TransactionsController#recognize_plate`
+
+The scanner posts the captured image to Rails as base64 image data.
+
+The controller:
+
+- authorizes the request
+- passes the image to `VehiclePlateRecognizer`
+- returns normalized JSON for the best candidate
+- reports configuration and provider errors clearly
+
+### `VehiclePlateRecognizer`
+
+The recognizer reads configuration from:
+
+- `PLATE_RECOGNIZER_API_TOKEN`
+- `PLATE_RECOGNIZER_REGION` defaulting to `in`
+- `PLATE_RECOGNIZER_API_URL` defaulting to the official Plate Recognizer endpoint
+
+It uploads the captured image to Plate Recognizer, normalizes candidate values with the app's existing vehicle helpers, and returns the best match plus confidence data.
 
 ## View contract
 
@@ -82,8 +106,9 @@ The scanner partial exposes a DOM contract that the JavaScript depends on.
 Important data attributes include:
 
 - `data-plate-scanner-root`
-- `data-input-id`
 - `data-auto-open`
+- `data-recognize-url`
+- `data-server-recognizer-available`
 - `data-plate-scanner-open`
 - `data-plate-scanner-panel`
 - `data-plate-scanner-video`
@@ -140,11 +165,23 @@ When the user taps `Capture`:
 
 No network request is made at capture time.
 
-## OCR pipeline
+## Recognition pipeline
 
-### 1. Tesseract loading
+### 1. Server-side recognition
 
-The OCR engine is loaded lazily from a CDN the first time it is needed.
+When the recognizer is configured, `useCapturedPhoto()` first posts the captured image to `/staff/transactions/recognize_plate`.
+
+If the server returns a valid match:
+
+- the field is filled immediately
+- confidence and validation notes are shown
+- the user can still edit the value before saving
+
+If the server-side step is unavailable or fails, the scanner falls back to browser OCR.
+
+### 2. Tesseract loading
+
+The OCR engine is loaded lazily from a CDN only for fallback use.
 
 Primary sources:
 
@@ -157,7 +194,7 @@ The loader:
 - avoids duplicate script tags
 - retries the mirror URL if the first CDN fails
 
-### 2. Image preprocessing
+### 3. Image preprocessing
 
 OCR is intentionally run against a cropped, high-contrast version of the captured image.
 
@@ -171,18 +208,19 @@ OCR is intentionally run against a cropped, high-contrast version of the capture
 
 This keeps OCR fast while improving plate readability.
 
-### 3. OCR execution
+### 4. OCR execution
 
 `useCapturedPhoto()`:
 
-1. loads Tesseract
-2. preprocesses the captured image
-3. runs `tesseract.recognize(processedCanvas, "eng")`
-4. reads the raw recognized text
-5. calculates an average confidence score
-6. normalizes the text into the expected vehicle-number format
-7. fills the transaction input
-8. updates the UI result panel and status text
+1. tries the Rails recognition endpoint when configured
+2. loads Tesseract only if fallback is needed
+3. preprocesses the captured image
+4. runs `tesseract.recognize(processedCanvas, "eng")`
+5. reads the raw recognized text
+6. calculates an average confidence score
+7. normalizes the text into the expected vehicle-number format
+8. fills the transaction input
+9. updates the UI result panel and status text
 
 ## Text normalization
 
