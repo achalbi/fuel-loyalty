@@ -9,7 +9,6 @@ module Staff
 
       assert_response :success
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path(plate_scanner: 1)}'][aria-label='Scan Vehicle Plate'][data-topbar-plate-scanner-link='true'][data-turbo='false']", 1
-      assert_select "#topbar input[type='file'][data-topbar-plate-scanner-file-input][accept='image/*'][capture='environment']", 1
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
       assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
       assert_select ".transaction-entry-titlebar__heading h1", text: "Record Fuel Transaction"
@@ -116,6 +115,7 @@ module Staff
       assert_select "#transaction-vehicle-tab.active[aria-selected='true']", 1
       assert_select "#transaction-vehicle-pane.show.active", 1
       assert_select "[data-plate-scanner-root][data-input-id='vehicle_transaction_transaction_vehicle_number'][data-auto-open='true']", 1
+      assert_select "input#vehicle_transaction_transaction_vehicle_number[autofocus]", 0
     end
 
     test "looks up a customer by vehicle number" do

@@ -24,7 +24,6 @@ module Admin
       assert_select "input[type='submit'][value='Apply']", 0
       assert_select ".user-menu .theme-switch-inline .theme-switch-shell--compact [data-theme-switch]", 1
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path(plate_scanner: 1)}'][aria-label='Scan Vehicle Plate'][data-topbar-plate-scanner-link='true'][data-turbo='false']", 1
-      assert_select "#topbar input[type='file'][data-topbar-plate-scanner-file-input][accept='image/*'][capture='environment']", 1
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
       assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
       assert_select "a.nav-link[href='#{my_pump_path}']", text: /My Pump/

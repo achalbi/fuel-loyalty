@@ -23,7 +23,7 @@
     value: vehicle_tab_active ? prefill_vehicle_number : nil,
     class: "form-control transaction-entry-lookup-input",
     required: true,
-    autofocus: vehicle_tab_active,
+    autofocus: vehicle_tab_active && !auto_open,
     placeholder: "Enter vehicle no.",
     autocomplete: "off",
     spellcheck: "false",
