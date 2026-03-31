@@ -294,7 +294,7 @@
       root.dataset.autoOpenPending = "true";
     }
 
-    const input = document.getElementById(root.dataset.inputId || "");
+    const input = root.querySelector("[data-plate-scanner-input]") || root.querySelector("[data-vehicle-number-input]");
     const panel = root.querySelector("[data-plate-scanner-panel]");
     const openButton = root.querySelector("[data-plate-scanner-open]");
     const startButton = root.querySelector("[data-plate-scanner-start]");

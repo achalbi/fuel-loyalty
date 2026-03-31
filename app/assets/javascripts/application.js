@@ -1632,44 +1632,6 @@
     });
   };
 
-  const initializeTopbarPlateScannerShortcut = () => {
-    document.querySelectorAll("[data-topbar-plate-scanner-link]").forEach((link) => {
-      if (link.dataset.topbarPlateScannerBound === "true") return;
-      link.dataset.topbarPlateScannerBound = "true";
-
-      link.addEventListener("click", async (event) => {
-        if (event.defaultPrevented) return;
-        if (event.button !== 0) return;
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-
-        const destination = link.href;
-        if (!destination) return;
-        if (!navigator.mediaDevices?.getUserMedia) return;
-        if (!window.isSecureContext && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") return;
-
-        event.preventDefault();
-        link.setAttribute("aria-disabled", "true");
-
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-              facingMode: { ideal: "environment" }
-            }
-          });
-
-          stream.getTracks().forEach((track) => track.stop());
-        } catch (_error) {
-          // Continue to the scanner page even if permission is denied so the user can
-          // still use the in-page Camera App fallback or enter the plate manually.
-        } finally {
-          link.removeAttribute("aria-disabled");
-          window.location.href = destination;
-        }
-      });
-    });
-  };
-
   document.addEventListener("turbo:load", initializeTheme);
   document.addEventListener("DOMContentLoaded", initializeTheme);
   document.addEventListener("turbo:before-render", (event) => applySidebarShellState(event.detail.newBody));
@@ -1705,8 +1667,6 @@
   document.addEventListener("DOMContentLoaded", initializeFuelPumpForms);
   document.addEventListener("turbo:load", initializeMyPumpForms);
   document.addEventListener("DOMContentLoaded", initializeMyPumpForms);
-  document.addEventListener("turbo:load", initializeTopbarPlateScannerShortcut);
-  document.addEventListener("DOMContentLoaded", initializeTopbarPlateScannerShortcut);
   bindInstallPromptEvents();
   registerServiceWorker();
 })();

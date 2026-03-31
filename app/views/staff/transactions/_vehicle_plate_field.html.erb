@@ -1,12 +1,9 @@
-<% input_id = "vehicle_transaction_transaction_vehicle_number" %>
-
 <div
   class="transaction-plate-scanner-shell"
   data-plate-scanner-root
-  data-input-id="<%= input_id %>"
   data-auto-open="<%= auto_open %>">
   <div class="transaction-plate-scanner__field-header">
-    <%= form.label :vehicle_number, "Vehicle Number", for: input_id, class: "form-label mb-0" %>
+    <%= form.label :vehicle_number, "Vehicle Number", class: "form-label mb-0" %>
     <button
       type="button"
       class="transaction-plate-scanner__toggle"
@@ -19,7 +16,6 @@
   </div>
 
   <%= form.text_field :vehicle_number,
-    id: input_id,
     value: vehicle_tab_active ? prefill_vehicle_number : nil,
     class: "form-control transaction-entry-lookup-input",
     required: true,
