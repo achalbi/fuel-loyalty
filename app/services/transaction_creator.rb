@@ -150,7 +150,7 @@ class TransactionCreator
       )
     end
 
-    if fuel_pump_nozzle.fuel_type_code != vehicle.fuel_type
+    if normalized_fuel_type_code(fuel_pump_nozzle.fuel_type_code) != normalized_fuel_type_code(vehicle.fuel_type)
       raise ActiveRecord::RecordInvalid.new(
         Transaction.new.tap do |transaction|
           transaction.errors.add(:fuel_pump_nozzle, "must match the selected vehicle's fuel type")
@@ -159,5 +159,9 @@ class TransactionCreator
     end
 
     [fuel_pump, fuel_pump_nozzle]
+  end
+
+  def normalized_fuel_type_code(value)
+    value.to_s.parameterize(separator: "_").presence
   end
 end

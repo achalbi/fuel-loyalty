@@ -189,6 +189,19 @@ class User < ApplicationRecord
     transaction_fuel_pump.present? && transaction_fuel_pump_nozzles.exists?
   end
 
+  def save_pump_assignment
+    clear_assigned_nozzles_without_pump
+    errors.clear
+    assigned_fuel_pump_must_be_active
+    assigned_fuel_pump_nozzles_required_when_pump_selected
+    assigned_fuel_pump_nozzles_must_belong_to_selected_pump
+    assigned_fuel_pump_nozzles_must_be_active
+
+    return false if errors.any?
+
+    save(validate: false)
+  end
+
   private
 
   def phone_number_attribute_available?

@@ -29,6 +29,7 @@ module Staff
             {
               vehicle_id: vehicle.id,
               vehicle_number: vehicle.vehicle_number,
+              fuel_type_code: vehicle.fuel_type,
               fuel_type: vehicle.display_fuel_type,
               vehicle_kind: vehicle.display_vehicle_kind,
               customer: customer_payload(vehicle.customer)
@@ -56,6 +57,7 @@ module Staff
       }
     rescue ActiveRecord::RecordInvalid => e
       @errors = e.record.errors.full_messages
+      @transaction_error_step = transaction_error_step(e.record.errors)
       assign_prefill_values
       load_transaction_pump_state
       prepare_registration_modal
@@ -129,6 +131,15 @@ module Staff
     def normalized_lookup_mode(lookup_mode_value = nil)
       lookup_mode = lookup_mode_value.to_s
       %w[phone vehicle].include?(lookup_mode) ? lookup_mode : "vehicle"
+    end
+
+    def transaction_error_step(errors)
+      attributes = errors.attribute_names.map(&:to_sym)
+
+      return "fuel" if (attributes & %i[base fuel_amount fuel_pump fuel_pump_nozzle fuel_pump_nozzle_id]).any?
+      return "review" if attributes.include?(:vehicle)
+
+      "lookup"
     end
 
     def prepare_registration_modal(customer: Customer.new, open: false)
@@ -215,6 +226,7 @@ module Staff
           {
             id: vehicle.id,
             vehicle_number: vehicle.vehicle_number,
+            fuel_type_code: vehicle.fuel_type,
             fuel_type: vehicle.display_fuel_type,
             vehicle_kind: vehicle.display_vehicle_kind,
             display_name: vehicle.display_name

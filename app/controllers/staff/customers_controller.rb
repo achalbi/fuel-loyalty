@@ -54,6 +54,7 @@ module Staff
               {
                 id: vehicle.id,
                 vehicle_number: vehicle.vehicle_number,
+                fuel_type_code: vehicle.fuel_type,
                 fuel_type: vehicle.display_fuel_type,
                 vehicle_kind: vehicle.display_vehicle_kind,
                 display_name: vehicle.display_name

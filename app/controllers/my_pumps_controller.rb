@@ -11,11 +11,10 @@ class MyPumpsController < ApplicationController
     authorize current_user, :manage_pump?
     current_user.assign_attributes(my_pump_params)
 
-    if current_user.save(context: :pump_assignment)
+    if current_user.save_pump_assignment
       redirect_to my_pump_path, notice: "My pump updated successfully."
     else
       load_form_state
-      flash.now[:alert] = current_user.errors.full_messages.to_sentence
       render :show, status: :unprocessable_entity
     end
   end

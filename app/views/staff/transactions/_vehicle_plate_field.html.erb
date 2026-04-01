@@ -4,17 +4,28 @@
   data-recognize-url="<%= recognize_plate_staff_transactions_path %>"
   data-server-recognizer-available="<%= VehiclePlateRecognizer.available? %>"
   data-auto-open="<%= auto_open %>">
+  <% vehicle_number_hint_id = "transactionVehicleNumberFieldHint" %>
   <div class="transaction-plate-scanner__field-header">
-    <%= form.label :vehicle_number, "Vehicle Number", class: "form-label mb-0" %>
-    <button
-      type="button"
-      class="transaction-plate-scanner__toggle"
-      data-plate-scanner-open
-      aria-controls="transactionPlateScannerPanel"
-      aria-expanded="false">
-      <i class="ti ti-camera" aria-hidden="true"></i>
-      <span>Capture Plate</span>
-    </button>
+    <div class="transaction-entry-titlebar__heading">
+      <%= form.label :vehicle_number, "Vehicle Number", class: "form-label mb-0" %>
+      <button
+        type="button"
+        class="transaction-entry-titlebar__hint-toggle"
+        data-bs-toggle="collapse"
+        data-bs-target="#<%= vehicle_number_hint_id %>"
+        aria-expanded="false"
+        aria-controls="<%= vehicle_number_hint_id %>"
+        aria-label="Show vehicle number help"
+        title="Show vehicle number help">
+        <i class="ti ti-info-circle" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="collapse transaction-entry-titlebar__hint" id="<%= vehicle_number_hint_id %>">
+    <div class="transaction-entry-titlebar__hint-card">
+      Use the full vehicle number as printed on the plate, or capture it with the camera.
+    </div>
   </div>
 
   <%= form.text_field :vehicle_number,
@@ -28,7 +39,6 @@
     autocapitalize: "characters",
     title: "Enter a valid vehicle number",
     data: { vehicle_number_input: true, lookup_focus_input: "vehicle", plate_scanner_input: true } %>
-  <div class="form-text">Use the full vehicle number as printed on the plate, or capture it with the camera.</div>
 
   <div class="transaction-plate-scanner__result d-none" data-plate-scanner-result role="status" aria-live="polite">
     <div class="transaction-plate-scanner__result-header">
@@ -48,6 +58,23 @@
     data-plate-scanner-panel
     hidden>
     <div class="card-body">
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        class="visually-hidden"
+        data-plate-scanner-file-input
+        tabindex="-1">
+
+      <div class="transaction-plate-scanner__actions" data-plate-scanner-toolbar role="group" aria-label="Camera actions">
+        <button type="button" class="btn btn-outline-secondary btn-sm is-active" data-plate-scanner-start aria-pressed="true">Open Camera</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-plate-scanner-file-trigger aria-pressed="false">Use Camera App</button>
+        <button type="button" class="btn btn-primary btn-sm" data-plate-scanner-capture disabled>Capture</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-plate-scanner-retake hidden>Retake</button>
+        <button type="button" class="btn btn-primary btn-sm" data-plate-scanner-use hidden>Use Photo</button>
+        <button type="button" class="btn btn-light btn-sm" data-plate-scanner-close>Close</button>
+      </div>
+
       <div class="transaction-plate-scanner__preview-shell">
         <video
           class="transaction-plate-scanner__video"
@@ -67,23 +94,6 @@
       <p class="transaction-plate-scanner__status mb-0" data-plate-scanner-status role="status" aria-live="polite">
         Align the vehicle number plate inside the guide, then capture the photo.
       </p>
-
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        class="visually-hidden"
-        data-plate-scanner-file-input
-        tabindex="-1">
-
-      <div class="transaction-plate-scanner__actions">
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-plate-scanner-start hidden>Open Camera</button>
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-plate-scanner-file-trigger>Use Camera App</button>
-        <button type="button" class="btn btn-primary btn-sm" data-plate-scanner-capture disabled>Capture</button>
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-plate-scanner-retake hidden>Retake</button>
-        <button type="button" class="btn btn-primary btn-sm" data-plate-scanner-use hidden>Use Photo</button>
-        <button type="button" class="btn btn-light btn-sm" data-plate-scanner-close>Close</button>
-      </div>
     </div>
   </div>
 </div>

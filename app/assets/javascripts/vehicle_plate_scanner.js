@@ -298,7 +298,6 @@
 
     const input = root.querySelector("[data-plate-scanner-input]") || root.querySelector("[data-vehicle-number-input]");
     const panel = root.querySelector("[data-plate-scanner-panel]");
-    const openButton = root.querySelector("[data-plate-scanner-open]");
     const startButton = root.querySelector("[data-plate-scanner-start]");
     const fileTriggerButton = root.querySelector("[data-plate-scanner-file-trigger]");
     const fileInput = root.querySelector("[data-plate-scanner-file-input]");
@@ -315,6 +314,8 @@
     const noteTarget = root.querySelector("[data-plate-scanner-note]");
     const rawTarget = root.querySelector("[data-plate-scanner-raw]");
     const confidenceTarget = root.querySelector("[data-plate-scanner-confidence]");
+    const toggleButtons = Array.from(document.querySelectorAll("[data-topbar-plate-scanner-toggle]"));
+    const transactionModal = root.closest("[data-transaction-entry-modal]");
     const recognizeUrl = root.dataset.recognizeUrl || "";
     const serverRecognizerAvailable = root.dataset.serverRecognizerAvailable === "true";
     const csrfToken = document.querySelector("meta[name='csrf-token']")?.content || "";
@@ -322,7 +323,6 @@
     const requiredNodes = {
       input,
       panel,
-      openButton,
       startButton,
       fileTriggerButton,
       fileInput,
@@ -355,10 +355,29 @@
     let capturedCanvas = null;
     let autoOpenScheduled = false;
     let cameraStartInFlight = null;
+    let sourceMode = "camera";
 
     const setStatus = (message, tone = "neutral") => {
       status.textContent = message;
       status.dataset.tone = tone;
+    };
+
+    const syncToggleButtons = (open) => {
+      toggleButtons.forEach((button) => {
+        button.setAttribute("aria-pressed", open ? "true" : "false");
+        button.setAttribute("aria-label", open ? "Close Vehicle Plate Scanner" : "Scan Vehicle Plate");
+        button.title = open ? "Close Vehicle Plate Scanner" : "Scan Vehicle Plate";
+        button.classList.toggle("active", open);
+      });
+    };
+
+    const setSourceMode = (nextMode) => {
+      sourceMode = nextMode === "app" ? "app" : "camera";
+      root.dataset.sourceMode = sourceMode;
+      startButton.classList.toggle("is-active", sourceMode === "camera");
+      fileTriggerButton.classList.toggle("is-active", sourceMode === "app");
+      startButton.setAttribute("aria-pressed", sourceMode === "camera" ? "true" : "false");
+      fileTriggerButton.setAttribute("aria-pressed", sourceMode === "app" ? "true" : "false");
     };
 
     const showLiveVideoShell = () => {
@@ -376,12 +395,12 @@
     const showPlayablePreviewState = () => {
       showLiveVideoShell();
       captureButton.disabled = !stream;
-      startButton.hidden = Boolean(stream);
+      setSourceMode("camera");
     };
 
     const showGestureRetryState = (message) => {
       showLiveVideoShell();
-      startButton.hidden = false;
+      setSourceMode("camera");
       captureButton.disabled = true;
       setStatus(message, "warning");
     };
@@ -400,8 +419,8 @@
 
     const setPanelOpen = (open) => {
       panel.hidden = !open;
-      openButton.setAttribute("aria-expanded", open ? "true" : "false");
       root.classList.toggle("is-open", open);
+      syncToggleButtons(open);
 
       if (open) {
         root.dataset.autoOpenPending = "false";
@@ -415,7 +434,7 @@
 
     const launchCameraAppFallback = ({ message } = {}) => {
       stopStream();
-      startButton.hidden = false;
+      setSourceMode("app");
       captureButton.disabled = true;
 
       setStatus(message, "warning");
@@ -444,6 +463,7 @@
 
     const startCamera = async () => {
       if (cameraStartInFlight) return cameraStartInFlight;
+      setSourceMode("camera");
 
       if (stream) {
         prepareVideoPreview(video);
@@ -506,7 +526,6 @@
       captureButton.hidden = true;
       retakeButton.hidden = false;
       useButton.hidden = false;
-      startButton.hidden = true;
       setStatus(message, "neutral");
     };
 
@@ -603,7 +622,6 @@
     };
 
     const toggleBusy = (busy) => {
-      openButton.disabled = busy;
       startButton.disabled = busy;
       fileTriggerButton.disabled = busy;
       captureButton.disabled = busy || !stream;
@@ -661,16 +679,14 @@
       }
     };
 
-    openButton.addEventListener("click", () => {
+    startButton.addEventListener("click", () => {
       setPanelOpen(true);
       startCamera();
     });
 
-    startButton.addEventListener("click", () => {
-      startCamera();
-    });
-
     fileTriggerButton.addEventListener("click", () => {
+      setSourceMode("app");
+      setPanelOpen(true);
       stopStream();
       fileInput.click();
     });
@@ -681,6 +697,12 @@
 
     retakeButton.addEventListener("click", () => {
       setPanelOpen(true);
+      if (sourceMode === "app") {
+        stopStream();
+        fileInput.click();
+        return;
+      }
+
       startCamera();
     });
 
@@ -694,6 +716,7 @@
 
       toggleBusy(true);
       setPanelOpen(true);
+      setSourceMode("app");
       setStatus("Preparing the selected photo...", "neutral");
 
       try {
@@ -712,6 +735,36 @@
       setStatus("Scanner closed. You can still type the vehicle number manually.", "neutral");
     });
 
+    const toggleFromTopbar = () => {
+      if (!root.isConnected) return;
+
+      if (!panel.hidden) {
+        setPanelOpen(false);
+        setStatus("Scanner closed. You can still type the vehicle number manually.", "neutral");
+        return;
+      }
+
+      const vehicleTabButton = document.getElementById("transaction-vehicle-tab");
+      const needsTabSwitch = vehicleTabButton && vehicleTabButton.getAttribute("aria-selected") !== "true";
+      if (needsTabSwitch) {
+        vehicleTabButton.click();
+      }
+
+      window.setTimeout(() => {
+        if (!root.isConnected) return;
+        setPanelOpen(true);
+        startCamera();
+      }, needsTabSwitch ? 140 : 0);
+    };
+
+    window.addEventListener("plate-scanner:toggle", toggleFromTopbar);
+    transactionModal?.addEventListener("hidden.bs.modal", () => {
+      if (!root.isConnected) return;
+
+      setPanelOpen(false);
+      setStatus("Scanner closed. You can still type the vehicle number manually.", "neutral");
+    });
+
     document.addEventListener("turbo:before-cache", stopStream);
     window.addEventListener("pagehide", stopStream);
 
@@ -719,10 +772,14 @@
       if (autoOpenScheduled) return;
       autoOpenScheduled = true;
       setPanelOpen(true);
+      setSourceMode("camera");
       window.setTimeout(() => {
         startCamera();
       }, 220);
     };
+
+    setSourceMode("camera");
+    syncToggleButtons(false);
 
     if (root.dataset.autoOpen === "true") {
       if (document.readyState === "complete") {

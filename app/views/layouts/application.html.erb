@@ -48,12 +48,23 @@
 
         <div class="ms-auto d-flex align-items-center gap-2">
           <% if current_user.staff? || current_user.admin? %>
-            <%= link_to new_staff_transaction_path(plate_scanner: 1),
-              class: "btn btn-light btn-icon btn-sm",
-              data: { turbo: false },
-              aria: { label: "Scan Vehicle Plate" },
-              title: "Scan Vehicle Plate" do %>
-              <i class="ti ti-camera" aria-hidden="true"></i>
+            <% if controller_path == "staff/transactions" && action_name == "new" %>
+              <button
+                type="button"
+                class="btn btn-light btn-icon btn-sm"
+                data-topbar-plate-scanner-toggle
+                aria-label="Scan Vehicle Plate"
+                title="Scan Vehicle Plate">
+                <i class="ti ti-camera" aria-hidden="true"></i>
+              </button>
+            <% else %>
+              <%= link_to new_staff_transaction_path(plate_scanner: 1),
+                class: "btn btn-light btn-icon btn-sm",
+                data: { turbo: false, topbar_plate_scanner_toggle: true },
+                aria: { label: "Scan Vehicle Plate" },
+                title: "Scan Vehicle Plate" do %>
+                <i class="ti ti-camera" aria-hidden="true"></i>
+              <% end %>
             <% end %>
 
             <%= link_to new_staff_transaction_path,

@@ -76,8 +76,111 @@
         </button>
       </li>
     </ul>
+    <% if @errors.present? %>
+      <div class="alert alert-danger transaction-entry-page-error" role="alert">
+        <div>
+          <strong>Transaction could not be saved.</strong>
+          <span>Review the highlighted step in the transaction modal and try again.</span>
+        </div>
+        <button
+          type="button"
+          class="btn btn-outline-danger btn-sm"
+          data-bs-toggle="modal"
+          data-bs-target="#transactionEntryWizardModal">
+          Review Steps
+        </button>
+      </div>
+    <% end %>
+    <div class="<%= "d-none" unless phone_tab_active %>" data-transaction-page-stepper="phone">
+      <div class="transaction-entry-stepper" data-transaction-stepper>
+        <button type="button" class="transaction-entry-step" data-transaction-step-marker="lookup" data-transaction-step-target="lookup">
+          <span class="transaction-entry-step__eyebrow">
+            <span class="transaction-entry-step__count">1</span>
+            <span class="transaction-entry-step__status" data-transaction-step-status>Current</span>
+          </span>
+          <strong class="transaction-entry-step__title">Find Customer</strong>
+          <span class="transaction-entry-step__text">Enter the phone number and load the profile.</span>
+        </button>
+        <button type="button" class="transaction-entry-step" data-transaction-step-marker="review" data-transaction-step-target="review">
+          <span class="transaction-entry-step__eyebrow">
+            <span class="transaction-entry-step__count">2</span>
+            <span class="transaction-entry-step__status" data-transaction-step-status>Locked</span>
+          </span>
+          <strong class="transaction-entry-step__title">Review Vehicle</strong>
+          <span class="transaction-entry-step__text">Confirm the customer card and pick the correct vehicle.</span>
+        </button>
+        <button type="button" class="transaction-entry-step" data-transaction-step-marker="fuel" data-transaction-step-target="fuel">
+          <span class="transaction-entry-step__eyebrow">
+            <span class="transaction-entry-step__count">3</span>
+            <span class="transaction-entry-step__status" data-transaction-step-status>Locked</span>
+          </span>
+          <strong class="transaction-entry-step__title">Fuel Details</strong>
+          <span class="transaction-entry-step__text">Enter the amount, choose nozzle, and save.</span>
+        </button>
+      </div>
+    </div>
+    <div class="<%= "d-none" unless vehicle_tab_active %>" data-transaction-page-stepper="vehicle">
+      <div class="transaction-entry-stepper" data-transaction-stepper>
+        <button type="button" class="transaction-entry-step" data-transaction-step-marker="lookup" data-transaction-step-target="lookup">
+          <span class="transaction-entry-step__eyebrow">
+            <span class="transaction-entry-step__count">1</span>
+            <span class="transaction-entry-step__status" data-transaction-step-status>Current</span>
+          </span>
+          <strong class="transaction-entry-step__title">Find Vehicle</strong>
+          <span class="transaction-entry-step__text">Scan or enter the vehicle number to find the customer.</span>
+        </button>
+        <button type="button" class="transaction-entry-step" data-transaction-step-marker="review" data-transaction-step-target="review">
+          <span class="transaction-entry-step__eyebrow">
+            <span class="transaction-entry-step__count">2</span>
+            <span class="transaction-entry-step__status" data-transaction-step-status>Locked</span>
+          </span>
+          <strong class="transaction-entry-step__title">Confirm Match</strong>
+          <span class="transaction-entry-step__text">Check the matched profile before recording fuel.</span>
+        </button>
+        <button type="button" class="transaction-entry-step" data-transaction-step-marker="fuel" data-transaction-step-target="fuel">
+          <span class="transaction-entry-step__eyebrow">
+            <span class="transaction-entry-step__count">3</span>
+            <span class="transaction-entry-step__status" data-transaction-step-status>Locked</span>
+          </span>
+          <strong class="transaction-entry-step__title">Fuel Details</strong>
+          <span class="transaction-entry-step__text">Enter amount, choose nozzle, and save the sale.</span>
+        </button>
+      </div>
+    </div>
+    <div class="transaction-entry-launch-actions">
+      <p class="mb-0 transaction-entry-tabs__description-text">
+        Continue the selected lookup flow in the step-by-step wizard modal.
+      </p>
+      <button
+        type="button"
+        class="btn btn-primary"
+        data-bs-toggle="modal"
+        data-bs-target="#transactionEntryWizardModal">
+        Open Steps
+      </button>
+    </div>
   </div>
 </div>
+
+<div
+  class="modal fade transaction-entry-modal"
+  id="transactionEntryWizardModal"
+  tabindex="-1"
+  aria-labelledby="transactionEntryWizardModalLabel"
+  aria-hidden="true"
+  data-transaction-entry-modal
+  data-auto-open-modal="<%= ((vehicle_tab_active && @auto_open_plate_scanner) || @errors.present?).to_s %>">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl modal-fullscreen-md-down transaction-entry-modal__dialog">
+    <div class="modal-content transaction-entry-modal__content">
+      <div class="modal-header border-0 pb-0 transaction-entry-modal__header">
+        <div>
+          <h2 class="modal-title h4 mb-1" id="transactionEntryWizardModalLabel">Transaction Steps</h2>
+          <p class="text-muted mb-0 small">Complete one step at a time for the currently selected lookup mode.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body pt-3 transaction-entry-modal__body">
 
 <div class="tab-content transaction-entry-content">
   <div
@@ -89,44 +192,50 @@
     <div
       class="transaction-entry-panel"
       data-transaction-phone-root
+      data-transaction-wizard-key="phone"
       data-lookup-url="<%= lookup_staff_customers_path %>"
+      data-transaction-error-step="<%= @active_lookup_mode == "phone" ? @transaction_error_step : "" %>"
       data-selected-vehicle-id="<%= phone_tab_active ? @prefill_vehicle_id : "" %>">
       <div class="alert alert-warning d-none mb-0 transaction-customer-error" data-customer-error role="alert"></div>
 
-      <div class="row gx-4 gy-3">
-        <div class="col-lg-7">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <div class="transaction-entry-titlebar">
-                <div class="transaction-entry-titlebar__heading">
-                  <h2 class="h4 mb-0">Lookup by Phone</h2>
-                  <button
-                    type="button"
-                    class="transaction-entry-titlebar__hint-toggle"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#transactionPhoneLookupHint"
-                    aria-expanded="false"
-                    aria-controls="transactionPhoneLookupHint"
-                    aria-label="Show phone lookup help"
-                    title="Show phone lookup help">
-                    <i class="ti ti-info-circle" aria-hidden="true"></i>
-                  </button>
-                </div>
+      <%= form_with scope: :transaction, namespace: :phone_transaction, url: staff_transactions_path, class: "transaction-entry-wizard-form" do |form| %>
+        <%= form.hidden_field :lookup_mode, value: "phone" %>
 
-                <div class="collapse transaction-entry-titlebar__hint" id="transactionPhoneLookupHint">
-                  <div class="transaction-entry-titlebar__hint-card">
-                    Enter the customer's phone number to load the profile, then choose the vehicle for this visit. Customer must already exist. Use the customer screen to register a new customer or add more vehicles.
+        <div class="transaction-entry-step-modal">
+          <section class="card shadow-sm transaction-entry-step-card" data-transaction-step-section="lookup">
+            <div class="card-body">
+              <div class="transaction-entry-step-card__header">
+                <div class="transaction-entry-step-card__title-stack">
+                  <div class="transaction-entry-step-card__eyebrow">Step 1</div>
+                  <div class="transaction-entry-step-card__title-row">
+                    <h2 class="h4 mb-0">Lookup by Phone</h2>
+                    <button
+                      type="button"
+                      class="transaction-entry-titlebar__hint-toggle"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#transactionPhoneLookupHint"
+                      aria-expanded="false"
+                      aria-controls="transactionPhoneLookupHint"
+                      aria-label="Show phone lookup help"
+                      title="Show phone lookup help">
+                      <i class="ti ti-info-circle" aria-hidden="true"></i>
+                    </button>
                   </div>
+                  <p class="transaction-entry-step-card__summary mb-0">Find the customer first, then move to a focused review step.</p>
                 </div>
               </div>
 
-              <% if phone_tab_active && @errors.present? %>
-                <div class="alert alert-danger"><%= @errors.to_sentence %></div>
+              <div class="collapse transaction-entry-titlebar__hint" id="transactionPhoneLookupHint">
+                <div class="transaction-entry-titlebar__hint-card">
+                  Enter the customer's phone number to load the profile. Customer must already exist. Use the customer screen to register a new customer or add more vehicles.
+                </div>
+              </div>
+
+              <% if phone_tab_active && @errors.present? && @transaction_error_step == "lookup" %>
+                <div class="alert alert-danger" data-transaction-server-error><%= @errors.to_sentence %></div>
               <% end %>
 
-              <%= form_with scope: :transaction, namespace: :phone_transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
-                <%= form.hidden_field :lookup_mode, value: "phone" %>
-
+              <div class="transaction-entry-step-card__body">
                 <div>
                   <%= form.label :phone_number, class: "form-label" %>
                   <div class="input-group">
@@ -144,88 +253,136 @@
                       data: { phone_input: true, phone_number_field: true, lookup_focus_input: "phone" } %>
                   </div>
                 </div>
+              </div>
+
+              <div class="transaction-entry-step-card__footer">
+                <p class="transaction-entry-step-card__footer-note mb-0">Lookup completes when a customer profile is found.</p>
+                <div class="transaction-entry-step-card__actions">
+                  <button type="button" class="btn btn-primary" data-transaction-step-next="review" data-transaction-step-next-gate="lookup" disabled>Continue to Review</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card shadow-sm loyalty-result-card redemption-customer-shell transaction-customer-shell transaction-entry-step-card" data-transaction-step-section="review" hidden>
+            <div class="card-body">
+              <div class="transaction-entry-step-card__header redemption-customer-shell__header">
+                <div>
+                  <div class="transaction-entry-step-card__eyebrow">Step 2</div>
+                  <h2 class="h5 mb-1">Customer Details</h2>
+                  <p class="text-muted mb-0">Review the profile and choose the right vehicle before recording fuel.</p>
+                </div>
+              </div>
+
+              <div class="transaction-entry-step-card__body">
+                <% if phone_tab_active && @errors.present? && @transaction_error_step == "review" %>
+                  <div class="alert alert-danger" data-transaction-server-error><%= @errors.to_sentence %></div>
+                <% end %>
 
                 <div>
                   <%= form.label :vehicle_id, "Vehicle", class: "form-label" %>
                   <%= form.select :vehicle_id, [], { prompt: "Select a vehicle" }, class: "form-select", required: true, disabled: true, data: { vehicle_select: true } %>
                 </div>
 
-                <div>
-                  <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
-                  <%= form.number_field :fuel_amount, value: phone_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
-                </div>
-
-                <%= render "pump_selection_fields",
-                  form: form,
-                  transaction_fuel_pump: @transaction_fuel_pump,
-                  transaction_fuel_pump_nozzles: @transaction_fuel_pump_nozzles,
-                  selected_nozzle_id: @prefill_fuel_pump_nozzle_id,
-                  dom_prefix: "phone_transaction" %>
-
-                <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
-              <% end %>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-lg-5">
-          <div class="card shadow-sm h-100 loyalty-result-card redemption-customer-shell transaction-customer-shell">
-            <div class="card-body">
-              <div class="redemption-customer-shell__header">
-                <div>
-                  <h2 class="h5 mb-1">Customer Details</h2>
-                  <p class="text-muted mb-0">Review the profile and choose the right vehicle before recording fuel.</p>
-                </div>
-              </div>
-
-              <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
-                <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
-                  <i class="ti ti-search"></i>
-                </div>
-                <p class="text-muted mb-0">Search by phone number to view the customer profile and available vehicles.</p>
-              </div>
-
-              <div class="d-none redemption-customer-card transaction-customer-card" data-customer-panel>
-                <div class="redemption-customer-card__hero">
-                  <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
-                  <strong class="redemption-customer-card__value" data-customer-points></strong>
-                  <span class="redemption-customer-card__note is-pending" data-customer-note></span>
-                </div>
-
-                <div class="redemption-customer-card__identity">
-                  <div class="redemption-customer-card__identity-heading">
-                    <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
-                    <span class="redemption-customer-card__status" data-customer-status></span>
+                <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
+                  <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
+                    <i class="ti ti-search"></i>
                   </div>
-                  <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
+                  <p class="text-muted mb-0">Search by phone number to view the customer profile and available vehicles.</p>
                 </div>
 
-                <div class="redemption-customer-card__stats transaction-customer-card__stats">
-                  <div class="redemption-customer-card__stat">
-                    <span class="redemption-customer-card__stat-label">Vehicles on File</span>
-                    <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
+                <div class="d-none redemption-customer-card transaction-customer-card" data-customer-panel>
+                  <div class="redemption-customer-card__hero">
+                    <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
+                    <strong class="redemption-customer-card__value" data-customer-points></strong>
+                    <span class="redemption-customer-card__note is-pending" data-customer-note></span>
                   </div>
-                  <div class="redemption-customer-card__stat">
-                    <span class="redemption-customer-card__stat-label">Selected Vehicle</span>
-                    <strong class="redemption-customer-card__stat-value transaction-customer-card__stat-value" data-customer-selected-vehicle></strong>
-                  </div>
-                </div>
 
-                <div class="transaction-customer-card__vehicles">
-                  <div class="transaction-customer-card__vehicles-header">
-                    <div>
-                      <h3 class="h6 mb-1">Registered Vehicles</h3>
-                      <p class="small-muted mb-0">Tap a vehicle here or choose from the selector on the left.</p>
+                  <div class="redemption-customer-card__identity">
+                    <div class="redemption-customer-card__identity-heading">
+                      <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
+                      <span class="redemption-customer-card__status" data-customer-status></span>
+                    </div>
+                    <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
+                  </div>
+
+                  <div class="redemption-customer-card__stats transaction-customer-card__stats">
+                    <div class="redemption-customer-card__stat">
+                      <span class="redemption-customer-card__stat-label">Vehicles on File</span>
+                      <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
+                    </div>
+                    <div class="redemption-customer-card__stat">
+                      <span class="redemption-customer-card__stat-label">Selected Vehicle</span>
+                      <strong class="redemption-customer-card__stat-value transaction-customer-card__stat-value" data-customer-selected-vehicle></strong>
                     </div>
                   </div>
 
-                  <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+                  <div class="transaction-customer-card__vehicles">
+                    <div class="transaction-customer-card__vehicles-header">
+                      <div>
+                        <h3 class="h6 mb-1">Registered Vehicles</h3>
+                        <p class="small-muted mb-0">Tap a vehicle here or choose it from the selector above.</p>
+                      </div>
+                    </div>
+
+                    <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="transaction-entry-step-card__footer">
+                <div class="transaction-entry-step-card__actions">
+                  <button type="button" class="btn btn-outline-secondary" data-transaction-step-prev="lookup">Back</button>
+                </div>
+                <div class="transaction-entry-step-card__actions">
+                  <button type="button" class="btn btn-primary" data-transaction-step-next="fuel" data-transaction-step-next-gate="review" disabled>Continue to Fuel</button>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
+
+          <section class="card shadow-sm transaction-entry-step-card" data-transaction-step-section="fuel" hidden>
+            <div class="card-body">
+              <div class="transaction-entry-step-card__header">
+                <div>
+                  <div class="transaction-entry-step-card__eyebrow">Step 3</div>
+                  <h2 class="h4 mb-1">Fuel Details</h2>
+                  <p class="transaction-entry-step-card__summary mb-0">Enter the sale amount, choose the compatible nozzle, and save the transaction.</p>
+                </div>
+              </div>
+
+              <fieldset class="transaction-entry-step-card__fieldset" data-transaction-step-fieldset="fuel" disabled>
+                <div class="transaction-entry-step-card__body">
+                  <% if phone_tab_active && @errors.present? && @transaction_error_step == "fuel" %>
+                    <div class="alert alert-danger" data-transaction-server-error><%= @errors.to_sentence %></div>
+                  <% end %>
+
+                  <div>
+                    <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
+                    <%= form.number_field :fuel_amount, value: phone_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
+                  </div>
+
+                  <%= render "pump_selection_fields",
+                    form: form,
+                    transaction_fuel_pump: @transaction_fuel_pump,
+                    transaction_fuel_pump_nozzles: @transaction_fuel_pump_nozzles,
+                    selected_nozzle_id: @prefill_fuel_pump_nozzle_id,
+                    dom_prefix: "phone_transaction" %>
+                </div>
+              </fieldset>
+
+              <div class="transaction-entry-step-card__footer">
+                <div class="transaction-entry-step-card__actions">
+                  <button type="button" class="btn btn-outline-secondary" data-transaction-step-prev="review">Back</button>
+                </div>
+                <div class="transaction-entry-step-card__actions">
+                  <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-      </div>
+      <% end %>
     </div>
   </div>
 
@@ -238,130 +395,195 @@
     <div
       class="transaction-entry-panel"
       data-transaction-vehicle-root
+      data-transaction-wizard-key="vehicle"
       data-lookup-url="<%= lookup_staff_transactions_path %>"
+      data-transaction-error-step="<%= @active_lookup_mode == "vehicle" ? @transaction_error_step : "" %>"
       data-selected-vehicle-id="<%= vehicle_tab_active ? @prefill_vehicle_id : "" %>">
       <div class="alert alert-warning d-none mb-0 transaction-customer-error" data-customer-error role="alert"></div>
 
-      <div class="row gx-4 gy-3">
-        <div class="col-lg-7">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <div class="transaction-entry-titlebar">
-                <div class="transaction-entry-titlebar__heading">
-                  <h2 class="h4 mb-0">Lookup by Vehicle</h2>
-                  <button
-                    type="button"
-                    class="transaction-entry-titlebar__hint-toggle"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#transactionVehicleLookupHint"
-                    aria-expanded="false"
-                    aria-controls="transactionVehicleLookupHint"
-                    aria-label="Show vehicle lookup help"
-                    title="Show vehicle lookup help">
-                    <i class="ti ti-info-circle" aria-hidden="true"></i>
-                  </button>
-                </div>
+      <%= form_with scope: :transaction, namespace: :vehicle_transaction, url: staff_transactions_path, class: "transaction-entry-wizard-form" do |form| %>
+        <%= form.hidden_field :lookup_mode, value: "vehicle" %>
 
-                <div class="collapse transaction-entry-titlebar__hint" id="transactionVehicleLookupHint">
-                  <div class="transaction-entry-titlebar__hint-card">
-                    Enter the vehicle number to find the customer. If multiple customers share the same vehicle number, choose the correct profile before saving.
+        <div class="transaction-entry-step-modal">
+          <section class="card shadow-sm transaction-entry-step-card" data-transaction-step-section="lookup">
+            <div class="card-body">
+              <div class="transaction-entry-step-card__header transaction-entry-step-card__header--with-toggle">
+                <div class="transaction-entry-step-card__title-stack">
+                  <div class="transaction-entry-step-card__eyebrow">Step 1</div>
+                  <div class="transaction-entry-step-card__title-row">
+                    <h2 class="h4 mb-0">Lookup by Vehicle</h2>
+                    <button
+                      type="button"
+                      class="transaction-entry-titlebar__hint-toggle"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#transactionVehicleLookupHint"
+                      aria-expanded="false"
+                      aria-controls="transactionVehicleLookupHint"
+                      aria-label="Show vehicle lookup help"
+                      title="Show vehicle lookup help">
+                      <i class="ti ti-info-circle" aria-hidden="true"></i>
+                    </button>
                   </div>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-light btn-icon btn-sm transaction-entry-step-card__camera-toggle"
+                  data-topbar-plate-scanner-toggle
+                  aria-label="Scan Vehicle Plate"
+                  title="Scan Vehicle Plate">
+                  <i class="ti ti-camera" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div class="collapse transaction-entry-titlebar__hint" id="transactionVehicleLookupHint">
+                <div class="transaction-entry-titlebar__hint-card">
+                  Scan or enter the vehicle number to find the customer. If multiple customers share the same vehicle number, choose the correct profile in the next step.
                 </div>
               </div>
 
-              <% if vehicle_tab_active && @errors.present? %>
-                <div class="alert alert-danger"><%= @errors.to_sentence %></div>
+              <% if vehicle_tab_active && @errors.present? && @transaction_error_step == "lookup" %>
+                <div class="alert alert-danger" data-transaction-server-error><%= @errors.to_sentence %></div>
               <% end %>
 
-              <%= form_with scope: :transaction, namespace: :vehicle_transaction, url: staff_transactions_path, class: "vstack gap-3" do |form| %>
-                <%= form.hidden_field :lookup_mode, value: "vehicle" %>
-
+              <div class="transaction-entry-step-card__body">
                 <%= render "vehicle_plate_field",
                   form: form,
                   prefill_vehicle_number: @prefill_vehicle_number,
                   vehicle_tab_active: vehicle_tab_active,
                   auto_open: @auto_open_plate_scanner && vehicle_tab_active %>
+              </div>
+
+              <div class="transaction-entry-step-card__footer">
+                <p class="transaction-entry-step-card__footer-note mb-0">Continue once a matching customer is found.</p>
+                <div class="transaction-entry-step-card__actions">
+                  <button type="button" class="btn btn-primary" data-transaction-step-next="review" data-transaction-step-next-gate="lookup" disabled>Continue to Review</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card shadow-sm loyalty-result-card redemption-customer-shell transaction-customer-shell transaction-entry-step-card" data-transaction-step-section="review" hidden>
+            <div class="card-body">
+              <div class="transaction-entry-step-card__header redemption-customer-shell__header">
+                <div>
+                  <div class="transaction-entry-step-card__eyebrow">Step 2</div>
+                  <h2 class="h5 mb-1">Matched Customer</h2>
+                  <p class="text-muted mb-0">Confirm the matched profile and vehicle before recording this transaction.</p>
+                </div>
+              </div>
+
+              <div class="transaction-entry-step-card__body">
+                <% if vehicle_tab_active && @errors.present? && @transaction_error_step == "review" %>
+                  <div class="alert alert-danger" data-transaction-server-error><%= @errors.to_sentence %></div>
+                <% end %>
 
                 <div>
                   <%= form.label :vehicle_id, "Matching Customer", class: "form-label" %>
                   <%= form.select :vehicle_id, [], { prompt: "Select the matching customer" }, class: "form-select", required: true, disabled: true, data: { vehicle_select: true } %>
                 </div>
 
-                <div>
-                  <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
-                  <%= form.number_field :fuel_amount, value: vehicle_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
-                </div>
-
-                <%= render "pump_selection_fields",
-                  form: form,
-                  transaction_fuel_pump: @transaction_fuel_pump,
-                  transaction_fuel_pump_nozzles: @transaction_fuel_pump_nozzles,
-                  selected_nozzle_id: @prefill_fuel_pump_nozzle_id,
-                  dom_prefix: "vehicle_transaction" %>
-
-                <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
-              <% end %>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-lg-5">
-          <div class="card shadow-sm h-100 loyalty-result-card redemption-customer-shell transaction-customer-shell">
-            <div class="card-body">
-              <div class="redemption-customer-shell__header">
-                <div>
-                  <h2 class="h5 mb-1">Matched Customer</h2>
-                  <p class="text-muted mb-0">Confirm the matched profile and vehicle before recording this transaction.</p>
-                </div>
-              </div>
-
-              <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
-                <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
-                  <i class="ti ti-car"></i>
-                </div>
-                <p class="text-muted mb-0">Search by vehicle number to load the customer profile and matched vehicle.</p>
-              </div>
-
-              <div class="d-none redemption-customer-card transaction-customer-card" data-customer-panel>
-                <div class="redemption-customer-card__hero">
-                  <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
-                  <strong class="redemption-customer-card__value" data-customer-points></strong>
-                  <span class="redemption-customer-card__note is-pending" data-customer-note></span>
-                </div>
-
-                <div class="redemption-customer-card__identity">
-                  <div class="redemption-customer-card__identity-heading">
-                    <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
-                    <span class="redemption-customer-card__status" data-customer-status></span>
+                <div class="redemption-customer-card redemption-customer-card--placeholder" data-customer-placeholder>
+                  <div class="redemption-customer-card__placeholder-icon" aria-hidden="true">
+                    <i class="ti ti-car"></i>
                   </div>
-                  <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
+                  <p class="text-muted mb-0">Search by vehicle number to load the customer profile and matched vehicle.</p>
                 </div>
 
-                <div class="redemption-customer-card__stats transaction-customer-card__stats">
-                  <div class="redemption-customer-card__stat">
-                    <span class="redemption-customer-card__stat-label">Vehicles on File</span>
-                    <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
+                <div class="d-none redemption-customer-card transaction-customer-card" data-customer-panel>
+                  <div class="redemption-customer-card__hero">
+                    <span class="small-muted redemption-customer-card__eyebrow">Available Points</span>
+                    <strong class="redemption-customer-card__value" data-customer-points></strong>
+                    <span class="redemption-customer-card__note is-pending" data-customer-note></span>
                   </div>
-                  <div class="redemption-customer-card__stat">
-                    <span class="redemption-customer-card__stat-label">Selected Vehicle</span>
-                    <strong class="redemption-customer-card__stat-value transaction-customer-card__stat-value" data-customer-selected-vehicle></strong>
-                  </div>
-                </div>
 
-                <div class="transaction-customer-card__vehicles">
-                  <div class="transaction-customer-card__vehicles-header">
-                    <div>
-                      <h3 class="h6 mb-1">Registered Vehicles</h3>
-                      <p class="small-muted mb-0">The matched vehicle is highlighted below so the visit can be verified quickly.</p>
+                  <div class="redemption-customer-card__identity">
+                    <div class="redemption-customer-card__identity-heading">
+                      <h3 class="redemption-customer-card__name mb-0" data-customer-name></h3>
+                      <span class="redemption-customer-card__status" data-customer-status></span>
+                    </div>
+                    <p class="redemption-customer-card__phone mb-0" data-customer-phone></p>
+                  </div>
+
+                  <div class="redemption-customer-card__stats transaction-customer-card__stats">
+                    <div class="redemption-customer-card__stat">
+                      <span class="redemption-customer-card__stat-label">Vehicles on File</span>
+                      <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
+                    </div>
+                    <div class="redemption-customer-card__stat">
+                      <span class="redemption-customer-card__stat-label">Selected Vehicle</span>
+                      <strong class="redemption-customer-card__stat-value transaction-customer-card__stat-value" data-customer-selected-vehicle></strong>
                     </div>
                   </div>
 
-                  <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+                  <div class="transaction-customer-card__vehicles">
+                    <div class="transaction-customer-card__vehicles-header">
+                      <div>
+                        <h3 class="h6 mb-1">Registered Vehicles</h3>
+                        <p class="small-muted mb-0">The matched vehicle is highlighted below so the visit can be verified quickly.</p>
+                      </div>
+                    </div>
+
+                    <div class="customer-details-vehicle-list transaction-customer-card__vehicle-list" data-customer-vehicles-list></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="transaction-entry-step-card__footer">
+                <div class="transaction-entry-step-card__actions">
+                  <button type="button" class="btn btn-outline-secondary" data-transaction-step-prev="lookup">Back</button>
+                </div>
+                <div class="transaction-entry-step-card__actions">
+                  <button type="button" class="btn btn-primary" data-transaction-step-next="fuel" data-transaction-step-next-gate="review" disabled>Continue to Fuel</button>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
+
+          <section class="card shadow-sm transaction-entry-step-card" data-transaction-step-section="fuel" hidden>
+            <div class="card-body">
+              <div class="transaction-entry-step-card__header">
+                <div>
+                  <div class="transaction-entry-step-card__eyebrow">Step 3</div>
+                  <h2 class="h4 mb-1">Fuel Details</h2>
+                  <p class="transaction-entry-step-card__summary mb-0">Complete the amount and nozzle selection after the customer match is verified.</p>
+                </div>
+              </div>
+
+              <fieldset class="transaction-entry-step-card__fieldset" data-transaction-step-fieldset="fuel" disabled>
+                <div class="transaction-entry-step-card__body">
+                  <% if vehicle_tab_active && @errors.present? && @transaction_error_step == "fuel" %>
+                    <div class="alert alert-danger" data-transaction-server-error><%= @errors.to_sentence %></div>
+                  <% end %>
+
+                  <div>
+                    <%= form.label :fuel_amount, "Fuel Amount (₹)", class: "form-label" %>
+                    <%= form.number_field :fuel_amount, value: vehicle_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true %>
+                  </div>
+
+                  <%= render "pump_selection_fields",
+                    form: form,
+                    transaction_fuel_pump: @transaction_fuel_pump,
+                    transaction_fuel_pump_nozzles: @transaction_fuel_pump_nozzles,
+                    selected_nozzle_id: @prefill_fuel_pump_nozzle_id,
+                    dom_prefix: "vehicle_transaction" %>
+                </div>
+              </fieldset>
+
+              <div class="transaction-entry-step-card__footer">
+                <div class="transaction-entry-step-card__actions">
+                  <button type="button" class="btn btn-outline-secondary" data-transaction-step-prev="review">Back</button>
+                </div>
+                <div class="transaction-entry-step-card__actions">
+                  <%= form.submit "Save Transaction", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
+      <% end %>
+    </div>
+  </div>
+</div>
       </div>
     </div>
   </div>
@@ -516,18 +738,136 @@
     };
 
     const registrationModal = createRegistrationModalController();
+    const normalizeFuelTypeCode = (value) => {
+      if (value === null || value === undefined) return "";
+
+      return value
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    };
 
     const bindTransactionNozzleOptions = (root, onChange) => {
-      const nozzleInputs = Array.from(root.querySelectorAll("[data-transaction-nozzle-input]"));
-      const nozzleOptions = Array.from(root.querySelectorAll("[data-transaction-nozzle-option]"));
+      const nozzleEntries = Array.from(root.querySelectorAll("[data-transaction-nozzle-option]"))
+        .map((option) => ({
+          option,
+          input: option.querySelector("[data-transaction-nozzle-input]")
+        }))
+        .filter(({ input }) => Boolean(input));
+      const nozzleInputs = nozzleEntries.map(({ input }) => input);
+      const status = root.querySelector("[data-transaction-nozzle-status]");
+      let activeFuelTypeCode = "";
+      let activeFuelTypeLabel = "";
+      let preferredNozzleId = nozzleInputs.find((input) => input.checked)?.value || "";
+
+      const selectedInput = () => nozzleInputs.find((input) => input.checked && !input.disabled);
+      const compatibleEntries = () => nozzleEntries.filter(({ input }) => !input.disabled);
+      const fuelTypeLabel = () => {
+        if (activeFuelTypeLabel) return activeFuelTypeLabel;
+        if (activeFuelTypeCode === "cng_lpg") return "CNG / LPG";
+
+        return activeFuelTypeCode
+          .split("_")
+          .filter(Boolean)
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+      };
+
+      const setStatus = (message, tone = "neutral") => {
+        if (!status) return;
+
+        status.textContent = message;
+        status.classList.toggle("d-none", message === "");
+        status.classList.toggle("text-muted", tone === "neutral");
+        status.classList.toggle("text-success", tone === "success");
+        status.classList.toggle("text-danger", tone === "warning");
+      };
+
+      const syncRequiredInputs = (enabledInputs) => {
+        nozzleInputs.forEach((input) => {
+          input.required = false;
+        });
+
+        if (enabledInputs.length > 0) {
+          enabledInputs[0].required = true;
+        }
+      };
+
+      const syncCompatibilityStatus = () => {
+        if (!activeFuelTypeCode) {
+          setStatus("Select a vehicle to see compatible nozzles.", "neutral");
+          return;
+        }
+
+        const availableEntries = compatibleEntries();
+        if (availableEntries.length === 0) {
+          setStatus(`No ${fuelTypeLabel()} nozzle is assigned to your pump for this vehicle.`, "warning");
+          return;
+        }
+
+        if (!selectedInput()) {
+          setStatus(`Choose one of the displayed ${fuelTypeLabel()} nozzles to continue.`, "neutral");
+          return;
+        }
+
+        setStatus(`${fuelTypeLabel()} nozzle selected for this vehicle.`, "success");
+      };
+
+      const applyFuelTypeConstraint = (fuelTypeCode, fuelTypeLabelText = "") => {
+        activeFuelTypeCode = normalizeFuelTypeCode(fuelTypeCode);
+        activeFuelTypeLabel = fuelTypeLabelText;
+
+        const matchingEntries = activeFuelTypeCode
+          ? nozzleEntries.filter(({ input }) => normalizeFuelTypeCode(input.dataset.nozzleFuelType) === activeFuelTypeCode)
+          : [];
+
+        nozzleEntries.forEach(({ option, input }) => {
+          const compatible = matchingEntries.some((entry) => entry.input === input);
+          const constrainChoices = activeFuelTypeCode !== "";
+
+          option.classList.toggle("d-none", constrainChoices && !compatible);
+          input.disabled = !constrainChoices || !compatible;
+
+          if (input.disabled) {
+            input.checked = false;
+          }
+        });
+
+        let nextSelectedInput = selectedInput();
+
+        if (!nextSelectedInput && preferredNozzleId) {
+          nextSelectedInput = matchingEntries.find(({ input }) => input.value === preferredNozzleId)?.input || null;
+        }
+
+        if (!nextSelectedInput && matchingEntries.length === 1) {
+          nextSelectedInput = matchingEntries[0].input;
+        }
+
+        if (nextSelectedInput) {
+          nextSelectedInput.checked = true;
+          preferredNozzleId = nextSelectedInput.value;
+        }
+
+        syncRequiredInputs(matchingEntries.map(({ input }) => input));
+        syncCompatibilityStatus();
+        onChange();
+      };
 
       nozzleInputs.forEach((input) => {
-        input.addEventListener("change", onChange);
+        input.addEventListener("change", () => {
+          if (input.checked) {
+            preferredNozzleId = input.value;
+          }
+
+          onChange();
+          syncCompatibilityStatus();
+        });
       });
 
-      nozzleOptions.forEach((option) => {
+      nozzleEntries.forEach(({ option, input }) => {
         option.addEventListener("click", (event) => {
-          const input = option.querySelector("[data-transaction-nozzle-input]");
           if (!input || input.disabled) return;
 
           event.preventDefault();
@@ -542,7 +882,12 @@
         });
       });
 
-      return nozzleInputs;
+      applyFuelTypeConstraint(null);
+
+      return {
+        applyFuelTypeConstraint,
+        selectedInput
+      };
     };
 
     const createCustomerCardController = (root) => {
@@ -653,6 +998,175 @@
       };
     };
 
+    const createTransactionWizardController = (root) => {
+      const wizardKey = root.dataset.transactionWizardKey || "";
+      const requestedErrorStep = ["lookup", "review", "fuel"].includes(root.dataset.transactionErrorStep) ? root.dataset.transactionErrorStep : "";
+      const stepper = wizardKey ? document.querySelector(`[data-transaction-page-stepper="${wizardKey}"]`) : null;
+      const markers = stepper ? Array.from(stepper.querySelectorAll("[data-transaction-step-marker]")) : [];
+      const sections = Object.fromEntries(
+        Array.from(root.querySelectorAll("[data-transaction-step-section]")).map((section) => [section.dataset.transactionStepSection, section])
+      );
+      const fieldsets = Object.fromEntries(
+        Array.from(root.querySelectorAll("[data-transaction-step-fieldset]")).map((fieldset) => [fieldset.dataset.transactionStepFieldset, fieldset])
+      );
+      const nextButtons = Array.from(root.querySelectorAll("[data-transaction-step-next]"));
+      const prevButtons = Array.from(root.querySelectorAll("[data-transaction-step-prev]"));
+      const stepOrder = ["lookup", "review", "fuel"];
+      const statusLabels = {
+        locked: "Locked",
+        pending: "Next",
+        ready: "Ready",
+        current: "Current",
+        complete: "Done"
+      };
+      let activeStep = null;
+      let pendingRequestedStep = requestedErrorStep;
+      let latestCompletion = {
+        lookupComplete: false,
+        reviewComplete: false,
+        fuelComplete: false
+      };
+
+      const lockedSteps = ({ lookupComplete, reviewComplete }) => ({
+        lookup: false,
+        review: !lookupComplete,
+        fuel: !reviewComplete
+      });
+
+      const defaultStep = ({ lookupComplete, reviewComplete }) => (
+        !lookupComplete ? "lookup" : (!reviewComplete ? "review" : "fuel")
+      );
+
+      const modalElement = document.querySelector("[data-transaction-entry-modal]");
+      const showStep = (stepKey, { smooth = true } = {}) => {
+        const section = sections[stepKey];
+        if (!section) return;
+
+        const locked = lockedSteps(latestCompletion);
+        if (locked[stepKey]) return;
+
+        activeStep = stepKey;
+        sync(latestCompletion, { preserveCurrentStep: true });
+        const revealStep = () => {
+          const nextSection = sections[stepKey];
+          if (!nextSection) return;
+
+          nextSection.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+        };
+
+        if (modalElement && !modalElement.classList.contains("show")) {
+          modalElement.addEventListener("shown.bs.modal", revealStep, { once: true });
+          bootstrap.Modal.getOrCreateInstance(modalElement).show();
+          return;
+        }
+
+        revealStep();
+      };
+
+      markers.forEach((marker) => {
+        marker.addEventListener("click", () => {
+          if (marker.disabled) return;
+
+          const stepKey = marker.dataset.transactionStepTarget;
+          showStep(stepKey);
+        });
+      });
+
+      nextButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          showStep(button.dataset.transactionStepNext);
+        });
+      });
+
+      prevButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          showStep(button.dataset.transactionStepPrev);
+        });
+      });
+
+      const sync = ({ lookupComplete = false, reviewComplete = false, fuelComplete = false } = {}, { preserveCurrentStep = false } = {}) => {
+        latestCompletion = {
+          lookup: lookupComplete,
+          review: reviewComplete,
+          fuel: fuelComplete
+        };
+        latestCompletion.lookupComplete = lookupComplete;
+        latestCompletion.reviewComplete = reviewComplete;
+        latestCompletion.fuelComplete = fuelComplete;
+
+        const completion = {
+          lookup: lookupComplete,
+          review: reviewComplete,
+          fuel: fuelComplete
+        };
+        const locked = lockedSteps(latestCompletion);
+        const currentStep = defaultStep(latestCompletion);
+
+        if (!preserveCurrentStep && pendingRequestedStep && !locked[pendingRequestedStep]) {
+          activeStep = pendingRequestedStep;
+          pendingRequestedStep = "";
+        }
+
+        if (!preserveCurrentStep && (!activeStep || locked[activeStep])) {
+          activeStep = currentStep;
+        }
+
+        if (!activeStep) {
+          activeStep = currentStep;
+        }
+
+        stepOrder.forEach((stepKey) => {
+          const marker = markers.find((entry) => entry.dataset.transactionStepMarker === stepKey);
+          const section = sections[stepKey];
+          const fieldset = fieldsets[stepKey];
+          const activeStepIndex = stepOrder.indexOf(activeStep);
+          const stepIndex = stepOrder.indexOf(stepKey);
+          const state = activeStep === stepKey
+            ? "current"
+            : (
+              stepIndex < activeStepIndex && completion[stepKey]
+                ? "complete"
+                : (locked[stepKey] ? "locked" : (completion[stepKey] ? "ready" : "pending"))
+            );
+
+          if (marker) {
+            marker.dataset.state = state;
+            marker.disabled = locked[stepKey];
+            marker.classList.toggle("is-complete", state === "complete");
+            marker.classList.toggle("is-current", state === "current");
+            marker.classList.toggle("is-ready", state === "ready");
+            marker.classList.toggle("is-locked", state === "locked");
+
+            const status = marker.querySelector("[data-transaction-step-status]");
+            if (status) {
+              status.textContent = statusLabels[state];
+            }
+          }
+
+          if (section) {
+            section.dataset.state = state;
+            section.hidden = activeStep !== stepKey;
+            section.classList.toggle("is-complete", state === "complete");
+            section.classList.toggle("is-current", state === "current");
+            section.classList.toggle("is-ready", state === "ready");
+            section.classList.toggle("is-locked", state === "locked");
+          }
+
+          if (fieldset) {
+            fieldset.disabled = locked[stepKey];
+          }
+        });
+
+        nextButtons.forEach((button) => {
+          const gate = button.dataset.transactionStepNextGate;
+          const enabled = gate === "lookup" ? lookupComplete : (gate === "review" ? reviewComplete : true);
+          button.disabled = !enabled;
+        });
+      };
+
+      return { sync, showStep };
+    };
+
     const initializePhoneLookup = () => {
       document.querySelectorAll("[data-transaction-phone-root]").forEach((root) => {
         if (root.__lookupBound === true) return;
@@ -662,12 +1176,19 @@
         const preselectedVehicleId = root.dataset.selectedVehicleId;
         const phoneInput = root.querySelector("[data-phone-input]");
         const vehicleSelect = root.querySelector("[data-vehicle-select]");
+        const fuelAmountInput = root.querySelector("input[name='transaction[fuel_amount]']");
         const submitButton = root.querySelector("[data-submit-button]");
         const card = createCustomerCardController(root);
+        const wizard = createTransactionWizardController(root);
+        const serverErrors = Array.from(root.querySelectorAll("[data-transaction-server-error]"));
         let activeLookup = 0;
         let customerActive = false;
         let currentCustomer = null;
         let suppressVehicleSelectBlurLookup = false;
+
+        const clearServerErrors = () => {
+          serverErrors.forEach((alert) => alert.classList.add("d-none"));
+        };
 
         const resetVehicleSelect = () => {
           vehicleSelect.innerHTML = "";
@@ -681,11 +1202,28 @@
         };
 
         const selectedVehicle = () => currentCustomer?.vehicles.find((vehicle) => String(vehicle.id) === String(vehicleSelect.value || ""));
-        const nozzleInputs = bindTransactionNozzleOptions(root, () => syncSubmitState());
-        const selectedNozzleInput = () => nozzleInputs.find((input) => input.checked);
-
+        const fuelAmountValid = () => {
+          const value = Number.parseFloat(fuelAmountInput?.value || "");
+          return Number.isFinite(value) && value > 0;
+        };
+        let nozzleController = null;
+        const selectedNozzleInput = () => nozzleController?.selectedInput();
+        const syncWizardState = () => {
+          const reviewReady = customerActive && Boolean(selectedVehicle());
+          wizard.sync({
+            lookupComplete: Boolean(currentCustomer),
+            reviewComplete: reviewReady,
+            fuelComplete: reviewReady && fuelAmountValid() && Boolean(selectedNozzleInput())
+          });
+        };
         const syncSubmitState = () => {
-          submitButton.disabled = vehicleSelect.value === "" || !customerActive || !selectedNozzleInput();
+          submitButton.disabled = vehicleSelect.value === "" || !customerActive || !selectedNozzleInput() || !fuelAmountValid();
+          syncWizardState();
+        };
+        nozzleController = bindTransactionNozzleOptions(root, () => syncSubmitState());
+        const syncNozzlesForSelectedVehicle = () => {
+          const vehicle = selectedVehicle();
+          nozzleController.applyFuelTypeConstraint(vehicle?.fuel_type_code, vehicle?.fuel_type);
         };
 
         const syncCustomerCard = () => {
@@ -715,6 +1253,7 @@
             onVehicleSelect: (vehicle) => {
               if (vehicleSelect.disabled) return;
               vehicleSelect.value = String(vehicle.id);
+              syncNozzlesForSelectedVehicle();
               syncSubmitState();
               syncCustomerCard();
             }
@@ -730,6 +1269,7 @@
             customerActive = false;
             card.clearPanel();
             resetVehicleSelect();
+            nozzleController.applyFuelTypeConstraint(null);
             return;
           }
 
@@ -753,6 +1293,7 @@
               currentCustomer = null;
               customerActive = false;
               resetVehicleSelect();
+              nozzleController.applyFuelTypeConstraint(null);
               card.setError(payload.message || "Customer not found for that phone number.", {
                 registerCustomerPath: payload.register_customer_path,
                 onRegisterCustomer: () => registrationModal.openNow(registrationPayload)
@@ -783,6 +1324,7 @@
               }
             }
 
+            syncNozzlesForSelectedVehicle();
             syncSubmitState();
             syncCustomerCard();
 
@@ -799,6 +1341,7 @@
             currentCustomer = null;
             customerActive = false;
             resetVehicleSelect();
+            nozzleController.applyFuelTypeConstraint(null);
             card.setError("Unable to fetch customer details right now.");
           }
         };
@@ -807,6 +1350,7 @@
 
         phoneInput.addEventListener("input", () => {
           registrationModal.cancelPendingOpen();
+          clearServerErrors();
           clearTimeout(lookupTimer);
           lookupTimer = setTimeout(loadCustomer, 300);
         });
@@ -829,8 +1373,23 @@
         });
 
         vehicleSelect.addEventListener("change", () => {
+          clearServerErrors();
+          syncNozzlesForSelectedVehicle();
           syncSubmitState();
           syncCustomerCard();
+        });
+
+        fuelAmountInput?.addEventListener("input", () => {
+          clearServerErrors();
+          syncSubmitState();
+        });
+        fuelAmountInput?.addEventListener("change", () => {
+          clearServerErrors();
+          syncSubmitState();
+        });
+
+        root.querySelectorAll("[data-transaction-nozzle-input]").forEach((input) => {
+          input.addEventListener("change", clearServerErrors);
         });
 
         if (phoneInput.value.trim() !== "") {
@@ -839,7 +1398,10 @@
           registrationModal.cancelPendingOpen();
           card.clearPanel();
           resetVehicleSelect();
+          nozzleController.applyFuelTypeConstraint(null);
         }
+
+        syncWizardState();
       });
     };
 
@@ -852,15 +1414,23 @@
         const preselectedVehicleId = root.dataset.selectedVehicleId;
         const vehicleNumberInput = root.querySelector("[data-vehicle-number-input]");
         const matchSelect = root.querySelector("[data-vehicle-select]");
+        const fuelAmountInput = root.querySelector("input[name='transaction[fuel_amount]']");
         const submitButton = root.querySelector("[data-submit-button]");
         const card = createCustomerCardController(root);
+        const wizard = createTransactionWizardController(root);
+        const serverErrors = Array.from(root.querySelectorAll("[data-transaction-server-error]"));
         let activeLookup = 0;
         let currentMatches = [];
         let selectedMatch = null;
         let suppressMatchSelectBlurLookup = false;
 
+        const clearServerErrors = () => {
+          serverErrors.forEach((alert) => alert.classList.add("d-none"));
+        };
+
         const focusVehicleNumberInput = () => {
           if (!vehicleNumberInput || !vehicleNumberInput.hasAttribute("autofocus")) return;
+          if (!transactionEntryModalVisible()) return;
           if (vehicleScannerFocusLockActive()) return;
 
           const activePane = root.closest(".tab-pane");
@@ -885,11 +1455,27 @@
           submitButton.disabled = true;
         };
 
-        const nozzleInputs = bindTransactionNozzleOptions(root, () => syncSubmitState());
-        const selectedNozzleInput = () => nozzleInputs.find((input) => input.checked);
-
+        let nozzleController = null;
+        const selectedNozzleInput = () => nozzleController?.selectedInput();
+        const fuelAmountValid = () => {
+          const value = Number.parseFloat(fuelAmountInput?.value || "");
+          return Number.isFinite(value) && value > 0;
+        };
+        const syncWizardState = () => {
+          const reviewReady = Boolean(selectedMatch) && Boolean(selectedMatch?.customer?.active);
+          wizard.sync({
+            lookupComplete: currentMatches.length > 0,
+            reviewComplete: reviewReady,
+            fuelComplete: reviewReady && fuelAmountValid() && Boolean(selectedNozzleInput())
+          });
+        };
         const syncSubmitState = () => {
-          submitButton.disabled = !selectedMatch || !selectedMatch.customer.active || !selectedNozzleInput();
+          submitButton.disabled = !selectedMatch || !selectedMatch.customer.active || !selectedNozzleInput() || !fuelAmountValid();
+          syncWizardState();
+        };
+        nozzleController = bindTransactionNozzleOptions(root, () => syncSubmitState());
+        const syncNozzlesForSelectedMatch = () => {
+          nozzleController.applyFuelTypeConstraint(selectedMatch?.fuel_type_code, selectedMatch?.fuel_type);
         };
 
         const syncCustomerCard = () => {
@@ -915,6 +1501,7 @@
 
         const applySelection = () => {
           selectedMatch = currentMatches.find((match) => String(match.vehicle_id) === String(matchSelect.value || "")) || null;
+          syncNozzlesForSelectedMatch();
           syncSubmitState();
           syncCustomerCard();
 
@@ -938,6 +1525,7 @@
             selectedMatch = null;
             card.clearPanel();
             resetMatchSelect();
+            nozzleController.applyFuelTypeConstraint(null);
             return;
           }
 
@@ -947,6 +1535,7 @@
             selectedMatch = null;
             card.clearPanel();
             resetMatchSelect();
+            nozzleController.applyFuelTypeConstraint(null);
             return;
           }
 
@@ -970,6 +1559,7 @@
               currentMatches = [];
               selectedMatch = null;
               resetMatchSelect();
+              nozzleController.applyFuelTypeConstraint(null);
               card.setError(payload.message || "No customer was found for that vehicle number.", {
                 registerCustomerPath: payload.register_customer_path,
                 onRegisterCustomer: () => registrationModal.openNow(registrationPayload)
@@ -1013,6 +1603,7 @@
             currentMatches = [];
             selectedMatch = null;
             resetMatchSelect();
+            nozzleController.applyFuelTypeConstraint(null);
             card.setError("Unable to fetch vehicle details right now.");
           }
         };
@@ -1030,6 +1621,7 @@
 
         vehicleNumberInput.addEventListener("input", () => {
           registrationModal.cancelPendingOpen();
+          clearServerErrors();
           vehicleNumberInput.value = normalizeVehicleNumberInput(vehicleNumberInput.value);
           syncVehicleNumberValidity();
           clearTimeout(lookupTimer);
@@ -1056,7 +1648,22 @@
           }
         });
 
-        matchSelect.addEventListener("change", applySelection);
+        matchSelect.addEventListener("change", () => {
+          clearServerErrors();
+          applySelection();
+        });
+        fuelAmountInput?.addEventListener("input", () => {
+          clearServerErrors();
+          syncSubmitState();
+        });
+        fuelAmountInput?.addEventListener("change", () => {
+          clearServerErrors();
+          syncSubmitState();
+        });
+
+        root.querySelectorAll("[data-transaction-nozzle-input]").forEach((input) => {
+          input.addEventListener("change", clearServerErrors);
+        });
 
         if (vehicleNumberInput.value.trim() !== "") {
           syncVehicleNumberValidity();
@@ -1065,13 +1672,20 @@
           registrationModal.cancelPendingOpen();
           card.clearPanel();
           resetMatchSelect();
+          nozzleController.applyFuelTypeConstraint(null);
         }
 
+        syncWizardState();
         focusVehicleNumberInput();
       });
     };
 
     const lookupFocusTimers = {};
+    const transactionEntryModalElement = () => document.querySelector("[data-transaction-entry-modal]");
+    const transactionEntryModalVisible = () => {
+      const modalElement = transactionEntryModalElement();
+      return !modalElement || modalElement.classList.contains("show");
+    };
     const vehicleScannerFocusLockActive = () => {
       const scannerRoot = document.querySelector("[data-plate-scanner-root]");
       if (!scannerRoot) return false;
@@ -1082,6 +1696,11 @@
     };
 
     const shouldSkipLookupFocus = (targetKey) => targetKey === "vehicle" && vehicleScannerFocusLockActive();
+    const syncPageStepperVisibility = (targetKey) => {
+      document.querySelectorAll("[data-transaction-page-stepper]").forEach((stepper) => {
+        stepper.classList.toggle("d-none", stepper.dataset.transactionPageStepper !== targetKey);
+      });
+    };
     const syncLookupTabDescription = (button) => {
       const target = document.querySelector("[data-lookup-tab-description-target]");
       if (!target || !button) return;
@@ -1090,6 +1709,7 @@
     };
 
     const focusLookupInputNow = (targetKey) => {
+      if (!transactionEntryModalVisible()) return;
       if (shouldSkipLookupFocus(targetKey)) return;
 
       const input = document.querySelector(`[data-lookup-focus-input="${targetKey}"]`);
@@ -1113,6 +1733,7 @@
     };
 
     const focusLookupInput = (targetKey, { preserveExistingFocus = false } = {}) => {
+      if (!transactionEntryModalVisible()) return;
       if (shouldSkipLookupFocus(targetKey)) return;
 
       const input = document.querySelector(`[data-lookup-focus-input="${targetKey}"]`);
@@ -1137,6 +1758,7 @@
     };
 
     const queueLookupInputFocus = (targetKey, options = {}) => {
+      if (!transactionEntryModalVisible()) return;
       if (shouldSkipLookupFocus(targetKey)) return;
 
       window.clearTimeout(lookupFocusTimers[targetKey]);
@@ -1153,11 +1775,13 @@
         const targetKey = button.dataset.lookupTabFocusTarget;
 
         button.addEventListener("shown.bs.tab", () => {
+          syncPageStepperVisibility(targetKey);
           syncLookupTabDescription(button);
           queueLookupInputFocus(targetKey, { delay: 0 });
         });
 
         button.addEventListener("click", () => {
+          syncPageStepperVisibility(targetKey);
           syncLookupTabDescription(button);
           focusLookupInputNow(targetKey);
           queueLookupInputFocus(targetKey, { delay: 90 });
@@ -1166,14 +1790,40 @@
 
       const activeButton = document.querySelector("[data-lookup-tab-focus-target].active");
       if (activeButton) {
+        syncPageStepperVisibility(activeButton.dataset.lookupTabFocusTarget);
         syncLookupTabDescription(activeButton);
         queueLookupInputFocus(activeButton.dataset.lookupTabFocusTarget, { preserveExistingFocus: true, delay: 0 });
       }
     };
 
+    const initializeTransactionEntryModal = () => {
+      const modalElement = transactionEntryModalElement();
+      if (!modalElement) return;
+      if (modalElement.dataset.transactionEntryModalBound === "true") return;
+
+      modalElement.dataset.transactionEntryModalBound = "true";
+      if (modalElement.dataset.autoOpenModal === "true" && modalElement.dataset.transactionEntryModalAutoOpened !== "true") {
+        modalElement.dataset.transactionEntryModalAutoOpened = "true";
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+      }
+      modalElement.addEventListener("shown.bs.modal", () => {
+        const activeButton = document.querySelector("[data-lookup-tab-focus-target].active");
+        if (!activeButton) return;
+
+        const currentStep = document
+          .querySelector(`[data-transaction-page-stepper="${activeButton.dataset.lookupTabFocusTarget}"] [data-transaction-step-marker].is-current`)
+          ?.dataset.transactionStepMarker;
+        if (currentStep && currentStep !== "lookup") return;
+
+        syncLookupTabDescription(activeButton);
+        queueLookupInputFocus(activeButton.dataset.lookupTabFocusTarget, { preserveExistingFocus: false, delay: 0 });
+      });
+    };
+
     const initLookupTabs = () => {
       initializePhoneLookup();
       initializeVehicleLookup();
+      initializeTransactionEntryModal();
       initializeLookupTabFocus();
     };
 

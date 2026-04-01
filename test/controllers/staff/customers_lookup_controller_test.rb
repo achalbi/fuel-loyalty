@@ -20,6 +20,7 @@ module Staff
       assert_equal 200, payload.dig("customer", "minimum_redeemable_points")
       assert_equal 200, payload.dig("customer", "max_redeemable_points")
       assert_equal 2, payload.dig("customer", "vehicles").size
+      assert_equal "petrol", payload.dig("customer", "vehicles", 0, "fuel_type_code")
       assert_equal "Petrol", payload.dig("customer", "vehicles", 0, "fuel_type")
       assert_equal "Two-Wheeler", payload.dig("customer", "vehicles", 0, "vehicle_kind")
     end

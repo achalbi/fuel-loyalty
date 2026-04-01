@@ -1632,6 +1632,32 @@
     });
   };
 
+  const initializeTopbarPlateScannerToggle = () => {
+    document.querySelectorAll("[data-topbar-plate-scanner-toggle]").forEach((button) => {
+      if (button.dataset.plateScannerToggleBound === "true") return;
+
+      button.dataset.plateScannerToggleBound = "true";
+
+      button.addEventListener("click", (event) => {
+        if (!document.querySelector("[data-plate-scanner-root]")) return;
+
+        event.preventDefault();
+        const transactionModal = document.querySelector("[data-transaction-entry-modal]");
+        const openScanner = () => {
+          window.dispatchEvent(new CustomEvent("plate-scanner:toggle", { detail: { source: "topbar" } }));
+        };
+
+        if (transactionModal && !transactionModal.classList.contains("show")) {
+          transactionModal.addEventListener("shown.bs.modal", openScanner, { once: true });
+          bootstrap.Modal.getOrCreateInstance(transactionModal).show();
+          return;
+        }
+
+        openScanner();
+      });
+    });
+  };
+
   document.addEventListener("turbo:load", initializeTheme);
   document.addEventListener("DOMContentLoaded", initializeTheme);
   document.addEventListener("turbo:before-render", (event) => applySidebarShellState(event.detail.newBody));
@@ -1667,6 +1693,8 @@
   document.addEventListener("DOMContentLoaded", initializeFuelPumpForms);
   document.addEventListener("turbo:load", initializeMyPumpForms);
   document.addEventListener("DOMContentLoaded", initializeMyPumpForms);
+  document.addEventListener("turbo:load", initializeTopbarPlateScannerToggle);
+  document.addEventListener("DOMContentLoaded", initializeTopbarPlateScannerToggle);
   bindInstallPromptEvents();
   registerServiceWorker();
 })();

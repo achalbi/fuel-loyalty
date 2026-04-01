@@ -57,6 +57,28 @@ class MyPumpsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_match(/must include at least one nozzle/i, response.body)
+    assert_select ".alert.alert-danger", 1
+    assert_match(/Select at least one nozzle for the chosen pump\./i, response.body)
+    refute_match(/Assigned fuel pump nozzle ids must include at least one nozzle/i, response.body)
+    refute_match(/Phone number can't be blank/i, response.body)
+  end
+
+  test "my pump validation does not surface unrelated profile errors for legacy staff records" do
+    staff = users(:two)
+    staff.update_columns(phone_number: nil)
+    sign_in staff
+
+    patch my_pump_path, params: {
+      user: {
+        fuel_pump_id: fuel_pumps(:one).id,
+        assigned_fuel_pump_nozzle_ids: [""]
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select ".alert.alert-danger", 1
+    assert_match(/Select at least one nozzle for the chosen pump\./i, response.body)
+    refute_match(/Assigned fuel pump nozzle ids must include at least one nozzle/i, response.body)
+    refute_match(/Phone number can't be blank/i, response.body)
   end
 end

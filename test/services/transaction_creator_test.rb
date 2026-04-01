@@ -168,6 +168,29 @@ class TransactionCreatorTest < ActiveSupport::TestCase
     assert_includes error.record.errors.full_messages, "Fuel pump nozzle must match the selected vehicle's fuel type"
   end
 
+  test "accepts a matching nozzle when the vehicle stores a legacy mixed-case fuel type" do
+    user = User.create!(name: "Staff Legacy Fuel", username: "staff_legacy_fuel", phone_number: "9099999999", password: "password123", password_confirmation: "password123", role: :staff)
+    petrol_nozzle, = assign_pump_to_user(user)
+    customer = Customer.create!(name: "Legacy Fuel User", phone_number: "9876501234")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN12AB1234", fuel_type: :petrol, vehicle_kind: :lmv)
+    vehicle.update_column(:fuel_type, "Petrol")
+
+    assert_difference -> { Transaction.count }, 1 do
+      assert_difference -> { PointsLedger.count }, 1 do
+        result = TransactionCreator.call(
+          user: user,
+          phone_number: customer.phone_number,
+          vehicle_id: vehicle.id,
+          fuel_amount: 400,
+          fuel_pump_nozzle_id: petrol_nozzle.id
+        )
+
+        assert_equal vehicle, result.transaction.vehicle
+        assert_equal petrol_nozzle, result.transaction.fuel_pump_nozzle
+      end
+    end
+  end
+
   private
 
   def assign_pump_to_user(user)

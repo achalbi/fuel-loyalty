@@ -29,6 +29,9 @@ module Staff
       assert_select ".transaction-pump-card__nozzle", minimum: 4
       assert_select "input.transaction-pump-card__nozzle-input[type='radio'][name='transaction[fuel_pump_nozzle_id]'][value='#{fuel_pump_nozzles(:one).id}']", 2
       assert_select "input.transaction-pump-card__nozzle-input[type='radio'][name='transaction[fuel_pump_nozzle_id]'][value='#{fuel_pump_nozzles(:two).id}']", 2
+      assert_select "input.transaction-pump-card__nozzle-input[data-nozzle-fuel-type='petrol'][value='#{fuel_pump_nozzles(:one).id}']", 2
+      assert_select "input.transaction-pump-card__nozzle-input[data-nozzle-fuel-type='diesel'][value='#{fuel_pump_nozzles(:two).id}']", 2
+      assert_select "[data-transaction-nozzle-status]", 2
       assert_select "a.transaction-pump-card__change-link.customer-details-vehicle-row__menu-toggle[href='#{my_pump_path}'][aria-label='Change My Pump']", minimum: 2
       assert_select ".transaction-pump-card__change-link .ti.ti-edit", minimum: 2
       assert_select ".transaction-pump-card .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#phone_transaction_pump_hint'][aria-controls='phone_transaction_pump_hint'][aria-label='Show My Pump help']", 1
@@ -41,8 +44,10 @@ module Staff
       assert_select "#transaction-phone-pane .form-text", text: /Customer must already exist/, count: 0
       assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__heading h2", text: "Lookup by Vehicle"
       assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionVehicleLookupHint'][aria-controls='transactionVehicleLookupHint']", 1
-      assert_select "#transactionVehicleLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Enter the vehicle number to find the customer/
+      assert_select "#transactionVehicleLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Scan or enter the vehicle number to find the customer/
       assert_select "[data-plate-scanner-root][data-auto-open='false'][data-recognize-url='#{recognize_plate_staff_transactions_path}'][data-server-recognizer-available='false']", 1
+      assert_select ".transaction-plate-scanner__field-header .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionVehicleNumberFieldHint'][aria-controls='transactionVehicleNumberFieldHint']", 1
+      assert_select "#transactionVehicleNumberFieldHint.collapse .transaction-entry-titlebar__hint-card", text: /Use the full vehicle number as printed on the plate, or capture it with the camera\./
       assert_select "button.transaction-plate-scanner__toggle[data-plate-scanner-open][aria-controls='transactionPlateScannerPanel']", text: /Capture Plate/
       assert_select "input[name='transaction[vehicle_number]'][data-plate-scanner-input='true'][data-vehicle-number-input='true']", 1
       assert_select "button[data-plate-scanner-start]", text: /Open Camera/
@@ -136,6 +141,7 @@ module Staff
       assert_equal 1, payload["matches"].size
       assert_equal vehicles(:one).id, payload["matches"].first["vehicle_id"]
       assert_equal vehicles(:one).vehicle_number, payload["matches"].first["vehicle_number"]
+      assert_equal vehicles(:one).fuel_type, payload["matches"].first["fuel_type_code"]
       assert_equal customers(:one).phone_number, payload["matches"].first.dig("customer", "phone_number")
     end
 
@@ -258,6 +264,29 @@ module Staff
       assert_response :success
       assert_select ".customer-details-hero__transaction-summary-copy", text: /\+6 reward points added\.\s*Balance updated to 11\./
       assert_select ".alert.alert-success", 0
+    end
+
+    test "staff cannot record a transaction with a nozzle that does not match the selected vehicle fuel type" do
+      sign_in users(:two)
+
+      assert_no_difference -> { Transaction.count } do
+        assert_no_difference -> { PointsLedger.count } do
+          post staff_transactions_path, params: {
+            transaction: {
+              lookup_mode: "phone",
+              phone_number: customers(:one).phone_number,
+              vehicle_id: vehicles(:one).id,
+              fuel_amount: "300",
+              fuel_pump_nozzle_id: fuel_pump_nozzles(:two).id
+            }
+          }
+        end
+      end
+
+      assert_response :unprocessable_entity
+      assert_select ".transaction-entry-page-error", text: /Transaction could not be saved\..*Review the highlighted step in the transaction modal and try again\./m
+      assert_select "[data-transaction-phone-root][data-transaction-error-step='fuel']"
+      assert_select "#transaction-phone-pane [data-transaction-step-section='fuel'] .alert.alert-danger", text: /Fuel pump nozzle must match the selected vehicle's fuel type/
     end
 
     test "staff can register a customer from vehicle lookup and return to transaction entry" do

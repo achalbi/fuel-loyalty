@@ -23,9 +23,24 @@
           </div>
         <% else %>
           <%= form_with model: current_user, url: my_pump_path, method: :patch, class: "vstack gap-3", data: { my_pump_form: true } do |form| %>
-            <% if current_user.errors.any? %>
+            <% nozzle_error_messages = current_user.errors[:assigned_fuel_pump_nozzle_ids].map do |message|
+              case message
+              when "must include at least one nozzle"
+                "Select at least one nozzle for the chosen pump."
+              when "must belong to the selected pump"
+                "Select only nozzles from the chosen pump."
+              when "must all be active"
+                "Select only active nozzles for the chosen pump."
+              else
+                message
+              end
+            end %>
+            <% pump_assignment_error_messages = current_user.errors.full_messages_for(:fuel_pump_id) +
+              nozzle_error_messages +
+              current_user.errors.full_messages_for(:base) %>
+            <% if pump_assignment_error_messages.any? %>
               <div class="alert alert-danger">
-                <%= current_user.errors.full_messages.to_sentence %>
+                <%= pump_assignment_error_messages.to_sentence %>
               </div>
             <% end %>
 
