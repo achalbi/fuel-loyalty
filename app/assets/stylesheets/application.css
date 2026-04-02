@@ -4362,6 +4362,30 @@ html[data-theme="dark"] .customer-details-inline-form {
   gap: 0.8rem;
 }
 
+.transaction-entry-step-card__header-actions {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+}
+
+.transaction-entry-step-card__header--with-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 0.8rem;
+  row-gap: 0.35rem;
+}
+
+.transaction-entry-step-card__header--with-action .transaction-entry-step-card__header-actions {
+  position: static;
+}
+
+.transaction-entry-step-card__header--with-action .transaction-entry-step-card__summary {
+  grid-column: 1 / -1;
+}
+
 .transaction-entry-step-card__header--with-toggle {
   position: relative;
   padding-right: 3rem;
@@ -4401,6 +4425,27 @@ html[data-theme="dark"] .customer-details-inline-form {
   position: absolute;
   top: 0;
   right: 0;
+}
+
+.transaction-entry-step-card__header-action--positive {
+  color: var(--fl-primary-contrast);
+  background: var(--fl-primary);
+  border-color: var(--fl-primary);
+  box-shadow: 0 0.6rem 1.2rem rgba(var(--bs-primary-rgb), 0.18);
+}
+
+.transaction-entry-step-card__header-action--positive:hover,
+.transaction-entry-step-card__header-action--positive:focus-visible,
+.transaction-entry-step-card__header-action--positive:active {
+  color: var(--fl-primary-contrast);
+  background: var(--fl-primary-strong);
+  border-color: var(--fl-primary-strong);
+}
+
+.transaction-entry-step-card__header-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .transaction-entry-step-card__body {

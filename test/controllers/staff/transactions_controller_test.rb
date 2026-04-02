@@ -45,6 +45,7 @@ module Staff
       assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__heading h2", text: "Lookup by Vehicle"
       assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionVehicleLookupHint'][aria-controls='transactionVehicleLookupHint']", 1
       assert_select "#transactionVehicleLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Scan or enter the vehicle number to find the customer/
+      assert_select "#transaction-vehicle-pane [data-transaction-step-section='review'] .transaction-entry-step-card__header-actions [data-transaction-register-customer-trigger][aria-label='Add Customer']", 1
       assert_select "[data-plate-scanner-root][data-auto-open='false'][data-recognize-url='#{recognize_plate_staff_transactions_path}'][data-server-recognizer-available='false']", 1
       assert_select ".transaction-plate-scanner__field-header .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionVehicleNumberFieldHint'][aria-controls='transactionVehicleNumberFieldHint']", 1
       assert_select "#transactionVehicleNumberFieldHint.collapse .transaction-entry-titlebar__hint-card", text: /Use the full vehicle number as printed on the plate, or capture it with the camera\./
@@ -88,6 +89,7 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[vehicle_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_amount]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_pump_nozzle_id]']"
+      assert_select "#transactionAddCustomerModal input[name='transaction_lookup[lock_vehicle_details]'][value='0']"
       assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[fuel_type]'][value='petrol']", 1
       assert_select "#transactionAddCustomerModal select[name='customer[fuel_type]']", 0
       assert_select "[data-push-opt-in-panel]", 0
@@ -142,6 +144,7 @@ module Staff
       assert_equal vehicles(:one).id, payload["matches"].first["vehicle_id"]
       assert_equal vehicles(:one).vehicle_number, payload["matches"].first["vehicle_number"]
       assert_equal vehicles(:one).fuel_type, payload["matches"].first["fuel_type_code"]
+      assert_equal vehicles(:one).vehicle_kind, payload["matches"].first["vehicle_kind_code"]
       assert_equal customers(:one).phone_number, payload["matches"].first.dig("customer", "phone_number")
     end
 

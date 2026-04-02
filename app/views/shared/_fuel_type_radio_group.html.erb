@@ -2,6 +2,7 @@
 <% required = local_assigns.fetch(:required, false) %>
 <% empty_message = local_assigns.fetch(:empty_message, "No options are available right now.") %>
 <% icons_by_value = local_assigns.fetch(:icons_by_value, {}) %>
+<% disabled = local_assigns.fetch(:disabled, false) %>
 
 <fieldset>
   <legend class="form-label mb-2"><%= legend %></legend>
@@ -15,7 +16,7 @@
       <% options.each_with_index do |(option_label, option_value), index| %>
         <% input_id = "#{field_id_prefix}_#{option_value}" %>
         <% option_icon = icons_by_value[option_value.to_s] || icons_by_value[option_value] %>
-        <%= radio_button_tag input_name, option_value, selected == option_value.to_s, class: "btn-check", id: input_id, required: required && index.zero? %>
+        <%= radio_button_tag input_name, option_value, selected == option_value.to_s, class: "btn-check", id: input_id, required: required && index.zero?, disabled: disabled %>
         <%= label_tag input_id, class: "btn btn-outline-secondary" do %>
           <% if option_icon.present? %>
             <span class="fuel-type-radio-group__icon" aria-hidden="true"><%= vehicle_type_icon_tag(option_icon) %></span>

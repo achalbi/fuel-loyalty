@@ -31,6 +31,7 @@ module Staff
               vehicle_number: vehicle.vehicle_number,
               fuel_type_code: vehicle.fuel_type,
               fuel_type: vehicle.display_fuel_type,
+              vehicle_kind_code: vehicle.vehicle_kind,
               vehicle_kind: vehicle.display_vehicle_kind,
               customer: customer_payload(vehicle.customer)
             }
@@ -116,6 +117,7 @@ module Staff
       @prefill_vehicle_id = prefill_source[:vehicle_id]
       @prefill_fuel_amount = prefill_source[:fuel_amount]
       @prefill_fuel_pump_nozzle_id = prefill_source[:fuel_pump_nozzle_id]
+      @transaction_registration_vehicle_details_locked = ActiveModel::Type::Boolean.new.cast(prefill_source[:lock_vehicle_details])
     end
 
     def transaction_prefill_source
@@ -157,7 +159,7 @@ module Staff
     end
 
     def transaction_lookup_params
-      params.require(:transaction_lookup).permit(:lookup_mode, :phone_number, :vehicle_number, :fuel_amount, :fuel_pump_nozzle_id)
+      params.require(:transaction_lookup).permit(:lookup_mode, :phone_number, :vehicle_number, :fuel_amount, :fuel_pump_nozzle_id, :lock_vehicle_details)
     end
 
     def build_registration_customer
@@ -228,6 +230,7 @@ module Staff
             vehicle_number: vehicle.vehicle_number,
             fuel_type_code: vehicle.fuel_type,
             fuel_type: vehicle.display_fuel_type,
+            vehicle_kind_code: vehicle.vehicle_kind,
             vehicle_kind: vehicle.display_vehicle_kind,
             display_name: vehicle.display_name
           }
