@@ -610,7 +610,7 @@ module Admin
           redemption_rate: issued.zero? ? 0.0 : ((redeemed.to_f / issued) * 100).round(1),
           issued_points: issued,
           redeemed_points: redeemed,
-          note: "Redemptions are tracked in #{PointsRedeemer::REDEMPTION_INCREMENT}-point slabs. Legacy non-standard entries are grouped under Other."
+          note: "Redemptions are tracked in #{PointsRedeemer.redemption_increment}-point slabs. Legacy non-standard entries are grouped under Other."
         }
       end
 
@@ -644,7 +644,7 @@ module Admin
       def redemption_bucket_for(points)
         absolute_points = points.to_i.abs
         return LEGACY_REDEMPTION_BUCKET if absolute_points.zero?
-        return absolute_points if (absolute_points % PointsRedeemer::REDEMPTION_INCREMENT).zero?
+        return absolute_points if (absolute_points % PointsRedeemer.redemption_increment).zero?
 
         LEGACY_REDEMPTION_BUCKET
       end

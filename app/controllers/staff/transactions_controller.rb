@@ -103,12 +103,13 @@ module Staff
     private
 
     def transaction_params
-      params.require(:transaction).permit(:lookup_mode, :phone_number, :vehicle_number, :vehicle_id, :fuel_amount, :fuel_pump_nozzle_id)
+      params.require(:transaction).permit(:lookup_mode, :phone_number, :vehicle_number, :vehicle_id, :fuel_amount, :fuel_pump_nozzle_id, :payment_mode)
     end
 
     def assign_prefill_values
       prefill_source = transaction_prefill_source
       @active_lookup_mode = "vehicle"
+      @prefill_payment_mode = "cash"
       return if prefill_source.blank?
 
       @active_lookup_mode = normalized_lookup_mode(prefill_source[:lookup_mode])
@@ -117,6 +118,7 @@ module Staff
       @prefill_vehicle_id = prefill_source[:vehicle_id]
       @prefill_fuel_amount = prefill_source[:fuel_amount]
       @prefill_fuel_pump_nozzle_id = prefill_source[:fuel_pump_nozzle_id]
+      @prefill_payment_mode = normalized_payment_mode(prefill_source[:payment_mode])
       @transaction_registration_vehicle_details_locked = ActiveModel::Type::Boolean.new.cast(prefill_source[:lock_vehicle_details])
     end
 
@@ -135,10 +137,15 @@ module Staff
       %w[phone vehicle].include?(lookup_mode) ? lookup_mode : "vehicle"
     end
 
+    def normalized_payment_mode(payment_mode_value = nil)
+      payment_mode = payment_mode_value.to_s
+      %w[cash credit].include?(payment_mode) ? payment_mode : "cash"
+    end
+
     def transaction_error_step(errors)
       attributes = errors.attribute_names.map(&:to_sym)
 
-      return "fuel" if (attributes & %i[base fuel_amount fuel_pump fuel_pump_nozzle fuel_pump_nozzle_id]).any?
+      return "fuel" if (attributes & %i[base fuel_amount fuel_pump fuel_pump_nozzle fuel_pump_nozzle_id payment_mode]).any?
       return "review" if attributes.include?(:vehicle)
 
       "lookup"
@@ -159,7 +166,7 @@ module Staff
     end
 
     def transaction_lookup_params
-      params.require(:transaction_lookup).permit(:lookup_mode, :phone_number, :vehicle_number, :fuel_amount, :fuel_pump_nozzle_id, :lock_vehicle_details)
+      params.require(:transaction_lookup).permit(:lookup_mode, :phone_number, :vehicle_number, :fuel_amount, :fuel_pump_nozzle_id, :payment_mode, :lock_vehicle_details)
     end
 
     def build_registration_customer
@@ -196,6 +203,7 @@ module Staff
       fuel_amount = transaction_lookup_params[:fuel_amount]
       lookup_mode = normalized_lookup_mode(transaction_lookup_params[:lookup_mode])
       fuel_pump_nozzle_id = transaction_lookup_params[:fuel_pump_nozzle_id]
+      payment_mode = normalized_payment_mode(transaction_lookup_params[:payment_mode])
 
       if lookup_mode == "vehicle" && vehicle.present?
         {
@@ -203,7 +211,8 @@ module Staff
           vehicle_number: vehicle.vehicle_number,
           vehicle_id: vehicle.id,
           fuel_amount:,
-          fuel_pump_nozzle_id:
+          fuel_pump_nozzle_id:,
+          payment_mode:
         }.compact_blank
       else
         {
@@ -211,7 +220,8 @@ module Staff
           phone_number: customer.phone_number,
           vehicle_id: vehicle&.id,
           fuel_amount:,
-          fuel_pump_nozzle_id:
+          fuel_pump_nozzle_id:,
+          payment_mode:
         }.compact_blank
       end
     end

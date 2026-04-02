@@ -28,4 +28,13 @@ class CustomerTest < ActiveSupport::TestCase
 
     assert_equal VehicleType::DEFAULT_MINIMUM_REDEEMABLE_POINTS, customer.minimum_redeemable_points
   end
+
+  test "uses the global reward setting minimum when it is configured" do
+    RewardSetting.current.update!(minimum_redeemable_points: 250)
+    customer = customers(:one)
+    vehicle_types(:two_wheeler).update!(minimum_redeemable_points: 200)
+    vehicle_types(:lmv).update!(minimum_redeemable_points: 300)
+
+    assert_equal 250, customer.minimum_redeemable_points
+  end
 end

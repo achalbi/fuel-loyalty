@@ -8,7 +8,7 @@ module Staff
       get new_staff_transaction_path
 
       assert_response :success
-      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path(plate_scanner: 1)}'][aria-label='Scan Vehicle Plate'][data-turbo='false']", 1
+      assert_select "#topbar button.btn-icon[aria-label='Scan Vehicle Plate'][data-topbar-plate-scanner-toggle]", 1
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
       assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
       assert_select ".transaction-entry-titlebar__heading h1", text: "Record Fuel Transaction"
@@ -31,6 +31,12 @@ module Staff
       assert_select "input.transaction-pump-card__nozzle-input[type='radio'][name='transaction[fuel_pump_nozzle_id]'][value='#{fuel_pump_nozzles(:two).id}']", 2
       assert_select "input.transaction-pump-card__nozzle-input[data-nozzle-fuel-type='petrol'][value='#{fuel_pump_nozzles(:one).id}']", 2
       assert_select "input.transaction-pump-card__nozzle-input[data-nozzle-fuel-type='diesel'][value='#{fuel_pump_nozzles(:two).id}']", 2
+      assert_select "input[type='radio'][name='transaction[payment_mode]'][value='cash'][checked='checked']", 2
+      assert_select "input[type='radio'][name='transaction[payment_mode]'][value='credit']", 2
+      assert_select "input#phone_transaction_transaction_payment_mode_cash + label[for='phone_transaction_transaction_payment_mode_cash']", text: "Cash", count: 1
+      assert_select "input#phone_transaction_transaction_payment_mode_credit + label[for='phone_transaction_transaction_payment_mode_credit']", text: "Credit", count: 1
+      assert_select "input#vehicle_transaction_transaction_payment_mode_cash + label[for='vehicle_transaction_transaction_payment_mode_cash']", text: "Cash", count: 1
+      assert_select "input#vehicle_transaction_transaction_payment_mode_credit + label[for='vehicle_transaction_transaction_payment_mode_credit']", text: "Credit", count: 1
       assert_select "[data-transaction-nozzle-status]", 2
       assert_select "a.transaction-pump-card__change-link.customer-details-vehicle-row__menu-toggle[href='#{my_pump_path}'][aria-label='Change My Pump']", minimum: 2
       assert_select ".transaction-pump-card__change-link .ti.ti-edit", minimum: 2
@@ -38,22 +44,23 @@ module Staff
       assert_select ".transaction-pump-card .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#vehicle_transaction_pump_hint'][aria-controls='vehicle_transaction_pump_hint'][aria-label='Show My Pump help']", 1
       assert_select "#phone_transaction_pump_hint.collapse .transaction-entry-titlebar__hint-card", text: /Your selected pump can be changed by clicking the change icon on top-right/
       assert_select "#vehicle_transaction_pump_hint.collapse .transaction-entry-titlebar__hint-card", text: /Your selected pump can be changed by clicking the change icon on top-right/
-      assert_select "#transaction-phone-pane .transaction-entry-titlebar__heading h2", text: "Lookup by Phone"
+      assert_select "#transaction-phone-pane [data-transaction-step-section='lookup'] .transaction-entry-step-card__title-row h2", text: "Lookup by Phone"
       assert_select "#transaction-phone-pane .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionPhoneLookupHint'][aria-controls='transactionPhoneLookupHint']", 1
       assert_select "#transactionPhoneLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Enter the customer's phone number to load the profile.*Customer must already exist/m
       assert_select "#transaction-phone-pane .form-text", text: /Customer must already exist/, count: 0
-      assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__heading h2", text: "Lookup by Vehicle"
+      assert_select "#transaction-vehicle-pane [data-transaction-step-section='lookup'] .transaction-entry-step-card__title-row h2", text: "Lookup by Vehicle"
       assert_select "#transaction-vehicle-pane .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionVehicleLookupHint'][aria-controls='transactionVehicleLookupHint']", 1
       assert_select "#transactionVehicleLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Scan or enter the vehicle number to find the customer/
       assert_select "#transaction-vehicle-pane [data-transaction-step-section='review'] .transaction-entry-step-card__header-actions [data-transaction-register-customer-trigger][aria-label='Add Customer']", 1
-      assert_select "[data-plate-scanner-root][data-auto-open='false'][data-recognize-url='#{recognize_plate_staff_transactions_path}'][data-server-recognizer-available='false']", 1
+      assert_select "[data-plate-scanner-root][data-auto-open='false'][data-recognize-url='#{recognize_plate_staff_transactions_path}']", 1
+      assert_select "[data-plate-scanner-root][data-server-recognizer-available]", 1
       assert_select ".transaction-plate-scanner__field-header .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionVehicleNumberFieldHint'][aria-controls='transactionVehicleNumberFieldHint']", 1
       assert_select "#transactionVehicleNumberFieldHint.collapse .transaction-entry-titlebar__hint-card", text: /Use the full vehicle number as printed on the plate, or capture it with the camera\./
-      assert_select "button.transaction-plate-scanner__toggle[data-plate-scanner-open][aria-controls='transactionPlateScannerPanel']", text: /Capture Plate/
+      assert_select "button.transaction-plate-scanner__toggle[data-plate-scanner-open][aria-controls='transactionPlateScannerPanel']", 0
       assert_select "input[name='transaction[vehicle_number]'][data-plate-scanner-input='true'][data-vehicle-number-input='true']", 1
-      assert_select "button[data-plate-scanner-start]", text: /Open Camera/
+      assert_select "button[data-plate-scanner-start]", text: /Live Preview/
       assert_select "input[type='file'][data-plate-scanner-file-input][accept='image/*'][capture='environment']", 1
-      assert_select "button[data-plate-scanner-file-trigger]", text: /Use Camera App/
+      assert_select "button[data-plate-scanner-file-trigger]", text: /Open Camera/
       assert_select ".transaction-plate-scanner__result.d-none[data-plate-scanner-result]", 1
       assert_select "[data-plate-scanner-cleaned]", 1
       assert_select "[data-plate-scanner-note]", 1
@@ -89,6 +96,7 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[vehicle_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_amount]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_pump_nozzle_id]']"
+      assert_select "#transactionAddCustomerModal input[name='transaction_lookup[payment_mode]'][value='cash']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[lock_vehicle_details]'][value='0']"
       assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[fuel_type]'][value='petrol']", 1
       assert_select "#transactionAddCustomerModal select[name='customer[fuel_type]']", 0
@@ -101,14 +109,18 @@ module Staff
       assert_includes response.body, "registrationModal.openNow(registrationPayload)"
       assert_includes response.body, "const bindTransactionNozzleOptions = (root, onChange) => {"
       assert_includes response.body, "fuelPumpNozzleId: selectedNozzleInput()?.value || \"\""
+      assert_includes response.body, "paymentMode: selectedPaymentMode()"
+      assert_includes response.body, "lookupPaymentModeField"
       assert_includes response.body, "shown.bs.tab"
-      assert_includes response.body, "const shouldSkipLookupFocus = (targetKey) => targetKey === \"vehicle\" && vehicleScannerFocusLockActive();"
+      assert_includes response.body, "const scannerTopbarTogglePendingActive = () => {"
+      assert_includes response.body, "if (scannerTopbarTogglePendingActive()) return true;"
+      assert_includes response.body, "return targetKey === \"vehicle\" && vehicleScannerFocusLockActive();"
       assert_includes response.body, "event.relatedTarget === vehicleSelect || suppressVehicleSelectBlurLookup"
       assert_includes response.body, "event.relatedTarget === matchSelect || suppressMatchSelectBlurLookup"
 
-      phone_fuel_amount_index = response.body.index('id="phone_transaction_fuel_amount"')
+      phone_fuel_amount_index = response.body.index('id="phone_transaction_transaction_fuel_amount"')
       phone_pump_hint_index = response.body.index('id="phone_transaction_pump_hint"')
-      vehicle_fuel_amount_index = response.body.index('id="vehicle_transaction_fuel_amount"')
+      vehicle_fuel_amount_index = response.body.index('id="vehicle_transaction_transaction_fuel_amount"')
       vehicle_pump_hint_index = response.body.index('id="vehicle_transaction_pump_hint"')
 
       refute_nil phone_fuel_amount_index
@@ -153,7 +165,7 @@ module Staff
 
       original_call = VehiclePlateRecognizer.method(:call)
       VehiclePlateRecognizer.singleton_class.define_method(:call) do |image_data:|
-        assert_match(/^data:image\/jpeg;base64,/, image_data)
+        raise "unexpected image data" unless image_data.match?(%r{\Adata:image/jpeg;base64,})
         VehiclePlateRecognizer::Result.new(
           found: true,
           plate: "TN01AA1234",
@@ -184,7 +196,7 @@ module Staff
 
       original_call = VehiclePlateRecognizer.method(:call)
       VehiclePlateRecognizer.singleton_class.define_method(:call) do |image_data:|
-        assert_match(/^data:image\/jpeg;base64,/, image_data)
+        raise "unexpected image data" unless image_data.match?(%r{\Adata:image/jpeg;base64,})
         raise VehiclePlateRecognizer::ConfigurationError, "Plate recognition service is not configured."
       end
 
@@ -261,12 +273,33 @@ module Staff
         end
       end
 
+      assert_equal "cash", Transaction.order(:created_at).last.payment_mode
       assert_redirected_to customer_path(customers(:one))
       follow_redirect!
 
       assert_response :success
       assert_select ".customer-details-hero__transaction-summary-copy", text: /\+6 reward points added\.\s*Balance updated to 11\./
       assert_select ".alert.alert-success", 0
+    end
+
+    test "staff can record a credit transaction" do
+      sign_in users(:two)
+
+      assert_difference -> { Transaction.count }, 1 do
+        post staff_transactions_path, params: {
+          transaction: {
+            lookup_mode: "phone",
+            phone_number: customers(:one).phone_number,
+            vehicle_id: vehicles(:one).id,
+            fuel_amount: "300",
+            fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id,
+            payment_mode: "credit"
+          }
+        }
+      end
+
+      assert_equal "credit", Transaction.order(:created_at).last.payment_mode
+      assert_redirected_to customer_path(customers(:one))
     end
 
     test "staff cannot record a transaction with a nozzle that does not match the selected vehicle fuel type" do
@@ -309,7 +342,8 @@ module Staff
               lookup_mode: "vehicle",
               vehicle_number: "TN30AB1234",
               fuel_amount: "650",
-              fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id
+              fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id,
+              payment_mode: "credit"
             }
           }
         end
@@ -324,7 +358,8 @@ module Staff
           vehicle_number: vehicle.vehicle_number,
           vehicle_id: vehicle.id,
           fuel_amount: "650",
-          fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id
+          fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id,
+          payment_mode: "credit"
         }
       )
     end

@@ -5,7 +5,7 @@ class TransactionCreator
     new(...).call
   end
 
-  def initialize(user:, fuel_amount:, vehicle_id:, fuel_pump_nozzle_id:, lookup_mode: "phone", phone_number: nil, vehicle_number: nil)
+  def initialize(user:, fuel_amount:, vehicle_id:, fuel_pump_nozzle_id:, lookup_mode: "phone", phone_number: nil, vehicle_number: nil, payment_mode: "cash")
     @user = user
     @lookup_mode = lookup_mode
     @phone_number = phone_number
@@ -13,21 +13,24 @@ class TransactionCreator
     @fuel_amount = fuel_amount
     @vehicle_id = vehicle_id
     @fuel_pump_nozzle_id = fuel_pump_nozzle_id
+    @payment_mode = payment_mode
   end
 
   def call
     ActiveRecord::Base.transaction do
       customer, vehicle = resolve_customer_and_vehicle!
       fuel_pump, fuel_pump_nozzle = resolve_fuel_pump_and_nozzle!(vehicle)
+      validated_payment_mode = resolve_payment_mode!
 
       transaction = customer.transactions.create!(
         user: user,
         vehicle: vehicle,
         fuel_amount: fuel_amount,
+        payment_mode: validated_payment_mode,
         fuel_pump: fuel_pump,
         fuel_pump_nozzle: fuel_pump_nozzle
       )
-      points = PointsCalculator.call(fuel_amount, fuel_type: vehicle.fuel_type)
+      points = PointsCalculator.call(fuel_amount, fuel_type: vehicle.fuel_type, vehicle_kind: vehicle.vehicle_kind)
 
       customer.points_ledgers.create!(
         fuel_transaction: transaction,
@@ -41,7 +44,7 @@ class TransactionCreator
 
   private
 
-  attr_reader :fuel_amount, :fuel_pump_nozzle_id, :lookup_mode, :phone_number, :user, :vehicle_id, :vehicle_number
+  attr_reader :fuel_amount, :fuel_pump_nozzle_id, :lookup_mode, :payment_mode, :phone_number, :user, :vehicle_id, :vehicle_number
 
   def resolve_customer_and_vehicle!
     if vehicle_lookup?
@@ -163,5 +166,16 @@ class TransactionCreator
 
   def normalized_fuel_type_code(value)
     value.to_s.parameterize(separator: "_").presence
+  end
+
+  def resolve_payment_mode!
+    normalized_payment_mode = payment_mode.to_s
+    return normalized_payment_mode if Transaction.payment_modes.key?(normalized_payment_mode)
+
+    raise ActiveRecord::RecordInvalid.new(
+      Transaction.new.tap do |transaction|
+        transaction.errors.add(:payment_mode, "must be cash or credit")
+      end
+    )
   end
 end

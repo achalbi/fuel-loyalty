@@ -29,7 +29,8 @@
               required: true,
               disabled: true,
               data: { points_select: true, prefill_value: @prefill_points } %>
-            <div class="form-text">Points can only be redeemed in multiples of <%= PointsRedeemer::REDEMPTION_INCREMENT %>.</div>
+            <div class="form-text">Points can only be redeemed in multiples of <%= RewardSetting.current.redemption_increment %>.</div>
+            <div class="form-text d-none" data-points-cash-reward></div>
           </div>
 
           <%= form.submit "Redeem Points", class: "btn btn-primary", disabled: true, data: { submit_button: true } %>
@@ -80,6 +81,10 @@
               <strong class="redemption-customer-card__stat-value" data-customer-max-redeemable></strong>
             </div>
             <div class="redemption-customer-card__stat">
+              <span class="redemption-customer-card__stat-label">Max Cash Reward</span>
+              <strong class="redemption-customer-card__stat-value" data-customer-max-redeemable-cash></strong>
+            </div>
+            <div class="redemption-customer-card__stat">
               <span class="redemption-customer-card__stat-label">Vehicles on File</span>
               <strong class="redemption-customer-card__stat-value" data-customer-vehicles-count></strong>
             </div>
@@ -114,13 +119,38 @@
       const redeemNoteTarget = root.querySelector("[data-customer-redeem-note]");
       const minimumRedeemableTarget = root.querySelector("[data-customer-minimum-redeemable]");
       const maxRedeemableTarget = root.querySelector("[data-customer-max-redeemable]");
+      const maxRedeemableCashTarget = root.querySelector("[data-customer-max-redeemable-cash]");
       const vehiclesCountTarget = root.querySelector("[data-customer-vehicles-count]");
+      const pointsCashRewardTarget = root.querySelector("[data-points-cash-reward]");
+      const defaultRedemptionIncrement = <%= RewardSetting.current.redemption_increment %>;
       let availablePoints = 0;
       let minimumRedeemablePoints = <%= VehicleType::DEFAULT_MINIMUM_REDEEMABLE_POINTS %>;
       let maxRedeemablePoints = 0;
+      let cashValuePerPoint = 0;
+      let redemptionIncrement = defaultRedemptionIncrement;
       let customerLoaded = false;
       let activeLookup = 0;
       const numberFormatter = new Intl.NumberFormat("en-IN");
+      const currencyFormatter = new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+
+      const formatCashReward = (value) => currencyFormatter.format(Number(value || 0));
+
+      const updateCashRewardNote = () => {
+        const requestedPoints = Number(pointsSelect.value || 0);
+        if (!(cashValuePerPoint > 0) || requestedPoints <= 0) {
+          pointsCashRewardTarget.textContent = "";
+          pointsCashRewardTarget.classList.add("d-none");
+          return;
+        }
+
+        pointsCashRewardTarget.textContent = `Cash reward: ${formatCashReward(requestedPoints * cashValuePerPoint)}`;
+        pointsCashRewardTarget.classList.remove("d-none");
+      };
 
       const populateRedeemableOptions = (minimumPoints, maxPoints, selectedValue = "") => {
         const normalizedSelectedValue = String(selectedValue || "").trim();
@@ -133,10 +163,10 @@
         placeholderOption.textContent = placeholderLabel;
         pointsSelect.appendChild(placeholderOption);
 
-        for (let points = minimumPoints; points <= maxPoints; points += 100) {
+        for (let points = minimumPoints; points <= maxPoints; points += redemptionIncrement) {
           const option = document.createElement("option");
           option.value = String(points);
-          option.textContent = String(points);
+          option.textContent = cashValuePerPoint > 0 ? `${points} pts (${formatCashReward(points * cashValuePerPoint)})` : String(points);
           pointsSelect.appendChild(option);
         }
 
@@ -144,7 +174,7 @@
           normalizedSelectedValue !== "" &&
           Number(normalizedSelectedValue) >= minimumPoints &&
           Number(normalizedSelectedValue) <= maxPoints &&
-          Number(normalizedSelectedValue) % 100 === 0
+          Number(normalizedSelectedValue) % redemptionIncrement === 0
         ) {
           pointsSelect.value = normalizedSelectedValue;
         } else {
@@ -152,6 +182,7 @@
         }
 
         pointsSelect.disabled = !customerLoaded || maxPoints < minimumPoints;
+        updateCashRewardNote();
       };
 
       const updateSubmitState = () => {
@@ -162,7 +193,7 @@
           requestedPoints <= 0 ||
           requestedPoints < minimumRedeemablePoints ||
           requestedPoints > maxRedeemablePoints ||
-          (requestedPoints % 100) !== 0;
+          (requestedPoints % redemptionIncrement) !== 0;
       };
 
       const showError = (message, { keepPanel = false } = {}) => {
@@ -198,7 +229,12 @@
         availablePoints = 0;
         minimumRedeemablePoints = <%= VehicleType::DEFAULT_MINIMUM_REDEEMABLE_POINTS %>;
         maxRedeemablePoints = 0;
+        cashValuePerPoint = 0;
+        redemptionIncrement = defaultRedemptionIncrement;
         populateRedeemableOptions(minimumRedeemablePoints, 0);
+        maxRedeemableCashTarget.textContent = "";
+        pointsCashRewardTarget.textContent = "";
+        pointsCashRewardTarget.classList.add("d-none");
         updateSubmitState();
       };
 
@@ -234,8 +270,14 @@
           statusTarget.textContent = payload.customer.status_label;
           statusTarget.className = `redemption-customer-card__status ${payload.customer.active ? "is-active" : "is-inactive"}`;
           minimumRedeemablePoints = Number(payload.customer.minimum_redeemable_points || <%= VehicleType::DEFAULT_MINIMUM_REDEEMABLE_POINTS %>);
+          redemptionIncrement = Number(payload.customer.redemption_increment || defaultRedemptionIncrement);
           minimumRedeemableTarget.textContent = `${numberFormatter.format(minimumRedeemablePoints)} pts`;
           maxRedeemableTarget.textContent = `${numberFormatter.format(payload.customer.max_redeemable_points || 0)} pts`;
+          cashValuePerPoint = Number(payload.customer.cash_value_per_point || 0);
+          maxRedeemableCashTarget.textContent =
+            cashValuePerPoint > 0 && payload.customer.max_redeemable_cash_reward != null
+              ? formatCashReward(payload.customer.max_redeemable_cash_reward)
+              : "Not set";
           vehiclesCountTarget.textContent = String(payload.customer.vehicles.length);
           availablePoints = Number(payload.customer.total_points || 0);
           maxRedeemablePoints = Number(payload.customer.max_redeemable_points || 0);
@@ -272,7 +314,10 @@
       });
 
       phoneInput.addEventListener("blur", loadCustomer);
-      pointsSelect.addEventListener("change", updateSubmitState);
+      pointsSelect.addEventListener("change", () => {
+        updateSubmitState();
+        updateCashRewardNote();
+      });
 
       if (phoneInput.value.trim() !== "") {
         loadCustomer();

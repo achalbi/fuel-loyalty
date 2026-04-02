@@ -1,4 +1,6 @@
 <% panel_class = local_assigns.fetch(:panel_class, "mt-4") %>
+<% enable_button_text = local_assigns.fetch(:enable_button_text, "Enable Notifications") %>
+<% disable_button_text = local_assigns.fetch(:disable_button_text, "Disable Notifications") %>
 
 <section class="install-app-panel <%= panel_class %>" data-push-opt-in-panel data-push-source="<%= source %>" aria-labelledby="<%= "#{source.parameterize}-push-title" %>">
   <div class="d-flex align-items-start gap-3">
@@ -17,11 +19,11 @@
       <div class="d-grid gap-2">
         <button type="button" class="btn btn-outline-primary" data-push-button>
           <i class="ti ti-bell-plus me-1"></i>
-          <span>Enable Notifications</span>
+          <span><%= enable_button_text %></span>
         </button>
         <button type="button" class="btn btn-outline-secondary d-none" data-push-disable-button>
           <i class="ti ti-bell-off me-1"></i>
-          <span>Disable Notifications</span>
+          <span><%= disable_button_text %></span>
         </button>
         <p class="small-muted mb-0 d-none" data-push-help></p>
       </div>

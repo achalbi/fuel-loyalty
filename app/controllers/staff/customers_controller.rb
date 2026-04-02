@@ -29,6 +29,7 @@ module Staff
 
     def lookup
       authorize Customer, :lookup?
+      reward_setting = RewardSetting.current
 
       normalized_phone = Customer.normalize_phone_number(params[:phone_number])
 
@@ -48,8 +49,12 @@ module Staff
             active: customer.active?,
             status_label: customer.status_label,
             total_points: customer.total_points,
+            cash_value_per_point: reward_setting.cash_value_per_point&.to_f,
+            total_points_cash_reward: reward_setting.cash_value_for_points(customer.total_points)&.to_f,
             minimum_redeemable_points: customer.minimum_redeemable_points,
+            redemption_increment: reward_setting.redemption_increment,
             max_redeemable_points: customer.max_redeemable_points,
+            max_redeemable_cash_reward: reward_setting.cash_value_for_points(customer.max_redeemable_points)&.to_f,
             vehicles: customer.vehicles.map do |vehicle|
               {
                 id: vehicle.id,

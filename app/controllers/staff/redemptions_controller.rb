@@ -8,8 +8,12 @@ module Staff
     def create
       authorize PointsLedger, :redeem?
       result = PointsRedeemer.call(**redemption_params.to_h.symbolize_keys)
+      notice = "#{result.points_redeemed} points redeemed successfully."
+      if result.cash_reward_amount.present?
+        notice = "#{notice} Cash reward: #{helpers.number_to_currency(result.cash_reward_amount, unit: "₹")}."
+      end
 
-      redirect_to customer_path(result.customer), notice: "#{result.points_redeemed} points redeemed successfully."
+      redirect_to customer_path(result.customer), notice: notice
     rescue ActiveRecord::RecordInvalid => e
       @errors = e.record.errors.full_messages
       assign_prefill_values

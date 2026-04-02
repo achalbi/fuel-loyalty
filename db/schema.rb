@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_29_203000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_02_151000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -147,6 +147,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_203000) do
   end
 
   create_table "points_ledgers", force: :cascade do |t|
+    t.decimal "cash_reward_amount", precision: 12, scale: 2
     t.datetime "created_at", null: false
     t.bigint "customer_id", null: false
     t.integer "entry_type", null: false
@@ -168,6 +169,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_203000) do
     t.index ["last_used_at"], name: "index_push_subscriptions_on_last_used_at"
     t.index ["platform"], name: "index_push_subscriptions_on_platform"
     t.index ["token"], name: "index_push_subscriptions_on_token", unique: true
+  end
+
+  create_table "reward_settings", force: :cascade do |t|
+    t.decimal "cash_value_per_point", precision: 10, scale: 2
+    t.datetime "created_at", null: false
+    t.integer "minimum_redeemable_points"
+    t.integer "rupees_per_reward_unit", default: 100, null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "scheduler_leases", force: :cascade do |t|
@@ -268,6 +277,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_203000) do
     t.decimal "fuel_amount", precision: 10, scale: 2, null: false
     t.bigint "fuel_pump_id"
     t.bigint "fuel_pump_nozzle_id"
+    t.string "payment_mode", default: "cash", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.bigint "vehicle_id"
@@ -315,6 +325,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_203000) do
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
+  create_table "vehicle_type_reward_offers", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "ends_at"
+    t.string "name", null: false
+    t.decimal "points_per_rupee", precision: 8, scale: 2, null: false
+    t.datetime "starts_at"
+    t.datetime "updated_at", null: false
+    t.string "vehicle_type_code", null: false
+    t.index ["active"], name: "index_vehicle_type_reward_offers_on_active"
+    t.index ["vehicle_type_code", "active"], name: "index_vehicle_type_reward_offers_on_type_and_active"
+    t.index ["vehicle_type_code"], name: "index_vehicle_type_reward_offers_on_vehicle_type_code"
+  end
+
   create_table "vehicle_types", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "app_label_source", default: "short_name", null: false
@@ -323,6 +347,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_203000) do
     t.string "icon_name", null: false
     t.integer "minimum_redeemable_points", default: 100, null: false
     t.string "name", null: false
+    t.integer "reward_points_per_100"
+    t.decimal "reward_points_per_rupee", precision: 8, scale: 2
     t.string "short_name", null: false
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_vehicle_types_on_active"

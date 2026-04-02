@@ -7,6 +7,9 @@ class Transaction < ApplicationRecord
 
   has_one :points_ledger, foreign_key: :transaction_id, dependent: :restrict_with_exception
 
+  enum :payment_mode, { cash: "cash", credit: "credit" }, default: :cash
+
   validates :vehicle, presence: true
   validates :fuel_amount, numericality: { greater_than: 0 }
+  validates :payment_mode, presence: true
 end

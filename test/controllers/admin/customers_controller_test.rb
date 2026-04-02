@@ -40,6 +40,16 @@ module Admin
       assert_select "form[action='#{admin_customer_path(customers(:one))}']"
     end
 
+    test "admin customer page shows the cash equivalent when cash reward is configured" do
+      sign_in users(:one)
+      RewardSetting.current.update!(cash_value_per_point: 0.5)
+
+      get admin_customer_path(customers(:one))
+
+      assert_response :success
+      assert_select ".customer-details-hero__chip", text: /₹2\.50 cash value/
+    end
+
     test "admin create failure re-renders index modal with errors" do
       sign_in users(:one)
 
@@ -162,6 +172,7 @@ module Admin
 
     test "admin can preview three ledger entries and fetch more in modal" do
       sign_in users(:one)
+      RewardSetting.current.update!(cash_value_per_point: 0.5)
       customer = Customer.create!(name: "Admin Ledger", phone_number: "9000000088")
 
       12.times do |index|
@@ -175,12 +186,14 @@ module Admin
       get admin_customer_path(customer)
       assert_response :success
       assert_select ".customer-details-ledger-item", 3
+      assert_select ".customer-details-ledger-item__cash", 3
       assert_select "[data-bs-target='#pointsLedgerModal']"
       assert_select "[data-points-ledger-panel][data-points-ledger-url='#{points_ledger_admin_customer_path(customer, page: 1)}']"
 
       get points_ledger_admin_customer_path(customer, page: 2)
       assert_response :success
       assert_select ".customer-details-ledger-item", 4
+      assert_select ".customer-details-ledger-item__cash", 4
       assert_match "Showing <strong>6-9</strong> of <strong>9</strong> more entries", response.body
     end
 

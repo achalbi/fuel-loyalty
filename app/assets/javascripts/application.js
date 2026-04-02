@@ -70,18 +70,18 @@
 
   syncSidebarRailDocumentClass();
 
-  const installInstructionsForDevice = () => {
+  const installInstructionsForDevice = (panel) => {
     const userAgent = window.navigator.userAgent.toLowerCase();
 
     if (/iphone|ipad|ipod/.test(userAgent)) {
-      return "Open Safari's Share menu, then tap Add to Home Screen.";
+      return panel?.dataset.installInstructionIos || "Open Safari's Share menu, then tap Add to Home Screen.";
     }
 
     if (/android/.test(userAgent)) {
-      return "Open your browser menu, then choose Install app or Add to Home Screen.";
+      return panel?.dataset.installInstructionAndroid || "Open your browser menu, then choose Install app or Add to Home Screen.";
     }
 
-    return "Use the install option in your browser menu or address bar to add Ace Fuel Loyalty.";
+    return panel?.dataset.installInstructionDefault || "Use the install option in your browser menu or address bar to add Ace Fuel Loyalty.";
   };
 
   const dispatchAnalyticsIntegrations = (name, properties) => {
@@ -1359,7 +1359,7 @@
     if (installPromptState.deferredPrompt) {
       button.classList.remove("btn-outline-primary");
       button.classList.add("btn-primary");
-      status.textContent = "Install Ace Fuel Loyalty now for one-tap staff access from your home screen.";
+      status.textContent = panel.dataset.installStatusPrompt || "Install Ace Fuel Loyalty now for one-tap access from your home screen.";
       help.classList.add("d-none");
       help.textContent = "";
       return;
@@ -1367,10 +1367,10 @@
 
     button.classList.remove("btn-primary");
     button.classList.add("btn-outline-primary");
-    status.textContent = "Install Ace Fuel Loyalty app to this device";
+    status.textContent = panel.dataset.installStatusDefault || "Install Ace Fuel Loyalty app to this device";
 
     if (state.showManualInstructions) {
-      help.textContent = installInstructionsForDevice();
+      help.textContent = installInstructionsForDevice(panel);
       help.classList.remove("d-none");
       return;
     }
@@ -1639,9 +1639,11 @@
       button.dataset.plateScannerToggleBound = "true";
 
       button.addEventListener("click", (event) => {
-        if (!document.querySelector("[data-plate-scanner-root]")) return;
+        const scannerRoot = document.querySelector("[data-plate-scanner-root]");
+        if (!scannerRoot) return;
 
         event.preventDefault();
+        scannerRoot.dataset.topbarTogglePending = "true";
         const transactionModal = document.querySelector("[data-transaction-entry-modal]");
         const openScanner = () => {
           window.dispatchEvent(new CustomEvent("plate-scanner:toggle", { detail: { source: "topbar" } }));

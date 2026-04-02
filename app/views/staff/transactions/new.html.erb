@@ -362,6 +362,11 @@
                     <%= form.number_field :fuel_amount, value: phone_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true, data: { transaction_step_focus: "fuel-amount" } %>
                   </div>
 
+                  <%= render "payment_mode_fields",
+                    form: form,
+                    dom_prefix: "phone_transaction",
+                    selected_payment_mode: @prefill_payment_mode %>
+
                   <%= render "pump_selection_fields",
                     form: form,
                     transaction_fuel_pump: @transaction_fuel_pump,
@@ -570,6 +575,11 @@
                     <%= form.number_field :fuel_amount, value: vehicle_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true, data: { transaction_step_focus: "fuel-amount" } %>
                   </div>
 
+                  <%= render "payment_mode_fields",
+                    form: form,
+                    dom_prefix: "vehicle_transaction",
+                    selected_payment_mode: @prefill_payment_mode %>
+
                   <%= render "pump_selection_fields",
                     form: form,
                     transaction_fuel_pump: @transaction_fuel_pump,
@@ -632,6 +642,7 @@
             "transaction_lookup[vehicle_number]" => @prefill_vehicle_number,
             "transaction_lookup[fuel_amount]" => @prefill_fuel_amount,
             "transaction_lookup[fuel_pump_nozzle_id]" => @prefill_fuel_pump_nozzle_id,
+            "transaction_lookup[payment_mode]" => @prefill_payment_mode,
             "transaction_lookup[lock_vehicle_details]" => (@transaction_registration_vehicle_details_locked ? "1" : "0")
           } %>
       </div>
@@ -696,7 +707,20 @@
       const lookupVehicleField = modalElement.querySelector("[name='transaction_lookup[vehicle_number]']");
       const lookupFuelAmountField = modalElement.querySelector("[name='transaction_lookup[fuel_amount]']");
       const lookupFuelPumpNozzleField = modalElement.querySelector("[name='transaction_lookup[fuel_pump_nozzle_id]']");
+      const lookupPaymentModeField = modalElement.querySelector("[name='transaction_lookup[payment_mode]']");
       const lookupLockVehicleDetailsField = modalElement.querySelector("[name='transaction_lookup[lock_vehicle_details]']");
+      const syncStackedBackdrop = () => {
+        const backdrops = Array.from(document.querySelectorAll(".modal-backdrop"));
+        backdrops.forEach((backdrop) => backdrop.classList.remove("transaction-registration-modal-backdrop"));
+
+        const topBackdrop = backdrops[backdrops.length - 1];
+        topBackdrop?.classList.add("transaction-registration-modal-backdrop");
+      };
+      const clearStackedBackdrop = () => {
+        document.querySelectorAll(".modal-backdrop.transaction-registration-modal-backdrop").forEach((backdrop) => {
+          backdrop.classList.remove("transaction-registration-modal-backdrop");
+        });
+      };
       let focusTarget = null;
       let openTimer = null;
 
@@ -707,12 +731,22 @@
         openTimer = null;
       };
 
+      modalElement.addEventListener("show.bs.modal", () => {
+        window.requestAnimationFrame(syncStackedBackdrop);
+      });
+
       modalElement.addEventListener("shown.bs.modal", () => {
+        syncStackedBackdrop();
         focusTarget?.focus();
+      });
+
+      modalElement.addEventListener("hide.bs.modal", () => {
+        clearStackedBackdrop();
       });
 
       modalElement.addEventListener("hidden.bs.modal", () => {
         cancelPendingOpen();
+        clearStackedBackdrop();
       });
 
       const syncLockedMirror = (name, value, locked) => {
@@ -782,7 +816,7 @@
         syncLockedMirror("customer[vehicle_kind]", selectedVehicleKind, locked);
       };
 
-      const showNow = ({ lookupMode, phoneNumber = "", vehicleNumber = "", fuelType = "", vehicleKind = "", fuelAmount = "", fuelPumpNozzleId = "", lockVehicleDetails = false }) => {
+      const showNow = ({ lookupMode, phoneNumber = "", vehicleNumber = "", fuelType = "", vehicleKind = "", fuelAmount = "", fuelPumpNozzleId = "", paymentMode = "cash", lockVehicleDetails = false }) => {
         form?.reset();
         modalElement.querySelector(".alert.alert-danger")?.remove();
 
@@ -802,6 +836,7 @@
         if (lookupVehicleField) lookupVehicleField.value = vehicleNumber;
         if (lookupFuelAmountField) lookupFuelAmountField.value = fuelAmount;
         if (lookupFuelPumpNozzleField) lookupFuelPumpNozzleField.value = fuelPumpNozzleId;
+        if (lookupPaymentModeField) lookupPaymentModeField.value = paymentMode || "cash";
 
         focusTarget = nameField || phoneField || vehicleField;
         bootstrap.Modal.getOrCreateInstance(modalElement).show();
@@ -1322,6 +1357,7 @@
         };
         let nozzleController = null;
         const selectedNozzleInput = () => nozzleController?.selectedInput();
+        const selectedPaymentMode = () => root.querySelector("input[name='transaction[payment_mode]']:checked")?.value || "cash";
         const syncWizardState = () => {
           const reviewReady = customerActive && Boolean(selectedVehicle());
           wizard.sync({
@@ -1402,7 +1438,8 @@
                 lookupMode: "phone",
                 phoneNumber,
                 fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || "",
-                fuelPumpNozzleId: selectedNozzleInput()?.value || ""
+                fuelPumpNozzleId: selectedNozzleInput()?.value || "",
+                paymentMode: selectedPaymentMode()
               };
               currentCustomer = null;
               customerActive = false;
@@ -1583,7 +1620,8 @@
             (selectedMatch?.vehicle_kind_code || selectedMatch?.vehicle_kind)
           ),
           fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || "",
-          fuelPumpNozzleId: selectedNozzleInput()?.value || ""
+          fuelPumpNozzleId: selectedNozzleInput()?.value || "",
+          paymentMode: root.querySelector("input[name='transaction[payment_mode]']:checked")?.value || "cash"
         });
         const fuelAmountValid = () => {
           const value = Number.parseFloat(fuelAmountInput?.value || "");
@@ -1830,16 +1868,24 @@
       const modalElement = transactionEntryModalElement();
       return !modalElement || modalElement.classList.contains("show");
     };
+    const scannerTopbarTogglePendingActive = () => {
+      const scannerRoot = document.querySelector("[data-plate-scanner-root]");
+      return scannerRoot?.dataset.topbarTogglePending === "true";
+    };
     const vehicleScannerFocusLockActive = () => {
       const scannerRoot = document.querySelector("[data-plate-scanner-root]");
       if (!scannerRoot) return false;
+      if (scannerTopbarTogglePendingActive()) return true;
       if (scannerRoot.classList.contains("is-open")) return true;
 
       return scannerRoot.dataset.autoOpenPending === "true" ||
         (scannerRoot.dataset.autoOpen === "true" && scannerRoot.dataset.autoOpenPending !== "false");
     };
 
-    const shouldSkipLookupFocus = (targetKey) => targetKey === "vehicle" && vehicleScannerFocusLockActive();
+    const shouldSkipLookupFocus = (targetKey) => {
+      if (scannerTopbarTogglePendingActive()) return true;
+      return targetKey === "vehicle" && vehicleScannerFocusLockActive();
+    };
     const syncPageStepperVisibility = (targetKey) => {
       document.querySelectorAll("[data-transaction-page-stepper]").forEach((stepper) => {
         stepper.classList.toggle("d-none", stepper.dataset.transactionPageStepper !== targetKey);

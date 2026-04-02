@@ -725,10 +725,7 @@ html[data-theme="dark"] body {
 }
 
 .loyalty-result-points__status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
+  display: inline-block;
   min-height: 2rem;
   padding: 0.36rem 0.82rem;
   border-radius: 999px;
@@ -736,6 +733,7 @@ html[data-theme="dark"] body {
   font-weight: 600;
   line-height: 1.2;
   text-align: center;
+  white-space: normal;
   border: 1px solid var(--fl-gray-200);
   background: rgba(255, 255, 255, 0.74);
   color: var(--fl-gray-700);
@@ -1830,6 +1828,16 @@ html[data-theme="dark"] .customer-details-history-preview-action:active {
   flex-shrink: 0;
 }
 
+.customer-details-ledger-item__cash {
+  font-size: 0.76rem;
+  color: var(--fl-gray-500);
+}
+
+.customer-details-ledger-item__cash strong {
+  color: var(--fl-gray-700);
+  font-weight: 700;
+}
+
 .customer-details-ledger-item__date {
   font-size: 0.8rem;
   color: var(--fl-gray-500);
@@ -2000,6 +2008,14 @@ html[data-theme="dark"] .customer-details-pill strong {
 
 html[data-theme="dark"] .customer-details-ledger-item__support {
   color: var(--fl-gray-400);
+}
+
+html[data-theme="dark"] .customer-details-ledger-item__cash {
+  color: var(--fl-gray-500);
+}
+
+html[data-theme="dark"] .customer-details-ledger-item__cash strong {
+  color: var(--fl-gray-300);
 }
 
 html[data-theme="dark"] .customer-details-vehicle-row__menu-toggle {
@@ -4041,6 +4057,16 @@ html[data-theme="dark"] .customer-details-inline-form {
   box-shadow: 0 1.8rem 3.6rem rgba(15, 23, 42, 0.2);
 }
 
+.customer-details-modal {
+  z-index: 1085;
+}
+
+.modal-backdrop.transaction-registration-modal-backdrop {
+  z-index: 1080;
+  --bs-backdrop-opacity: 0.42;
+  background-color: #0f172a;
+}
+
 .transaction-entry-modal__header {
   padding-bottom: 0.2rem;
 }
@@ -5119,6 +5145,11 @@ html[data-theme="dark"] .transaction-entry-modal__content {
   color: var(--fl-gray-300);
 }
 
+html[data-theme="dark"] .modal-backdrop.transaction-registration-modal-backdrop {
+  --bs-backdrop-opacity: 0.56;
+  background-color: #020617;
+}
+
 html[data-theme="dark"] .transaction-entry-tabs .nav-link {
   background:
     linear-gradient(180deg, rgba(31, 41, 55, 0.92), rgba(17, 24, 39, 0.92)),
@@ -5768,6 +5799,50 @@ html[data-theme="dark"] .admin-transaction-modal__label {
   max-width: 520px;
 }
 
+.loyalty-language-switcher {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.loyalty-language-switcher--result {
+  margin-bottom: 0.85rem;
+}
+
+.loyalty-language-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgba(var(--bs-primary-rgb), 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 0.35rem 0.95rem rgba(12, 16, 13, 0.04);
+}
+
+.loyalty-language-form__label {
+  margin-bottom: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--fl-gray-600);
+}
+
+.loyalty-language-form__select {
+  min-width: 10.5rem;
+  border: 0;
+  background-color: transparent;
+  box-shadow: none;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--fl-gray-800);
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+}
+
+.loyalty-language-form__select:focus {
+  box-shadow: none;
+}
+
 .redemption-customer-shell .card-body {
   display: grid;
   gap: 1rem;
@@ -5959,6 +6034,20 @@ html[data-theme="dark"] .admin-transaction-modal__label {
 
 html[data-theme="dark"] .redemption-customer-shell__header .text-muted {
   color: var(--fl-gray-400) !important;
+}
+
+html[data-theme="dark"] .loyalty-language-form {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(18, 15, 10, 0.5);
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .loyalty-language-form__label {
+  color: var(--fl-gray-400);
+}
+
+html[data-theme="dark"] .loyalty-language-form__select {
+  color: #fff2d7;
 }
 
 html[data-theme="dark"] .redemption-customer-card {
@@ -6427,6 +6516,10 @@ html[data-theme="dark"] .form-switch .form-check-input {
   border: 1px solid var(--fl-gray-200);
   border-radius: 1rem;
   background: linear-gradient(180deg, var(--fl-surface-elevated), var(--fl-surface));
+}
+
+.reward-rates-form--vehicle-types .reward-rate-row {
+  grid-template-columns: minmax(0, 1fr) minmax(204px, 248px);
 }
 
 .reward-rate-copy {
@@ -7462,6 +7555,21 @@ h4 {
     padding: 1.1rem !important;
   }
 
+  .loyalty-language-switcher {
+    margin-bottom: 0.72rem;
+  }
+
+  .loyalty-language-form {
+    width: 100%;
+    justify-content: space-between;
+    border-radius: 0.88rem;
+  }
+
+  .loyalty-language-form__select {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
   .redemption-customer-shell .card-body {
     gap: 0.85rem;
   }
@@ -8223,6 +8331,10 @@ h4 {
     grid-template-columns: minmax(0, 1fr) minmax(112px, 42%);
     gap: 0.68rem;
     padding: 0.74rem 0.78rem;
+  }
+
+  .reward-rates-form--vehicle-types .reward-rate-row {
+    grid-template-columns: minmax(0, 1fr) minmax(156px, 54%);
   }
 
   .reward-rate-title {

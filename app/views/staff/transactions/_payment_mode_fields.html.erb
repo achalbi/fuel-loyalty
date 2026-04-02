@@ -1,0 +1,16 @@
+<% selected_payment_mode = local_assigns.fetch(:selected_payment_mode, "cash").presence_in(%w[cash credit]) || "cash" %>
+<% dom_prefix = local_assigns.fetch(:dom_prefix) %>
+
+<div class="transaction-payment-mode">
+  <span class="form-label d-block">Payment Type</span>
+  <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-label="Payment Type">
+    <% [["cash", "Cash"], ["credit", "Credit"]].each do |value, label| %>
+      <% input_id = form.field_id(:payment_mode, value) %>
+      <%= form.radio_button :payment_mode,
+        value,
+        checked: selected_payment_mode == value,
+        class: "btn-check" %>
+      <%= label_tag input_id, label, class: "btn btn-outline-primary" %>
+    <% end %>
+  </div>
+</div>

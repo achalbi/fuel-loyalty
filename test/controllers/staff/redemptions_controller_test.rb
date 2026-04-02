@@ -15,11 +15,24 @@ module Staff
       assert_select "[data-customer-redeem-note]"
       assert_select "[data-customer-minimum-redeemable]"
       assert_select "[data-customer-max-redeemable]"
+      assert_select "[data-customer-max-redeemable-cash]"
+      assert_select "[data-points-cash-reward]"
       assert_select "[data-customer-vehicles-count]"
+    end
+
+    test "shows the configured minimum redemption step on the new page" do
+      sign_in users(:two)
+      RewardSetting.current.update!(minimum_redeemable_points: 250)
+
+      get new_staff_redemption_path
+
+      assert_response :success
+      assert_match "Points can only be redeemed in multiples of 250.", response.body
     end
 
     test "staff can redeem points for an existing customer" do
       sign_in users(:two)
+      RewardSetting.current.update!(cash_value_per_point: 0.5)
       customer = Customer.create!(name: "Redeem Controller User", phone_number: "9777777777")
       customer.points_ledgers.create!(points: 500, entry_type: :earn)
 
@@ -29,7 +42,7 @@ module Staff
 
       assert_redirected_to customer_path(customer)
       follow_redirect!
-      assert_match "500 points redeemed successfully", response.body
+      assert_match "500 points redeemed successfully. Cash reward: ₹250.00.", response.body
     end
 
     test "shows validation feedback when requested points exceed redeemable balance" do

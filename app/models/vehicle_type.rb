@@ -56,6 +56,7 @@ class VehicleType < ApplicationRecord
   before_validation :normalize_icon_name
   before_validation :assign_icon_name
   before_validation :normalize_minimum_redeemable_points
+  before_validation :normalize_reward_points_per_100
   before_validation :assign_default_minimum_redeemable_points
 
   before_destroy :ensure_not_used_by_vehicles
@@ -75,6 +76,12 @@ class VehicleType < ApplicationRecord
       only_integer: true,
       greater_than_or_equal_to: MINIMUM_REDEEMABLE_POINTS_STEP
     }
+  validates :reward_points_per_100,
+    numericality: {
+      only_integer: true,
+      greater_than_or_equal_to: 0
+    },
+    allow_nil: true
   validates :active, inclusion: { in: [true, false] }
   validate :minimum_redeemable_points_must_match_redemption_step
 
@@ -191,6 +198,15 @@ class VehicleType < ApplicationRecord
     DEFAULT_MINIMUM_REDEEMABLE_POINTS
   end
 
+  def self.reward_points_per_100_for(code)
+    normalized_code = normalize_code(code)
+    return if normalized_code.blank?
+
+    where(code: normalized_code).pick(:reward_points_per_100)
+  rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
+    nil
+  end
+
   def app_label
     preferred_app_label.presence || name
   end
@@ -288,6 +304,18 @@ class VehicleType < ApplicationRecord
   def normalize_minimum_redeemable_points
     normalized_value = minimum_redeemable_points.to_s.delete(",").squish
     self.minimum_redeemable_points = normalized_value.presence&.to_i
+  end
+
+  def normalize_reward_points_per_100
+    normalized_value = reward_points_per_100.to_s.delete(",").squish
+    self.reward_points_per_100 =
+      if normalized_value.blank?
+        nil
+      else
+        Integer(normalized_value, 10)
+      end
+  rescue ArgumentError
+    self.reward_points_per_100 = normalized_value
   end
 
   def assign_short_name_from_name

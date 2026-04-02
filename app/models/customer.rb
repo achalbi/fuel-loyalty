@@ -31,13 +31,17 @@ class Customer < ApplicationRecord
   end
 
   def minimum_redeemable_points
-    VehicleType.minimum_redeemable_points_for_codes(registered_vehicle_type_codes)
+    fallback_minimum = VehicleType.minimum_redeemable_points_for_codes(registered_vehicle_type_codes)
+    RewardSetting.current.effective_minimum_redeemable_points(fallback: fallback_minimum)
   end
 
   def max_redeemable_points
+    reward_setting = RewardSetting.current
+
     PointsRedeemer.max_redeemable_points(
       total_points,
-      minimum_redeemable_points: minimum_redeemable_points
+      minimum_redeemable_points: minimum_redeemable_points,
+      redemption_increment: reward_setting.redemption_increment
     )
   end
 
@@ -79,7 +83,7 @@ class Customer < ApplicationRecord
     if association(:vehicles).loaded?
       vehicles.map(&:vehicle_kind)
     else
-      vehicles.distinct.pluck(:vehicle_kind)
+      vehicles.reorder(nil).distinct.pluck(:vehicle_kind)
     end
   end
 end

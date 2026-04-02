@@ -15,6 +15,17 @@ class PointsRedeemerTest < ActiveSupport::TestCase
     end
   end
 
+  test "returns the configured cash reward value for redeemed points" do
+    RewardSetting.current.update!(cash_value_per_point: 0.5)
+    customer = Customer.create!(name: "Redeem Cash User", phone_number: "9333333344")
+    customer.points_ledgers.create!(points: 500, entry_type: :earn)
+
+    result = PointsRedeemer.call(phone_number: customer.phone_number, points: 500)
+
+    assert_equal BigDecimal("250.0"), result.cash_reward_amount
+    assert_equal BigDecimal("250.0"), customer.reload.points_ledgers.order(:created_at).last.cash_reward_amount
+  end
+
   test "rejects redemption when points exceed maximum redeemable balance rounded to 100" do
     customer = Customer.create!(name: "Redeem Limit User", phone_number: "9444444444")
     customer.points_ledgers.create!(points: 550, entry_type: :earn)
@@ -46,6 +57,29 @@ class PointsRedeemerTest < ActiveSupport::TestCase
     end
 
     assert_includes error.record.errors.full_messages.to_sentence, "must have at least 100 available points to redeem"
+  end
+
+  test "uses the configured global minimum redeemable points as the redemption increment" do
+    RewardSetting.current.update!(minimum_redeemable_points: 250)
+    customer = Customer.create!(name: "Redeem Global Min User", phone_number: "9666666699")
+    customer.points_ledgers.create!(points: 550, entry_type: :earn)
+
+    result = PointsRedeemer.call(phone_number: customer.phone_number, points: 250)
+
+    assert_equal 250, result.points_redeemed
+    assert_equal 300, customer.reload.total_points
+  end
+
+  test "rejects redemption when points are not in multiples of the configured global minimum" do
+    RewardSetting.current.update!(minimum_redeemable_points: 250)
+    customer = Customer.create!(name: "Redeem Global Step User", phone_number: "9666666700")
+    customer.points_ledgers.create!(points: 500, entry_type: :earn)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      PointsRedeemer.call(phone_number: customer.phone_number, points: 200)
+    end
+
+    assert_includes error.record.errors.full_messages.to_sentence, "must be in multiples of 250"
   end
 
   test "rejects redemption below the configured vehicle type minimum" do

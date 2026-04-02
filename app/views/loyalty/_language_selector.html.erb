@@ -1,0 +1,17 @@
+<% hidden_fields = local_assigns.fetch(:hidden_fields, {}) %>
+
+<%= form_with url: path, method: :get, local: true, class: "loyalty-language-form" do |form| %>
+  <% hidden_fields.each do |field_name, field_value| %>
+    <% next if field_value.blank? %>
+
+    <%= hidden_field_tag field_name, field_value %>
+  <% end %>
+
+  <%= form.label :lang, t("loyalty.language.label"), class: "loyalty-language-form__label" %>
+  <%= form.select :lang,
+    options_for_select(loyalty_language_options, loyalty_language_param),
+    {},
+    class: "form-select form-select-sm loyalty-language-form__select",
+    onchange: "this.form.requestSubmit()",
+    aria: { label: t("loyalty.language.label") } %>
+<% end %>

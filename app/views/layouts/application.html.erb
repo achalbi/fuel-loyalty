@@ -3,11 +3,12 @@
   <head>
     <% theme_setting = ThemeSetting.current %>
     <% cache_buster = pwa_cache_buster %>
-    <title><%= content_for(:title) || "Ace Fuel Loyalty" %></title>
+    <% public_brand_name = controller_path == "loyalty" ? t("loyalty.brand_name", default: "Ace Fuel Loyalty") : "Ace Fuel Loyalty" %>
+    <title><%= content_for(:title) || public_brand_name %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Ace Fuel Loyalty">
-    <meta name="application-name" content="Ace Fuel Loyalty">
+    <meta name="apple-mobile-web-app-title" content="<%= public_brand_name %>">
+    <meta name="application-name" content="<%= public_brand_name %>">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="<%= theme_setting.primary_color %>">
     <%= csrf_meta_tags %>
@@ -151,7 +152,7 @@
             <li><%= link_to admin_users_path, class: "nav-link #{'active' if request.path.start_with?(admin_users_path)}" do %><i class="ti ti-user-cog"></i><span class="nav-text">Users</span><% end %></li>
             <li><%= link_to admin_customers_path, class: "nav-link #{'active' if current_page?(admin_customers_path)}" do %><i class="ti ti-users"></i><span class="nav-text">Customers</span><% end %></li>
             <li><%= link_to admin_transactions_path, class: "nav-link #{'active' if current_page?(admin_transactions_path)}" do %><i class="ti ti-receipt"></i><span class="nav-text">Transactions</span><% end %></li>
-            <li><%= link_to admin_fuel_types_path, class: "nav-link #{'active' if controller_path == 'admin/fuel_types'}" do %><i class="ti ti-gas-station"></i><span class="nav-text">Fuel Types</span><% end %></li>
+            <li><%= link_to admin_fuel_types_path, class: "nav-link #{'active' if controller_path == 'admin/fuel_types'}" do %><i class="ti ti-droplet"></i><span class="nav-text">Fuel Types</span><% end %></li>
             <li><%= link_to admin_fuel_pumps_path, class: "nav-link #{'active' if controller_path == 'admin/fuel_pumps'}" do %><i class="ti ti-gas-station"></i><span class="nav-text">Pumps</span><% end %></li>
             <li><%= link_to admin_vehicle_types_path, class: "nav-link #{'active' if controller_path == 'admin/vehicle_types'}" do %><i class="ti ti-car"></i><span class="nav-text">Vehicle Types</span><% end %></li>
             <li><%= link_to admin_fuel_reward_rates_path, class: "nav-link #{'active' if current_page?(admin_fuel_reward_rates_path)}" do %><i class="ti ti-adjustments"></i><span class="nav-text">Reward Rates</span><% end %></li>
@@ -195,7 +196,7 @@
           <div class="container">
             <%= link_to root_path, class: "brand-lockup" do %>
               <span class="brand-mark" aria-hidden="true"><%= image_tag "/icon.svg?v=#{cache_buster}", alt: "", class: "brand-mark-image" %></span>
-              <span class="logo-text">Ace Fuel Loyalty</span>
+              <span class="logo-text"><%= public_brand_name %></span>
             <% end %>
 
             <div class="d-flex align-items-center gap-2">

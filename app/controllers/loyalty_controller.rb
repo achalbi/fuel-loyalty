@@ -1,5 +1,19 @@
 class LoyaltyController < ApplicationController
   PUBLIC_CACHE_FALLBACK_TIME = Time.utc(2024, 1, 1).freeze
+  LOYALTY_LANGUAGE_COOKIE = :loyalty_language
+  SUPPORTED_LOYALTY_LOCALES = {
+    "en" => "English",
+    "kn" => "ಕನ್ನಡ",
+    "hi" => "हिन्दी",
+    "ta" => "தமிழ்",
+    "te" => "తెలుగు",
+    "ml" => "മലയാളം",
+    "or" => "ଓଡ଼ିଆ",
+    "bn" => "বাংলা",
+    "mr" => "मराठी",
+    "gu" => "ગુજરાતી",
+    "pa" => "ਪੰਜਾਬੀ"
+  }.freeze
 
   # Older cached loyalty shells may still submit POST /loyalty. Keep that
   # compatibility path CSRF-free because it only validates the phone number,
@@ -7,6 +21,11 @@ class LoyaltyController < ApplicationController
   # result page.
   skip_forgery_protection only: :create
   before_action :discard_devise_sign_out_notice
+  before_action :persist_selected_loyalty_language
+  before_action :redirect_to_remembered_loyalty_language, only: :new
+  around_action :switch_loyalty_locale
+
+  helper_method :loyalty_language_options, :loyalty_language_param, :loyalty_language_params
 
   def new
     return unless public_loyalty_shell_cacheable?
@@ -22,7 +41,7 @@ class LoyaltyController < ApplicationController
     )
 
     return unless stale?(
-      etag: [cache_version, theme_setting.primary_color],
+      etag: [cache_version, theme_setting.primary_color, I18n.locale],
       last_modified: theme_setting.updated_at&.utc || PUBLIC_CACHE_FALLBACK_TIME,
       public: true
     )
@@ -30,7 +49,7 @@ class LoyaltyController < ApplicationController
 
   def show
     @phone_number = LoyaltyLookupToken.verified_phone_number(params[:lookup_token])
-    return redirect_to(new_loyalty_path, alert: lookup_token_alert) if @phone_number.blank?
+    return redirect_to(new_loyalty_path(loyalty_language_params), alert: lookup_token_alert) if @phone_number.blank?
     return render_invalid_phone_number unless Customer.valid_phone_number?(@phone_number)
 
     @customer = Customer.find_by(phone_number: @phone_number)
@@ -47,7 +66,7 @@ class LoyaltyController < ApplicationController
       @activities = @customer.loyalty_activities(limit: @full_history ? nil : 5)
       @show_full_history_button = !@full_history && @customer.loyalty_activities_count > 5
     else
-      flash.now[:alert] = "No customer found for that phone number."
+      flash.now[:alert] = t("loyalty.alerts.not_found")
       render :new, status: :unprocessable_entity
     end
   end
@@ -56,28 +75,51 @@ class LoyaltyController < ApplicationController
     @phone_number = Customer.normalize_phone_number(loyalty_params[:phone_number])
     return render_invalid_phone_number unless Customer.valid_phone_number?(@phone_number)
 
-    redirect_to loyalty_result_path(lookup_token: LoyaltyLookupToken.generate(@phone_number))
+    redirect_to loyalty_result_path(loyalty_language_params(lookup_token: LoyaltyLookupToken.generate(@phone_number)))
   end
 
   private
 
   def lookup_token_alert
     if params[:lookup_token].present?
-      "That lookup link has expired. Please enter your phone number again."
+      t("loyalty.alerts.expired_link")
     else
-      "Enter your phone number to continue."
+      t("loyalty.alerts.enter_phone")
     end
   end
 
   def public_loyalty_shell_cacheable?
     # Only cache the anonymous shell. Signed-in chrome and flash banners are
     # session-specific and should never be replayed from a shared cache.
-    !user_signed_in? && flash.empty?
+    !user_signed_in? && flash.empty? && !updating_loyalty_language_cookie?
   end
 
   def render_invalid_phone_number
-    flash.now[:alert] = "Phone number must be a 10 digit number."
+    flash.now[:alert] = t("loyalty.alerts.invalid_phone")
     render :new, status: :unprocessable_entity
+  end
+
+  def switch_loyalty_locale(&action)
+    I18n.with_locale(selected_loyalty_locale, &action)
+  end
+
+  def selected_loyalty_locale
+    normalized_loyalty_locale(params[:lang]) || remembered_loyalty_locale || I18n.default_locale.to_s
+  end
+
+  def loyalty_language_options
+    SUPPORTED_LOYALTY_LOCALES.map { |locale, label| [label, locale] }
+  end
+
+  def loyalty_language_param
+    I18n.locale.to_s
+  end
+
+  def loyalty_language_params(extra_params = {})
+    params = extra_params.compact_blank
+    return params if I18n.locale.to_s == I18n.default_locale.to_s
+
+    params.merge(lang: loyalty_language_param)
   end
 
   def discard_devise_sign_out_notice
@@ -87,6 +129,41 @@ class LoyaltyController < ApplicationController
     ]
 
     flash.delete(:notice) if signed_out_messages.include?(flash[:notice])
+  end
+
+  def persist_selected_loyalty_language
+    selected_locale = normalized_loyalty_locale(params[:lang])
+    @updating_loyalty_language_cookie = selected_locale.present? && selected_locale != remembered_loyalty_locale
+    return unless updating_loyalty_language_cookie?
+
+    cookies.permanent[LOYALTY_LANGUAGE_COOKIE] = {
+      value: selected_locale,
+      same_site: :lax
+    }
+  end
+
+  def redirect_to_remembered_loyalty_language
+    return if params[:lang].present?
+
+    remembered_locale = remembered_loyalty_locale
+    return if remembered_locale.blank? || remembered_locale == I18n.default_locale.to_s
+
+    redirect_to new_loyalty_path(lang: remembered_locale)
+  end
+
+  def remembered_loyalty_locale
+    normalized_loyalty_locale(cookies[LOYALTY_LANGUAGE_COOKIE])
+  end
+
+  def updating_loyalty_language_cookie?
+    @updating_loyalty_language_cookie == true
+  end
+
+  def normalized_loyalty_locale(value)
+    locale = value.to_s.tr("-", "_")
+    return if locale.blank?
+
+    SUPPORTED_LOYALTY_LOCALES.key?(locale) ? locale : nil
   end
 
   def loyalty_params

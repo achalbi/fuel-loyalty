@@ -1,43 +1,164 @@
 <% content_for :title, "Reward Rates" %>
 
 <div class="row justify-content-center">
-  <div class="col-lg-8">
+  <div class="col-lg-9">
     <div class="card shadow-sm">
       <div class="card-body">
-        <h1 class="h3 mb-3">Fuel Reward Rates</h1>
-        <p class="text-muted">Set how many loyalty points a customer earns for every Rs.100 spent on each active fuel type. Manage availability from <%= link_to "Fuel Types", admin_fuel_types_path %>.</p>
+        <h1 class="h3 mb-3">Reward Rates</h1>
+        <p class="text-muted">Set reward points and cash reward values from one place. Vehicle-type values override the older fuel-type fallback below.</p>
 
-        <% if @fuel_reward_rates.any? %>
-          <%= form_with scope: :fuel_reward_rates, url: admin_fuel_reward_rates_path, method: :patch, class: "reward-rates-form vstack gap-3" do |form| %>
-            <% @fuel_reward_rates.each do |rate| %>
-              <% field_id = "#{rate.fuel_type}_points_per_100" %>
-              <% hint_id = "#{field_id}_hint" %>
-
-              <div class="reward-rate-row">
-                <div class="reward-rate-copy">
-                  <label for="<%= field_id %>" class="reward-rate-title"><%= rate.display_name %></label>
-                  <p class="reward-rate-meta mb-0">Points awarded for every Rs.100 spent on this fuel type.</p>
-                </div>
-
-                <div class="reward-rate-field vstack gap-2">
-                  <div class="input-group reward-rate-input-group">
-                    <%= number_field_tag "fuel_reward_rates[#{rate.fuel_type}][points_per_100]", rate.points_per_100, class: "form-control text-end", min: 0, required: true, id: field_id, aria: { describedby: hint_id } %>
-                    <span class="input-group-text" id="<%= hint_id %>">pts</span>
-                  </div>
-                  <% if rate.errors[:points_per_100].any? %>
-                    <div class="text-danger small mt-1"><%= rate.errors[:points_per_100].to_sentence %></div>
-                  <% end %>
-                </div>
+        <section class="mb-4">
+          <%= form_with model: @reward_setting, url: admin_fuel_reward_rates_path, method: :patch, class: "reward-rates-form vstack gap-3" do |form| %>
+            <div class="reward-rate-row">
+              <div class="reward-rate-copy">
+                <label for="reward_setting_rupees_per_reward_unit" class="reward-rate-title">Rupee Unit</label>
+                <p class="reward-rate-meta mb-0">Choose how much customer spend should count as one reward unit.</p>
               </div>
-            <% end %>
 
-            <%= form.submit "Save Reward Rates", class: "btn btn-primary" %>
+              <div class="reward-rate-field vstack gap-2">
+                <div class="input-group reward-rate-input-group">
+                  <span class="input-group-text">Rs.</span>
+                  <%= form.number_field :rupees_per_reward_unit,
+                    class: "form-control text-end",
+                    min: 1,
+                    step: 1,
+                    required: true %>
+                </div>
+                <% if @reward_setting.errors[:rupees_per_reward_unit].any? %>
+                  <div class="text-danger small mt-1"><%= @reward_setting.errors[:rupees_per_reward_unit].to_sentence %></div>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="reward-rate-row">
+              <div class="reward-rate-copy">
+                <label for="reward_setting_minimum_redeemable_points" class="reward-rate-title">Minimum Redeemable Points</label>
+                <p class="reward-rate-meta mb-0">Set a global redemption minimum. Leave blank to keep using the existing vehicle-type minimums.</p>
+              </div>
+
+              <div class="reward-rate-field vstack gap-2">
+                <div class="input-group reward-rate-input-group">
+                  <%= form.number_field :minimum_redeemable_points,
+                    class: "form-control text-end",
+                    min: 1,
+                    step: 1,
+                    placeholder: "Points" %>
+                  <span class="input-group-text">pts</span>
+                </div>
+                <% if @reward_setting.errors[:minimum_redeemable_points].any? %>
+                  <div class="text-danger small mt-1"><%= @reward_setting.errors[:minimum_redeemable_points].to_sentence %></div>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="reward-rate-row">
+              <div class="reward-rate-copy">
+                <label for="reward_setting_cash_value_per_point" class="reward-rate-title">1 Point Cash Reward</label>
+                <p class="reward-rate-meta mb-0">Set how much cash reward one point is worth.</p>
+              </div>
+
+              <div class="reward-rate-field vstack gap-2">
+                <div class="input-group reward-rate-input-group">
+                  <span class="input-group-text">Rs.</span>
+                  <%= form.number_field :cash_value_per_point,
+                    class: "form-control text-end",
+                    min: 0,
+                    step: "0.01",
+                    placeholder: "Cash" %>
+                </div>
+                <% if @reward_setting.errors[:cash_value_per_point].any? %>
+                  <div class="text-danger small mt-1"><%= @reward_setting.errors[:cash_value_per_point].to_sentence %></div>
+                <% end %>
+              </div>
+            </div>
+
+            <%= form.submit "Save Reward Settings", class: "btn btn-outline-primary" %>
           <% end %>
-        <% else %>
-          <div class="alert alert-light border mb-0">
-            No active fuel types are available right now. Update <%= link_to "Fuel Types", admin_fuel_types_path %> first.
+        </section>
+
+        <section class="mb-4">
+          <div class="mb-3">
+            <h2 class="h4 mb-1">Vehicle Type Reward Overrides</h2>
+            <p class="text-muted mb-0">All vehicle types are listed here. Leave a vehicle type blank to keep using the fuel-type fallback.</p>
           </div>
-        <% end %>
+
+          <% if @vehicle_types.any? %>
+            <%= form_with scope: :vehicle_type_reward_rates, url: admin_fuel_reward_rates_path, method: :patch, class: "reward-rates-form reward-rates-form--vehicle-types vstack gap-3" do |form| %>
+              <% @vehicle_types.each do |vehicle_type| %>
+                <% field_id = "#{vehicle_type.code}_reward_points_per_100" %>
+                <% hint_id = "#{field_id}_hint" %>
+
+                <div class="reward-rate-row">
+                  <div class="reward-rate-copy">
+                    <label for="<%= field_id %>" class="reward-rate-title"><%= vehicle_type.name %></label>
+                  </div>
+
+                  <div class="reward-rate-field vstack gap-2">
+                    <div class="input-group reward-rate-input-group">
+                      <%= number_field_tag "vehicle_type_reward_rates[#{vehicle_type.code}][reward_points_per_100]",
+                        vehicle_type.reward_points_per_100,
+                        class: "form-control text-end",
+                        min: 0,
+                        step: 1,
+                        id: field_id,
+                        placeholder: "Points",
+                        aria: { describedby: hint_id } %>
+                      <span class="input-group-text" id="<%= hint_id %>">pts / Rs.<%= @reward_setting.rupees_per_reward_unit %></span>
+                    </div>
+                    <% if vehicle_type.errors[:reward_points_per_100].any? %>
+                      <div class="text-danger small mt-1"><%= vehicle_type.errors[:reward_points_per_100].to_sentence %></div>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+
+              <%= form.submit "Save Vehicle Type Reward Rates", class: "btn btn-primary" %>
+            <% end %>
+          <% else %>
+            <div class="alert alert-light border mb-0">
+              No vehicle types are available right now. Update <%= link_to "Vehicle Types", admin_vehicle_types_path %> first.
+            </div>
+          <% end %>
+        </section>
+
+        <section>
+          <div class="mb-3">
+            <h2 class="h4 mb-1">Fuel-Type Fallback Rates</h2>
+            <p class="text-muted mb-0">These rates are used only when the selected vehicle type does not have its own override.</p>
+          </div>
+
+          <% if @fuel_reward_rates.any? %>
+            <%= form_with scope: :fuel_reward_rates, url: admin_fuel_reward_rates_path, method: :patch, class: "reward-rates-form vstack gap-3" do |form| %>
+              <% @fuel_reward_rates.each do |rate| %>
+                <% field_id = "#{rate.fuel_type}_points_per_100" %>
+                <% hint_id = "#{field_id}_hint" %>
+
+                <div class="reward-rate-row">
+                  <div class="reward-rate-copy">
+                    <label for="<%= field_id %>" class="reward-rate-title"><%= rate.display_name %></label>
+                    <p class="reward-rate-meta mb-0">Points awarded for every Rs.<%= @reward_setting.rupees_per_reward_unit %> spent on this fuel type.</p>
+                  </div>
+
+                  <div class="reward-rate-field vstack gap-2">
+                    <div class="input-group reward-rate-input-group">
+                      <%= number_field_tag "fuel_reward_rates[#{rate.fuel_type}][points_per_100]", rate.points_per_100, class: "form-control text-end", min: 0, required: true, id: field_id, aria: { describedby: hint_id } %>
+                      <span class="input-group-text" id="<%= hint_id %>">pts</span>
+                    </div>
+                    <% if rate.errors[:points_per_100].any? %>
+                      <div class="text-danger small mt-1"><%= rate.errors[:points_per_100].to_sentence %></div>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+
+              <%= form.submit "Save Fuel Reward Rates", class: "btn btn-outline-primary" %>
+            <% end %>
+          <% else %>
+            <div class="alert alert-light border mb-0">
+              No active fuel types are available right now. Update <%= link_to "Fuel Types", admin_fuel_types_path %> first.
+            </div>
+          <% end %>
+        </section>
       </div>
     </div>
   </div>

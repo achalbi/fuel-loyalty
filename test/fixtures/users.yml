@@ -8,7 +8,7 @@ one:
 
 two:
   email: staff@example.com
-  fuel_pump: one
+  fuel_pump_id: <%= ActiveRecord::FixtureSet.identify(:one) %>
   name: Staff
   phone_number: 9000000022
   username: staff

@@ -16,6 +16,8 @@
 <% transaction_summary = flash[:transaction_summary].presence %>
 <% transaction_points_earned = transaction_summary&.dig("points_earned") || transaction_summary&.dig(:points_earned) %>
 <% transaction_current_points = transaction_summary&.dig("current_points") || transaction_summary&.dig(:current_points) %>
+<% reward_setting = RewardSetting.current %>
+<% total_points_cash_reward = reward_setting.cash_value_for_points(@customer.total_points) %>
 
 <div class="customer-details-shell">
   <div class="card shadow-sm loyalty-result-card loyalty-result-hero customer-details-hero">
@@ -34,6 +36,9 @@
         <div class="customer-details-hero__meta">
           <span class="customer-details-hero__chip"><strong><%= @customer.transactions.size %></strong> visits</span>
           <span class="customer-details-hero__chip"><strong><%= persisted_vehicles.size %></strong> vehicles</span>
+          <% if reward_setting.cash_reward_configured? %>
+            <span class="customer-details-hero__chip"><strong><%= number_to_currency(total_points_cash_reward, unit: "₹") %></strong> cash value</span>
+          <% end %>
           <span class="customer-details-hero__chip">Joined <strong><%= @customer.created_at.strftime("%b %Y") %></strong></span>
           <% if can_redeem_points %>
             <%= link_to new_staff_redemption_path(redemption: { phone_number: @customer.phone_number }),

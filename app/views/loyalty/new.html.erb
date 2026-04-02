@@ -1,30 +1,55 @@
-<% content_for :title, "Loyalty Lookup" %>
+<% content_for :title, t("loyalty.new.page_title") %>
+<% loyalty_brand_name = t("loyalty.brand_name") %>
 
 <div class="d-flex align-items-center justify-content-center py-5">
   <div class="card lookup-card">
     <div class="card-body p-5">
+      <div class="loyalty-language-switcher">
+        <%= render "language_selector", path: new_loyalty_path %>
+      </div>
+
       <div class="text-center mb-4">
         <div class="brand-lockup justify-content-center mb-4">
           <span class="brand-mark" aria-hidden="true"><%= image_tag "/icon.svg?v=#{pwa_cache_buster}", alt: "", class: "brand-mark-image" %></span>
-          <span class="logo-text">Ace Fuel Loyalty</span>
+          <span class="logo-text"><%= loyalty_brand_name %></span>
         </div>
-        <h1 class="h4 mb-2">Loyalty Lookup</h1>
-        <p class="small-muted mb-0">Enter your mobile number to view your current loyalty points and recent visits.</p>
+        <h1 class="h4 mb-2"><%= t("loyalty.new.heading") %></h1>
+        <p class="small-muted mb-0"><%= t("loyalty.new.subtitle") %></p>
       </div>
 
       <%= form_with url: loyalty_path, scope: :loyalty, local: true, class: "vstack gap-3" do |form| %>
+        <%= hidden_field_tag :lang, loyalty_language_param %>
         <div>
-          <%= form.label :phone_number, "Phone number", class: "form-label" %>
+          <%= form.label :phone_number, t("loyalty.new.phone_number"), class: "form-label" %>
           <div class="input-group">
             <span class="input-group-text phone-prefix">+91</span>
-            <%= form.telephone_field :phone_number, value: @phone_number, class: "form-control", placeholder: "10 digit phone number", required: true, inputmode: "numeric", autocomplete: "tel-national", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit phone number", data: { phone_number_field: true } %>
+            <%= form.telephone_field :phone_number,
+              value: @phone_number,
+              class: "form-control",
+              placeholder: t("loyalty.new.phone_placeholder"),
+              required: true,
+              inputmode: "numeric",
+              autocomplete: "tel-national",
+              maxlength: 10,
+              pattern: "\\d{10}",
+              title: t("loyalty.new.phone_title"),
+              data: { phone_number_field: true } %>
           </div>
         </div>
 
-        <%= form.submit "Check Points", class: "btn btn-primary w-100" %>
+        <%= form.submit t("loyalty.new.check_points"), class: "btn btn-primary w-100" %>
       <% end %>
 
-      <section class="install-app-panel mt-4" data-pwa-install-panel data-install-source="loyalty_page" aria-labelledby="loyalty-install-app-title">
+      <section
+        class="install-app-panel mt-4"
+        data-pwa-install-panel
+        data-install-source="loyalty_page"
+        data-install-status-prompt="<%= t("loyalty.new.install_status_prompt", brand: loyalty_brand_name) %>"
+        data-install-status-default="<%= t("loyalty.new.install_status_default", brand: loyalty_brand_name) %>"
+        data-install-instruction-ios="<%= t("loyalty.new.install_instruction_ios") %>"
+        data-install-instruction-android="<%= t("loyalty.new.install_instruction_android") %>"
+        data-install-instruction-default="<%= t("loyalty.new.install_instruction_default", brand: loyalty_brand_name) %>"
+        aria-labelledby="loyalty-install-app-title">
         <div class="d-flex align-items-start gap-3">
           <div class="install-app-icon" aria-hidden="true">
             <i class="ti ti-device-mobile-down"></i>
@@ -32,18 +57,18 @@
 
           <div class="flex-grow-1">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-              <h2 id="loyalty-install-app-title" class="h6 mb-0">Install Ace Fuel Loyalty</h2>
-              <span class="badge text-bg-light border">Recommended</span>
+              <h2 id="loyalty-install-app-title" class="h6 mb-0"><%= t("loyalty.new.install_title", brand: loyalty_brand_name) %></h2>
+              <span class="badge text-bg-light border"><%= t("loyalty.new.recommended") %></span>
             </div>
 
             <p class="small-muted mb-3" data-pwa-install-status>
-              Add Ace Fuel Loyalty to this device for faster access next time and a full-screen app experience.
+              <%= t("loyalty.new.install_description", brand: loyalty_brand_name) %>
             </p>
 
             <div class="d-grid gap-2">
               <button type="button" class="btn btn-outline-primary" data-pwa-install-button>
                 <i class="ti ti-download me-1"></i>
-                <span>Install App</span>
+                <span><%= t("loyalty.new.install_button") %></span>
               </button>
               <p class="small-muted mb-0 d-none" data-pwa-install-help></p>
             </div>
@@ -54,9 +79,11 @@
       <% if firebase_web_push_enabled? %>
         <%= render "shared/push_opt_in_panel",
           source: "loyalty_page",
-          title: "Enable Loyalty Alerts",
-          badge_label: "Optional",
-          description: "Turn on push notifications to receive loyalty updates and announcements on this device." %>
+          title: t("loyalty.new.push_title"),
+          badge_label: t("loyalty.new.optional"),
+          description: t("loyalty.new.push_description"),
+          enable_button_text: t("loyalty.new.enable_notifications"),
+          disable_button_text: t("loyalty.new.disable_notifications") %>
       <% end %>
     </div>
   </div>

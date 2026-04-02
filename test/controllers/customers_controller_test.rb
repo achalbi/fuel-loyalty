@@ -21,6 +21,7 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
 
   test "staff customer page previews three ledger entries and lazy loads more in modal" do
     sign_in users(:two)
+    RewardSetting.current.update!(cash_value_per_point: 0.5)
     customer = Customer.create!(name: "Ledger Customer", phone_number: "9000000099")
 
     12.times do |index|
@@ -34,18 +35,35 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     get customer_path(customer)
     assert_response :success
     assert_select ".customer-details-ledger-item", 3
+    assert_select ".customer-details-ledger-item__cash", 3
     assert_select "[data-bs-target='#pointsLedgerModal']"
     assert_select "[data-points-ledger-panel][data-points-ledger-url='#{points_ledger_customer_path(customer, page: 1)}']"
 
     get points_ledger_customer_path(customer, page: 1)
     assert_response :success
     assert_select ".customer-details-ledger-item", 5
+    assert_select ".customer-details-ledger-item__cash", 5
     assert_match "Showing <strong>1-5</strong> of <strong>9</strong> more entries", response.body
 
     get points_ledger_customer_path(customer, page: 2)
     assert_response :success
     assert_select ".customer-details-ledger-item", 4
+    assert_select ".customer-details-ledger-item__cash", 4
     assert_match "Showing <strong>6-9</strong> of <strong>9</strong> more entries", response.body
+  end
+
+  test "staff customer page shows recorded cash values even after the reward setting changes" do
+    sign_in users(:two)
+    RewardSetting.current.update!(cash_value_per_point: 0.5)
+    customer = Customer.create!(name: "Frozen Ledger Customer", phone_number: "9000000100")
+    customer.points_ledgers.create!(points: 10, entry_type: :earn)
+    RewardSetting.current.update!(cash_value_per_point: 1.0)
+
+    get customer_path(customer)
+
+    assert_response :success
+    assert_select ".customer-details-ledger-item__cash", text: /₹5\.00/
+    assert_select ".customer-details-ledger-item__cash", text: /₹10\.00/, count: 0
   end
 
   test "staff customer page uses the compact customer actions menu" do
@@ -60,6 +78,16 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Mark Inactive"
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Delete Customer", count: 0
     assert_select "#editCustomerModal"
+  end
+
+  test "staff customer page shows the cash equivalent when cash reward is configured" do
+    sign_in users(:two)
+    RewardSetting.current.update!(cash_value_per_point: 0.5)
+
+    get customer_path(customers(:one))
+
+    assert_response :success
+    assert_select ".customer-details-hero__chip", text: /₹2\.50 cash value/
   end
 
   test "staff update failure re-renders customer page and reopens edit modal" do

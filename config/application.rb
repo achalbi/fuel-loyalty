@@ -22,6 +22,9 @@ module App
     # in config/environments, which are processed later.
     #
     config.time_zone = "Kolkata"
+    config.i18n.available_locales = %i[en hi kn ta te ml or bn mr gu pa]
+    config.i18n.default_locale = :en
+    config.i18n.fallbacks = true
     # config.eager_load_paths << Rails.root.join("extras")
   end
 end

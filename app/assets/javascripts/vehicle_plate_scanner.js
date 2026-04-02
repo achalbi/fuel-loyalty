@@ -226,7 +226,7 @@
     }
 
     if (error?.name === "NotFoundError" || error?.name === "OverconstrainedError") {
-      return "A rear camera is not available on this device. Use Camera App or type the vehicle number manually instead.";
+      return "A rear camera is not available on this device. Open Camera or type the vehicle number manually instead.";
     }
 
     return "Camera preview could not be started right now. Try Camera App or type the vehicle number manually.";
@@ -357,6 +357,10 @@
     let cameraStartInFlight = null;
     let sourceMode = "camera";
 
+    const setTopbarTogglePending = (pending) => {
+      root.dataset.topbarTogglePending = pending ? "true" : "false";
+    };
+
     const setStatus = (message, tone = "neutral") => {
       status.textContent = message;
       status.dataset.tone = tone;
@@ -421,6 +425,7 @@
       panel.hidden = !open;
       root.classList.toggle("is-open", open);
       syncToggleButtons(open);
+      setTopbarTogglePending(false);
 
       if (open) {
         root.dataset.autoOpenPending = "false";
@@ -456,7 +461,7 @@
           return false;
         }
 
-        showGestureRetryState("Live preview is ready but needs one more tap. Tap Open Camera to continue, or use Camera App instead.");
+        showGestureRetryState("Live preview is ready but needs one more tap. Tap Live Preview to continue, or use Camera App instead.");
         return false;
       }
     };
@@ -474,7 +479,7 @@
 
       if (!cameraSupported()) {
         launchCameraAppFallback({
-          message: "Camera-based plate capture is not available in this browser. Use Camera App or type the vehicle number manually."
+          message: "Camera-based plate capture is not available in this browser. Open Camera or type the vehicle number manually."
         });
         return;
       }
@@ -737,6 +742,7 @@
 
     const toggleFromTopbar = () => {
       if (!root.isConnected) return;
+      setTopbarTogglePending(true);
 
       if (!panel.hidden) {
         setPanelOpen(false);

@@ -20,6 +20,9 @@
     </div>
     <div class="customer-details-history-row__side customer-details-ledger-item__side">
       <span class="loyalty-activity-item__points <%= point_state %>"><%= point_label %></span>
+      <% if entry.recorded_cash_reward? %>
+        <span class="customer-details-ledger-item__cash">Cash: <strong><%= number_to_currency(entry.recorded_cash_reward_amount, unit: "₹") %></strong></span>
+      <% end %>
       <span class="customer-details-history-row__date customer-details-ledger-item__date"><%= l(entry.created_at, format: :short) %></span>
     </div>
   </div>

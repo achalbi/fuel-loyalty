@@ -60,8 +60,8 @@ The feature is spread across a small set of files:
 
 If live preview is unavailable, the scanner keeps the panel open, shows a warning, and exposes:
 
+- `Live Preview`
 - `Open Camera`
-- `Use Camera App`
 - manual typing in the vehicle number field
 
 The hidden file input uses `accept="image/*"` with `capture="environment"` so the browser can launch the native camera app on supported devices.

@@ -2,6 +2,7 @@ require "test_helper"
 
 class TransactionCreatorTest < ActiveSupport::TestCase
   test "creates a transaction and ledger entry for an existing customer vehicle" do
+    RewardSetting.current.update!(cash_value_per_point: 0.5)
     user = User.create!(name: "Staff Test", username: "staff_test", phone_number: "9011111111", password: "password123", password_confirmation: "password123", role: :staff)
     petrol_nozzle, = assign_pump_to_user(user)
     customer = Customer.create!(name: "Ravi", phone_number: "9876543210")
@@ -22,9 +23,48 @@ class TransactionCreatorTest < ActiveSupport::TestCase
           assert_equal "9876543210", result.customer.phone_number
           assert_equal 10, result.customer.total_points
           assert_equal vehicle, result.transaction.vehicle
+          assert_equal "cash", result.transaction.payment_mode
+          assert_equal BigDecimal("5.0"), result.customer.points_ledgers.order(:created_at).last.cash_reward_amount
         end
       end
     end
+  end
+
+  test "stores credit payment mode when selected" do
+    user = User.create!(name: "Staff Credit", username: "staff_credit_mode", phone_number: "9018888888", password: "password123", password_confirmation: "password123", role: :staff)
+    petrol_nozzle, = assign_pump_to_user(user)
+    customer = Customer.create!(name: "Credit User", phone_number: "9876541111")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN09AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    result = TransactionCreator.call(
+      user: user,
+      phone_number: customer.phone_number,
+      fuel_amount: 250,
+      vehicle_id: vehicle.id,
+      fuel_pump_nozzle_id: petrol_nozzle.id,
+      payment_mode: "credit"
+    )
+
+    assert_equal "credit", result.transaction.payment_mode
+  end
+
+  test "uses vehicle type reward rate overrides when present" do
+    user = User.create!(name: "Staff Vehicle Reward", username: "staff_vehicle_reward", phone_number: "9012345678", password: "password123", password_confirmation: "password123", role: :staff)
+    petrol_nozzle, = assign_pump_to_user(user)
+    vehicle_types(:two_wheeler).update!(reward_points_per_100: 4)
+    customer = Customer.create!(name: "Ravi Override", phone_number: "9876501111")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN01CD1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    result = TransactionCreator.call(
+      user: user,
+      phone_number: customer.phone_number,
+      fuel_amount: 550,
+      vehicle_id: vehicle.id,
+      fuel_pump_nozzle_id: petrol_nozzle.id
+    )
+
+    assert_equal 20, result.points_earned
+    assert_equal 20, result.customer.reload.total_points
   end
 
   test "rejects transactions for inactive customers" do

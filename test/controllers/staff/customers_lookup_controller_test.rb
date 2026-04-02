@@ -4,6 +4,7 @@ module Staff
   class CustomersLookupControllerTest < ActionDispatch::IntegrationTest
     test "returns customer details and vehicles for a valid phone number" do
       sign_in users(:two)
+      RewardSetting.current.update!(cash_value_per_point: 0.5)
       vehicle_types(:two_wheeler).update!(minimum_redeemable_points: 200)
       vehicle_types(:lmv).update!(minimum_redeemable_points: 300)
       customers(:one).points_ledgers.create!(points: 195, entry_type: :earn)
@@ -17,12 +18,29 @@ module Staff
       assert_equal "Arun", payload.dig("customer", "name")
       assert_equal true, payload.dig("customer", "active")
       assert_equal "Active", payload.dig("customer", "status_label")
+      assert_equal 0.5, payload.dig("customer", "cash_value_per_point")
       assert_equal 200, payload.dig("customer", "minimum_redeemable_points")
       assert_equal 200, payload.dig("customer", "max_redeemable_points")
+      assert_equal 100.0, payload.dig("customer", "max_redeemable_cash_reward")
       assert_equal 2, payload.dig("customer", "vehicles").size
       assert_equal "petrol", payload.dig("customer", "vehicles", 0, "fuel_type_code")
       assert_equal "Petrol", payload.dig("customer", "vehicles", 0, "fuel_type")
       assert_equal "Two-Wheeler", payload.dig("customer", "vehicles", 0, "vehicle_kind")
+    end
+
+    test "returns the configured global minimum redemption threshold and increment" do
+      sign_in users(:two)
+      RewardSetting.current.update!(minimum_redeemable_points: 250)
+      customers(:one).points_ledgers.create!(points: 275, entry_type: :earn)
+
+      get lookup_staff_customers_path, params: { phone_number: customers(:one).phone_number }, as: :json
+
+      assert_response :success
+
+      payload = JSON.parse(response.body)
+      assert_equal 250, payload.dig("customer", "minimum_redeemable_points")
+      assert_equal 250, payload.dig("customer", "redemption_increment")
+      assert_equal 250, payload.dig("customer", "max_redeemable_points")
     end
 
     test "returns not found for an unknown phone number" do

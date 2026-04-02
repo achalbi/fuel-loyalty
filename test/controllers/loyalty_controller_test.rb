@@ -30,6 +30,36 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'pattern="\d{10}"'
   end
 
+  test "renders the loyalty lookup page in the selected language" do
+    get new_loyalty_path(lang: "hi")
+
+    assert_response :success
+    assert_select "h1", I18n.t("loyalty.new.heading", locale: :hi)
+    assert_select "nav .logo-text", I18n.t("loyalty.brand_name", locale: :hi)
+    assert_select ".lookup-card .logo-text", I18n.t("loyalty.brand_name", locale: :hi)
+    assert_select "#loyalty-install-app-title", I18n.t("loyalty.new.install_title", locale: :hi, brand: I18n.t("loyalty.brand_name", locale: :hi))
+    assert_select "[data-pwa-install-status]", I18n.t("loyalty.new.install_description", locale: :hi, brand: I18n.t("loyalty.brand_name", locale: :hi))
+    assert_select "input[name='lang'][value='hi']", 1
+    assert_select "option[value='hi'][selected='selected']", "हिन्दी"
+  end
+
+  test "remembers the last selected language on later loyalty visits" do
+    get new_loyalty_path(lang: "hi")
+
+    assert_response :success
+    assert_equal "hi", response.cookies["loyalty_language"]
+
+    get new_loyalty_path
+
+    assert_response :redirect
+    assert_redirected_to new_loyalty_path(lang: "hi")
+
+    follow_redirect!
+
+    assert_response :success
+    assert_select "option[value='hi'][selected='selected']", "हिन्दी"
+  end
+
   test "renders firebase push configuration when web push is configured" do
     with_firebase_web_push_env do
       get new_loyalty_path
@@ -118,6 +148,32 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.location, "phone_number="
   ensure
     ActionController::Base.allow_forgery_protection = original_value
+  end
+
+  test "lookup keeps the selected language in the redirect" do
+    post loyalty_path, params: { lang: "kn", loyalty: { phone_number: customers(:one).phone_number } }
+
+    assert_response :redirect
+    assert_equal "kn", redirect_query["lang"]
+    assert_predicate redirect_query["lookup_token"], :present?
+  end
+
+  test "reuses the remembered language for later lookup submits and result pages" do
+    customer = customers(:one)
+
+    get new_loyalty_path(lang: "kn")
+    assert_response :success
+
+    post loyalty_path, params: { loyalty: { phone_number: customer.phone_number } }
+
+    assert_response :redirect
+    assert_equal "kn", redirect_query["lang"]
+
+    get loyalty_result_path(lookup_token: loyalty_lookup_token_for(customer.phone_number))
+
+    assert_response :success
+    assert_select ".loyalty-language-form select[name='lang'] option[value='kn'][selected='selected']", "ಕನ್ನಡ"
+    assert_select "h2", I18n.t("loyalty.show.recent_activity", locale: :kn)
   end
 
   test "shows loyalty details for an existing customer" do
@@ -222,6 +278,18 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-loyalty-activity]", minimum: 7
   end
 
+  test "renders the loyalty result page in the selected language and preserves it in history links" do
+    customer = customers(:one)
+    customer.points_ledgers.create!(points: 195, entry_type: :earn)
+
+    get loyalty_result_path(lookup_token: loyalty_lookup_token_for(customer.phone_number), lang: "ta", full_history: 1)
+
+    assert_response :success
+    assert_select ".loyalty-language-form select[name='lang'] option[value='ta'][selected='selected']", "தமிழ்"
+    assert_select "h2", I18n.t("loyalty.show.full_activity", locale: :ta)
+    assert_select "a[href*='lang=ta']", text: I18n.t("loyalty.show.show_last_5", locale: :ta)
+  end
+
   test "redirects to the lookup form when no phone number is stored" do
     get loyalty_result_path
 
@@ -235,6 +303,13 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_equal "private, no-store", response.headers["Cache-Control"]
     assert_select ".alert", /lookup link has expired/
+  end
+
+  test "redirects to the lookup form with the selected language when the token is invalid" do
+    get loyalty_result_path(lookup_token: "invalid-token", lang: "te")
+
+    assert_response :redirect
+    assert_equal "te", redirect_query["lang"]
   end
 
   test "redirects to the lookup form when the token is expired" do
