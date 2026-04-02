@@ -9,6 +9,7 @@ class Customer < ApplicationRecord
 
   before_validation :normalize_phone_number
 
+  validates :name, presence: true
   validates :phone_number, presence: true, uniqueness: true
   validates :phone_number, format: { with: PHONE_NUMBER_FORMAT, message: PHONE_NUMBER_ERROR_MESSAGE }
 
@@ -24,6 +25,14 @@ class Customer < ApplicationRecord
     active? ? "Active" : "Inactive"
   end
 
+  def rewards_status_label
+    rewards_paused? ? "Rewards Paused" : "Rewards Active"
+  end
+
+  def rewards_enabled?
+    active? && !rewards_paused?
+  end
+
   def total_points
     return self[:total_points_sum].to_i if has_attribute?(:total_points_sum)
 
@@ -36,6 +45,8 @@ class Customer < ApplicationRecord
   end
 
   def max_redeemable_points
+    return 0 if rewards_paused?
+
     reward_setting = RewardSetting.current
 
     PointsRedeemer.max_redeemable_points(
@@ -51,7 +62,7 @@ class Customer < ApplicationRecord
 
   def recent_transactions(limit = 5)
     transactions
-      .includes(:fuel_pump, :vehicle, :user, fuel_pump_nozzle: %i[fuel_pump fuel_type_record])
+      .includes(:points_ledger, :fuel_pump, :vehicle, :user, fuel_pump_nozzle: %i[fuel_pump fuel_type_record])
       .order(created_at: :desc)
       .limit(limit)
   end

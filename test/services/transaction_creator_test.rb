@@ -48,6 +48,28 @@ class TransactionCreatorTest < ActiveSupport::TestCase
     assert_equal "credit", result.transaction.payment_mode
   end
 
+  test "creates a transaction without awarding points when rewards are paused for the customer" do
+    user = User.create!(name: "Staff Paused Rewards", username: "staff_paused_rewards", phone_number: "9019999999", password: "password123", password_confirmation: "password123", role: :staff)
+    petrol_nozzle, = assign_pump_to_user(user)
+    customer = Customer.create!(name: "Paused Customer", phone_number: "9876542222", rewards_paused: true)
+    vehicle = customer.vehicles.create!(vehicle_number: "TN13AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    assert_difference -> { Transaction.count }, 1 do
+      assert_no_difference -> { PointsLedger.count } do
+        result = TransactionCreator.call(
+          user: user,
+          phone_number: customer.phone_number,
+          fuel_amount: 250,
+          vehicle_id: vehicle.id,
+          fuel_pump_nozzle_id: petrol_nozzle.id
+        )
+
+        assert_equal 0, result.points_earned
+        assert_equal true, result.rewards_paused
+      end
+    end
+  end
+
   test "uses vehicle type reward rate overrides when present" do
     user = User.create!(name: "Staff Vehicle Reward", username: "staff_vehicle_reward", phone_number: "9012345678", password: "password123", password_confirmation: "password123", role: :staff)
     petrol_nozzle, = assign_pump_to_user(user)

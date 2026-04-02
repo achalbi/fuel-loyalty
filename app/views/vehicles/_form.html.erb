@@ -12,45 +12,62 @@
   <% vehicle_type_icons = VehicleType.icon_map_for(vehicle_type_options.map(&:last)) %>
   <% fuel_type_field_prefix = "vehicle_#{vehicle.persisted? ? vehicle.id : "new"}_fuel_type" %>
   <% vehicle_type_field_prefix = "vehicle_#{vehicle.persisted? ? vehicle.id : "new"}_vehicle_kind" %>
-
-  <% if local_assigns[:context].present? %>
-    <%= hidden_field_tag :vehicle_form_context, local_assigns[:context] %>
-  <% end %>
+  <% commercial_field_prefix = "vehicle_#{vehicle.persisted? ? vehicle.id : "new"}" %>
+  <% commercial_vehicle_selected = Vehicle.commercial_vehicle_kind?(vehicle.vehicle_kind) %>
 
   <% if vehicle.errors.any? %>
     <div class="alert alert-danger"><%= vehicle.errors.full_messages.to_sentence %></div>
   <% end %>
 
-  <div>
-    <%= form.label :vehicle_number, field_label, class: "form-label" %>
-    <%= form.text_field :vehicle_number, class: "form-control", required: true %>
-  </div>
+  <div data-commercial-vehicle-form="true" data-commercial-vehicle-kinds="<%= Vehicle::COMMERCIAL_VEHICLE_KINDS.join(",") %>">
+    <% if local_assigns[:context].present? %>
+      <%= hidden_field_tag :vehicle_form_context, local_assigns[:context] %>
+    <% end %>
 
-  <div>
-    <%= render "shared/fuel_type_radio_group",
-      legend: "Fuel Type",
-      input_name: "vehicle[fuel_type]",
-      options: fuel_type_options,
-      selected_value: vehicle.fuel_type,
-      field_id_prefix: fuel_type_field_prefix,
-      errors: vehicle.errors[:fuel_type],
-      hint: "Inactive fuel types stay visible here only when the vehicle already uses them.",
-      required: true %>
-  </div>
+    <div>
+      <%= form.label :vehicle_number, field_label, class: "form-label" %>
+      <%= form.text_field :vehicle_number, class: "form-control", required: true %>
+    </div>
 
-  <div>
-    <%= render "shared/fuel_type_radio_group",
-      legend: "Vehicle Type",
-      input_name: "vehicle[vehicle_kind]",
-      options: vehicle_type_options,
-      icons_by_value: vehicle_type_icons,
-      selected_value: vehicle.vehicle_kind,
-      field_id_prefix: vehicle_type_field_prefix,
-      errors: vehicle.errors[:vehicle_kind],
-      hint: "Inactive vehicle types stay visible here only when the vehicle already uses them.",
-      empty_message: "No active vehicle types are available right now.",
-      required: true %>
-  </div>
+    <div>
+      <%= render "shared/fuel_type_radio_group",
+        legend: "Fuel Type",
+        input_name: "vehicle[fuel_type]",
+        options: fuel_type_options,
+        selected_value: vehicle.fuel_type,
+        field_id_prefix: fuel_type_field_prefix,
+        errors: vehicle.errors[:fuel_type],
+        hint: "Inactive fuel types stay visible here only when the vehicle already uses them.",
+        required: true %>
+    </div>
 
-  <%= form.submit submit_label, class: submit_class %>
+    <div class="customer-form__vehicle-kind-block">
+      <%= render "shared/fuel_type_radio_group",
+        legend: "Vehicle Type",
+        input_name: "vehicle[vehicle_kind]",
+        options: vehicle_type_options,
+        icons_by_value: vehicle_type_icons,
+        selected_value: vehicle.vehicle_kind,
+        field_id_prefix: vehicle_type_field_prefix,
+        errors: vehicle.errors[:vehicle_kind],
+        hint: "Inactive vehicle types stay visible here only when the vehicle already uses them.",
+        empty_message: "No active vehicle types are available right now.",
+        required: true %>
+    </div>
+
+    <%= render "shared/commercial_vehicle_fields",
+      scope_name: "vehicle",
+      field_id_prefix: commercial_field_prefix,
+      values: {
+        commercial_company_name: vehicle.commercial_company_name,
+        commercial_contact_name: vehicle.commercial_contact_name,
+        commercial_contact_phone_number: vehicle.commercial_contact_phone_number,
+        commercial_address: vehicle.commercial_address,
+        commercial_notes: vehicle.commercial_notes
+      },
+      errors: vehicle.errors,
+      visible: commercial_vehicle_selected %>
+
+    <%= form.submit submit_label, class: submit_class %>
+  </div>
 <% end %>

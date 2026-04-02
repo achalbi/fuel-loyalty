@@ -26,6 +26,17 @@ class PointsRedeemerTest < ActiveSupport::TestCase
     assert_equal BigDecimal("250.0"), customer.reload.points_ledgers.order(:created_at).last.cash_reward_amount
   end
 
+  test "rejects redemption when rewards are paused for the customer" do
+    customer = Customer.create!(name: "Paused Redeem User", phone_number: "9333333355", rewards_paused: true)
+    customer.points_ledgers.create!(points: 500, entry_type: :earn)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      PointsRedeemer.call(phone_number: customer.phone_number, points: 500)
+    end
+
+    assert_includes error.record.errors.full_messages.to_sentence, "cannot be redeemed while rewards are paused for this customer"
+  end
+
   test "rejects redemption when points exceed maximum redeemable balance rounded to 100" do
     customer = Customer.create!(name: "Redeem Limit User", phone_number: "9444444444")
     customer.points_ledgers.create!(points: 550, entry_type: :earn)

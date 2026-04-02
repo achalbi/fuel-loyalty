@@ -1,0 +1,94 @@
+<% values = local_assigns.fetch(:values, {}) %>
+<% errors = local_assigns.fetch(:errors, {}) %>
+<% visible = local_assigns.fetch(:visible, false) %>
+<% scope_name = local_assigns.fetch(:scope_name) %>
+<% field_id_prefix = local_assigns.fetch(:field_id_prefix) %>
+
+<% company_errors = Array(errors[:commercial_company_name]) %>
+<% contact_errors = Array(errors[:commercial_contact_name]) %>
+<% phone_errors = Array(errors[:commercial_contact_phone_number]) %>
+<% address_errors = Array(errors[:commercial_address]) %>
+<% notes_errors = Array(errors[:commercial_notes]) %>
+
+<div class="<%= "d-none" unless visible %> commercial-vehicle-fields" data-commercial-vehicle-fields>
+  <div class="commercial-vehicle-fields__header">
+    <h3 class="commercial-vehicle-fields__title">Company / Transport Details</h3>
+    <p class="commercial-vehicle-fields__hint mb-0">Shown only for commercial vehicles such as LCV, MCV, and HCV.</p>
+  </div>
+
+  <div>
+    <%= label_tag "#{field_id_prefix}_commercial_company_name", "Company / Transport Service", class: "form-label" %>
+    <%= text_field_tag "#{scope_name}[commercial_company_name]",
+      values[:commercial_company_name],
+      id: "#{field_id_prefix}_commercial_company_name",
+      class: "form-control#{' is-invalid' if company_errors.any?}",
+      autocomplete: "organization",
+      data: { commercial_required_field: true } %>
+    <% if company_errors.any? %>
+      <div class="invalid-feedback d-block"><%= company_errors.to_sentence %></div>
+    <% end %>
+  </div>
+
+  <div>
+    <%= label_tag "#{field_id_prefix}_commercial_contact_name", "Owner / Manager Name", class: "form-label" %>
+    <%= text_field_tag "#{scope_name}[commercial_contact_name]",
+      values[:commercial_contact_name],
+      id: "#{field_id_prefix}_commercial_contact_name",
+      class: "form-control#{' is-invalid' if contact_errors.any?}",
+      autocomplete: "name",
+      data: { commercial_required_field: true } %>
+    <% if contact_errors.any? %>
+      <div class="invalid-feedback d-block"><%= contact_errors.to_sentence %></div>
+    <% end %>
+  </div>
+
+  <div>
+    <%= label_tag "#{field_id_prefix}_commercial_contact_phone_number", "Owner / Manager Phone Number", class: "form-label" %>
+    <div class="input-group customer-form__phone-group">
+      <span class="input-group-text phone-prefix">+91</span>
+      <%= telephone_field_tag "#{scope_name}[commercial_contact_phone_number]",
+        values[:commercial_contact_phone_number],
+        id: "#{field_id_prefix}_commercial_contact_phone_number",
+        class: "form-control#{' is-invalid' if phone_errors.any?}",
+        placeholder: "Optional 10 digit phone number",
+        inputmode: "numeric",
+        autocomplete: "tel-national",
+        maxlength: 10,
+        pattern: "\\d{10}",
+        title: "Enter a 10 digit phone number",
+        data: { phone_number_field: true } %>
+    </div>
+    <% if phone_errors.any? %>
+      <div class="invalid-feedback d-block"><%= phone_errors.to_sentence %></div>
+    <% else %>
+      <div class="form-text">Optional. Add this if the owner or manager should receive follow-up calls.</div>
+    <% end %>
+  </div>
+
+  <div>
+    <%= label_tag "#{field_id_prefix}_commercial_address", "Company Address", class: "form-label" %>
+    <%= text_area_tag "#{scope_name}[commercial_address]",
+      values[:commercial_address],
+      id: "#{field_id_prefix}_commercial_address",
+      class: "form-control#{' is-invalid' if address_errors.any?}",
+      rows: 2,
+      data: { commercial_required_field: true } %>
+    <% if address_errors.any? %>
+      <div class="invalid-feedback d-block"><%= address_errors.to_sentence %></div>
+    <% end %>
+  </div>
+
+  <div>
+    <%= label_tag "#{field_id_prefix}_commercial_notes", "Notes", class: "form-label" %>
+    <%= text_area_tag "#{scope_name}[commercial_notes]",
+      values[:commercial_notes],
+      id: "#{field_id_prefix}_commercial_notes",
+      class: "form-control#{' is-invalid' if notes_errors.any?}",
+      rows: 2 %>
+    <% if notes_errors.any? %>
+      <div class="invalid-feedback d-block"><%= notes_errors.to_sentence %></div>
+    <% else %>
+      <div class="form-text">Optional. Add route, billing, or service notes if needed.</div>
+    <% end %>
+  </div>
+</div>

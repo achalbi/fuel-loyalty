@@ -90,7 +90,9 @@ module Staff
       assert_select "[data-customer-vehicles-list]", minimum: 2
       assert_select ".transaction-customer-error[data-customer-error]", minimum: 2
       assert_select "#transactionAddCustomerModal[data-transaction-registration-modal]"
+      assert_select "#transactionAddCustomerModal[data-customer-lookup-url='#{lookup_staff_customers_path}']"
       assert_select "#transactionAddCustomerModal form[action='#{register_customer_staff_transactions_path}']"
+      assert_select "#transactionAddCustomerModal [data-transaction-registration-existing-customer].d-none"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[lookup_mode]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[phone_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[vehicle_number]']"
@@ -98,7 +100,16 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_pump_nozzle_id]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[payment_mode]'][value='cash']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[lock_vehicle_details]'][value='0']"
+      assert_select "#transactionAddCustomerModal input[name='customer[vehicle_number]'][required]"
       assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[fuel_type]'][value='petrol']", 1
+      assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[fuel_type]'][value='petrol'][required]"
+      assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler'][required]"
+      assert_select "#transactionAddCustomerModal [data-commercial-vehicle-fields].d-none", 1
+      assert_select "#transactionAddCustomerModal input[name='customer[commercial_company_name]']", 1
+      assert_select "#transactionAddCustomerModal input[name='customer[commercial_contact_name]']", 1
+      assert_select "#transactionAddCustomerModal input[name='customer[commercial_contact_phone_number]'][data-phone-number-field='true']", 1
+      assert_select "#transactionAddCustomerModal textarea[name='customer[commercial_address]']", 1
+      assert_select "#transactionAddCustomerModal textarea[name='customer[commercial_notes]']", 1
       assert_select "#transactionAddCustomerModal select[name='customer[fuel_type]']", 0
       assert_select "[data-push-opt-in-panel]", 0
       assert_select "a.nav-link[href='#{staff_notifications_path}']", text: /Notifications/
@@ -111,6 +122,8 @@ module Staff
       assert_includes response.body, "fuelPumpNozzleId: selectedNozzleInput()?.value || \"\""
       assert_includes response.body, "paymentMode: selectedPaymentMode()"
       assert_includes response.body, "lookupPaymentModeField"
+      assert_includes response.body, "resolveExistingCustomerByPhone"
+      assert_includes response.body, "This vehicle will be added to that customer."
       assert_includes response.body, "shown.bs.tab"
       assert_includes response.body, "const scannerTopbarTogglePendingActive = () => {"
       assert_includes response.body, "if (scannerTopbarTogglePendingActive()) return true;"
@@ -141,6 +154,28 @@ module Staff
       assert_select "#transaction-vehicle-pane.show.active", 1
       assert_select "[data-plate-scanner-root][data-auto-open='true']", 1
       assert_select "#transaction-vehicle-pane input[name='transaction[vehicle_number]'][autofocus]", 0
+    end
+
+    test "new transaction page restores vehicle lookup prefills from a customer vehicle link" do
+      sign_in users(:two)
+
+      get new_staff_transaction_path, params: {
+        transaction: {
+          lookup_mode: "vehicle",
+          phone_number: customers(:one).phone_number,
+          vehicle_number: vehicles(:one).vehicle_number,
+          vehicle_id: vehicles(:one).id
+        }
+      }
+
+      assert_response :success
+      assert_select "#transaction-vehicle-tab.active[aria-selected='true']"
+      assert_select "#transaction-vehicle-pane.show.active"
+      assert_select "[data-transaction-vehicle-root][data-selected-vehicle-id='#{vehicles(:one).id}']"
+      assert_select "#transaction-vehicle-pane input[name='transaction[vehicle_number]'][value='#{vehicles(:one).vehicle_number}']"
+      assert_select "#transactionAddCustomerModal input[name='transaction_lookup[lookup_mode]'][value='vehicle']"
+      assert_select "#transactionAddCustomerModal input[name='transaction_lookup[phone_number]'][value='#{customers(:one).phone_number}']"
+      assert_select "#transactionAddCustomerModal input[name='transaction_lookup[vehicle_number]'][value='#{vehicles(:one).vehicle_number}']"
     end
 
     test "looks up a customer by vehicle number" do
@@ -302,6 +337,32 @@ module Staff
       assert_redirected_to customer_path(customers(:one))
     end
 
+    test "staff can record a transaction while rewards are paused without adding points" do
+      sign_in users(:two)
+      customers(:one).update!(rewards_paused: true)
+
+      assert_difference -> { Transaction.count }, 1 do
+        assert_no_difference -> { PointsLedger.count } do
+          post staff_transactions_path, params: {
+            transaction: {
+              lookup_mode: "phone",
+              phone_number: customers(:one).phone_number,
+              vehicle_id: vehicles(:one).id,
+              fuel_amount: "300",
+              fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id
+            }
+          }
+        end
+      end
+
+      assert_redirected_to customer_path(customers(:one))
+      follow_redirect!
+
+      assert_response :success
+      assert_select ".alert.alert-success", text: /Rewards are paused for this customer, so no points were added/
+      assert_select ".customer-details-hero__transaction-summary-copy", count: 0
+    end
+
     test "staff cannot record a transaction with a nozzle that does not match the selected vehicle fuel type" do
       sign_in users(:two)
 
@@ -364,6 +425,45 @@ module Staff
       )
     end
 
+    test "transaction add customer stores commercial vehicle details for commercial vehicle kinds" do
+      sign_in users(:two)
+
+      assert_difference -> { Customer.count }, 1 do
+        assert_difference -> { Vehicle.count }, 1 do
+          post register_customer_staff_transactions_path, params: {
+            customer: {
+              name: "Commercial Driver",
+              phone_number: "95555 44444",
+              vehicle_number: "TN 40 AB 1234",
+              fuel_type: "diesel",
+              vehicle_kind: "lcv",
+              commercial_company_name: "Fast Freight",
+              commercial_contact_name: "Selvam",
+              commercial_contact_phone_number: "98888 77777",
+              commercial_address: "Erode Yard",
+              commercial_notes: "Invoice every Friday"
+            },
+            transaction_lookup: {
+              lookup_mode: "vehicle",
+              vehicle_number: "TN40AB1234",
+              fuel_amount: "650",
+              fuel_pump_nozzle_id: fuel_pump_nozzles(:two).id,
+              payment_mode: "cash"
+            }
+          }
+        end
+      end
+
+      customer = Customer.find_by!(phone_number: "9555544444")
+      vehicle = customer.vehicles.first
+
+      assert_equal "Fast Freight", vehicle.commercial_company_name
+      assert_equal "Selvam", vehicle.commercial_contact_name
+      assert_equal "9888877777", vehicle.commercial_contact_phone_number
+      assert_equal "Erode Yard", vehicle.commercial_address
+      assert_equal "Invoice every Friday", vehicle.commercial_notes
+    end
+
     test "register customer failure re-renders transaction page and reopens modal" do
       sign_in users(:two)
 
@@ -391,6 +491,74 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='customer[phone_number]'][value='123']"
       assert_select "#transaction-phone-pane.show.active"
       assert_select "#transaction-phone-pane input[name='transaction[phone_number]'][value='1234567890']"
+    end
+
+    test "register customer requires initial vehicle details" do
+      sign_in users(:two)
+
+      assert_no_difference -> { Customer.count } do
+        post register_customer_staff_transactions_path, params: {
+          customer: {
+            name: "Lookup Driver",
+            phone_number: "9888877777",
+            vehicle_number: "",
+            fuel_type: "",
+            vehicle_kind: ""
+          },
+          transaction_lookup: {
+            lookup_mode: "vehicle",
+            vehicle_number: "TN30AB1234",
+            fuel_amount: "500",
+            fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id
+          }
+        }
+      end
+
+      assert_response :unprocessable_entity
+      assert_select "#transactionAddCustomerModal[data-auto-open-modal='true']"
+      assert_select "#transactionAddCustomerModal .alert.alert-danger", text: /Vehicle number can't be blank/
+      assert_select "#transactionAddCustomerModal .alert.alert-danger", text: /Fuel type can't be blank/
+      assert_select "#transactionAddCustomerModal .alert.alert-danger", text: /Vehicle kind can't be blank/
+    end
+
+    test "transaction add customer can attach a new vehicle to an existing customer" do
+      sign_in users(:two)
+      existing_customer = customers(:one)
+
+      assert_no_difference -> { Customer.count } do
+        assert_difference -> { Vehicle.count }, 1 do
+        post register_customer_staff_transactions_path, params: {
+          customer: {
+            name: "Changed Name",
+            phone_number: existing_customer.phone_number,
+            vehicle_number: "TN 66 AB 1234",
+            fuel_type: "petrol",
+            vehicle_kind: "two_wheeler"
+          },
+          transaction_lookup: {
+            lookup_mode: "vehicle",
+            vehicle_number: "TN66AB1234",
+            fuel_amount: "500",
+            fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id
+          }
+        }
+        end
+      end
+
+      vehicle = existing_customer.vehicles.find_by!(vehicle_number: "TN66AB1234")
+
+      assert_redirected_to new_staff_transaction_path(
+        transaction: {
+          lookup_mode: "vehicle",
+          vehicle_number: vehicle.vehicle_number,
+          vehicle_id: vehicle.id,
+          fuel_amount: "500",
+          fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id,
+          payment_mode: "cash"
+        }
+      )
+      assert_equal "Vehicle added to the existing customer. Continue recording the transaction.", flash[:notice]
+      assert_equal "Arun", existing_customer.reload.name
     end
   end
 end

@@ -67,6 +67,17 @@ module Staff
       assert_match "must be in multiples of 100", response.body
     end
 
+    test "shows validation feedback when rewards are paused for the customer" do
+      sign_in users(:two)
+      customer = Customer.create!(name: "Paused Redeem Controller User", phone_number: "9999999996", rewards_paused: true)
+      customer.points_ledgers.create!(points: 500, entry_type: :earn)
+
+      post staff_redemptions_path, params: { redemption: { phone_number: customer.phone_number, points: 500 } }
+
+      assert_response :unprocessable_entity
+      assert_match "cannot be redeemed while rewards are paused for this customer", response.body
+    end
+
     test "shows validation feedback when the vehicle type requires a higher minimum redemption" do
       sign_in users(:two)
       vehicle_types(:lcv).update!(minimum_redeemable_points: 300)

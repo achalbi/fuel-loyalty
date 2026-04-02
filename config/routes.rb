@@ -22,6 +22,8 @@ Rails.application.routes.draw do
       get :lookup, on: :collection
       patch :activate, on: :member
       patch :deactivate, on: :member
+      patch :pause_rewards, on: :member
+      patch :resume_rewards, on: :member
     end
     resources :redemptions, only: %i[new create]
     resources :transactions, only: %i[new create] do

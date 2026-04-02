@@ -20,7 +20,11 @@
         data-loyalty-points-value
         data-loyalty-points-target="<%= @total_points %>"
         aria-label="<%= t("loyalty.show.total_points_aria", points: @total_points) %>">0</strong>
-      <% if @redeemable_points >= @minimum_redeemable_points %>
+      <% if @rewards_paused %>
+        <span class="loyalty-result-points__status is-pending" data-loyalty-redeem-status>
+          <%= t("loyalty.show.paused_html", default: "Rewards are currently paused for this customer. Please contact station staff.") %>
+        </span>
+      <% elsif @redeemable_points >= @minimum_redeemable_points %>
         <span class="loyalty-result-points__status is-redeemable" data-loyalty-redeem-status>
           <%= t("loyalty.show.unlocked_html", points: @redeemable_points, minimum: @minimum_redeemable_points) %>
         </span>

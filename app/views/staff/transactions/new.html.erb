@@ -616,17 +616,19 @@
   aria-labelledby="transactionAddCustomerModalLabel"
   aria-hidden="true"
   data-transaction-registration-modal
+  data-customer-lookup-url="<%= lookup_staff_customers_path %>"
   data-auto-open-modal="<%= @transaction_registration_modal_open %>">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content confirm-modal-content customer-details-modal__content admin-customers-modal__content">
       <div class="modal-header border-0 pb-0">
         <div>
           <h2 class="modal-title h5 mb-1" id="transactionAddCustomerModalLabel">Add Customer</h2>
-          <p class="text-muted mb-0 small">Create the customer here and continue recording the transaction without leaving this page.</p>
+          <p class="text-muted mb-0 small">Create a customer here, or use an existing customer phone number to add this vehicle without leaving the transaction.</p>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body pt-3">
+        <div class="alert alert-success d-none py-2 px-3 small" data-transaction-registration-existing-customer role="status" aria-live="polite"></div>
         <%= render "customers/form",
           customer: registration_customer,
           form_url: register_customer_staff_transactions_path,
@@ -702,6 +704,8 @@
       const editableVehicleNumberGroup = modalElement.querySelector("[data-registration-editable-group='vehicle_number']");
       const editableFuelTypeGroup = modalElement.querySelector("[data-registration-editable-group='fuel_type']");
       const editableVehicleKindGroup = modalElement.querySelector("[data-registration-editable-group='vehicle_kind']");
+      const existingCustomerNotice = modalElement.querySelector("[data-transaction-registration-existing-customer]");
+      const customerLookupUrl = modalElement.dataset.customerLookupUrl;
       const lookupModeField = modalElement.querySelector("[name='transaction_lookup[lookup_mode]']");
       const lookupPhoneField = modalElement.querySelector("[name='transaction_lookup[phone_number]']");
       const lookupVehicleField = modalElement.querySelector("[name='transaction_lookup[vehicle_number]']");
@@ -723,6 +727,10 @@
       };
       let focusTarget = null;
       let openTimer = null;
+      let customerLookupTimer = null;
+      let activeCustomerLookup = 0;
+      let resolvedExistingCustomer = null;
+      let typedNameValue = "";
 
       const cancelPendingOpen = () => {
         if (!openTimer) return;
@@ -737,6 +745,9 @@
 
       modalElement.addEventListener("shown.bs.modal", () => {
         syncStackedBackdrop();
+        if (!resolvedExistingCustomer && phoneField?.value.replace(/\D/g, "").length === 10) {
+          resolveExistingCustomerByPhone({ immediate: true });
+        }
         focusTarget?.focus();
       });
 
@@ -748,6 +759,49 @@
         cancelPendingOpen();
         clearStackedBackdrop();
       });
+
+      nameField?.addEventListener("input", () => {
+        if (nameField.readOnly) return;
+        typedNameValue = nameField.value;
+      });
+
+      const setExistingCustomerNotice = (message = "") => {
+        if (!existingCustomerNotice) return;
+
+        existingCustomerNotice.textContent = message;
+        existingCustomerNotice.classList.toggle("d-none", message === "");
+      };
+
+      const clearExistingCustomerResolution = ({ restoreTypedName = false } = {}) => {
+        resolvedExistingCustomer = null;
+        setExistingCustomerNotice("");
+
+        if (nameField) {
+          const shouldRestoreName = restoreTypedName && nameField.readOnly;
+          nameField.readOnly = false;
+          nameField.classList.remove("is-locked");
+
+          if (shouldRestoreName) {
+            nameField.value = typedNameValue;
+          }
+        }
+      };
+
+      const applyExistingCustomerResolution = (customer) => {
+        resolvedExistingCustomer = customer;
+
+        if (nameField) {
+          if (!nameField.readOnly) {
+            typedNameValue = nameField.value;
+          }
+
+          nameField.value = customer.name || customer.display_name || "";
+          nameField.readOnly = true;
+          nameField.classList.add("is-locked");
+        }
+
+        setExistingCustomerNotice(`Existing customer found: ${customer.name} (+91 ${customer.phone_number}). This vehicle will be added to that customer.`);
+      };
 
       const syncLockedMirror = (name, value, locked) => {
         const selector = `[data-registration-locked-mirror="${name}"]`;
@@ -816,9 +870,64 @@
         syncLockedMirror("customer[vehicle_kind]", selectedVehicleKind, locked);
       };
 
+      const resolveExistingCustomerByPhone = async ({ immediate = false } = {}) => {
+        if (!phoneField || !customerLookupUrl) return;
+
+        const normalizedPhone = phoneField.value.replace(/\D/g, "");
+
+        if (normalizedPhone.length !== 10) {
+          clearExistingCustomerResolution({ restoreTypedName: true });
+          return;
+        }
+
+        const lookupId = ++activeCustomerLookup;
+
+        try {
+          const response = await fetch(`${customerLookupUrl}?phone_number=${encodeURIComponent(normalizedPhone)}`, {
+            headers: { Accept: "application/json" }
+          });
+          const payload = await response.json();
+          if (lookupId !== activeCustomerLookup) return;
+
+          if (response.ok && payload.found && payload.customer) {
+            applyExistingCustomerResolution(payload.customer);
+            if (immediate && focusTarget === nameField) {
+              focusTarget = phoneField;
+            }
+            return;
+          }
+
+          clearExistingCustomerResolution({ restoreTypedName: true });
+        } catch (_error) {
+          if (lookupId !== activeCustomerLookup) return;
+          clearExistingCustomerResolution({ restoreTypedName: true });
+        }
+      };
+
+      phoneField?.addEventListener("input", () => {
+        if (customerLookupTimer) {
+          window.clearTimeout(customerLookupTimer);
+          customerLookupTimer = null;
+        }
+
+        if (resolvedExistingCustomer && phoneField.value.replace(/\D/g, "") !== resolvedExistingCustomer.phone_number) {
+          clearExistingCustomerResolution({ restoreTypedName: true });
+        }
+
+        customerLookupTimer = window.setTimeout(() => {
+          resolveExistingCustomerByPhone();
+        }, 250);
+      });
+
+      phoneField?.addEventListener("blur", () => {
+        resolveExistingCustomerByPhone({ immediate: true });
+      });
+
       const showNow = ({ lookupMode, phoneNumber = "", vehicleNumber = "", fuelType = "", vehicleKind = "", fuelAmount = "", fuelPumpNozzleId = "", paymentMode = "cash", lockVehicleDetails = false }) => {
         form?.reset();
         modalElement.querySelector(".alert.alert-danger")?.remove();
+        clearExistingCustomerResolution();
+        typedNameValue = "";
 
         if (nameField) nameField.value = "";
         if (phoneField) phoneField.value = phoneNumber;
@@ -838,7 +947,10 @@
         if (lookupFuelPumpNozzleField) lookupFuelPumpNozzleField.value = fuelPumpNozzleId;
         if (lookupPaymentModeField) lookupPaymentModeField.value = paymentMode || "cash";
 
-        focusTarget = nameField || phoneField || vehicleField;
+        focusTarget = phoneNumber ? (nameField || phoneField || vehicleField) : (phoneField || nameField || vehicleField);
+        if (phoneNumber) {
+          resolveExistingCustomerByPhone({ immediate: true });
+        }
         bootstrap.Modal.getOrCreateInstance(modalElement).show();
       };
 
@@ -1387,6 +1499,10 @@
 
           if (!customerActive) {
             noteText = "Customer must be active before recording a transaction";
+          } else if (currentCustomer.rewards_paused) {
+            noteText = selectedVehicle()
+              ? "Rewards are paused for this customer. Transaction will be saved without points."
+              : "Select the matching vehicle. Rewards are paused for this customer."
           } else if (currentCustomer.vehicles.length === 0) {
             noteText = "Add a vehicle before recording fuel";
           } else if (selectedVehicle()) {
@@ -1655,6 +1771,9 @@
 
           if (!selectedMatch.customer.active) {
             noteText = "Customer must be active before recording a transaction";
+            noteState = "is-pending";
+          } else if (selectedMatch.customer.rewards_paused) {
+            noteText = "Rewards are paused for this customer. Transaction will be saved without points.";
             noteState = "is-pending";
           }
 

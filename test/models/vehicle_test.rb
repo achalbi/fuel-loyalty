@@ -132,4 +132,58 @@ class VehicleTest < ActiveSupport::TestCase
     assert_equal "mini_van", vehicle.vehicle_kind
     assert_equal "Mini-Van", vehicle.display_vehicle_kind
   end
+
+  test "requires company and owner details for commercial vehicle kinds" do
+    vehicle = Vehicle.new(
+      customer: customers(:one),
+      vehicle_number: "TN11LC1234",
+      fuel_type: :diesel,
+      vehicle_kind: :lcv
+    )
+
+    assert_not vehicle.valid?
+    assert_includes vehicle.errors[:commercial_company_name], "can't be blank"
+    assert_includes vehicle.errors[:commercial_contact_name], "can't be blank"
+    assert_includes vehicle.errors[:commercial_address], "can't be blank"
+  end
+
+  test "accepts and normalizes commercial registration details" do
+    vehicle = Vehicle.new(
+      customer: customers(:one),
+      vehicle_number: "TN11LC5678",
+      fuel_type: :diesel,
+      vehicle_kind: :mcv,
+      commercial_company_name: "  ACME Logistics  ",
+      commercial_contact_name: "  Ravi Kumar ",
+      commercial_contact_phone_number: "98765 43210",
+      commercial_address: "  Chennai Port Road  ",
+      commercial_notes: "  Night route only  "
+    )
+
+    assert vehicle.valid?
+    assert_equal "ACME Logistics", vehicle.commercial_company_name
+    assert_equal "Ravi Kumar", vehicle.commercial_contact_name
+    assert_equal "9876543210", vehicle.commercial_contact_phone_number
+    assert_equal "Chennai Port Road", vehicle.commercial_address
+    assert_equal "Night route only", vehicle.commercial_notes
+  end
+
+  test "clears commercial registration details when the vehicle is not commercial" do
+    vehicle = vehicles(:three)
+    vehicle.assign_attributes(
+      vehicle_kind: :lmv,
+      commercial_company_name: "Freight Movers",
+      commercial_contact_name: "Shyam",
+      commercial_contact_phone_number: "9988776655",
+      commercial_address: "Salem",
+      commercial_notes: "Handle with care"
+    )
+
+    assert vehicle.valid?
+    assert_nil vehicle.commercial_company_name
+    assert_nil vehicle.commercial_contact_name
+    assert_nil vehicle.commercial_contact_phone_number
+    assert_nil vehicle.commercial_address
+    assert_nil vehicle.commercial_notes
+  end
 end

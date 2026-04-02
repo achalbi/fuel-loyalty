@@ -30,6 +30,11 @@ class PointsRedeemer
   def call
     customer = find_customer!
     points_to_redeem = normalized_points
+
+    if customer.rewards_paused?
+      invalid_redemption!(customer, points_to_redeem, "cannot be redeemed while rewards are paused for this customer")
+    end
+
     minimum_redeemable_points = customer.minimum_redeemable_points
     redemption_increment = self.class.redemption_increment
     max_redeemable_points = self.class.max_redeemable_points(

@@ -1,18 +1,18 @@
-<% showing_from = total_remaining_entries.zero? ? 0 : ((current_page - 1) * CustomerPointsLedgerRendering::POINTS_LEDGER_PER_PAGE) + 1 %>
-<% showing_to = total_remaining_entries.zero? ? 0 : showing_from + points_ledger_entries.size - 1 %>
+<% showing_from = total_entries.zero? ? 0 : ((current_page - 1) * CustomerPointsLedgerRendering::POINTS_LEDGER_PER_PAGE) + 1 %>
+<% showing_to = total_entries.zero? ? 0 : showing_from + points_ledger_entries.size - 1 %>
 
 <% if points_ledger_entries.any? %>
   <div class="customer-details-vehicle-list customer-details-ledger-list">
-    <%= render "customers/points_ledger_rows", points_ledger_entries: %>
+    <%= render "customers/points_ledger_rows", points_ledger_entries: points_ledger_entries %>
   </div>
 <% else %>
-  <p class="text-muted mb-0">No more ledger entries to show.</p>
+  <p class="text-muted mb-0">No points activity yet.</p>
 <% end %>
 
-<% if total_remaining_entries.positive? %>
+<% if total_entries.positive? %>
   <div class="customer-details-ledger-pagination">
     <div class="customer-details-ledger-pagination__summary">
-      Showing <strong><%= showing_from %>-<%= showing_to %></strong> of <strong><%= total_remaining_entries %></strong> more entries
+      Showing <strong><%= showing_from %>-<%= showing_to %></strong> of <strong><%= total_entries %></strong> entries
     </div>
 
     <% if total_pages > 1 %>

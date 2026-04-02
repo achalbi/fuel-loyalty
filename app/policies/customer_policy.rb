@@ -43,6 +43,14 @@ class CustomerPolicy < ApplicationPolicy
     staff_access?
   end
 
+  def pause_rewards?
+    staff_access?
+  end
+
+  def resume_rewards?
+    staff_access?
+  end
+
   private
 
   def staff_access?

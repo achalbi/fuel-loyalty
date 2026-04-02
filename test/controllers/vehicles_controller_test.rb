@@ -17,6 +17,31 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to customer_path(customers(:one))
   end
 
+  test "staff can add a commercial vehicle with company details" do
+    sign_in users(:two)
+
+    assert_difference -> { customers(:one).vehicles.count }, 1 do
+      post customer_vehicles_path(customers(:one)), params: {
+        vehicle: {
+          vehicle_number: "TN 66 ZZ 1234",
+          fuel_type: "diesel",
+          vehicle_kind: "hcv",
+          commercial_company_name: "ACE Transport",
+          commercial_contact_name: "Ramesh",
+          commercial_contact_phone_number: "91234 56789",
+          commercial_address: "Hosur Road, Bengaluru",
+          commercial_notes: "Long-haul fleet"
+        }
+      }
+    end
+
+    vehicle = customers(:one).vehicles.order(:id).last
+    assert_redirected_to customer_path(customers(:one))
+    assert_equal "ACE Transport", vehicle.commercial_company_name
+    assert_equal "Ramesh", vehicle.commercial_contact_name
+    assert_equal "9123456789", vehicle.commercial_contact_phone_number
+  end
+
   test "staff can edit a vehicle" do
     sign_in users(:two)
 
@@ -36,6 +61,51 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "TN11AA4321", vehicle.vehicle_number
     assert_equal "diesel", vehicle.fuel_type
     assert_equal "three_wheeler", vehicle.vehicle_kind
+  end
+
+  test "edit vehicle shows commercial fields for commercial vehicle types" do
+    sign_in users(:two)
+    vehicle = customers(:one).vehicles.create!(
+      vehicle_number: "TN44LC1234",
+      fuel_type: :diesel,
+      vehicle_kind: :lcv,
+      commercial_company_name: "Blue Line Logistics",
+      commercial_contact_name: "Karthik",
+      commercial_contact_phone_number: "9000012345",
+      commercial_address: "Coimbatore",
+      commercial_notes: "Regional route"
+    )
+
+    get edit_customer_vehicle_path(customers(:one), vehicle)
+
+    assert_response :success
+    assert_select "[data-commercial-vehicle-fields]:not(.d-none)"
+    assert_select "input[name='vehicle[commercial_company_name]'][value='Blue Line Logistics']"
+    assert_select "input[name='vehicle[commercial_contact_name]'][value='Karthik']"
+    assert_select "input[name='vehicle[commercial_contact_phone_number]'][value='9000012345']"
+    assert_select "textarea[name='vehicle[commercial_address]']", text: /Coimbatore/
+  end
+
+  test "commercial vehicle create requires company and owner details" do
+    sign_in users(:two)
+
+    assert_no_difference -> { customers(:one).vehicles.count } do
+      post customer_vehicles_path(customers(:one)), params: {
+        vehicle: {
+          vehicle_number: "TN 77 ZZ 1234",
+          fuel_type: "diesel",
+          vehicle_kind: "lcv",
+          commercial_company_name: "",
+          commercial_contact_name: "",
+          commercial_address: ""
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "Commercial company name can&#39;t be blank", response.body
+    assert_match "Commercial contact name can&#39;t be blank", response.body
+    assert_match "Commercial address can&#39;t be blank", response.body
   end
 
   test "edit vehicle keeps its inactive fuel type visible as a radio option" do

@@ -54,6 +54,29 @@ module Staff
       assert_response :unprocessable_entity
       assert_select "#addCustomerModal[data-auto-open-modal='true']"
       assert_select "#addCustomerModal .alert.alert-danger"
+      assert_select "#addCustomerModal .alert.alert-danger", text: /Name can't be blank/
+    end
+
+    test "staff add customer requires initial vehicle details" do
+      sign_in users(:two)
+
+      assert_no_difference -> { Customer.count } do
+        post staff_customers_path, params: {
+          customer: {
+            name: "Kiran",
+            phone_number: "98888 77777",
+            vehicle_number: "",
+            fuel_type: "",
+            vehicle_kind: ""
+          }
+        }
+      end
+
+      assert_response :unprocessable_entity
+      assert_select "#addCustomerModal[data-auto-open-modal='true']"
+      assert_select "#addCustomerModal .alert.alert-danger", text: /Vehicle number can't be blank/
+      assert_select "#addCustomerModal .alert.alert-danger", text: /Fuel type can't be blank/
+      assert_select "#addCustomerModal .alert.alert-danger", text: /Vehicle kind can't be blank/
     end
 
     test "staff can create a customer with an initial vehicle" do
@@ -79,21 +102,112 @@ module Staff
       assert_equal "TN30AB1234", customer.vehicles.first.vehicle_number
     end
 
+    test "staff can create a commercial customer vehicle with company details" do
+      sign_in users(:two)
+
+      assert_difference -> { Customer.count }, 1 do
+        assert_difference -> { Vehicle.count }, 1 do
+          post staff_customers_path, params: {
+            customer: {
+              name: "Fleet Owner",
+              phone_number: "97777 66666",
+              vehicle_number: "TN 45 AB 6789",
+              fuel_type: "diesel",
+              vehicle_kind: "lcv",
+              commercial_company_name: "South Freight",
+              commercial_contact_name: "Manoj",
+              commercial_contact_phone_number: "90000 12345",
+              commercial_address: "Trichy Bypass",
+              commercial_notes: "Deliver before noon"
+            }
+          }
+        end
+      end
+
+      customer = Customer.find_by!(phone_number: "9777766666")
+      vehicle = customer.vehicles.first
+
+      assert_redirected_to customer_path(customer)
+      assert_equal "South Freight", vehicle.commercial_company_name
+      assert_equal "Manoj", vehicle.commercial_contact_name
+      assert_equal "9000012345", vehicle.commercial_contact_phone_number
+      assert_equal "Trichy Bypass", vehicle.commercial_address
+      assert_equal "Deliver before noon", vehicle.commercial_notes
+    end
+
+    test "staff commercial customer vehicle requires company details" do
+      sign_in users(:two)
+
+      assert_no_difference -> { Customer.count } do
+        post staff_customers_path, params: {
+          customer: {
+            name: "Fleet Owner",
+            phone_number: "97777 66666",
+            vehicle_number: "TN 45 AB 6789",
+            fuel_type: "diesel",
+            vehicle_kind: "hcv",
+            commercial_company_name: "",
+            commercial_contact_name: "",
+            commercial_address: ""
+          }
+        }
+      end
+
+      assert_response :unprocessable_entity
+      assert_select "#addCustomerModal[data-auto-open-modal='true']"
+      assert_select "#addCustomerModal .alert.alert-danger", text: /Commercial company name can't be blank/
+      assert_select "#addCustomerModal .alert.alert-danger", text: /Commercial contact name can't be blank/
+      assert_select "#addCustomerModal .alert.alert-danger", text: /Commercial address can't be blank/
+    end
+
+    test "staff add customer does not update an existing customer with the same phone number" do
+      sign_in users(:two)
+      existing_customer = customers(:one)
+
+      assert_no_difference -> { Customer.count } do
+        post staff_customers_path, params: {
+          customer: {
+            name: "Changed Name",
+            phone_number: existing_customer.phone_number,
+            vehicle_number: "TN 44 AB 1234",
+            fuel_type: "petrol",
+            vehicle_kind: "two_wheeler"
+          }
+        }
+      end
+
+      assert_response :unprocessable_entity
+      assert_select "#addCustomerModal[data-auto-open-modal='true']"
+      assert_select "#addCustomerModal .alert.alert-danger", text: /Phone number has already been taken/
+      assert_equal "Arun", existing_customer.reload.name
+      assert_not existing_customer.vehicles.exists?(vehicle_number: "TN44AB1234")
+    end
+
     test "staff can render the new customer screen" do
       sign_in users(:two)
 
       get new_staff_customer_path
 
       assert_response :success
+      assert_select "input[name='customer[name]'][required]"
+      assert_select "input[name='customer[vehicle_number]'][required]"
       assert_select "input[type='radio'][name='customer[fuel_type]'][value='petrol']", 1
+      assert_select "input[type='radio'][name='customer[fuel_type]'][value='petrol'][required]"
       assert_select "input[type='radio'][name='customer[fuel_type]'][value='diesel']", 1
       assert_select "select[name='customer[fuel_type]']", 0
       assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler']", 1
+      assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler'][required]"
       assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='three_wheeler']", 1
       assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='lmv']", 1
       assert_select "label[for='customer_vehicle_kind_two_wheeler'] i.ti.ti-bike", 1
       assert_select "label[for='customer_vehicle_kind_three_wheeler'] [data-vehicle-type-icon='custom-tuk-tuk']", 1
       assert_select "select[name='customer[vehicle_kind]']", 0
+      assert_select "[data-commercial-vehicle-fields].d-none", 1
+      assert_select "input[name='customer[commercial_company_name]']", 1
+      assert_select "input[name='customer[commercial_contact_name]']", 1
+      assert_select "input[name='customer[commercial_contact_phone_number]'][data-phone-number-field='true']", 1
+      assert_select "textarea[name='customer[commercial_address]']", 1
+      assert_select "textarea[name='customer[commercial_notes]']", 1
       assert_select "button[data-cancel-back-button='true'][data-fallback-path='#{staff_customers_path}']", text: "Cancel"
       assert_includes response.body, "window.history.back()"
     end

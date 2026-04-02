@@ -15,15 +15,12 @@ module Admin
 
     def create
       normalized_phone = Customer.normalize_phone_number(customer_params[:phone_number])
-      @customer = Customer.find_or_initialize_by(phone_number: normalized_phone)
-      was_new_record = @customer.new_record?
+      @customer = Customer.new(phone_number: normalized_phone)
       authorize @customer
-      @customer.phone_number = normalized_phone
       @customer.name = customer_params[:name] if customer_params[:name].present?
 
-      if @customer.save && save_vehicle
-        notice = was_new_record ? "Customer created successfully." : "Customer updated successfully."
-        redirect_to admin_customer_path(@customer), notice: notice
+      if persist_customer_with_vehicle
+        redirect_to admin_customer_path(@customer), notice: "Customer created successfully."
       else
         load_index_state(form_customer: @customer)
         render :index, status: :unprocessable_entity
@@ -150,18 +147,32 @@ module Admin
     end
 
     def customer_params
-      params.require(:customer).permit(:name, :phone_number, :vehicle_number, :fuel_type, :vehicle_kind)
+      params.require(:customer).permit(
+        :name,
+        :phone_number,
+        :vehicle_number,
+        :fuel_type,
+        :vehicle_kind,
+        :commercial_company_name,
+        :commercial_contact_name,
+        :commercial_contact_phone_number,
+        :commercial_address,
+        :commercial_notes
+      )
     end
 
     def save_vehicle
-      return true if customer_params[:vehicle_number].blank?
-
       vehicle = @customer.vehicles.find_or_initialize_by(vehicle_number: Vehicle.normalize_vehicle_number(customer_params[:vehicle_number]))
-      return true if vehicle.persisted?
+      return vehicle if vehicle.persisted?
 
       vehicle.assign_attributes(
         fuel_type: customer_params[:fuel_type],
-        vehicle_kind: customer_params[:vehicle_kind]
+        vehicle_kind: customer_params[:vehicle_kind],
+        commercial_company_name: customer_params[:commercial_company_name],
+        commercial_contact_name: customer_params[:commercial_contact_name],
+        commercial_contact_phone_number: customer_params[:commercial_contact_phone_number],
+        commercial_address: customer_params[:commercial_address],
+        commercial_notes: customer_params[:commercial_notes]
       )
 
       vehicle.save.tap do |saved|
@@ -171,6 +182,38 @@ module Admin
           @customer.errors.add(error.attribute, error.message)
         end
       end
+    end
+
+    def persist_customer_with_vehicle
+      return false unless initial_vehicle_fields_present?
+
+      success = false
+
+      Customer.transaction do
+        unless @customer.save && save_vehicle
+          raise ActiveRecord::Rollback
+        end
+
+        success = true
+      end
+
+      success
+    end
+
+    def initial_vehicle_fields_present?
+      @customer.valid?
+
+      required_fields = {
+        vehicle_number: customer_params[:vehicle_number],
+        fuel_type: customer_params[:fuel_type],
+        vehicle_kind: customer_params[:vehicle_kind]
+      }
+
+      required_fields.each do |field, value|
+        @customer.errors.add(field, "can't be blank") if value.blank?
+      end
+
+      @customer.errors.none?
     end
   end
 end

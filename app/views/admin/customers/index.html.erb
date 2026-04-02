@@ -5,12 +5,12 @@
     <div class="admin-customers-header__topline">
       <h1>Customers</h1>
       <div class="page-actions">
-        <%= button_tag "+ Add Customer",
+        <%= button_tag "+ New",
           type: "button",
           class: "admin-customers-create-action",
           data: { bs_toggle: "modal", bs_target: "#addCustomerModal" },
-          aria: { label: "Add Customer" },
-          title: "Add Customer" %>
+          aria: { label: "New Customer" },
+          title: "New Customer" %>
       </div>
     </div>
     <p>Browse enrolled loyalty customers, their vehicles, and their current point balance.</p>
@@ -105,7 +105,7 @@
       <div class="modal-header border-0 pb-0">
         <div>
           <h2 class="modal-title h5 mb-1" id="addCustomerModalLabel">Add Customer</h2>
-          <p class="text-muted mb-0 small">Create a new customer and optionally add the first vehicle right away.</p>
+          <p class="text-muted mb-0 small">Create a new customer and add the first vehicle right away.</p>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>

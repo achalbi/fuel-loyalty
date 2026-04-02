@@ -235,6 +235,17 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-loyalty-redeem-status]", /50 points more.*Minimum redemption:\s*300 points/
   end
 
+  test "shows a paused rewards message when customer rewards are paused" do
+    customer = customers(:one)
+    customer.update!(rewards_paused: true)
+    customer.points_ledgers.create!(points: 195, entry_type: :earn)
+
+    get loyalty_result_path(lookup_token: loyalty_lookup_token_for(customer.phone_number))
+
+    assert_response :success
+    assert_select "[data-loyalty-redeem-status]", /Rewards are currently paused for this customer/
+  end
+
   test "titleizes the customer name in the loyalty hero" do
     customer = customers(:one)
     customer.update!(name: "arun kumar")

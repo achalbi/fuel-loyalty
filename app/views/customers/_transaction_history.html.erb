@@ -3,29 +3,7 @@
 
 <% if transaction_history_entries.any? %>
   <div class="customer-details-vehicle-list customer-details-history-list">
-    <% transaction_history_entries.each do |transaction| %>
-      <% pump_nozzle_summary = transaction_pump_nozzle_summary(transaction) %>
-      <div class="customer-details-vehicle-row customer-details-history-row">
-        <div class="customer-details-vehicle-row__main customer-details-history-row__main">
-          <div class="customer-details-vehicle-row__number customer-details-history-row__vehicle">
-            <%= transaction.vehicle&.vehicle_number || "Vehicle not linked" %>
-          </div>
-          <div class="customer-details-history-row__handled-by">
-            Handled by <strong><%= transaction.user.display_name %></strong>
-          </div>
-          <% if pump_nozzle_summary.present? %>
-            <div class="transaction-location-meta customer-details-history-row__location">
-              <i class="ti ti-gas-station" aria-hidden="true"></i>
-              <span><%= pump_nozzle_summary %></span>
-            </div>
-          <% end %>
-        </div>
-        <div class="customer-details-history-row__side">
-          <span class="customer-details-history-item__amount"><%= number_to_currency(transaction.fuel_amount, unit: "₹") %></span>
-          <span class="customer-details-history-row__date"><%= l(transaction.created_at, format: :short) %></span>
-        </div>
-      </div>
-    <% end %>
+    <%= render "customers/transaction_rows", transactions: transaction_history_entries %>
   </div>
 <% else %>
   <p class="text-muted mb-0">No additional transactions yet.</p>

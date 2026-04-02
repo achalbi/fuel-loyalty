@@ -6,12 +6,22 @@
 <% selected_vehicle_number = params.dig(customer.model_name.param_key, :vehicle_number).presence || customer.vehicle_number.presence %>
 <% selected_fuel_type = params.dig(customer.model_name.param_key, :fuel_type).presence %>
 <% selected_vehicle_kind = params.dig(customer.model_name.param_key, :vehicle_kind).presence %>
+<% selected_commercial_company_name = params.dig(customer.model_name.param_key, :commercial_company_name).presence %>
+<% selected_commercial_contact_name = params.dig(customer.model_name.param_key, :commercial_contact_name).presence %>
+<% selected_commercial_contact_phone_number = params.dig(customer.model_name.param_key, :commercial_contact_phone_number).presence %>
+<% selected_commercial_address = params.dig(customer.model_name.param_key, :commercial_address).presence %>
+<% selected_commercial_notes = params.dig(customer.model_name.param_key, :commercial_notes).presence %>
 <% fuel_type_options = FuelType.active_options %>
 <% vehicle_type_options = VehicleType.active_options %>
 <% vehicle_type_icons = VehicleType.icon_map_for(vehicle_type_options.map(&:last)) %>
+<% commercial_vehicle_selected = Vehicle.commercial_vehicle_kind?(selected_vehicle_kind) %>
 
 <% form_markup = capture do %>
-  <%= form_with model: customer, url: form_url, method: form_method, class: "vstack gap-3" do |form| %>
+  <%= form_with model: customer,
+    url: form_url,
+    method: form_method,
+    class: "vstack gap-3",
+    data: { commercial_vehicle_form: true, commercial_vehicle_kinds: Vehicle::COMMERCIAL_VEHICLE_KINDS.join(",") } do |form| %>
     <% if customer.errors.any? %>
       <div class="alert alert-danger">
         <%= customer.errors.full_messages.to_sentence %>
@@ -20,12 +30,12 @@
 
     <div>
       <%= form.label :name, class: "form-label" %>
-      <%= form.text_field :name, class: "form-control" %>
+      <%= form.text_field :name, class: "form-control", required: true, autocomplete: "name" %>
     </div>
 
     <div>
       <%= form.label :phone_number, class: "form-label" %>
-      <div class="input-group">
+      <div class="input-group customer-form__phone-group">
         <span class="input-group-text phone-prefix">+91</span>
         <%= form.telephone_field :phone_number, class: "form-control", required: true, placeholder: "10 digit phone number", inputmode: "numeric", autocomplete: "tel-national", maxlength: 10, pattern: "\\d{10}", title: "Enter a 10 digit phone number", data: { phone_number_field: true } %>
       </div>
@@ -34,7 +44,7 @@
     <% if include_vehicle_fields %>
       <div class="<%= "d-none" if lock_vehicle_fields %>" data-registration-editable-group="vehicle_number">
         <%= form.label :vehicle_number, "Initial Vehicle Number", class: "form-label" %>
-        <%= form.text_field :vehicle_number, class: "form-control", disabled: lock_vehicle_fields, data: { registration_vehicle_number_field: true } %>
+        <%= form.text_field :vehicle_number, class: "form-control", required: true, disabled: lock_vehicle_fields, data: { registration_vehicle_number_field: true } %>
         <div class="form-text">You can add more vehicles after the customer record is created.</div>
       </div>
 
@@ -47,10 +57,11 @@
           field_id_prefix: "customer_fuel_type",
           errors: customer.errors[:fuel_type],
           hint: "Only active fuel types appear here.",
+          required: true,
           disabled: lock_vehicle_fields %>
       </div>
 
-      <div class="<%= "d-none" if lock_vehicle_fields %>" data-registration-editable-group="vehicle_kind">
+      <div class="<%= "d-none" if lock_vehicle_fields %> customer-form__vehicle-kind-block" data-registration-editable-group="vehicle_kind">
         <%= render "shared/fuel_type_radio_group",
           legend: "Vehicle Type",
           input_name: "customer[vehicle_kind]",
@@ -61,7 +72,23 @@
           errors: customer.errors[:vehicle_kind],
           hint: "Only active vehicle types appear here.",
           empty_message: "No active vehicle types are available right now.",
+          required: true,
           disabled: lock_vehicle_fields %>
+      </div>
+
+      <div class="<%= "d-none" if lock_vehicle_fields %>" data-registration-editable-group="commercial_registration">
+        <%= render "shared/commercial_vehicle_fields",
+          scope_name: customer.model_name.param_key,
+          field_id_prefix: "customer",
+          values: {
+            commercial_company_name: selected_commercial_company_name,
+            commercial_contact_name: selected_commercial_contact_name,
+            commercial_contact_phone_number: selected_commercial_contact_phone_number,
+            commercial_address: selected_commercial_address,
+            commercial_notes: selected_commercial_notes
+          },
+          errors: customer.errors,
+          visible: commercial_vehicle_selected %>
       </div>
 
       <% if lock_vehicle_fields && selected_vehicle_number.present? %>

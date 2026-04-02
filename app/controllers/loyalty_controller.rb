@@ -59,6 +59,7 @@ class LoyaltyController < ApplicationController
       # reusing the original redirect token.
       @lookup_token = LoyaltyLookupToken.generate(@phone_number)
       @total_points = @customer.total_points
+      @rewards_paused = @customer.rewards_paused?
       @minimum_redeemable_points = @customer.minimum_redeemable_points
       @redeemable_points = @customer.max_redeemable_points
       @points_until_redeemable = @customer.points_until_redeemable

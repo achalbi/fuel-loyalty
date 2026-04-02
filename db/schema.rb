@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_02_151000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_02_184500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -85,6 +85,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_02_151000) do
     t.datetime "created_at", null: false
     t.string "name"
     t.string "phone_number", null: false
+    t.boolean "rewards_paused", default: false, null: false
     t.datetime "updated_at", null: false
     t.string "vehicle_number"
     t.index ["phone_number"], name: "index_customers_on_phone_number", unique: true
@@ -356,6 +357,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_02_151000) do
   end
 
   create_table "vehicles", force: :cascade do |t|
+    t.text "commercial_address"
+    t.string "commercial_company_name"
+    t.string "commercial_contact_name"
+    t.string "commercial_contact_phone_number"
+    t.text "commercial_notes"
     t.datetime "created_at", null: false
     t.bigint "customer_id", null: false
     t.string "fuel_type", null: false

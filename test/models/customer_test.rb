@@ -1,6 +1,13 @@
 require "test_helper"
 
 class CustomerTest < ActiveSupport::TestCase
+  test "requires a customer name" do
+    customer = Customer.new(name: "", phone_number: "9876543210")
+
+    assert_not customer.valid?
+    assert_includes customer.errors.full_messages, "Name can't be blank"
+  end
+
   test "normalizes and validates a 10 digit phone number" do
     customer = Customer.new(name: "Ravi", phone_number: "98765 43210")
 

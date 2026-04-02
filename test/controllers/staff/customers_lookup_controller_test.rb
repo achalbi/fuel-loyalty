@@ -17,6 +17,8 @@ module Staff
       assert payload["found"]
       assert_equal "Arun", payload.dig("customer", "name")
       assert_equal true, payload.dig("customer", "active")
+      assert_equal false, payload.dig("customer", "rewards_paused")
+      assert_equal "Rewards Active", payload.dig("customer", "rewards_status_label")
       assert_equal "Active", payload.dig("customer", "status_label")
       assert_equal 0.5, payload.dig("customer", "cash_value_per_point")
       assert_equal 200, payload.dig("customer", "minimum_redeemable_points")
@@ -76,6 +78,18 @@ module Staff
       patch activate_staff_customer_path(customers(:one))
       assert_redirected_to customer_path(customers(:one))
       assert customers(:one).reload.active?
+    end
+
+    test "staff can pause and resume customer rewards" do
+      sign_in users(:two)
+
+      patch pause_rewards_staff_customer_path(customers(:one))
+      assert_redirected_to customer_path(customers(:one))
+      assert customers(:one).reload.rewards_paused?
+
+      patch resume_rewards_staff_customer_path(customers(:one))
+      assert_redirected_to customer_path(customers(:one))
+      refute customers(:one).reload.rewards_paused?
     end
   end
 end

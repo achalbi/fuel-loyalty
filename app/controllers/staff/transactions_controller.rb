@@ -50,12 +50,18 @@ module Staff
       authorize Transaction
       result = TransactionCreator.call(user: current_user, **transaction_params.to_h.symbolize_keys)
 
-      redirect_to customer_path(result.customer), flash: {
-        transaction_summary: {
+      flash_payload = {}
+
+      if result.rewards_paused
+        flash_payload[:notice] = "Transaction recorded. Rewards are paused for this customer, so no points were added."
+      else
+        flash_payload[:transaction_summary] = {
           points_earned: result.points_earned,
           current_points: result.customer.total_points
         }
-      }
+      end
+
+      redirect_to customer_path(result.customer), flash: flash_payload
     rescue ActiveRecord::RecordInvalid => e
       @errors = e.record.errors.full_messages
       @transaction_error_step = transaction_error_step(e.record.errors)
@@ -84,14 +90,13 @@ module Staff
 
     def register_customer
       customer = build_registration_customer
-      was_new_record = customer.new_record?
-      authorize customer, :create?
+      existing_customer = customer.persisted?
+      authorize customer, existing_customer ? :update? : :create?
 
-      saved_vehicle = save_registration_vehicle(customer) if customer.save
+      registration_saved, saved_vehicle = persist_registration_customer_with_vehicle(customer, existing_customer:)
 
-      if customer.persisted? && saved_vehicle != false
-        notice = was_new_record ? "Customer created successfully. Continue recording the transaction." : "Customer updated successfully. Continue recording the transaction."
-        redirect_to new_staff_transaction_path(transaction: transaction_prefill_for_registered_customer(customer, saved_vehicle)), notice:
+      if registration_saved
+        redirect_to new_staff_transaction_path(transaction: transaction_prefill_for_registered_customer(customer, saved_vehicle)), notice: registration_success_notice(existing_customer:, vehicle: saved_vehicle)
       else
         assign_prefill_values
         load_transaction_pump_state
@@ -162,7 +167,18 @@ module Staff
     end
 
     def registration_customer_params
-      params.require(:customer).permit(:name, :phone_number, :vehicle_number, :fuel_type, :vehicle_kind)
+      params.require(:customer).permit(
+        :name,
+        :phone_number,
+        :vehicle_number,
+        :fuel_type,
+        :vehicle_kind,
+        :commercial_company_name,
+        :commercial_contact_name,
+        :commercial_contact_phone_number,
+        :commercial_address,
+        :commercial_notes
+      )
     end
 
     def transaction_lookup_params
@@ -171,23 +187,27 @@ module Staff
 
     def build_registration_customer
       normalized_phone = Customer.normalize_phone_number(registration_customer_params[:phone_number])
-      Customer.find_or_initialize_by(phone_number: normalized_phone).tap do |customer|
-        customer.phone_number = normalized_phone
+      existing_customer = Customer.find_by(phone_number: normalized_phone)
+      return existing_customer if existing_customer.present?
+
+      Customer.new(phone_number: normalized_phone).tap do |customer|
         customer.name = registration_customer_params[:name] if registration_customer_params[:name].present?
         customer.vehicle_number = Vehicle.normalize_vehicle_number(registration_customer_params[:vehicle_number]) if customer.respond_to?(:vehicle_number=)
       end
     end
 
     def save_registration_vehicle(customer)
-      normalized_vehicle_number = Vehicle.normalize_vehicle_number(registration_customer_params[:vehicle_number])
-      return nil if normalized_vehicle_number.blank?
-
-      vehicle = customer.vehicles.find_or_initialize_by(vehicle_number: normalized_vehicle_number)
+      vehicle = customer.vehicles.find_or_initialize_by(vehicle_number: Vehicle.normalize_vehicle_number(registration_customer_params[:vehicle_number]))
       return vehicle if vehicle.persisted?
 
       vehicle.assign_attributes(
         fuel_type: registration_customer_params[:fuel_type],
-        vehicle_kind: registration_customer_params[:vehicle_kind]
+        vehicle_kind: registration_customer_params[:vehicle_kind],
+        commercial_company_name: registration_customer_params[:commercial_company_name],
+        commercial_contact_name: registration_customer_params[:commercial_contact_name],
+        commercial_contact_phone_number: registration_customer_params[:commercial_contact_phone_number],
+        commercial_address: registration_customer_params[:commercial_address],
+        commercial_notes: registration_customer_params[:commercial_notes]
       )
 
       return vehicle if vehicle.save
@@ -197,6 +217,46 @@ module Staff
       end
 
       false
+    end
+
+    def persist_registration_customer_with_vehicle(customer, existing_customer:)
+      return [ false, nil ] unless registration_fields_present?(customer, existing_customer:)
+
+      saved_vehicle = nil
+      success = false
+
+      Customer.transaction do
+        unless existing_customer || customer.save
+          raise ActiveRecord::Rollback
+        end
+
+        saved_vehicle = save_registration_vehicle(customer)
+        unless saved_vehicle != false
+          raise ActiveRecord::Rollback
+        end
+
+        success = true
+      end
+
+      [ success, saved_vehicle ]
+    end
+
+    def registration_fields_present?(customer, existing_customer:)
+      customer.valid? unless existing_customer
+
+      required_fields = {
+        name: registration_customer_params[:name],
+        phone_number: registration_customer_params[:phone_number],
+        vehicle_number: registration_customer_params[:vehicle_number],
+        fuel_type: registration_customer_params[:fuel_type],
+        vehicle_kind: registration_customer_params[:vehicle_kind]
+      }
+
+      required_fields.each do |field, value|
+        customer.errors.add(field, "can't be blank") if value.blank?
+      end
+
+      customer.errors.none?
     end
 
     def transaction_prefill_for_registered_customer(customer, vehicle)
@@ -226,12 +286,21 @@ module Staff
       end
     end
 
+    def registration_success_notice(existing_customer:, vehicle:)
+      return "Customer created successfully. Continue recording the transaction." unless existing_customer
+      return "Vehicle added to the existing customer. Continue recording the transaction." if vehicle&.previously_new_record?
+
+      "Existing customer details loaded. Continue recording the transaction."
+    end
+
     def customer_payload(customer)
       {
         id: customer.id,
         name: customer.display_name,
         phone_number: customer.phone_number,
         active: customer.active?,
+        rewards_paused: customer.rewards_paused?,
+        rewards_status_label: customer.rewards_status_label,
         status_label: customer.status_label,
         total_points: customer.total_points,
         vehicles: customer.vehicles.map do |vehicle|

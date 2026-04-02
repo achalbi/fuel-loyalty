@@ -925,6 +925,20 @@
   };
 
   const initializeLazyPointsLedger = () => {
+    const syncLedgerToggleState = (toggle, expanded) => {
+      if (!toggle) return;
+
+      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      toggle.setAttribute("aria-label", expanded ? "Collapse points activity" : "Expand points activity");
+      toggle.setAttribute("title", expanded ? "Collapse points activity" : "Expand points activity");
+
+      const icon = toggle.querySelector("[data-points-ledger-toggle-icon]");
+      if (!icon) return;
+
+      icon.classList.toggle("ti-chevron-down", !expanded);
+      icon.classList.toggle("ti-chevron-up", expanded);
+    };
+
     const renderLedgerErrorState = (panel) => {
       panel.innerHTML = `
         <div class="customer-details-ledger-state is-error">
@@ -974,9 +988,28 @@
       if (panel.dataset.pointsLedgerBound === "true") return;
 
       panel.dataset.pointsLedgerBound = "true";
+      const collapseElement = panel.closest("[data-points-ledger-collapse]");
       const modalElement = panel.closest(".modal");
       const initialUrl = panel.dataset.pointsLedgerUrl;
-      if (!modalElement || !initialUrl) return;
+      if (!initialUrl) return;
+
+      if (collapseElement) {
+        const toggle = document.querySelector(`[data-points-ledger-toggle][data-bs-target="#${collapseElement.id}"]`);
+        syncLedgerToggleState(toggle, collapseElement.classList.contains("show"));
+
+        collapseElement.addEventListener("shown.bs.collapse", () => {
+          syncLedgerToggleState(toggle, true);
+          loadLedgerPage(panel, panel.dataset.pointsLedgerUrl || initialUrl);
+        });
+
+        collapseElement.addEventListener("hidden.bs.collapse", () => {
+          syncLedgerToggleState(toggle, false);
+        });
+
+        return;
+      }
+
+      if (!modalElement) return;
 
       modalElement.addEventListener("shown.bs.modal", () => {
         loadLedgerPage(panel, panel.dataset.pointsLedgerUrl || initialUrl);
@@ -1116,6 +1149,61 @@
       input.addEventListener("invalid", () => {
         syncPhoneNumberValidity(input);
       });
+    });
+  };
+
+  const normalizeVehicleKindSelection = (value) => value.toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+
+  const initializeCommercialVehicleFields = () => {
+    document.querySelectorAll("[data-commercial-vehicle-form]").forEach((root) => {
+      const commercialFieldSections = Array.from(root.querySelectorAll("[data-commercial-vehicle-fields]"));
+      const vehicleKindInputs = Array.from(root.querySelectorAll("input[name$='[vehicle_kind]'], select[name$='[vehicle_kind]']"));
+
+      if (commercialFieldSections.length === 0 || vehicleKindInputs.length === 0) return;
+
+      const commercialKinds = new Set(
+        (root.dataset.commercialVehicleKinds || "lcv,mcv,hcv")
+          .split(",")
+          .map((value) => normalizeVehicleKindSelection(value))
+          .filter(Boolean)
+      );
+
+      const requiredInputs = Array.from(root.querySelectorAll("[data-commercial-required-field]"));
+      const selectedVehicleKind = () => {
+        const selectedRadio = vehicleKindInputs.find((input) => input.type === "radio" && input.checked);
+        if (selectedRadio) return normalizeVehicleKindSelection(selectedRadio.value);
+
+        const selectInput = vehicleKindInputs.find((input) => input.tagName === "SELECT");
+        return selectInput ? normalizeVehicleKindSelection(selectInput.value) : "";
+      };
+
+      const syncCommercialFields = () => {
+        const commercialSelected = commercialKinds.has(selectedVehicleKind());
+
+        commercialFieldSections.forEach((section) => {
+          section.classList.toggle("d-none", !commercialSelected);
+        });
+
+        requiredInputs.forEach((input) => {
+          input.required = commercialSelected;
+
+          if (!commercialSelected) {
+            input.setCustomValidity("");
+          }
+        });
+      };
+
+      if (root.dataset.commercialVehicleBound === "true") {
+        syncCommercialFields();
+        return;
+      }
+
+      root.dataset.commercialVehicleBound = "true";
+      vehicleKindInputs.forEach((input) => {
+        input.addEventListener("change", syncCommercialFields);
+      });
+
+      syncCommercialFields();
     });
   };
 
@@ -1675,6 +1763,8 @@
   document.addEventListener("DOMContentLoaded", initializeLazyTransactionHistory);
   document.addEventListener("turbo:load", initializePhoneNumberFields);
   document.addEventListener("DOMContentLoaded", initializePhoneNumberFields);
+  document.addEventListener("turbo:load", initializeCommercialVehicleFields);
+  document.addEventListener("DOMContentLoaded", initializeCommercialVehicleFields);
   document.addEventListener("turbo:load", initializeLoyaltyPointsHero);
   document.addEventListener("DOMContentLoaded", initializeLoyaltyPointsHero);
   document.addEventListener("turbo:load", initializeInstallPrompt);

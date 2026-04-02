@@ -1,5 +1,5 @@
 class TransactionCreator
-  Result = Struct.new(:customer, :transaction, :points_earned, keyword_init: true)
+  Result = Struct.new(:customer, :transaction, :points_earned, :rewards_paused, keyword_init: true)
 
   def self.call(...)
     new(...).call
@@ -30,15 +30,19 @@ class TransactionCreator
         fuel_pump: fuel_pump,
         fuel_pump_nozzle: fuel_pump_nozzle
       )
-      points = PointsCalculator.call(fuel_amount, fuel_type: vehicle.fuel_type, vehicle_kind: vehicle.vehicle_kind)
+      if customer.rewards_paused?
+        points = 0
+      else
+        points = PointsCalculator.call(fuel_amount, fuel_type: vehicle.fuel_type, vehicle_kind: vehicle.vehicle_kind)
 
-      customer.points_ledgers.create!(
-        fuel_transaction: transaction,
-        points: points,
-        entry_type: :earn
-      )
+        customer.points_ledgers.create!(
+          fuel_transaction: transaction,
+          points: points,
+          entry_type: :earn
+        )
+      end
 
-      Result.new(customer: customer, transaction: transaction, points_earned: points)
+      Result.new(customer: customer, transaction: transaction, points_earned: points, rewards_paused: customer.rewards_paused?)
     end
   end
 

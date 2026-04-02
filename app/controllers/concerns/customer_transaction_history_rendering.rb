@@ -14,7 +14,7 @@ module CustomerTransactionHistoryRendering
     current_page = total_pages if current_page > total_pages
 
     transaction_history_entries = customer.transactions
-      .includes(:fuel_pump, :vehicle, :user, fuel_pump_nozzle: %i[fuel_pump fuel_type_record])
+      .includes(:points_ledger, :fuel_pump, :vehicle, :user, fuel_pump_nozzle: %i[fuel_pump fuel_type_record])
       .order(created_at: :desc)
       .offset(TRANSACTION_PREVIEW_LIMIT + ((current_page - 1) * TRANSACTION_HISTORY_PER_PAGE))
       .limit(TRANSACTION_HISTORY_PER_PAGE)

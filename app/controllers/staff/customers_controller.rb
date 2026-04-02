@@ -12,15 +12,12 @@ module Staff
 
     def create
       normalized_phone = Customer.normalize_phone_number(customer_params[:phone_number])
-      @customer = Customer.find_or_initialize_by(phone_number: normalized_phone)
-      was_new_record = @customer.new_record?
+      @customer = Customer.new(phone_number: normalized_phone)
       authorize @customer
-      @customer.phone_number = normalized_phone
       @customer.name = customer_params[:name] if customer_params[:name].present?
 
-      if @customer.save && save_vehicle
-        notice = was_new_record ? "Customer created successfully." : "Customer updated successfully."
-        redirect_to customer_path(@customer), notice: notice
+      if persist_customer_with_vehicle
+        redirect_to customer_path(@customer), notice: "Customer created successfully."
       else
         load_index_state(form_customer: @customer)
         render :index, status: :unprocessable_entity
@@ -47,6 +44,8 @@ module Staff
             name: customer.display_name,
             phone_number: customer.phone_number,
             active: customer.active?,
+            rewards_paused: customer.rewards_paused?,
+            rewards_status_label: customer.rewards_status_label,
             status_label: customer.status_label,
             total_points: customer.total_points,
             cash_value_per_point: reward_setting.cash_value_per_point&.to_f,
@@ -82,6 +81,14 @@ module Staff
 
     def deactivate
       update_status!(false, "Customer marked as inactive.")
+    end
+
+    def pause_rewards
+      update_rewards_paused!(true, "Rewards paused for this customer.")
+    end
+
+    def resume_rewards
+      update_rewards_paused!(false, "Rewards resumed for this customer.")
     end
 
     private
@@ -128,18 +135,32 @@ module Staff
     end
 
     def customer_params
-      params.require(:customer).permit(:name, :phone_number, :vehicle_number, :fuel_type, :vehicle_kind)
+      params.require(:customer).permit(
+        :name,
+        :phone_number,
+        :vehicle_number,
+        :fuel_type,
+        :vehicle_kind,
+        :commercial_company_name,
+        :commercial_contact_name,
+        :commercial_contact_phone_number,
+        :commercial_address,
+        :commercial_notes
+      )
     end
 
     def save_vehicle
-      return true if customer_params[:vehicle_number].blank?
-
       vehicle = @customer.vehicles.find_or_initialize_by(vehicle_number: Vehicle.normalize_vehicle_number(customer_params[:vehicle_number]))
-      return true if vehicle.persisted?
+      return vehicle if vehicle.persisted?
 
       vehicle.assign_attributes(
         fuel_type: customer_params[:fuel_type],
-        vehicle_kind: customer_params[:vehicle_kind]
+        vehicle_kind: customer_params[:vehicle_kind],
+        commercial_company_name: customer_params[:commercial_company_name],
+        commercial_contact_name: customer_params[:commercial_contact_name],
+        commercial_contact_phone_number: customer_params[:commercial_contact_phone_number],
+        commercial_address: customer_params[:commercial_address],
+        commercial_notes: customer_params[:commercial_notes]
       )
 
       vehicle.save.tap do |saved|
@@ -151,12 +172,52 @@ module Staff
       end
     end
 
+    def persist_customer_with_vehicle
+      return false unless initial_vehicle_fields_present?
+
+      success = false
+
+      Customer.transaction do
+        unless @customer.save && save_vehicle
+          raise ActiveRecord::Rollback
+        end
+
+        success = true
+      end
+
+      success
+    end
+
+    def initial_vehicle_fields_present?
+      @customer.valid?
+
+      required_fields = {
+        vehicle_number: customer_params[:vehicle_number],
+        fuel_type: customer_params[:fuel_type],
+        vehicle_kind: customer_params[:vehicle_kind]
+      }
+
+      required_fields.each do |field, value|
+        @customer.errors.add(field, "can't be blank") if value.blank?
+      end
+
+      @customer.errors.none?
+    end
+
     def update_status!(active, notice_message)
       customer = Customer.find(params[:id])
       authorize customer, active ? :activate? : :deactivate?
       customer.update!(active: active)
 
       redirect_to customer_path(customer), notice: notice_message
+    end
+
+    def update_rewards_paused!(paused, notice_message)
+      customer = Customer.find(params[:id])
+      authorize customer, paused ? :pause_rewards? : :resume_rewards?
+      customer.update!(rewards_paused: paused)
+
+      redirect_back fallback_location: customer_path(customer), notice: notice_message
     end
   end
 end

@@ -19,7 +19,7 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "9000000011", customers(:one).reload.phone_number
   end
 
-  test "staff customer page previews three ledger entries and lazy loads more in modal" do
+  test "staff customer page keeps points ledger collapsed and loads the full ledger inline" do
     sign_in users(:two)
     RewardSetting.current.update!(cash_value_per_point: 0.5)
     customer = Customer.create!(name: "Ledger Customer", phone_number: "9000000099")
@@ -34,22 +34,22 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
 
     get customer_path(customer)
     assert_response :success
-    assert_select ".customer-details-ledger-item", 3
-    assert_select ".customer-details-ledger-item__cash", 3
-    assert_select "[data-bs-target='#pointsLedgerModal']"
+    assert_select "#pointsLedgerCollapse.collapse[data-points-ledger-collapse]"
+    assert_select "[data-points-ledger-toggle][data-bs-target='#pointsLedgerCollapse'][aria-expanded='false']"
     assert_select "[data-points-ledger-panel][data-points-ledger-url='#{points_ledger_customer_path(customer, page: 1)}']"
+    assert_select ".customer-details-ledger-item", 0
 
     get points_ledger_customer_path(customer, page: 1)
     assert_response :success
     assert_select ".customer-details-ledger-item", 5
     assert_select ".customer-details-ledger-item__cash", 5
-    assert_match "Showing <strong>1-5</strong> of <strong>9</strong> more entries", response.body
+    assert_match "Showing <strong>1-5</strong> of <strong>12</strong> entries", response.body
 
     get points_ledger_customer_path(customer, page: 2)
     assert_response :success
-    assert_select ".customer-details-ledger-item", 4
-    assert_select ".customer-details-ledger-item__cash", 4
-    assert_match "Showing <strong>6-9</strong> of <strong>9</strong> more entries", response.body
+    assert_select ".customer-details-ledger-item", 5
+    assert_select ".customer-details-ledger-item__cash", 5
+    assert_match "Showing <strong>6-10</strong> of <strong>12</strong> entries", response.body
   end
 
   test "staff customer page shows recorded cash values even after the reward setting changes" do
@@ -59,7 +59,7 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     customer.points_ledgers.create!(points: 10, entry_type: :earn)
     RewardSetting.current.update!(cash_value_per_point: 1.0)
 
-    get customer_path(customer)
+    get points_ledger_customer_path(customer, page: 1)
 
     assert_response :success
     assert_select ".customer-details-ledger-item__cash", text: /₹5\.00/
@@ -68,6 +68,12 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
 
   test "staff customer page uses the compact customer actions menu" do
     sign_in users(:two)
+    expected_transaction_path = new_staff_transaction_path(transaction: {
+      lookup_mode: "vehicle",
+      phone_number: customers(:one).phone_number,
+      vehicle_number: vehicles(:one).vehicle_number,
+      vehicle_id: vehicles(:one).id
+    })
 
     get customer_path(customers(:one))
     assert_response :success
@@ -76,8 +82,26 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_select ".customer-details-hero__menu .customer-details-vehicle-row__menu-toggle", 1
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Edit Customer"
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Mark Inactive"
+    assert_select ".customer-details-hero__menu .dropdown-item", text: "Pause Rewards"
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Delete Customer", count: 0
     assert_select "#editCustomerModal"
+    assert_select "a.customer-details-vehicle-row__transaction-link[aria-label=?][title=?][href=?]",
+      "New transaction for #{vehicles(:one).vehicle_number}",
+      "New transaction for #{vehicles(:one).vehicle_number}",
+      expected_transaction_path,
+      1
+  end
+
+  test "staff customer page shows rewards paused state and resume action" do
+    sign_in users(:two)
+    customers(:one).update!(rewards_paused: true)
+
+    get customer_path(customers(:one))
+
+    assert_response :success
+    assert_select ".customer-details-hero__chip--warning", text: "Rewards Paused"
+    assert_select ".customer-details-hero__menu .dropdown-item", text: "Resume Rewards"
+    assert_select ".customer-details-hero__menu .dropdown-item", text: "Pause Rewards", count: 0
   end
 
   test "staff customer page shows the cash equivalent when cash reward is configured" do
@@ -107,12 +131,13 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
 
   test "staff customer page previews three transactions and lazy loads more in modal" do
     sign_in users(:two)
+    RewardSetting.current.update!(cash_value_per_point: 0.5)
     customer = Customer.create!(name: "Transaction Customer", phone_number: "9000000077")
     user = users(:two)
     vehicle = customer.vehicles.create!(vehicle_number: "TN01AB1234", fuel_type: :petrol, vehicle_kind: :lmv)
 
     8.times do |index|
-      customer.transactions.create!(
+      transaction = customer.transactions.create!(
         user:,
         vehicle:,
         fuel_amount: 100 + index,
@@ -120,12 +145,15 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
         fuel_pump_nozzle: fuel_pump_nozzles(:one),
         created_at: Time.current + index.minutes
       )
+      customer.points_ledgers.create!(fuel_transaction: transaction, points: index + 3, entry_type: :earn, created_at: transaction.created_at)
     end
 
     get customer_path(customer)
     assert_response :success
     assert_select ".customer-details-history-row", 3
     assert_select ".customer-details-history-row__location", text: /Pump 1.*Nozzle 1.*Petrol/m, count: 3
+    assert_select ".customer-details-history-row__reward-points", text: /Reward Points:.*\+/, count: 3
+    assert_select ".customer-details-history-row__reward-cash", text: /Cash Reward:.*₹/, count: 3
     assert_select "[data-bs-target='#transactionHistoryModal']"
     assert_select "[data-transaction-history-panel][data-transaction-history-url='#{transaction_history_customer_path(customer, page: 1)}']"
 
@@ -133,6 +161,8 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".customer-details-history-row", 5
     assert_select ".customer-details-history-row__location", text: /Pump 1.*Nozzle 1.*Petrol/m, count: 5
+    assert_select ".customer-details-history-row__reward-points", count: 5
+    assert_select ".customer-details-history-row__reward-cash", count: 5
     assert_match "Showing <strong>1-5</strong> of <strong>5</strong> more transactions", response.body
   end
 end

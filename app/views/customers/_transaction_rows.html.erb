@@ -1,0 +1,37 @@
+<% transactions.each do |transaction| %>
+  <% pump_nozzle_summary = transaction_pump_nozzle_summary(transaction) %>
+  <% reward_entry = transaction.points_ledger %>
+  <% reward_points_label = reward_entry.present? ? (reward_entry.points.positive? ? "+#{reward_entry.points}" : reward_entry.points.to_s) : nil %>
+  <div class="customer-details-vehicle-row customer-details-history-row">
+    <div class="customer-details-vehicle-row__main customer-details-history-row__main">
+      <div class="customer-details-vehicle-row__number customer-details-history-row__vehicle">
+        <%= transaction.vehicle&.vehicle_number || "Vehicle not linked" %>
+      </div>
+      <div class="customer-details-history-row__handled-by">
+        Handled by <strong><%= transaction.user.display_name %></strong>
+      </div>
+      <% if pump_nozzle_summary.present? %>
+        <div class="transaction-location-meta customer-details-history-row__location">
+          <i class="ti ti-gas-station" aria-hidden="true"></i>
+          <span><%= pump_nozzle_summary %></span>
+        </div>
+      <% end %>
+      <% if reward_entry.present? %>
+        <div class="customer-details-history-row__rewards">
+          <span class="customer-details-history-row__reward-points">
+            Reward Points: <strong><%= reward_points_label %></strong>
+          </span>
+          <% if reward_entry.recorded_cash_reward? %>
+            <span class="customer-details-history-row__reward-cash">
+              Cash Reward: <strong><%= number_to_currency(reward_entry.recorded_cash_reward_amount, unit: "₹") %></strong>
+            </span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+    <div class="customer-details-history-row__side">
+      <span class="customer-details-history-item__amount"><%= number_to_currency(transaction.fuel_amount, unit: "₹") %></span>
+      <span class="customer-details-history-row__date"><%= l(transaction.created_at, format: :short) %></span>
+    </div>
+  </div>
+<% end %>

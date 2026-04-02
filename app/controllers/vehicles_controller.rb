@@ -53,7 +53,16 @@ class VehiclesController < ApplicationController
   end
 
   def vehicle_params
-    params.require(:vehicle).permit(:vehicle_number, :fuel_type, :vehicle_kind).to_h.merge(
+    params.require(:vehicle).permit(
+      :vehicle_number,
+      :fuel_type,
+      :vehicle_kind,
+      :commercial_company_name,
+      :commercial_contact_name,
+      :commercial_contact_phone_number,
+      :commercial_address,
+      :commercial_notes
+    ).to_h.merge(
       vehicle_number: Vehicle.normalize_vehicle_number(params.dig(:vehicle, :vehicle_number))
     )
   end

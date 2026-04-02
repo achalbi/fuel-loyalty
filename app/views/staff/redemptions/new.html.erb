@@ -285,6 +285,13 @@
           populateRedeemableOptions(minimumRedeemablePoints, maxRedeemablePoints, pointsSelect.dataset.prefillValue || pointsSelect.value);
           pointsSelect.dataset.prefillValue = "";
 
+          if (payload.customer.rewards_paused) {
+            redeemNoteTarget.textContent = "Rewards are paused for this customer.";
+            redeemNoteTarget.className = "redemption-customer-card__note is-pending";
+            showError("Rewards are paused for this customer. Resume rewards to redeem points.", { keepPanel: true });
+            return;
+          }
+
           if (maxRedeemablePoints >= minimumRedeemablePoints) {
             redeemNoteTarget.textContent = `Ready to redeem from ${numberFormatter.format(minimumRedeemablePoints)} to ${numberFormatter.format(maxRedeemablePoints)} points`;
             redeemNoteTarget.className = "redemption-customer-card__note is-redeemable";
