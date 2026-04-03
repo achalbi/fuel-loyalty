@@ -1,0 +1,186 @@
+en:
+  loyalty:
+    shared:
+      staff_login: "Staff Login"
+    push:
+      enabled_button_text: "Notifications Enabled"
+      off_button_text: "Notifications Off"
+      app_disabled_message: "Notifications are turned off for this device in the app."
+      app_disabled_help: "Tap Enable Notifications to subscribe this device again."
+      enabled_message: "Push notifications are enabled on this device."
+      browser_disabled_message: "Notifications are currently turned off for this browser profile."
+      browser_disabled_help: "Turn notifications on in your browser or device settings, then reload this page."
+      permission_pending_message: "Notifications are not enabled on this device yet."
+      permission_pending_help: "Tap Enable Notifications whenever you're ready to allow alerts."
+      registration_error_help: "We could not complete push registration on this device. Please try again."
+      disable_error_help: "We could not turn off notifications on this device right now. Please try again."
+
+hi:
+  loyalty:
+    shared:
+      staff_login: "स्टाफ लॉगिन"
+    push:
+      enabled_button_text: "सूचनाएं चालू हैं"
+      off_button_text: "सूचनाएं बंद हैं"
+      app_disabled_message: "इस डिवाइस पर ऐप के अंदर सूचनाएं बंद हैं।"
+      app_disabled_help: "इस डिवाइस को फिर से सदस्यता देने के लिए सूचनाएं चालू करें पर टैप करें।"
+      enabled_message: "इस डिवाइस पर पुश सूचनाएं चालू हैं।"
+      browser_disabled_message: "इस ब्राउज़र प्रोफ़ाइल में अभी सूचनाएं बंद हैं।"
+      browser_disabled_help: "अपने ब्राउज़र या डिवाइस सेटिंग्स में सूचनाएं चालू करें, फिर इस पेज को दोबारा लोड करें।"
+      permission_pending_message: "इस डिवाइस पर अभी सूचनाएं चालू नहीं हैं।"
+      permission_pending_help: "जब आप अलर्ट की अनुमति देना चाहें, तब सूचनाएं चालू करें पर टैप करें।"
+      registration_error_help: "इस डिवाइस पर पुश पंजीकरण पूरा नहीं हो सका। कृपया फिर से कोशिश करें।"
+      disable_error_help: "अभी इस डिवाइस पर सूचनाएं बंद नहीं की जा सकीं। कृपया फिर से कोशिश करें।"
+
+kn:
+  loyalty:
+    shared:
+      staff_login: "ಸ್ಟಾಫ್ ಲಾಗಿನ್"
+    push:
+      enabled_button_text: "ಸೂಚನೆಗಳು ಸಕ್ರಿಯವಾಗಿವೆ"
+      off_button_text: "ಸೂಚನೆಗಳು ನಿಷ್ಕ್ರಿಯವಾಗಿವೆ"
+      app_disabled_message: "ಈ ಸಾಧನದಲ್ಲಿ ಆಪ್ ಒಳಗೆ ಸೂಚನೆಗಳನ್ನು ಆಫ್ ಮಾಡಲಾಗಿದೆ."
+      app_disabled_help: "ಈ ಸಾಧನವನ್ನು ಮತ್ತೆ ಸಬ್‌ಸ್ಕ್ರೈಬ್ ಮಾಡಲು ಸೂಚನೆಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ ಅನ್ನು ತಟ್ಟಿರಿ."
+      enabled_message: "ಈ ಸಾಧನದಲ್ಲಿ ಪುಶ್ ಸೂಚನೆಗಳು ಸಕ್ರಿಯವಾಗಿವೆ."
+      browser_disabled_message: "ಈ ಬ್ರೌಸರ್ ಪ್ರೊಫೈಲ್‌ನಲ್ಲಿ ಸೂಚನೆಗಳನ್ನು ಈಗ ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ."
+      browser_disabled_help: "ನಿಮ್ಮ ಬ್ರೌಸರ್ ಅಥವಾ ಸಾಧನದ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಸೂಚನೆಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ, ನಂತರ ಈ ಪುಟವನ್ನು ಮರುಲೋಡ್ ಮಾಡಿ."
+      permission_pending_message: "ಈ ಸಾಧನದಲ್ಲಿ ಇನ್ನೂ ಸೂಚನೆಗಳು ಸಕ್ರಿಯವಾಗಿಲ್ಲ."
+      permission_pending_help: "ಅಲರ್ಟ್‌ಗಳಿಗೆ ಅನುಮತಿ ನೀಡಲು ಸಿದ್ಧರಾದಾಗ ಸೂಚನೆಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ ಅನ್ನು ತಟ್ಟಿರಿ."
+      registration_error_help: "ಈ ಸಾಧನದಲ್ಲಿ ಪುಶ್ ನೋಂದಣಿ ಪೂರ್ಣಗೊಳಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
+      disable_error_help: "ಈ ಸಾಧನದಲ್ಲಿ ಸೂಚನೆಗಳನ್ನು ಈಗ ಆಫ್ ಮಾಡಲು ಆಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
+
+ta:
+  loyalty:
+    shared:
+      staff_login: "ஸ்டாஃப் லாகின்"
+    push:
+      enabled_button_text: "அறிவிப்புகள் இயக்கப்பட்டுள்ளன"
+      off_button_text: "அறிவிப்புகள் நிறுத்தப்பட்டுள்ளன"
+      app_disabled_message: "இந்த சாதனத்தில் ஆப்பில் அறிவிப்புகள் அணைக்கப்பட்டுள்ளன."
+      app_disabled_help: "இந்த சாதனத்தை மீண்டும் சேர்க்க அறிவிப்புகளை இயக்கு என்பதைத் தட்டுங்கள்."
+      enabled_message: "இந்த சாதனத்தில் புஷ் அறிவிப்புகள் இயக்கப்பட்டுள்ளன."
+      browser_disabled_message: "இந்த உலாவி சுயவிவரத்தில் அறிவிப்புகள் தற்போது அணைக்கப்பட்டுள்ளன."
+      browser_disabled_help: "உங்கள் உலாவி அல்லது சாதன அமைப்புகளில் அறிவிப்புகளை இயக்கி, பின்னர் இந்தப் பக்கத்தை மீண்டும் ஏற்றுங்கள்."
+      permission_pending_message: "இந்த சாதனத்தில் இன்னும் அறிவிப்புகள் இயக்கப்படவில்லை."
+      permission_pending_help: "அலர்ட்களை அனுமதிக்க தயாரானபோது அறிவிப்புகளை இயக்கு என்பதைத் தட்டுங்கள்."
+      registration_error_help: "இந்த சாதனத்தில் புஷ் பதிவு முடிக்கப்படவில்லை. மீண்டும் முயற்சிக்கவும்."
+      disable_error_help: "இந்த சாதனத்தில் அறிவிப்புகளை இப்போது அணைக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."
+
+te:
+  loyalty:
+    shared:
+      staff_login: "స్టాఫ్ లాగిన్"
+    push:
+      enabled_button_text: "నోటిఫికేషన్‌లు ప్రారంభించబడ్డాయి"
+      off_button_text: "నోటిఫికేషన్‌లు ఆపబడ్డాయి"
+      app_disabled_message: "ఈ పరికరంలో యాప్‌లో నోటిఫికేషన్‌లు ఆఫ్ చేయబడ్డాయి."
+      app_disabled_help: "ఈ పరికరాన్ని మళ్లీ సభ్యత్వంలోకి చేర్చడానికి నోటిఫికేషన్‌లు ప్రారంభించండి పై నొక్కండి."
+      enabled_message: "ఈ పరికరంలో పుష్ నోటిఫికేషన్‌లు ప్రారంభించబడ్డాయి."
+      browser_disabled_message: "ఈ బ్రౌజర్ ప్రొఫైల్‌లో నోటిఫికేషన్‌లు ప్రస్తుతం ఆఫ్‌లో ఉన్నాయి."
+      browser_disabled_help: "మీ బ్రౌజర్ లేదా పరికర సెట్టింగ్‌లలో నోటిఫికేషన్‌లను ప్రారంభించి, తర్వాత ఈ పేజీని మళ్లీ లోడ్ చేయండి."
+      permission_pending_message: "ఈ పరికరంలో ఇంకా నోటిఫికేషన్‌లు ప్రారంభించబడలేదు."
+      permission_pending_help: "అలర్ట్‌లకు అనుమతి ఇవ్వడానికి సిద్ధమైనప్పుడు నోటిఫికేషన్‌లు ప్రారంభించండి పై నొక్కండి."
+      registration_error_help: "ఈ పరికరంలో పుష్ నమోదు పూర్తి కాలేదు. దయచేసి మళ్లీ ప్రయత్నించండి."
+      disable_error_help: "ఈ పరికరంలో నోటిఫికేషన్‌లను ఇప్పుడే ఆఫ్ చేయలేకపోయాము. దయచేసి మళ్లీ ప్రయత్నించండి."
+
+ml:
+  loyalty:
+    shared:
+      staff_login: "സ്റ്റാഫ് ലോഗിൻ"
+    push:
+      enabled_button_text: "അറിയിപ്പുകൾ പ്രവർത്തനക്ഷമമാണ്"
+      off_button_text: "അറിയിപ്പുകൾ ഓഫ് ആണ്"
+      app_disabled_message: "ഈ ഉപകരണത്തിൽ ആപ്പിനുള്ളിൽ അറിയിപ്പുകൾ ഓഫ് ചെയ്തിരിക്കുന്നു."
+      app_disabled_help: "ഈ ഉപകരണം വീണ്ടും സബ്സ്ക്രൈബ് ചെയ്യാൻ അറിയിപ്പുകൾ സജീവമാക്കുക അമർത്തുക."
+      enabled_message: "ഈ ഉപകരണത്തിൽ പുഷ് അറിയിപ്പുകൾ പ്രവർത്തനക്ഷമമാണ്."
+      browser_disabled_message: "ഈ ബ്രൗസർ പ്രൊഫൈലിൽ അറിയിപ്പുകൾ ഇപ്പോൾ ഓഫ് ചെയ്തിരിക്കുന്നു."
+      browser_disabled_help: "നിങ്ങളുടെ ബ്രൗസർ അല്ലെങ്കിൽ ഉപകരണ ക്രമീകരണങ്ങളിൽ അറിയിപ്പുകൾ സജീവമാക്കി, ശേഷം ഈ പേജ് വീണ്ടും ലോഡ് ചെയ്യുക."
+      permission_pending_message: "ഈ ഉപകരണത്തിൽ ഇതുവരെ അറിയിപ്പുകൾ സജീവമാക്കിയിട്ടില്ല."
+      permission_pending_help: "അലർട്ടുകൾക്ക് അനുമതി നൽകാൻ തയ്യാറാകുമ്പോൾ അറിയിപ്പുകൾ സജീവമാക്കുക അമർത്തുക."
+      registration_error_help: "ഈ ഉപകരണത്തിൽ പുഷ് രജിസ്ട്രേഷൻ പൂർത്തിയാക്കാൻ കഴിഞ്ഞില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
+      disable_error_help: "ഈ ഉപകരണത്തിൽ അറിയിപ്പുകൾ ഇപ്പോൾ ഓഫ് ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
+
+or:
+  loyalty:
+    shared:
+      staff_login: "ଷ୍ଟାଫ୍ ଲଗଇନ୍"
+    push:
+      enabled_button_text: "ନୋଟିଫିକେସନ୍ ଚାଲୁ ଅଛି"
+      off_button_text: "ନୋଟିଫିକେସନ୍ ବନ୍ଦ ଅଛି"
+      app_disabled_message: "ଏହି ଡିଭାଇସ୍‌ରେ ଆପ୍‌ ଭିତରେ ନୋଟିଫିକେସନ୍ ବନ୍ଦ କରାଯାଇଛି।"
+      app_disabled_help: "ଏହି ଡିଭାଇସ୍‌କୁ ପୁନର୍ବାର ସବ୍ସକ୍ରାଇବ୍ କରିବା ପାଇଁ ନୋଟିଫିକେସନ୍ ଚାଲୁ କରନ୍ତୁ ଉପରେ ଟାପ୍ କରନ୍ତୁ।"
+      enabled_message: "ଏହି ଡିଭାଇସ୍‌ରେ ପୁଶ୍ ନୋଟିଫିକେସନ୍ ଚାଲୁ ଅଛି।"
+      browser_disabled_message: "ଏହି ବ୍ରାଉଜର୍ ପ୍ରୋଫାଇଲ୍‌ରେ ନୋଟିଫିକେସନ୍ ବର୍ତ୍ତମାନ ବନ୍ଦ ଅଛି।"
+      browser_disabled_help: "ଆପଣଙ୍କ ବ୍ରାଉଜର୍ କିମ୍ବା ଡିଭାଇସ୍ ସେଟିଂସ୍‌ରେ ନୋଟିଫିକେସନ୍ ଚାଲୁ କରି, ପରେ ଏହି ପୃଷ୍ଠାକୁ ପୁନଃଲୋଡ୍ କରନ୍ତୁ।"
+      permission_pending_message: "ଏହି ଡିଭାଇସ୍‌ରେ ଏପର୍ଯ୍ୟନ୍ତ ନୋଟିଫିକେସନ୍ ଚାଲୁ ହୋଇନାହିଁ।"
+      permission_pending_help: "ଆଲର୍ଟ ଅନୁମତି ଦେବାକୁ ପ୍ରସ୍ତୁତ ହେଲେ ନୋଟିଫିକେସନ୍ ଚାଲୁ କରନ୍ତୁ ଉପରେ ଟାପ୍ କରନ୍ତୁ।"
+      registration_error_help: "ଏହି ଡିଭାଇସ୍‌ରେ ପୁଶ୍ ରେଜିଷ୍ଟ୍ରେସନ୍ ସମ୍ପୂର୍ଣ୍ଣ ହୋଇନାହିଁ। ଦୟାକରି ପୁନି ଚେଷ୍ଟା କରନ୍ତୁ।"
+      disable_error_help: "ଏହି ଡିଭାଇସ୍‌ରେ ବର୍ତ୍ତମାନ ନୋଟିଫିକେସନ୍ ବନ୍ଦ କରିପାରିଲୁ ନାହିଁ। ଦୟାକରି ପୁନି ଚେଷ୍ଟା କରନ୍ତୁ।"
+
+bn:
+  loyalty:
+    shared:
+      staff_login: "স্টাফ লগইন"
+    push:
+      enabled_button_text: "নোটিফিকেশন চালু আছে"
+      off_button_text: "নোটিফিকেশন বন্ধ আছে"
+      app_disabled_message: "এই ডিভাইসে অ্যাপের মধ্যে নোটিফিকেশন বন্ধ করা আছে।"
+      app_disabled_help: "এই ডিভাইসটিকে আবার সাবস্ক্রাইব করতে নোটিফিকেশন চালু করুন-এ ট্যাপ করুন।"
+      enabled_message: "এই ডিভাইসে পুশ নোটিফিকেশন চালু আছে।"
+      browser_disabled_message: "এই ব্রাউজার প্রোফাইলে নোটিফিকেশন বর্তমানে বন্ধ আছে।"
+      browser_disabled_help: "আপনার ব্রাউজার বা ডিভাইসের সেটিংসে নোটিফিকেশন চালু করে তারপর এই পেজটি আবার লোড করুন।"
+      permission_pending_message: "এই ডিভাইসে এখনও নোটিফিকেশন চালু হয়নি।"
+      permission_pending_help: "অ্যালার্টের অনুমতি দিতে প্রস্তুত হলে নোটিফিকেশন চালু করুন-এ ট্যাপ করুন।"
+      registration_error_help: "এই ডিভাইসে পুশ রেজিস্ট্রেশন সম্পূর্ণ করা যায়নি। আবার চেষ্টা করুন।"
+      disable_error_help: "এই ডিভাইসে এখন নোটিফিকেশন বন্ধ করা যায়নি। আবার চেষ্টা করুন।"
+
+mr:
+  loyalty:
+    shared:
+      staff_login: "स्टाफ लॉगिन"
+    push:
+      enabled_button_text: "सूचना सुरू आहेत"
+      off_button_text: "सूचना बंद आहेत"
+      app_disabled_message: "या डिव्हाइसवर अॅपमध्ये सूचना बंद केल्या आहेत."
+      app_disabled_help: "हे डिव्हाइस पुन्हा सदस्यता घेण्यासाठी सूचना सुरू करा वर टॅप करा."
+      enabled_message: "या डिव्हाइसवर पुश सूचना सुरू आहेत."
+      browser_disabled_message: "या ब्राउझर प्रोफाइलमध्ये सूचना सध्या बंद आहेत."
+      browser_disabled_help: "तुमच्या ब्राउझर किंवा डिव्हाइस सेटिंगमध्ये सूचना सुरू करा, मग हे पृष्ठ पुन्हा लोड करा."
+      permission_pending_message: "या डिव्हाइसवर अजून सूचना सुरू झालेल्या नाहीत."
+      permission_pending_help: "अलर्टना परवानगी द्यायला तयार झाल्यावर सूचना सुरू करा वर टॅप करा."
+      registration_error_help: "या डिव्हाइसवर पुश नोंदणी पूर्ण होऊ शकली नाही. कृपया पुन्हा प्रयत्न करा."
+      disable_error_help: "या डिव्हाइसवर सूचना आत्ता बंद करता आल्या नाहीत. कृपया पुन्हा प्रयत्न करा."
+
+gu:
+  loyalty:
+    shared:
+      staff_login: "સ્ટાફ લોગિન"
+    push:
+      enabled_button_text: "સૂચનાઓ ચાલુ છે"
+      off_button_text: "સૂચનાઓ બંધ છે"
+      app_disabled_message: "આ ડિવાઇસમાં એપની અંદર સૂચનાઓ બંધ કરવામાં આવી છે."
+      app_disabled_help: "આ ડિવાઇસને ફરીથી સબ્સ્ક્રાઇબ કરવા માટે સૂચનાઓ ચાલુ કરો પર ટૅપ કરો."
+      enabled_message: "આ ડિવાઇસમાં પુશ સૂચનાઓ ચાલુ છે."
+      browser_disabled_message: "આ બ્રાઉઝર પ્રોફાઇલમાં સૂચનાઓ હાલમાં બંધ છે."
+      browser_disabled_help: "તમારા બ્રાઉઝર અથવા ડિવાઇસ સેટિંગ્સમાં સૂચનાઓ ચાલુ કરો, પછી આ પેજ ફરીથી લોડ કરો."
+      permission_pending_message: "આ ડિવાઇસમાં હજી સૂચનાઓ ચાલુ નથી."
+      permission_pending_help: "અલર્ટની પરવાનગી આપવા તૈયાર થાઓ ત્યારે સૂચનાઓ ચાલુ કરો પર ટૅપ કરો."
+      registration_error_help: "આ ડિવાઇસમાં પુશ રજિસ્ટ્રેશન પૂર્ણ કરી શકાયું નથી. કૃપા કરીને ફરી પ્રયાસ કરો."
+      disable_error_help: "આ ડિવાઇસમાં સૂચનાઓ અત્યારે બંધ કરી શકાયી નથી. કૃપા કરીને ફરી પ્રયાસ કરો."
+
+pa:
+  loyalty:
+    shared:
+      staff_login: "ਸਟਾਫ਼ ਲਾਗਇਨ"
+    push:
+      enabled_button_text: "ਸੂਚਨਾਵਾਂ ਚਾਲੂ ਹਨ"
+      off_button_text: "ਸੂਚਨਾਵਾਂ ਬੰਦ ਹਨ"
+      app_disabled_message: "ਇਸ ਡਿਵਾਈਸ ਤੇ ਐਪ ਦੇ ਅੰਦਰ ਸੂਚਨਾਵਾਂ ਬੰਦ ਹਨ।"
+      app_disabled_help: "ਇਸ ਡਿਵਾਈਸ ਨੂੰ ਫਿਰ ਤੋਂ ਸਬਸਕ੍ਰਾਈਬ ਕਰਨ ਲਈ ਸੂਚਨਾਵਾਂ ਚਾਲੂ ਕਰੋ ਤੇ ਟੈਪ ਕਰੋ।"
+      enabled_message: "ਇਸ ਡਿਵਾਈਸ ਤੇ ਪੁਸ਼ ਸੂਚਨਾਵਾਂ ਚਾਲੂ ਹਨ।"
+      browser_disabled_message: "ਇਸ ਬ੍ਰਾਊਜ਼ਰ ਪ੍ਰੋਫ਼ਾਈਲ ਵਿੱਚ ਸੂਚਨਾਵਾਂ ਇਸ ਵੇਲੇ ਬੰਦ ਹਨ।"
+      browser_disabled_help: "ਆਪਣੇ ਬ੍ਰਾਊਜ਼ਰ ਜਾਂ ਡਿਵਾਈਸ ਸੈਟਿੰਗਾਂ ਵਿੱਚ ਸੂਚਨਾਵਾਂ ਚਾਲੂ ਕਰੋ, ਫਿਰ ਇਹ ਪੰਨਾ ਮੁੜ ਲੋਡ ਕਰੋ।"
+      permission_pending_message: "ਇਸ ਡਿਵਾਈਸ ਤੇ ਹਾਲੇ ਸੂਚਨਾਵਾਂ ਚਾਲੂ ਨਹੀਂ ਹੋਈਆਂ।"
+      permission_pending_help: "ਜਦੋਂ ਤੁਸੀਂ ਅਲਰਟਾਂ ਦੀ ਇਜਾਜ਼ਤ ਦੇਣ ਲਈ ਤਿਆਰ ਹੋਵੋ, ਤਦ ਸੂਚਨਾਵਾਂ ਚਾਲੂ ਕਰੋ ਤੇ ਟੈਪ ਕਰੋ।"
+      registration_error_help: "ਇਸ ਡਿਵਾਈਸ ਤੇ ਪੁਸ਼ ਰਜਿਸਟ੍ਰੇਸ਼ਨ ਪੂਰੀ ਨਹੀਂ ਹੋ ਸਕੀ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"
+      disable_error_help: "ਇਸ ਡਿਵਾਈਸ ਤੇ ਸੂਚਨਾਵਾਂ ਇਸ ਵੇਲੇ ਬੰਦ ਨਹੀਂ ਕੀਤੀਆਂ ਜਾ ਸਕੀਆਂ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"

@@ -5913,6 +5913,15 @@ html[data-theme="dark"] .admin-transaction-modal__label {
   margin: 0 auto;
 }
 
+.loyalty-lookup-shell {
+  padding-top: 0;
+  padding-bottom: 3rem;
+}
+
+.lookup-card-shell {
+  width: min(100%, 520px);
+}
+
 .lookup-card {
   max-width: 520px;
 }
@@ -5920,7 +5929,17 @@ html[data-theme="dark"] .admin-transaction-modal__label {
 .loyalty-language-switcher {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.loyalty-language-switcher--lookup {
+  margin-bottom: 0.55rem;
+}
+
+.loyalty-language-switcher--lookup .loyalty-language-form {
+  width: 100%;
+  justify-content: space-between;
+  padding-inline: 1rem;
 }
 
 .loyalty-language-switcher--result {
@@ -5930,8 +5949,8 @@ html[data-theme="dark"] .admin-transaction-modal__label {
 .loyalty-language-form {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.35rem 0.45rem;
+  gap: 0.45rem;
+  padding: 0.32rem 0.42rem;
   border: 1px solid rgba(var(--bs-primary-rgb), 0.14);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
@@ -5946,15 +5965,22 @@ html[data-theme="dark"] .admin-transaction-modal__label {
 }
 
 .loyalty-language-form__select {
-  min-width: 10.5rem;
+  min-width: 7.2rem;
   border: 0;
   background-color: transparent;
   box-shadow: none;
   font-size: 0.86rem;
   font-weight: 600;
   color: var(--fl-gray-800);
+  width: auto;
+  flex: 0 1 auto;
   padding-top: 0.15rem;
   padding-bottom: 0.15rem;
+}
+
+.loyalty-language-switcher--lookup .loyalty-language-form__select {
+  min-width: 0;
+  flex: 0 1 6.4rem;
 }
 
 .loyalty-language-form__select:focus {
@@ -7725,19 +7751,38 @@ h4 {
     padding: 1.1rem !important;
   }
 
+  .loyalty-lookup-shell {
+    padding-bottom: 2rem;
+  }
+
+  .lookup-card-shell {
+    width: 100%;
+  }
+
   .loyalty-language-switcher {
-    margin-bottom: 0.72rem;
+    margin-bottom: 0.5rem;
   }
 
   .loyalty-language-form {
-    width: 100%;
-    justify-content: space-between;
+    width: auto;
+    max-width: 100%;
+    justify-content: flex-end;
     border-radius: 0.88rem;
   }
 
   .loyalty-language-form__select {
     min-width: 0;
-    flex: 1 1 auto;
+    flex: 0 1 6.4rem;
+  }
+
+  .loyalty-language-switcher--lookup .loyalty-language-form {
+    width: 100%;
+    justify-content: space-between;
+    padding-inline: 1rem;
+  }
+
+  .loyalty-language-switcher--lookup .loyalty-language-form__select {
+    flex: 0 1 5.9rem;
   }
 
   .redemption-customer-shell .card-body {

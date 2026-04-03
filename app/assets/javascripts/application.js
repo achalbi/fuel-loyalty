@@ -357,6 +357,21 @@
     const help = panel.querySelector("[data-push-help]");
     if (!button || !disableButton || !status || !help) return;
 
+    const pushCopy = {
+      enableButtonText: panel.dataset.pushEnableButtonText || "Enable Notifications",
+      enabledButtonText: panel.dataset.pushEnabledButtonText || "Notifications Enabled",
+      offButtonText: panel.dataset.pushOffButtonText || "Notifications Off",
+      appDisabledMessage: panel.dataset.pushAppDisabledMessage || "Notifications are turned off for this device in the app.",
+      appDisabledHelp: panel.dataset.pushAppDisabledHelp || "Tap Enable Notifications to subscribe this device again.",
+      enabledMessage: panel.dataset.pushEnabledMessage || "Push notifications are enabled on this device.",
+      browserDisabledMessage: panel.dataset.pushBrowserDisabledMessage || "Notifications are currently turned off for this browser profile.",
+      browserDisabledHelp: panel.dataset.pushBrowserDisabledHelp || "Turn notifications on in your browser or device settings, then reload this page.",
+      permissionPendingMessage: panel.dataset.pushPermissionPendingMessage || "Notifications are not enabled on this device yet.",
+      permissionPendingHelp: panel.dataset.pushPermissionPendingHelp || "Tap Enable Notifications whenever you're ready to allow alerts.",
+      registrationErrorHelp: panel.dataset.pushRegistrationErrorHelp || "We could not complete push registration on this device. Please try again.",
+      disableErrorHelp: panel.dataset.pushDisableErrorHelp || "We could not turn off notifications on this device right now. Please try again."
+    };
+
     if (!pushNotificationsSupported()) {
       panel.classList.add("d-none");
       return;
@@ -370,9 +385,9 @@
       disableButton.classList.add("d-none");
       button.classList.remove("btn-primary", "btn-outline-secondary");
       button.classList.add("btn-outline-primary");
-      button.querySelector("span").textContent = "Enable Notifications";
-      status.textContent = state.message || "Notifications are turned off for this device in the app.";
-      help.textContent = state.helpText || "Tap Enable Notifications to subscribe this device again.";
+      button.querySelector("span").textContent = pushCopy.enableButtonText;
+      status.textContent = state.message || pushCopy.appDisabledMessage;
+      help.textContent = state.helpText || pushCopy.appDisabledHelp;
       help.classList.remove("d-none");
       return;
     }
@@ -381,8 +396,8 @@
       disableButton.classList.remove("d-none");
       button.classList.remove("btn-outline-primary");
       button.classList.add("btn-primary");
-      button.querySelector("span").textContent = "Notifications Enabled";
-      status.textContent = state.message || "Push notifications are enabled on this device.";
+      button.querySelector("span").textContent = pushCopy.enabledButtonText;
+      status.textContent = state.message || pushCopy.enabledMessage;
       help.classList.add("d-none");
       help.textContent = "";
       return;
@@ -392,9 +407,9 @@
       disableButton.classList.add("d-none");
       button.classList.remove("btn-primary");
       button.classList.add("btn-outline-secondary");
-      button.querySelector("span").textContent = "Notifications Off";
-      status.textContent = "Notifications are currently turned off for this browser profile.";
-      help.textContent = "Turn notifications on in your browser or device settings, then reload this page.";
+      button.querySelector("span").textContent = pushCopy.offButtonText;
+      status.textContent = pushCopy.browserDisabledMessage;
+      help.textContent = pushCopy.browserDisabledHelp;
       help.classList.remove("d-none");
       return;
     }
@@ -402,7 +417,7 @@
     disableButton.classList.add("d-none");
     button.classList.remove("btn-primary", "btn-outline-secondary");
     button.classList.add("btn-outline-primary");
-    button.querySelector("span").textContent = "Enable Notifications";
+    button.querySelector("span").textContent = pushCopy.enableButtonText;
     status.textContent = state.message || status.dataset.defaultMessage || status.textContent;
 
     if (state.helpText) {
@@ -455,25 +470,25 @@
 
           if (!result.ok && result.permission === "default") {
             refreshPushPanels({
-              message: "Notifications are not enabled on this device yet.",
-              helpText: "Tap Enable Notifications whenever you're ready to allow alerts."
+              message: panel.dataset.pushPermissionPendingMessage,
+              helpText: panel.dataset.pushPermissionPendingHelp
             });
             return;
           }
 
           if (!result.ok) {
             refreshPushPanels({
-              helpText: "We could not complete push registration on this device. Please try again."
+              helpText: panel.dataset.pushRegistrationErrorHelp
             });
             return;
           }
 
           refreshPushPanels({
-            message: "Push notifications are enabled on this device."
+            message: panel.dataset.pushEnabledMessage
           });
         } catch (_error) {
           refreshPushPanels({
-            helpText: "We could not complete push registration on this device. Please try again."
+            helpText: panel.dataset.pushRegistrationErrorHelp
           });
         } finally {
           setPushPanelState(panel, { busy: false });
@@ -486,12 +501,12 @@
         try {
           await disablePushNotificationsInApp();
           refreshPushPanels({
-            message: "Notifications are turned off for this device in the app.",
-            helpText: "Tap Enable Notifications to subscribe this device again."
+            message: panel.dataset.pushAppDisabledMessage,
+            helpText: panel.dataset.pushAppDisabledHelp
           });
         } catch (_error) {
           refreshPushPanels({
-            helpText: "We could not turn off notifications on this device right now. Please try again."
+            helpText: panel.dataset.pushDisableErrorHelp
           });
         } finally {
           setPushPanelState(panel, { busy: false });
@@ -504,14 +519,14 @@
     if (pushPermissionState() === "granted") {
       if (pushOptOutEnabled()) {
         refreshPushPanels({
-          message: "Notifications are turned off for this device in the app.",
-          helpText: "Tap Enable Notifications to subscribe this device again."
+          message: panels[0].dataset.pushAppDisabledMessage,
+          helpText: panels[0].dataset.pushAppDisabledHelp
         });
       } else {
         syncPushSubscription().then((result) => {
           if (result.ok) {
             refreshPushPanels({
-              message: "Push notifications are enabled on this device."
+              message: panels[0].dataset.pushEnabledMessage
             });
           }
         }).catch(() => {});

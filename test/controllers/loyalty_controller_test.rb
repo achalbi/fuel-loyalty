@@ -36,11 +36,25 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h1", I18n.t("loyalty.new.heading", locale: :hi)
     assert_select "nav .logo-text", I18n.t("loyalty.brand_name", locale: :hi)
+    assert_select "nav .btn.btn-primary", I18n.t("loyalty.shared.staff_login", locale: :hi)
     assert_select ".lookup-card .logo-text", I18n.t("loyalty.brand_name", locale: :hi)
     assert_select "#loyalty-install-app-title", I18n.t("loyalty.new.install_title", locale: :hi, brand: I18n.t("loyalty.brand_name", locale: :hi))
     assert_select "[data-pwa-install-status]", I18n.t("loyalty.new.install_description", locale: :hi, brand: I18n.t("loyalty.brand_name", locale: :hi))
     assert_select "input[name='lang'][value='hi']", 1
     assert_select "option[value='hi'][selected='selected']", "हिन्दी"
+  end
+
+  test "renders translated loyalty push runtime strings in the selected language" do
+    with_firebase_web_push_env do
+      get new_loyalty_path(lang: "hi")
+
+      assert_response :success
+      assert_select "[data-push-opt-in-panel] .h6", I18n.t("loyalty.new.push_title", locale: :hi)
+      assert_select "[data-push-button] span", I18n.t("loyalty.new.enable_notifications", locale: :hi)
+      assert_includes response.body, I18n.t("loyalty.push.enabled_message", locale: :hi)
+      assert_includes response.body, I18n.t("loyalty.push.permission_pending_help", locale: :hi)
+      assert_includes response.body, I18n.t("loyalty.push.disable_error_help", locale: :hi)
+    end
   end
 
   test "remembers the last selected language on later loyalty visits" do
@@ -226,7 +240,14 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
   test "shows the configured vehicle type minimum when rewards are still locked" do
     vehicle_types(:lcv).update!(minimum_redeemable_points: 300)
     customer = Customer.create!(name: "Threshold User", phone_number: "9123456789")
-    customer.vehicles.create!(vehicle_number: "TN30AB1234", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code)
+    customer.vehicles.create!(
+      vehicle_number: "TN30AB1234",
+      fuel_type: :diesel,
+      vehicle_kind: vehicle_types(:lcv).code,
+      commercial_company_name: "Threshold Logistics",
+      commercial_contact_name: "Ravi",
+      commercial_address: "Bengaluru"
+    )
     customer.points_ledgers.create!(points: 250, entry_type: :earn)
 
     get loyalty_result_path(lookup_token: loyalty_lookup_token_for(customer.phone_number))
