@@ -253,6 +253,51 @@ class TransactionCreatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "creates a transaction with a selected pump when nozzle selection is disabled" do
+    RewardSetting.current.update!(nozzle_feature_enabled: false)
+    user = User.create!(name: "Staff Pump Only", username: "staff_pump_only", phone_number: "9100000000", password: "password123", password_confirmation: "password123", role: :staff)
+    fuel_pump = FuelPump.create!(
+      active: true,
+      nozzles_attributes: [
+        { fuel_type_code: "petrol", active: true }
+      ]
+    )
+    customer = Customer.create!(name: "Pump Only User", phone_number: "9876502222")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN14AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    assert_difference -> { Transaction.count }, 1 do
+      result = TransactionCreator.call(
+        user: user,
+        phone_number: customer.phone_number,
+        fuel_amount: 400,
+        vehicle_id: vehicle.id,
+        fuel_pump_id: fuel_pump.id
+      )
+
+      assert_equal fuel_pump, result.transaction.fuel_pump
+      assert_nil result.transaction.fuel_pump_nozzle
+    end
+  end
+
+  test "requires an active pump when nozzle selection is disabled" do
+    RewardSetting.current.update!(nozzle_feature_enabled: false)
+    user = User.create!(name: "Staff Missing Pump", username: "staff_missing_pump", phone_number: "9100000001", password: "password123", password_confirmation: "password123", role: :staff)
+    customer = Customer.create!(name: "Missing Pump User", phone_number: "9876503333")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN15AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      TransactionCreator.call(
+        user: user,
+        phone_number: customer.phone_number,
+        fuel_amount: 400,
+        vehicle_id: vehicle.id,
+        fuel_pump_id: nil
+      )
+    end
+
+    assert_includes error.record.errors.full_messages, "Fuel pump must be selected from active pumps"
+  end
+
   private
 
   def assign_pump_to_user(user)

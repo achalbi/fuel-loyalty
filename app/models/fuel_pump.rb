@@ -66,13 +66,23 @@ class FuelPump < ApplicationRecord
     retained_nozzles = nozzles.reject(&:marked_for_destruction?)
     return if retained_nozzles.empty?
 
-    next_sequence_number = retained_nozzles.map(&:sequence_number).compact.max.to_i + 1
+    reserved_sequence_number = nozzles.map(&:sequence_number).compact.max.to_i + 1
+
+    nozzles.select(&:marked_for_destruction?).each do |nozzle|
+      nozzle.sequence_number = reserved_sequence_number
+      reserved_sequence_number += 1
+    end
+
+    taken_sequence_numbers = retained_nozzles.map(&:sequence_number).compact
 
     retained_nozzles.each do |nozzle|
       next if nozzle.sequence_number.present?
 
+      next_sequence_number = 1
+      next_sequence_number += 1 while taken_sequence_numbers.include?(next_sequence_number)
+
       nozzle.sequence_number = next_sequence_number
-      next_sequence_number += 1
+      taken_sequence_numbers << next_sequence_number
     end
   end
 

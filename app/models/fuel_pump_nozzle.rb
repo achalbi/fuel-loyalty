@@ -19,10 +19,10 @@ class FuelPumpNozzle < ApplicationRecord
 
   validates :sequence_number,
     presence: true,
-    uniqueness: { scope: :fuel_pump_id },
     numericality: { only_integer: true, greater_than: 0 }
   validates :fuel_type_code, presence: true
   validates :active, inclusion: { in: [true, false] }
+  validate :sequence_number_must_be_unique_within_pump
   validate :fuel_type_must_exist_for_new_selection
   validate :fuel_type_must_be_active_for_new_selection
 
@@ -41,6 +41,18 @@ class FuelPumpNozzle < ApplicationRecord
 
   def normalize_fuel_type_code
     self.fuel_type_code = fuel_type_code.to_s.parameterize(separator: "_").presence
+  end
+
+  def sequence_number_must_be_unique_within_pump
+    return if sequence_number.blank? || fuel_pump.blank?
+
+    sibling_nozzles = fuel_pump.nozzles.reject do |nozzle|
+      nozzle.equal?(self) || nozzle.marked_for_destruction?
+    end
+
+    return unless sibling_nozzles.any? { |nozzle| nozzle.sequence_number == sequence_number }
+
+    errors.add(:sequence_number, "has already been taken")
   end
 
   def fuel_type_must_exist_for_new_selection

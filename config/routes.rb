@@ -53,7 +53,9 @@ Rails.application.routes.draw do
     end
     resources :users, only: %i[index new create show edit update]
     resources :fuel_types, only: %i[index create edit update destroy]
-    resources :fuel_pumps, only: %i[index create edit update destroy]
+    resources :fuel_pumps, only: %i[index create edit update destroy] do
+      patch :feature_settings, on: :collection
+    end
     resources :vehicle_types, only: %i[index create edit update destroy]
     resource :fuel_reward_rates, only: %i[show update], controller: "fuel_reward_rates"
     resource :theme_settings, only: %i[show update], controller: "theme_settings"

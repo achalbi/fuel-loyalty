@@ -97,6 +97,7 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[phone_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[vehicle_number]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_amount]']"
+      assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_pump_id]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_pump_nozzle_id]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[payment_mode]'][value='cash']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[lock_vehicle_details]'][value='0']"
@@ -119,6 +120,7 @@ module Staff
       assert_includes response.body, "registerCustomerPath: payload.register_customer_path"
       assert_includes response.body, "registrationModal.openNow(registrationPayload)"
       assert_includes response.body, "const bindTransactionNozzleOptions = (root, onChange) => {"
+      assert_includes response.body, "fuelPumpId: selectedPumpInput()?.value || \"\""
       assert_includes response.body, "fuelPumpNozzleId: selectedNozzleInput()?.value || \"\""
       assert_includes response.body, "paymentMode: selectedPaymentMode()"
       assert_includes response.body, "lookupPaymentModeField"
@@ -142,6 +144,21 @@ module Staff
       refute_nil vehicle_pump_hint_index
       assert_operator phone_fuel_amount_index, :<, phone_pump_hint_index
       assert_operator vehicle_fuel_amount_index, :<, vehicle_pump_hint_index
+    end
+
+    test "renders pump selection instead of nozzles when nozzle feature is disabled" do
+      RewardSetting.current.update!(nozzle_feature_enabled: false)
+      sign_in users(:two)
+
+      get new_staff_transaction_path
+
+      assert_response :success
+      assert_select ".transaction-pump-card[data-transaction-pump-mode='pump']", 2
+      assert_select ".transaction-pump-card .transaction-entry-titlebar__heading h2.h4", text: "Pump", count: 2
+      assert_select "input.transaction-pump-card__nozzle-input[type='radio'][name='transaction[fuel_pump_id]'][data-transaction-pump-input]", 2
+      assert_select "input.transaction-pump-card__nozzle-input[type='radio'][name='transaction[fuel_pump_nozzle_id]']", 0
+      assert_select "a.transaction-pump-card__change-link[href='#{my_pump_path}']", 0
+      assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_pump_id]']", 1
     end
 
     test "scanner shortcut auto opens the vehicle plate capture panel" do
@@ -315,6 +332,30 @@ module Staff
       assert_response :success
       assert_select ".customer-details-hero__transaction-summary-copy", text: /\+6 reward points added\.\s*Balance updated to 11\./
       assert_select ".alert.alert-success", 0
+    end
+
+    test "staff can record a transaction by selecting a pump when nozzle feature is disabled" do
+      RewardSetting.current.update!(nozzle_feature_enabled: false)
+      sign_in users(:two)
+
+      assert_difference -> { Transaction.count }, 1 do
+        assert_difference -> { PointsLedger.count }, 1 do
+          post staff_transactions_path, params: {
+            transaction: {
+              lookup_mode: "phone",
+              phone_number: customers(:one).phone_number,
+              vehicle_id: vehicles(:one).id,
+              fuel_amount: "300",
+              fuel_pump_id: fuel_pumps(:one).id
+            }
+          }
+        end
+      end
+
+      transaction = Transaction.order(:created_at).last
+      assert_equal fuel_pumps(:one), transaction.fuel_pump
+      assert_nil transaction.fuel_pump_nozzle
+      assert_redirected_to customer_path(customers(:one))
     end
 
     test "staff can record a credit transaction" do

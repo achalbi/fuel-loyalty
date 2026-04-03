@@ -115,7 +115,7 @@
             <span class="transaction-entry-step__status" data-transaction-step-status>Locked</span>
           </span>
           <strong class="transaction-entry-step__title">Fuel Details</strong>
-          <span class="transaction-entry-step__text">Enter the amount, choose nozzle, and save.</span>
+          <span class="transaction-entry-step__text"><%= @nozzle_feature_enabled ? "Enter the amount, choose nozzle, and save." : "Enter the amount, choose pump, and save." %></span>
         </button>
       </div>
     </div>
@@ -143,7 +143,7 @@
             <span class="transaction-entry-step__status" data-transaction-step-status>Locked</span>
           </span>
           <strong class="transaction-entry-step__title">Fuel Details</strong>
-          <span class="transaction-entry-step__text">Enter amount, choose nozzle, and save the sale.</span>
+          <span class="transaction-entry-step__text"><%= @nozzle_feature_enabled ? "Enter amount, choose nozzle, and save the sale." : "Enter amount, choose pump, and save the sale." %></span>
         </button>
       </div>
     </div>
@@ -347,7 +347,7 @@
                 <div>
                   <div class="transaction-entry-step-card__eyebrow">Step 3</div>
                   <h2 class="h4 mb-1">Fuel Details</h2>
-                  <p class="transaction-entry-step-card__summary mb-0">Enter the sale amount, choose the compatible nozzle, and save the transaction.</p>
+                  <p class="transaction-entry-step-card__summary mb-0"><%= @nozzle_feature_enabled ? "Enter the sale amount, choose the compatible nozzle, and save the transaction." : "Enter the sale amount, choose the pump used, and save the transaction." %></p>
                 </div>
               </div>
 
@@ -369,8 +369,11 @@
 
                   <%= render "pump_selection_fields",
                     form: form,
+                    nozzle_feature_enabled: @nozzle_feature_enabled,
                     transaction_fuel_pump: @transaction_fuel_pump,
+                    transaction_fuel_pumps: @transaction_fuel_pumps,
                     transaction_fuel_pump_nozzles: @transaction_fuel_pump_nozzles,
+                    selected_pump_id: @prefill_fuel_pump_id,
                     selected_nozzle_id: @prefill_fuel_pump_nozzle_id,
                     dom_prefix: "phone_transaction" %>
                 </div>
@@ -560,7 +563,7 @@
                 <div>
                   <div class="transaction-entry-step-card__eyebrow">Step 3</div>
                   <h2 class="h4 mb-1">Fuel Details</h2>
-                  <p class="transaction-entry-step-card__summary mb-0">Complete the amount and nozzle selection after the customer match is verified.</p>
+                  <p class="transaction-entry-step-card__summary mb-0"><%= @nozzle_feature_enabled ? "Complete the amount and nozzle selection after the customer match is verified." : "Complete the amount and pump selection after the customer match is verified." %></p>
                 </div>
               </div>
 
@@ -582,8 +585,11 @@
 
                   <%= render "pump_selection_fields",
                     form: form,
+                    nozzle_feature_enabled: @nozzle_feature_enabled,
                     transaction_fuel_pump: @transaction_fuel_pump,
+                    transaction_fuel_pumps: @transaction_fuel_pumps,
                     transaction_fuel_pump_nozzles: @transaction_fuel_pump_nozzles,
+                    selected_pump_id: @prefill_fuel_pump_id,
                     selected_nozzle_id: @prefill_fuel_pump_nozzle_id,
                     dom_prefix: "vehicle_transaction" %>
                 </div>
@@ -643,6 +649,7 @@
             "transaction_lookup[phone_number]" => @prefill_phone_number,
             "transaction_lookup[vehicle_number]" => @prefill_vehicle_number,
             "transaction_lookup[fuel_amount]" => @prefill_fuel_amount,
+            "transaction_lookup[fuel_pump_id]" => @prefill_fuel_pump_id,
             "transaction_lookup[fuel_pump_nozzle_id]" => @prefill_fuel_pump_nozzle_id,
             "transaction_lookup[payment_mode]" => @prefill_payment_mode,
             "transaction_lookup[lock_vehicle_details]" => (@transaction_registration_vehicle_details_locked ? "1" : "0")
@@ -710,6 +717,7 @@
       const lookupPhoneField = modalElement.querySelector("[name='transaction_lookup[phone_number]']");
       const lookupVehicleField = modalElement.querySelector("[name='transaction_lookup[vehicle_number]']");
       const lookupFuelAmountField = modalElement.querySelector("[name='transaction_lookup[fuel_amount]']");
+      const lookupFuelPumpIdField = modalElement.querySelector("[name='transaction_lookup[fuel_pump_id]']");
       const lookupFuelPumpNozzleField = modalElement.querySelector("[name='transaction_lookup[fuel_pump_nozzle_id]']");
       const lookupPaymentModeField = modalElement.querySelector("[name='transaction_lookup[payment_mode]']");
       const lookupLockVehicleDetailsField = modalElement.querySelector("[name='transaction_lookup[lock_vehicle_details]']");
@@ -923,7 +931,7 @@
         resolveExistingCustomerByPhone({ immediate: true });
       });
 
-      const showNow = ({ lookupMode, phoneNumber = "", vehicleNumber = "", fuelType = "", vehicleKind = "", fuelAmount = "", fuelPumpNozzleId = "", paymentMode = "cash", lockVehicleDetails = false }) => {
+      const showNow = ({ lookupMode, phoneNumber = "", vehicleNumber = "", fuelType = "", vehicleKind = "", fuelAmount = "", fuelPumpId = "", fuelPumpNozzleId = "", paymentMode = "cash", lockVehicleDetails = false }) => {
         form?.reset();
         modalElement.querySelector(".alert.alert-danger")?.remove();
         clearExistingCustomerResolution();
@@ -944,6 +952,7 @@
         if (lookupPhoneField) lookupPhoneField.value = phoneNumber;
         if (lookupVehicleField) lookupVehicleField.value = vehicleNumber;
         if (lookupFuelAmountField) lookupFuelAmountField.value = fuelAmount;
+        if (lookupFuelPumpIdField) lookupFuelPumpIdField.value = fuelPumpId;
         if (lookupFuelPumpNozzleField) lookupFuelPumpNozzleField.value = fuelPumpNozzleId;
         if (lookupPaymentModeField) lookupPaymentModeField.value = paymentMode || "cash";
 
@@ -991,6 +1000,15 @@
         .filter(({ input }) => Boolean(input));
       const nozzleInputs = nozzleEntries.map(({ input }) => input);
       const status = root.querySelector("[data-transaction-nozzle-status]");
+
+      if (nozzleInputs.length === 0) {
+        status?.classList.add("d-none");
+        return {
+          applyFuelTypeConstraint: () => onChange(),
+          selectedInput: () => null
+        };
+      }
+
       let activeFuelTypeCode = "";
       let activeFuelTypeLabel = "";
       let preferredNozzleId = nozzleInputs.find((input) => input.checked)?.value || "";
@@ -1121,6 +1139,50 @@
         applyFuelTypeConstraint,
         selectedInput
       };
+    };
+
+    const bindTransactionPumpOptions = (root, onChange) => {
+      const pumpEntries = Array.from(root.querySelectorAll("[data-transaction-pump-option]"))
+        .map((option) => ({
+          option,
+          input: option.querySelector("[data-transaction-pump-input]")
+        }))
+        .filter(({ input }) => Boolean(input));
+
+      const syncSelectedState = () => {
+        pumpEntries.forEach(({ option, input }) => {
+          option.classList.toggle("is-selected", Boolean(input.checked));
+        });
+      };
+
+      const selectedInput = () => pumpEntries.find(({ input }) => input.checked)?.input || null;
+
+      pumpEntries.forEach(({ option, input }) => {
+        const syncPumpSelection = () => {
+          syncSelectedState();
+          onChange();
+        };
+
+        input.addEventListener("input", syncPumpSelection);
+        input.addEventListener("change", syncPumpSelection);
+
+        option.addEventListener("click", (event) => {
+          if (!input || input.disabled) return;
+
+          event.preventDefault();
+
+          if (!input.checked) {
+            input.checked = true;
+          }
+
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      });
+
+      syncSelectedState();
+
+      return { selectedInput };
     };
 
     const createCustomerCardController = (root) => {
@@ -1468,21 +1530,29 @@
           return Number.isFinite(value) && value > 0;
         };
         let nozzleController = null;
+        let pumpController = null;
+        const pumpMode = () => root.querySelector("[data-transaction-pump-mode]")?.dataset.transactionPumpMode || "nozzle";
         const selectedNozzleInput = () => nozzleController?.selectedInput();
+        const selectedPumpInput = () => pumpController?.selectedInput();
+        const fuelSelectionValid = () => pumpMode() === "pump" ? Boolean(selectedPumpInput()) : Boolean(selectedNozzleInput());
         const selectedPaymentMode = () => root.querySelector("input[name='transaction[payment_mode]']:checked")?.value || "cash";
         const syncWizardState = () => {
           const reviewReady = customerActive && Boolean(selectedVehicle());
           wizard.sync({
             lookupComplete: Boolean(currentCustomer),
             reviewComplete: reviewReady,
-            fuelComplete: reviewReady && fuelAmountValid() && Boolean(selectedNozzleInput())
+            fuelComplete: reviewReady && fuelAmountValid() && fuelSelectionValid()
           });
         };
         const syncSubmitState = () => {
-          submitButton.disabled = vehicleSelect.value === "" || !customerActive || !selectedNozzleInput() || !fuelAmountValid();
+          submitButton.disabled = vehicleSelect.value === "" || !customerActive || !fuelSelectionValid() || !fuelAmountValid();
           syncWizardState();
         };
         nozzleController = bindTransactionNozzleOptions(root, () => syncSubmitState());
+        pumpController = bindTransactionPumpOptions(root, () => {
+          clearServerErrors();
+          syncSubmitState();
+        });
         const syncNozzlesForSelectedVehicle = () => {
           const vehicle = selectedVehicle();
           nozzleController.applyFuelTypeConstraint(vehicle?.fuel_type_code, vehicle?.fuel_type);
@@ -1554,6 +1624,7 @@
                 lookupMode: "phone",
                 phoneNumber,
                 fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || "",
+                fuelPumpId: selectedPumpInput()?.value || "",
                 fuelPumpNozzleId: selectedNozzleInput()?.value || "",
                 paymentMode: selectedPaymentMode()
               };
@@ -1658,7 +1729,6 @@
         root.querySelectorAll("[data-transaction-nozzle-input]").forEach((input) => {
           input.addEventListener("change", clearServerErrors);
         });
-
         if (phoneInput.value.trim() !== "") {
           loadCustomer();
         } else {
@@ -1724,7 +1794,10 @@
         };
 
         let nozzleController = null;
+        let pumpController = null;
+        const pumpMode = () => root.querySelector("[data-transaction-pump-mode]")?.dataset.transactionPumpMode || "nozzle";
         const selectedNozzleInput = () => nozzleController?.selectedInput();
+        const selectedPumpInput = () => pumpController?.selectedInput();
         const buildRegistrationPayload = () => ({
           lookupMode: "vehicle",
           vehicleNumber: normalizeVehicleNumberInput(vehicleNumberInput?.value || ""),
@@ -1736,6 +1809,7 @@
             (selectedMatch?.vehicle_kind_code || selectedMatch?.vehicle_kind)
           ),
           fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || "",
+          fuelPumpId: selectedPumpInput()?.value || "",
           fuelPumpNozzleId: selectedNozzleInput()?.value || "",
           paymentMode: root.querySelector("input[name='transaction[payment_mode]']:checked")?.value || "cash"
         });
@@ -1743,19 +1817,24 @@
           const value = Number.parseFloat(fuelAmountInput?.value || "");
           return Number.isFinite(value) && value > 0;
         };
+        const fuelSelectionValid = () => pumpMode() === "pump" ? Boolean(selectedPumpInput()) : Boolean(selectedNozzleInput());
         const syncWizardState = () => {
           const reviewReady = Boolean(selectedMatch) && Boolean(selectedMatch?.customer?.active);
           wizard.sync({
             lookupComplete: currentMatches.length > 0,
             reviewComplete: reviewReady,
-            fuelComplete: reviewReady && fuelAmountValid() && Boolean(selectedNozzleInput())
+            fuelComplete: reviewReady && fuelAmountValid() && fuelSelectionValid()
           });
         };
         const syncSubmitState = () => {
-          submitButton.disabled = !selectedMatch || !selectedMatch.customer.active || !selectedNozzleInput() || !fuelAmountValid();
+          submitButton.disabled = !selectedMatch || !selectedMatch.customer.active || !fuelSelectionValid() || !fuelAmountValid();
           syncWizardState();
         };
         nozzleController = bindTransactionNozzleOptions(root, () => syncSubmitState());
+        pumpController = bindTransactionPumpOptions(root, () => {
+          clearServerErrors();
+          syncSubmitState();
+        });
         const syncNozzlesForSelectedMatch = () => {
           nozzleController.applyFuelTypeConstraint(selectedMatch?.fuel_type_code, selectedMatch?.fuel_type);
         };
@@ -1962,7 +2041,6 @@
         root.querySelectorAll("[data-transaction-nozzle-input]").forEach((input) => {
           input.addEventListener("change", clearServerErrors);
         });
-
         if (vehicleNumberInput.value.trim() !== "") {
           syncVehicleNumberValidity();
           syncRegisterCustomerButton();

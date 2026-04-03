@@ -8,6 +8,8 @@ module Admin
       get admin_fuel_pumps_path
 
       assert_response :success
+      assert_select "form[action='#{feature_settings_admin_fuel_pumps_path}']", 1
+      assert_select "input[name='reward_setting[nozzle_feature_enabled]'][type='checkbox']", 1
       assert_select "h1", "Fuel Dispensing Units / Pumps"
       assert_select "form[action='#{admin_fuel_pumps_path}'][data-fuel-pump-form='true']", 1
       assert_select "[data-fuel-pump-nozzle-add]", text: /Add Nozzle/
@@ -74,6 +76,19 @@ module Admin
         [[1, "petrol", false], [2, "petrol", true]],
         fuel_pump.nozzles.order(:sequence_number).pluck(:sequence_number, :fuel_type_code, :active)
       )
+    end
+
+    test "admin can disable nozzle selection for transactions" do
+      sign_in users(:one)
+
+      patch feature_settings_admin_fuel_pumps_path, params: {
+        reward_setting: {
+          nozzle_feature_enabled: "0"
+        }
+      }
+
+      assert_redirected_to admin_fuel_pumps_path
+      assert_equal false, RewardSetting.current.nozzle_feature_enabled?
     end
   end
 end

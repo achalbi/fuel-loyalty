@@ -4921,20 +4921,30 @@ html[data-theme="dark"] .customer-details-inline-form {
 }
 
 .my-pump-nozzle-card__input:checked + .my-pump-nozzle-card,
-.transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle {
+.transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle,
+.transaction-pump-card__nozzle-option.is-selected .transaction-pump-card__nozzle {
   border-color: var(--bs-primary);
   background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.96), rgba(var(--bs-primary-rgb), 0.86));
   box-shadow: 0 1rem 2rem rgba(var(--bs-primary-rgb), 0.28);
 }
 
 .my-pump-nozzle-card__input:checked + .my-pump-nozzle-card .my-pump-nozzle-card__copy strong,
-.transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle .transaction-pump-card__nozzle-copy strong {
+.transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle .transaction-pump-card__nozzle-copy strong,
+.transaction-pump-card__nozzle-option.is-selected .transaction-pump-card__nozzle-copy strong {
   color: var(--bs-white);
 }
 
 .my-pump-nozzle-card__input:checked + .my-pump-nozzle-card .my-pump-nozzle-card__copy span,
-.transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle .transaction-pump-card__nozzle-copy span {
+.transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle .transaction-pump-card__nozzle-copy span,
+.transaction-pump-card__nozzle-option.is-selected .transaction-pump-card__nozzle-copy span {
   color: rgba(255, 255, 255, 0.82);
+}
+
+.transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle .transaction-pump-card__nozzle-meta .badge,
+.transaction-pump-card__nozzle-option.is-selected .transaction-pump-card__nozzle-meta .badge {
+  color: var(--bs-primary);
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(255, 255, 255, 0.96) !important;
 }
 
 .my-pump-nozzle-card__input:focus-visible + .my-pump-nozzle-card,
@@ -5509,7 +5519,8 @@ html[data-theme="dark"] .transaction-pump-card__nozzle:has(.transaction-pump-car
 }
 
 html[data-theme="dark"] .my-pump-nozzle-card__input:checked + .my-pump-nozzle-card,
-html[data-theme="dark"] .transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle {
+html[data-theme="dark"] .transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle,
+html[data-theme="dark"] .transaction-pump-card__nozzle-option.is-selected .transaction-pump-card__nozzle {
   border-color: #9dd6ff;
   background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.98), rgba(8, 84, 182, 0.94));
   box-shadow: 0 1rem 2rem rgba(var(--bs-primary-rgb), 0.34);
@@ -5522,13 +5533,22 @@ html[data-theme="dark"] .transaction-pump-card__nozzle-input:focus-visible + .tr
 }
 
 html[data-theme="dark"] .my-pump-nozzle-card__input:checked + .my-pump-nozzle-card .my-pump-nozzle-card__copy strong,
-html[data-theme="dark"] .transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle .transaction-pump-card__nozzle-copy strong {
+html[data-theme="dark"] .transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle .transaction-pump-card__nozzle-copy strong,
+html[data-theme="dark"] .transaction-pump-card__nozzle-option.is-selected .transaction-pump-card__nozzle-copy strong {
   color: #ffffff;
 }
 
 html[data-theme="dark"] .my-pump-nozzle-card__input:checked + .my-pump-nozzle-card .my-pump-nozzle-card__copy span,
-html[data-theme="dark"] .transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle .transaction-pump-card__nozzle-copy span {
+html[data-theme="dark"] .transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle .transaction-pump-card__nozzle-copy span,
+html[data-theme="dark"] .transaction-pump-card__nozzle-option.is-selected .transaction-pump-card__nozzle-copy span {
   color: rgba(255, 255, 255, 0.84);
+}
+
+html[data-theme="dark"] .transaction-pump-card__nozzle-input:checked + .transaction-pump-card__nozzle .transaction-pump-card__nozzle-meta .badge,
+html[data-theme="dark"] .transaction-pump-card__nozzle-option.is-selected .transaction-pump-card__nozzle-meta .badge {
+  color: rgb(20, 62, 109);
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(255, 255, 255, 0.96) !important;
 }
 
 html[data-theme="dark"] .my-pump-nozzle-card__copy strong,

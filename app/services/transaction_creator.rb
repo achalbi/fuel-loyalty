@@ -5,13 +5,14 @@ class TransactionCreator
     new(...).call
   end
 
-  def initialize(user:, fuel_amount:, vehicle_id:, fuel_pump_nozzle_id:, lookup_mode: "phone", phone_number: nil, vehicle_number: nil, payment_mode: "cash")
+  def initialize(user:, fuel_amount:, vehicle_id:, fuel_pump_nozzle_id: nil, fuel_pump_id: nil, lookup_mode: "phone", phone_number: nil, vehicle_number: nil, payment_mode: "cash")
     @user = user
     @lookup_mode = lookup_mode
     @phone_number = phone_number
     @vehicle_number = vehicle_number
     @fuel_amount = fuel_amount
     @vehicle_id = vehicle_id
+    @fuel_pump_id = fuel_pump_id
     @fuel_pump_nozzle_id = fuel_pump_nozzle_id
     @payment_mode = payment_mode
   end
@@ -48,7 +49,7 @@ class TransactionCreator
 
   private
 
-  attr_reader :fuel_amount, :fuel_pump_nozzle_id, :lookup_mode, :payment_mode, :phone_number, :user, :vehicle_id, :vehicle_number
+  attr_reader :fuel_amount, :fuel_pump_id, :fuel_pump_nozzle_id, :lookup_mode, :payment_mode, :phone_number, :user, :vehicle_id, :vehicle_number
 
   def resolve_customer_and_vehicle!
     if vehicle_lookup?
@@ -137,6 +138,8 @@ class TransactionCreator
   end
 
   def resolve_fuel_pump_and_nozzle!(vehicle)
+    return resolve_selected_pump! unless RewardSetting.current.nozzle_feature_enabled?
+
     fuel_pump = user.transaction_fuel_pump
 
     unless fuel_pump
@@ -166,6 +169,20 @@ class TransactionCreator
     end
 
     [fuel_pump, fuel_pump_nozzle]
+  end
+
+  def resolve_selected_pump!
+    fuel_pump = FuelPump.active.find_by(id: fuel_pump_id)
+
+    unless fuel_pump
+      raise ActiveRecord::RecordInvalid.new(
+        Transaction.new.tap do |transaction|
+          transaction.errors.add(:fuel_pump, "must be selected from active pumps")
+        end
+      )
+    end
+
+    [fuel_pump, nil]
   end
 
   def normalized_fuel_type_code(value)

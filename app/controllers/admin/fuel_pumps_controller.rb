@@ -4,7 +4,22 @@ module Admin
 
     def index
       authorize FuelPump
+      @reward_setting = RewardSetting.current
+      authorize @reward_setting, :show?
       load_index_state
+    end
+
+    def feature_settings
+      @reward_setting = RewardSetting.current
+      authorize @reward_setting, :update?
+
+      @reward_setting.update!(feature_setting_params)
+      redirect_to admin_fuel_pumps_path, notice: "Pump transaction settings updated successfully."
+    rescue ActiveRecord::RecordInvalid => e
+      @reward_setting = e.record
+      load_index_state
+      flash.now[:alert] = e.record.errors.full_messages.to_sentence
+      render :index, status: :unprocessable_entity
     end
 
     def create
@@ -55,6 +70,7 @@ module Admin
     end
 
     def load_index_state(new_fuel_pump: build_new_fuel_pump)
+      @reward_setting ||= RewardSetting.current
       @fuel_pump = prepare_fuel_pump_form(new_fuel_pump)
       @fuel_pumps = FuelPump.for_settings
     end
@@ -82,6 +98,10 @@ module Admin
           :_destroy
         ]
       )
+    end
+
+    def feature_setting_params
+      params.require(:reward_setting).permit(:nozzle_feature_enabled)
     end
   end
 end

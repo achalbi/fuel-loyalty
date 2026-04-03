@@ -4,6 +4,36 @@
   <div class="col-lg-5">
     <div class="card shadow-sm h-100">
       <div class="card-body">
+        <section class="mb-4">
+          <h1 class="h4 mb-2">Transaction Pump Settings</h1>
+          <p class="text-muted mb-3">Choose whether staff should pick an assigned nozzle or just select a pump during new transactions.</p>
+
+          <%= form_with model: @reward_setting, url: feature_settings_admin_fuel_pumps_path, method: :patch, class: "reward-rates-form vstack gap-3" do |form| %>
+            <div class="reward-rate-row">
+              <div class="reward-rate-copy">
+                <label for="reward_setting_nozzle_feature_enabled" class="reward-rate-title">Nozzle Selection</label>
+                <p class="reward-rate-meta mb-0">
+                  When enabled, staff use My Pump and assigned nozzles. When disabled, staff choose the pump directly in New Transaction.
+                </p>
+              </div>
+
+              <div class="reward-rate-field">
+                <div class="form-check form-switch reward-rate-toggle">
+                  <%= form.check_box :nozzle_feature_enabled, class: "form-check-input reward-rate-toggle__input" %>
+                  <%= form.label :nozzle_feature_enabled, class: "form-check-label reward-rate-toggle__label" do %>
+                    <span>Enable nozzle selection</span>
+                  <% end %>
+                </div>
+                <% if @reward_setting.errors[:nozzle_feature_enabled].any? %>
+                  <div class="text-danger small mt-1"><%= @reward_setting.errors[:nozzle_feature_enabled].to_sentence %></div>
+                <% end %>
+              </div>
+            </div>
+
+            <%= form.submit "Save Pump Settings", class: "btn btn-outline-primary" %>
+          <% end %>
+        </section>
+
         <h1 class="h3 mb-3">Fuel Dispensing Units / Pumps</h1>
         <p class="text-muted">Add pumps as running numbers and configure the nozzles available on each unit.</p>
 
