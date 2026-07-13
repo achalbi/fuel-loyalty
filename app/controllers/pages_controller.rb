@@ -8,4 +8,8 @@ class PagesController < ApplicationController
   def privacy
     set_public_cache_headers(max_age: 1.hour.to_i, s_maxage: 1.day.to_i)
   end
+
+  def delete_account
+    set_public_cache_headers(max_age: 1.hour.to_i, s_maxage: 1.day.to_i)
+  end
 end

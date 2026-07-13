@@ -3,6 +3,7 @@ Rails.application.routes.draw do
 
   get "up" => "rails/health#show", as: :rails_health_check
   get "/privacy", to: "pages#privacy", as: :privacy
+  get "/delete-account", to: "pages#delete_account", as: :delete_account
   get "/manifest.json", to: "pwa#manifest", as: :pwa_manifest, defaults: { format: :json }
   get "/service-worker.js", to: "pwa#service_worker", as: :pwa_service_worker, defaults: { format: :js }
   post "/analytics/events", to: "analytics/events#create", as: :analytics_events, defaults: { format: :json }
