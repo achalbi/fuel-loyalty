@@ -42,9 +42,11 @@ android {
 
     buildTypes {
         debug {
-            // On the physical device: `adb reverse tcp:3007 tcp:3007` tunnels
-            // device localhost -> the Mac's Rails dev server. (Emulator would use 10.0.2.2.)
-            buildConfigField("String", "API_BASE_URL", "\"http://localhost:3007/\"")
+            // Points at the deployed Cloud Run backend (fuel-loyalty-git in us-central1,
+            // custom domain fly.thoughtbasics.com) so debug builds hit the real instance.
+            // For local dev against the Rails server, swap this to "http://localhost:3007/"
+            // and run `adb reverse tcp:3007 tcp:3007` (emulator would use 10.0.2.2).
+            buildConfigField("String", "API_BASE_URL", "\"https://fly.thoughtbasics.com/\"")
         }
         release {
             // R8 minify is a follow-up: enable + add keep rules for
