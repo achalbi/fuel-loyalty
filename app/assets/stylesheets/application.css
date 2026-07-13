@@ -267,7 +267,7 @@ html[data-theme="dark"] body {
   height: 100%;
   display: block;
   object-fit: contain;
-  filter: drop-shadow(0 10px 20px rgba(47, 158, 68, 0.18));
+  filter: drop-shadow(0 8px 16px rgba(16, 68, 124, 0.22));
 }
 
 .logo-text {
