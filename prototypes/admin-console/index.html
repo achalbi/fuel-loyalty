@@ -1,0 +1,1999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Console — Redesign Prototypes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SHARED
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:#0b0f14;
+  color:#111;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer;border:0;background:none}
+a{text-decoration:none;color:inherit}
+
+/* Nayara tokens (from the repo) */
+:root{
+  --navy-900:#10447c; --navy-800:#0f4f93; --navy-700:#1d63b0; --navy-950:#052b54;
+  --navy-100:#e0f2ff; --navy-50:#f1fbff;
+  --cyan-600:#0080a0; --cyan-500:#39a0c1; --cyan-100:#def4fd;
+  --green-600:#18945c; --green-500:#39aa71; --green-100:#dff7e7;
+  --sky-500:#249adf; --sky-600:#0082c6; --sky-100:#dcf4ff;
+  --amber-400:#f5a524; --amber-100:#ffeccf;
+  --red-600:#df2935; --red-500:#fa484b; --red-100:#ffe5e2;
+  --n-50:#f9fafc; --n-100:#f1f3f5; --n-200:#e2e5e9; --n-300:#d0d4d9;
+  --n-400:#a7acb2; --n-500:#838990; --n-600:#636a71; --n-700:#4d535b;
+  --n-800:#373e46; --n-900:#232932; --n-950:#12161c;
+}
+
+/* ---------- Chrome / switcher ---------- */
+.chrome{
+  position:fixed; inset:0 0 auto 0; z-index:1000;
+  display:flex; align-items:center; gap:18px;
+  padding:0 18px; height:56px;
+  background:#0b0f14;
+  border-bottom:1px solid #1e252e;
+}
+.chrome__brand{
+  display:flex; align-items:center; gap:9px;
+  color:#e8ecf1; font-size:13px; font-weight:600; letter-spacing:-.01em;
+  padding-right:18px; border-right:1px solid #1e252e; height:100%;
+}
+.chrome__brand span{width:8px;height:8px;border-radius:2px;background:var(--sky-500)}
+.chrome__tabs{display:flex; gap:4px; background:#141a21; padding:4px; border-radius:10px}
+.chrome__tab{
+  padding:7px 15px; border-radius:7px; font-size:12.5px; font-weight:600;
+  color:#7d8894; transition:.15s; letter-spacing:-.01em; white-space:nowrap;
+}
+.chrome__tab:hover{color:#c3ccd6}
+.chrome__tab.on{background:#242d38; color:#fff; box-shadow:0 1px 2px rgba(0,0,0,.4)}
+.chrome__tab small{display:block;font-size:10px;font-weight:500;opacity:.6;letter-spacing:0}
+.chrome__note{
+  margin-left:auto; font-size:11.5px; color:#5f6b78; display:flex; gap:16px; align-items:center;
+}
+.chrome__note kbd{
+  background:#1c232c;border:1px solid #2b3540;border-radius:4px;padding:2px 6px;
+  font-family:"IBM Plex Mono",monospace;font-size:10px;color:#9aa5b1;
+}
+.chrome__page{display:flex;gap:4px}
+.chrome__pagebtn{
+  font-size:11.5px;font-weight:600;color:#7d8894;padding:6px 11px;border-radius:6px;
+  border:1px solid #232b35;
+}
+.chrome__pagebtn.on{background:#1c232c;color:#dbe2e9;border-color:#33404e}
+
+/* Panel that holds the mock */
+.stage{padding:56px 0 0}
+.proto{display:none; min-height:calc(100vh - 56px)}
+.proto.on{display:block}
+.view{display:none}
+.view.on{display:block}
+
+/* rationale strip */
+.why{
+  position:fixed; right:16px; bottom:16px; z-index:900;
+  width:330px; background:#12181f; border:1px solid #242d38; border-radius:12px;
+  padding:14px 16px; color:#aab4bf; font-size:12px; line-height:1.55;
+  box-shadow:0 20px 50px rgba(0,0,0,.5);
+}
+.why h6{margin:0 0 8px; color:#fff; font-size:12px; letter-spacing:.06em; text-transform:uppercase}
+.why ul{margin:0; padding-left:15px}
+.why li{margin-bottom:5px}
+.why li b{color:#dfe6ed;font-weight:600}
+.why__close{position:absolute;top:10px;right:10px;color:#5f6b78;font-size:14px;line-height:1}
+.why.hide{display:none}
+.whytoggle{
+  position:fixed;right:16px;bottom:16px;z-index:899;background:#12181f;border:1px solid #242d38;
+  color:#8f9aa6;font-size:11px;font-weight:600;padding:8px 12px;border-radius:8px;display:none;
+}
+.whytoggle.show{display:block}
+
+/* ============================================================
+   DIRECTION A — "FOCUSED OPS"
+   Light. Grouped collapsible nav + command palette. Compact sticky
+   filter bar. Tabbed dashboard. Real sortable table w/ bulk actions.
+   ============================================================ */
+#a{background:#f6f8fa; font-size:14px; color:var(--n-900)}
+#a .shell{display:grid; grid-template-columns:236px 1fr; min-height:calc(100vh - 56px)}
+
+#a .side{
+  background:#fff; border-right:1px solid var(--n-200);
+  display:flex; flex-direction:column; padding:14px 0;
+  position:sticky; top:56px; height:calc(100vh - 56px);
+}
+#a .side__brand{
+  display:flex; align-items:center; gap:9px; padding:2px 16px 14px;
+  font-weight:700; font-size:14.5px; letter-spacing:-.02em; color:var(--navy-900);
+}
+#a .side__logo{
+  width:26px;height:26px;border-radius:7px;
+  background:linear-gradient(135deg,var(--navy-900),var(--sky-500));
+  display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700;
+}
+#a .side__search{
+  margin:0 12px 14px; display:flex; align-items:center; gap:7px;
+  border:1px solid var(--n-200); border-radius:8px; padding:7px 9px;
+  color:var(--n-500); font-size:12.5px; background:var(--n-50);
+  cursor:pointer; transition:.15s;
+}
+#a .side__search:hover{border-color:var(--n-300); background:#fff}
+#a .side__search kbd{
+  margin-left:auto; font-family:"IBM Plex Mono",monospace; font-size:10px;
+  background:#fff; border:1px solid var(--n-200); border-radius:4px; padding:1px 5px; color:var(--n-500);
+}
+#a .side__scroll{overflow-y:auto; padding:0 12px; flex:1}
+#a .side__scroll::-webkit-scrollbar{width:6px}
+#a .side__scroll::-webkit-scrollbar-thumb{background:var(--n-200);border-radius:3px}
+
+#a .grp{margin-bottom:3px}
+#a .grp__head{
+  width:100%; display:flex; align-items:center; gap:7px;
+  padding:7px 9px; border-radius:7px;
+  font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--n-500);
+}
+#a .grp__head:hover{background:var(--n-50); color:var(--n-700)}
+#a .grp__chev{margin-left:auto; font-size:9px; transition:.18s; color:var(--n-400)}
+#a .grp.open .grp__chev{transform:rotate(90deg)}
+#a .grp__body{display:none; padding:2px 0 6px}
+#a .grp.open .grp__body{display:block}
+#a .navlink{
+  display:flex; align-items:center; gap:10px;
+  padding:7.5px 10px; border-radius:7px; margin-bottom:1px;
+  font-size:13px; font-weight:500; color:var(--n-700); transition:.12s;
+}
+#a .navlink:hover{background:var(--n-50); color:var(--n-900)}
+#a .navlink.on{background:var(--navy-50); color:var(--navy-800); font-weight:600}
+#a .navlink.on .ico{background:var(--navy-900); color:#fff}
+#a .ico{
+  width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+  background:var(--n-100); color:var(--n-600); font-size:11px; flex:none;
+}
+#a .navlink .cnt{margin-left:auto;font-size:10.5px;font-weight:600;color:var(--n-500);
+  background:var(--n-100);border-radius:20px;padding:1px 6px}
+#a .side__foot{
+  padding:12px 12px 0; margin:8px 12px 0; border-top:1px solid var(--n-200);
+  display:flex; align-items:center; gap:9px;
+}
+#a .avat{
+  width:30px;height:30px;border-radius:50%;background:var(--navy-100);color:var(--navy-800);
+  display:grid;place-items:center;font-size:11.5px;font-weight:700;flex:none;
+}
+
+#a .main{min-width:0}
+#a .top{
+  position:sticky; top:56px; z-index:20; background:rgba(246,248,250,.85);
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--n-200);
+  padding:14px 26px 0;
+}
+#a .crumbs{font-size:11.5px;color:var(--n-500);margin-bottom:6px;display:flex;gap:6px;align-items:center}
+#a .crumbs b{color:var(--n-800);font-weight:600}
+#a .pagehead{display:flex;align-items:flex-start;gap:16px;margin-bottom:12px}
+#a .pagehead h1{margin:0 0 2px;font-size:21px;font-weight:700;letter-spacing:-.025em}
+#a .pagehead p{margin:0;font-size:12.5px;color:var(--n-500)}
+#a .pagehead .acts{margin-left:auto;display:flex;gap:8px;flex:none}
+
+#a .btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;
+  border:1px solid var(--n-200); background:#fff; color:var(--n-700); transition:.13s;
+}
+#a .btn:hover{border-color:var(--n-300);background:var(--n-50)}
+#a .btn--p{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
+#a .btn--p:hover{background:var(--navy-800);border-color:var(--navy-800)}
+#a .btn--sm{padding:5px 10px;font-size:11.5px}
+
+/* compact single-row filter bar — replaces the 5-block form */
+#a .filtbar{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  padding:0 0 12px;
+}
+#a .seg{display:flex;background:var(--n-100);border-radius:8px;padding:2px}
+#a .seg button{
+  padding:5.5px 11px;border-radius:6px;font-size:12px;font-weight:600;color:var(--n-600);transition:.12s;
+}
+#a .seg button:hover{color:var(--n-900)}
+#a .seg button.on{background:#fff;color:var(--navy-900);box-shadow:0 1px 2px rgba(16,24,40,.08)}
+#a .drop{
+  display:inline-flex;align-items:center;gap:6px;padding:6.5px 11px;
+  border:1px solid var(--n-200);border-radius:8px;background:#fff;
+  font-size:12px;font-weight:500;color:var(--n-700);
+}
+#a .drop b{font-weight:600;color:var(--n-900)}
+#a .drop:hover{border-color:var(--n-300)}
+#a .divid{width:1px;height:22px;background:var(--n-200);margin:0 2px}
+#a .filtbar .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+#a .stale{font-size:11px;color:var(--n-500);display:flex;align-items:center;gap:5px}
+#a .dot{width:6px;height:6px;border-radius:50%;background:var(--green-500)}
+
+#a .tabs{display:flex;gap:2px;border-bottom:0;margin-top:-1px}
+#a .tab{
+  padding:9px 14px;font-size:12.5px;font-weight:600;color:var(--n-500);
+  border-bottom:2px solid transparent;transition:.13s;
+}
+#a .tab:hover{color:var(--n-800)}
+#a .tab.on{color:var(--navy-900);border-bottom-color:var(--navy-900)}
+
+#a .body{padding:20px 26px 60px}
+
+/* KPI: 4 hero + secondary strip */
+#a .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+#a .kpi{
+  background:#fff;border:1px solid var(--n-200);border-radius:12px;padding:14px 15px;
+  transition:.15s;
+}
+#a .kpi:hover{border-color:var(--n-300);box-shadow:0 4px 14px rgba(16,24,40,.05)}
+#a .kpi__t{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--n-600);font-weight:500;margin-bottom:9px}
+#a .kpi__v{font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin-bottom:8px}
+#a .kpi__f{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+#a .delta{font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+#a .delta.up{color:var(--green-600)}
+#a .delta.dn{color:var(--red-600)}
+#a .delta small{color:var(--n-400);font-weight:500}
+#a .spark{flex:none}
+
+#a .kpis2{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  background:#fff;border:1px solid var(--n-200);border-radius:12px;overflow:hidden;margin-bottom:20px;
+}
+#a .kpi2{padding:12px 15px;border-right:1px solid var(--n-200)}
+#a .kpi2:last-child{border-right:0}
+#a .kpi2 span{display:block;font-size:11px;color:var(--n-500);margin-bottom:4px}
+#a .kpi2 strong{font-size:17px;font-weight:700;letter-spacing:-.02em}
+#a .kpi2 em{font-style:normal;font-size:11px;font-weight:600;margin-left:6px}
+
+#a .charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#a .card{background:#fff;border:1px solid var(--n-200);border-radius:12px}
+#a .card__h{
+  display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--n-100);
+}
+#a .card__h h3{margin:0;font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+#a .card__h p{margin:1px 0 0;font-size:11.5px;color:var(--n-500)}
+#a .card__h .acts{margin-left:auto;display:flex;gap:4px}
+#a .iconbtn{
+  width:26px;height:26px;border-radius:6px;display:grid;place-items:center;
+  color:var(--n-400);font-size:12px;transition:.12s;
+}
+#a .iconbtn:hover{background:var(--n-100);color:var(--n-700)}
+#a .card__b{padding:14px 16px}
+#a .pill{
+  font-size:10.5px;font-weight:600;padding:2.5px 7px;border-radius:20px;
+  background:var(--green-100);color:var(--green-700,#007845);
+}
+#a .pill.dn{background:var(--red-100);color:#bc001f}
+
+/* TABLE (customers) */
+#a .tablewrap{background:#fff;border:1px solid var(--n-200);border-radius:12px;overflow:hidden}
+#a .tbar{
+  display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--n-200);
+}
+#a .srch{
+  display:flex;align-items:center;gap:7px;border:1px solid var(--n-200);border-radius:8px;
+  padding:6px 10px;width:280px;background:var(--n-50);
+}
+#a .srch input{border:0;background:none;outline:none;font-size:12.5px;width:100%;color:var(--n-900)}
+#a .srch input::placeholder{color:var(--n-400)}
+#a table{width:100%;border-collapse:collapse}
+#a thead th{
+  text-align:left;padding:8px 14px;font-size:10.5px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--n-500);background:var(--n-50);
+  border-bottom:1px solid var(--n-200); white-space:nowrap; cursor:pointer; user-select:none;
+}
+#a thead th:hover{color:var(--n-800)}
+#a thead th .sortico{opacity:.35;margin-left:3px;font-size:9px}
+#a thead th.sorted{color:var(--navy-900)}
+#a thead th.sorted .sortico{opacity:1}
+#a tbody td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--n-100);vertical-align:middle}
+#a tbody tr:hover{background:var(--navy-50)}
+#a tbody tr:last-child td{border-bottom:0}
+#a .cnm{font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+#a .mono{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--n-700)}
+#a .plate{
+  display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
+  border:1px solid var(--n-200);border-radius:4px;padding:1.5px 5px;margin-right:4px;color:var(--n-700);
+  background:var(--n-50);
+}
+#a .badge{font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:20px}
+#a .badge.act{background:var(--green-100);color:#007845}
+#a .badge.ina{background:var(--n-100);color:var(--n-600)}
+#a .pts{font-weight:700;font-family:"IBM Plex Mono",monospace;font-size:13px}
+#a .rowacts{display:flex;gap:2px;opacity:0;transition:.12s}
+#a tbody tr:hover .rowacts{opacity:1}
+#a .selbar{
+  display:none;align-items:center;gap:10px;padding:9px 14px;background:var(--navy-900);color:#fff;
+  font-size:12.5px;font-weight:600;
+}
+#a .selbar.on{display:flex}
+#a .selbar .btn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff}
+#a .selbar .btn:hover{background:rgba(255,255,255,.2)}
+#a .pgn{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--n-200);font-size:12px;color:var(--n-600)}
+#a .pgn .right{margin-left:auto;display:flex;gap:6px;align-items:center}
+#a input[type=checkbox]{width:14px;height:14px;accent-color:var(--navy-900);cursor:pointer}
+
+/* command palette */
+#a .cmdk{position:fixed;inset:56px 0 0;background:rgba(16,22,30,.4);backdrop-filter:blur(3px);z-index:500;display:none;padding-top:100px;justify-content:center}
+#a .cmdk.on{display:flex}
+#a .cmdk__box{width:560px;height:max-content;background:#fff;border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.3);overflow:hidden}
+#a .cmdk__in{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--n-200)}
+#a .cmdk__in input{border:0;outline:none;font-size:15px;width:100%;color:var(--n-900)}
+#a .cmdk__sec{padding:8px 12px 4px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500)}
+#a .cmdk__i{display:flex;align-items:center;gap:11px;padding:9px 12px;margin:0 6px;border-radius:8px;font-size:13.5px;color:var(--n-800)}
+#a .cmdk__i:hover,#a .cmdk__i.on{background:var(--navy-50)}
+#a .cmdk__i kbd{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--n-500);border:1px solid var(--n-200);border-radius:4px;padding:1px 5px}
+#a .cmdk__f{padding:9px 14px;border-top:1px solid var(--n-100);font-size:11px;color:var(--n-500);display:flex;gap:14px}
+
+/* ============================================================
+   DIRECTION B — "COMMAND CENTER"
+   Dark ops room. Icon rail + contextual panel. Dense grid,
+   keyboard-first data table, live feed. For all-day operators.
+   ============================================================ */
+#b{background:#0d1117; color:#c9d3dd; font-size:13.5px; min-height:calc(100vh - 56px)}
+#b .shell{display:grid;grid-template-columns:60px 216px 1fr; min-height:calc(100vh - 56px)}
+
+#b .rail{
+  background:#0a0e13;border-right:1px solid #1a212a;
+  display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;
+  position:sticky;top:56px;height:calc(100vh - 56px);
+}
+#b .rail__logo{
+  width:32px;height:32px;border-radius:9px;margin-bottom:12px;
+  background:linear-gradient(135deg,var(--sky-500),var(--cyan-600));
+  display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;
+}
+#b .railbtn{
+  width:38px;height:38px;border-radius:9px;display:grid;place-items:center;
+  color:#5f6d7c;font-size:16px;transition:.13s;position:relative;
+}
+#b .railbtn:hover{background:#151c24;color:#a8b6c4}
+#b .railbtn.on{background:#16212c;color:var(--sky-500)}
+#b .railbtn.on::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--sky-500)}
+#b .rail__sp{flex:1}
+
+#b .panel{
+  background:#0d1117;border-right:1px solid #1a212a;padding:16px 12px;
+  position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;
+}
+#b .panel h4{
+  margin:0 0 12px 8px;font-size:10.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:#5f6d7c;
+}
+#b .pl{
+  display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;
+  font-size:13px;color:#8b97a4;margin-bottom:1px;transition:.12s;
+}
+#b .pl:hover{background:#151c24;color:#dbe4ec}
+#b .pl.on{background:#16212c;color:#fff;font-weight:600}
+#b .pl .k{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:10px;color:#4a5765;
+  border:1px solid #232c37;border-radius:4px;padding:1px 5px}
+#b .pl .n{margin-left:auto;font-size:10.5px;font-weight:600;color:#6b7887}
+#b .psep{height:1px;background:#1a212a;margin:14px 8px}
+
+#b .main{min-width:0;display:flex;flex-direction:column}
+#b .bhead{
+  display:flex;align-items:center;gap:12px;padding:12px 20px;
+  border-bottom:1px solid #1a212a;position:sticky;top:56px;z-index:20;background:#0d1117;
+}
+#b .bhead h1{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em;color:#eaf0f6}
+#b .bhead .sub{font-size:11.5px;color:#5f6d7c}
+#b .live{
+  display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  color:var(--green-500);background:rgba(57,170,113,.1);border:1px solid rgba(57,170,113,.22);
+  padding:3px 9px;border-radius:20px;
+}
+#b .live i{width:6px;height:6px;border-radius:50%;background:var(--green-500);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+#b .bhead .right{margin-left:auto;display:flex;gap:7px;align-items:center}
+#b .bbtn{
+  padding:6px 11px;border-radius:7px;border:1px solid #232c37;background:#141b23;
+  color:#9dabb9;font-size:12px;font-weight:600;transition:.13s;
+  display:inline-flex;align-items:center;gap:6px;
+}
+#b .bbtn:hover{background:#1a232d;color:#dbe4ec;border-color:#2e3a47}
+#b .bbtn.p{background:var(--sky-600);border-color:var(--sky-600);color:#fff}
+#b .bbtn.p:hover{background:var(--sky-500);border-color:var(--sky-500)}
+
+#b .filts{display:flex;align-items:center;gap:6px;padding:9px 20px;border-bottom:1px solid #1a212a;flex-wrap:wrap}
+#b .chip{
+  padding:5px 10px;border-radius:6px;font-size:11.5px;font-weight:600;color:#7d8b99;
+  border:1px solid transparent;transition:.12s;
+}
+#b .chip:hover{background:#151c24;color:#c3ced9}
+#b .chip.on{background:#16212c;color:var(--sky-500);border-color:#24333f}
+#b .fdiv{width:1px;height:18px;background:#1e2731;margin:0 6px}
+#b .fsel{
+  background:#141b23;border:1px solid #232c37;border-radius:6px;padding:5px 9px;
+  color:#a8b6c4;font-size:11.5px;font-weight:600;
+}
+
+#b .bbody{padding:16px 20px 50px;flex:1}
+
+/* hero band */
+#b .hero{
+  display:grid;grid-template-columns:1.35fr 1fr 1fr 1fr;gap:1px;
+  background:#1a212a;border:1px solid #1a212a;border-radius:12px;overflow:hidden;margin-bottom:14px;
+}
+#b .hc{background:#111820;padding:15px 17px}
+#b .hc.big{background:linear-gradient(135deg,#12202c,#0f1720)}
+#b .hc__l{font-size:11px;color:#6b7887;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+#b .hc__v{
+  font-family:"IBM Plex Mono",monospace;font-size:26px;font-weight:600;
+  letter-spacing:-.02em;color:#eef3f8;line-height:1;margin-bottom:9px;
+}
+#b .hc.big .hc__v{font-size:34px;color:#fff}
+#b .hc__f{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+#b .bd{font-size:11.5px;font-weight:600;font-family:"IBM Plex Mono",monospace}
+#b .bd.up{color:var(--green-500)}
+#b .bd.dn{color:var(--red-500)}
+#b .bd small{color:#57646f;font-weight:400}
+
+#b .grid{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px}
+#b .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+#b .bcard{background:#111820;border:1px solid #1a212a;border-radius:12px;overflow:hidden}
+#b .bcard__h{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid #1a212a}
+#b .bcard__h h3{margin:0;font-size:12.5px;font-weight:600;color:#dce4ec;letter-spacing:-.01em}
+#b .bcard__h .r{margin-left:auto;display:flex;gap:5px;align-items:center}
+#b .bcard__b{padding:14px 15px}
+#b .tag{font-size:10px;font-weight:600;font-family:"IBM Plex Mono",monospace;
+  padding:2px 6px;border-radius:4px;background:#16212c;color:#7d8b99;border:1px solid #212b36}
+#b .tag.g{background:rgba(57,170,113,.1);color:var(--green-500);border-color:rgba(57,170,113,.2)}
+#b .tag.r{background:rgba(250,72,75,.1);color:var(--red-500);border-color:rgba(250,72,75,.2)}
+
+/* live feed */
+#b .feed{max-height:270px;overflow-y:auto}
+#b .feed::-webkit-scrollbar{width:6px}
+#b .feed::-webkit-scrollbar-thumb{background:#232c37;border-radius:3px}
+#b .fi{display:flex;gap:10px;padding:9px 15px;border-bottom:1px solid #161d25;font-size:12px}
+#b .fi:last-child{border-bottom:0}
+#b .fi__t{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:#57646f;flex:none;width:44px;padding-top:1px}
+#b .fi__m{flex:1;min-width:0}
+#b .fi__m b{color:#dbe4ec;font-weight:600}
+#b .fi__m span{color:#6b7887}
+#b .fi__a{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:#a8b6c4;flex:none}
+
+/* dense data grid */
+#b .dg{background:#111820;border:1px solid #1a212a;border-radius:12px;overflow:hidden}
+#b .dg__bar{display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid #1a212a}
+#b .dg__srch{display:flex;align-items:center;gap:7px;background:#0d1319;border:1px solid #232c37;
+  border-radius:7px;padding:6px 10px;width:300px}
+#b .dg__srch input{background:none;border:0;outline:none;color:#dbe4ec;font-size:12.5px;width:100%}
+#b .dg__srch input::placeholder{color:#4a5765}
+#b .dg__srch kbd{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#57646f;
+  border:1px solid #232c37;border-radius:4px;padding:1px 5px}
+#b table{width:100%;border-collapse:collapse;font-family:"IBM Plex Mono",monospace}
+#b thead th{
+  text-align:left;padding:7px 13px;font-size:10px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:#5f6d7c;background:#0d1319;border-bottom:1px solid #1a212a;
+  font-family:Inter,sans-serif;cursor:pointer;white-space:nowrap;
+}
+#b thead th:hover{color:#9dabb9}
+#b thead th.sorted{color:var(--sky-500)}
+#b tbody td{padding:8px 13px;font-size:12.5px;border-bottom:1px solid #161d25;color:#a8b6c4}
+#b tbody tr{cursor:pointer}
+#b tbody tr:hover{background:#151d26}
+#b tbody tr.sel{background:#16212c;box-shadow:inset 2px 0 0 var(--sky-500)}
+#b .bnm{color:#eaf0f6;font-weight:500;font-family:Inter,sans-serif}
+#b .bplate{color:#7d8b99;font-size:11.5px}
+#b .bst{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:Inter,sans-serif;font-weight:600}
+#b .bst i{width:5px;height:5px;border-radius:50%}
+#b .bst.a{color:var(--green-500)} #b .bst.a i{background:var(--green-500)}
+#b .bst.i{color:#5f6d7c} #b .bst.i i{background:#3c4753}
+#b .bpts{color:#eef3f8;font-weight:600;text-align:right}
+#b .dg__foot{display:flex;align-items:center;padding:9px 13px;border-top:1px solid #1a212a;
+  font-size:11.5px;color:#5f6d7c;gap:12px}
+#b .kbhint{margin-left:auto;display:flex;gap:12px;font-size:11px;color:#4a5765;align-items:center}
+#b .kbhint kbd{font-family:"IBM Plex Mono",monospace;background:#141b23;border:1px solid #232c37;
+  border-radius:4px;padding:1px 5px;color:#7d8b99;margin-right:3px}
+
+/* inspector drawer */
+#b .insp{
+  position:fixed;top:56px;right:0;bottom:0;width:380px;background:#0f151c;
+  border-left:1px solid #1e2731;z-index:400;transform:translateX(100%);transition:.22s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto;box-shadow:-20px 0 60px rgba(0,0,0,.4);
+}
+#b .insp.on{transform:translateX(0)}
+#b .insp__h{padding:16px 18px;border-bottom:1px solid #1a212a;display:flex;align-items:flex-start;gap:12px}
+#b .insp__h h3{margin:0 0 3px;font-size:15px;color:#fff;font-weight:600}
+#b .insp__h p{margin:0;font-size:11.5px;color:#6b7887;font-family:"IBM Plex Mono",monospace}
+#b .insp__b{padding:16px 18px}
+#b .kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #161d25;font-size:12.5px}
+#b .kv span{color:#6b7887}
+#b .kv b{color:#dbe4ec;font-weight:600;font-family:"IBM Plex Mono",monospace}
+
+/* ============================================================
+   DIRECTION C — "WORKSPACE"
+   Modern SaaS. Top nav + saved views. Roomy, editorial. Detail in a
+   side drawer instead of modals. Optimised for occasional admins.
+   ============================================================ */
+#c{background:#fff; color:#1a1f26; font-family:Poppins,Inter,sans-serif; font-size:14px}
+#c .cnav{
+  position:sticky;top:56px;z-index:30;background:rgba(255,255,255,.9);backdrop-filter:blur(12px);
+  border-bottom:1px solid #ecedef;
+}
+#c .cnav__r1{display:flex;align-items:center;gap:14px;padding:12px 32px 0;max-width:1400px;margin:0 auto}
+#c .cbrand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;letter-spacing:-.02em}
+#c .cbrand__m{
+  width:28px;height:28px;border-radius:9px;background:var(--navy-900);
+  display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700;
+}
+#c .cswitch{
+  display:flex;align-items:center;gap:7px;padding:5px 10px;border-radius:8px;
+  border:1px solid #e6e8ea;font-size:12px;font-weight:500;color:#5b6470;margin-left:6px;
+}
+#c .cswitch:hover{background:#fafbfc}
+#c .cnav__r1 .right{margin-left:auto;display:flex;align-items:center;gap:8px}
+#c .cgs{
+  display:flex;align-items:center;gap:8px;background:#f5f6f8;border:1px solid transparent;
+  border-radius:9px;padding:7px 12px;width:280px;font-size:12.5px;color:#8b939d;transition:.15s;
+}
+#c .cgs:hover{background:#fff;border-color:#e6e8ea;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+#c .cgs kbd{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:10px;
+  background:#fff;border:1px solid #e6e8ea;border-radius:4px;padding:1px 5px}
+#c .cav{width:30px;height:30px;border-radius:50%;background:var(--navy-900);color:#fff;
+  display:grid;place-items:center;font-size:11px;font-weight:600}
+#c .cnav__r2{display:flex;gap:2px;padding:10px 32px 0;max-width:1400px;margin:0 auto}
+#c .cn{
+  padding:8px 13px;border-radius:8px 8px 0 0;font-size:13px;font-weight:500;color:#6b7480;
+  border-bottom:2px solid transparent;transition:.13s;display:flex;align-items:center;gap:7px;
+}
+#c .cn:hover{color:#1a1f26;background:#fafbfc}
+#c .cn.on{color:var(--navy-900);border-bottom-color:var(--navy-900);font-weight:600}
+
+#c .cwrap{max-width:1400px;margin:0 auto;padding:28px 32px 70px}
+#c .chead{display:flex;align-items:flex-start;gap:20px;margin-bottom:24px}
+#c .chead h1{margin:0 0 5px;font-size:27px;font-weight:600;letter-spacing:-.035em}
+#c .chead p{margin:0;font-size:13.5px;color:#7b838d;max-width:520px;line-height:1.5}
+#c .chead .acts{margin-left:auto;display:flex;gap:8px;flex:none}
+#c .cbtn{
+  display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:9px;
+  font-size:13px;font-weight:500;border:1px solid #e6e8ea;background:#fff;color:#3d4551;transition:.14s;
+}
+#c .cbtn:hover{background:#fafbfc;border-color:#d6d9dd}
+#c .cbtn.p{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
+#c .cbtn.p:hover{background:var(--navy-800)}
+
+/* saved views */
+#c .views{display:flex;align-items:center;gap:6px;margin-bottom:18px;border-bottom:1px solid #ecedef;padding-bottom:0}
+#c .view-tab{
+  padding:8px 13px;font-size:13px;font-weight:500;color:#7b838d;border-bottom:2px solid transparent;
+  display:flex;align-items:center;gap:7px;transition:.13s;
+}
+#c .view-tab:hover{color:#1a1f26}
+#c .view-tab.on{color:var(--navy-900);border-bottom-color:var(--navy-900);font-weight:600}
+#c .view-tab .n{font-size:11px;font-weight:600;background:#f1f3f5;color:#6b7480;border-radius:20px;padding:1px 7px}
+#c .view-tab.on .n{background:var(--navy-100);color:var(--navy-800)}
+#c .views .add{margin-left:auto;font-size:12.5px;color:#7b838d;padding:6px 10px;border-radius:7px;font-weight:500}
+#c .views .add:hover{background:#f5f6f8;color:#1a1f26}
+
+/* metric cards — editorial */
+#c .mrow{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+#c .m{
+  border:1px solid #ecedef;border-radius:16px;padding:20px;transition:.18s;background:#fff;
+}
+#c .m:hover{border-color:#dfe2e6;box-shadow:0 8px 30px rgba(20,30,45,.06);transform:translateY(-1px)}
+#c .m__l{font-size:12.5px;color:#7b838d;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+#c .m__i{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:12px}
+#c .m__v{font-size:31px;font-weight:600;letter-spacing:-.04em;line-height:1;margin-bottom:12px}
+#c .m__d{display:flex;align-items:center;gap:8px;font-size:12px}
+#c .cd{font-weight:600;display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:11.5px}
+#c .cd.up{background:var(--green-100);color:#007845}
+#c .cd.dn{background:var(--red-100);color:#bc001f}
+#c .m__d small{color:#9aa1a9}
+
+#c .csec{margin-top:32px}
+#c .csec__h{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+#c .csec__h h2{margin:0;font-size:17px;font-weight:600;letter-spacing:-.025em}
+#c .csec__h p{margin:0;font-size:12.5px;color:#9aa1a9}
+#c .csec__h .r{margin-left:auto}
+#c .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+#c .ccard{border:1px solid #ecedef;border-radius:16px;overflow:hidden;background:#fff;transition:.18s}
+#c .ccard:hover{border-color:#dfe2e6;box-shadow:0 8px 30px rgba(20,30,45,.05)}
+#c .ccard__h{display:flex;align-items:center;gap:10px;padding:16px 18px 10px}
+#c .ccard__h h3{margin:0;font-size:14px;font-weight:600;letter-spacing:-.015em}
+#c .ccard__h p{margin:2px 0 0;font-size:12px;color:#9aa1a9}
+#c .ccard__h .r{margin-left:auto}
+#c .ccard__b{padding:6px 18px 18px}
+#c .cpill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--green-100);color:#007845}
+#c .cpill.dn{background:var(--red-100);color:#bc001f}
+#c .cico{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:#9aa1a9;font-size:13px}
+#c .cico:hover{background:#f5f6f8;color:#3d4551}
+
+/* list w/ drawer */
+#c .cfilters{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+#c .cfs{display:flex;align-items:center;gap:9px;border:1px solid #e6e8ea;border-radius:10px;
+  padding:9px 13px;width:320px;background:#fff}
+#c .cfs input{border:0;outline:none;font-size:13px;width:100%;font-family:inherit}
+#c .cfs input::placeholder{color:#a8aeb5}
+#c .cfilt{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border:1px solid #e6e8ea;
+  border-radius:10px;font-size:12.5px;font-weight:500;color:#5b6470;background:#fff}
+#c .cfilt:hover{border-color:#d6d9dd}
+#c .cfilt.on{border-color:var(--navy-900);background:var(--navy-50);color:var(--navy-900);font-weight:600}
+#c .cfilters .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+#c .clist{border:1px solid #ecedef;border-radius:16px;overflow:hidden}
+#c .chdr{display:grid;grid-template-columns:26px 2.1fr 1.4fr 1.6fr .9fr .9fr 40px;gap:14px;
+  padding:11px 18px;background:#fbfcfd;border-bottom:1px solid #ecedef;
+  font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8b939d;align-items:center}
+#c .chdr span{cursor:pointer}
+#c .chdr span:hover{color:#3d4551}
+#c .crow{display:grid;grid-template-columns:26px 2.1fr 1.4fr 1.6fr .9fr .9fr 40px;gap:14px;
+  padding:13px 18px;border-bottom:1px solid #f3f4f6;align-items:center;cursor:pointer;transition:.1s}
+#c .crow:hover{background:#fbfcfd}
+#c .crow.sel{background:var(--navy-50)}
+#c .crow:last-child{border-bottom:0}
+#c .cper{display:flex;align-items:center;gap:11px;min-width:0}
+#c .cpav{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+  font-size:11.5px;font-weight:600;flex:none}
+#c .cpnm{font-weight:600;font-size:13.5px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#c .cpsub{font-size:11.5px;color:#9aa1a9;margin-top:1px}
+#c .cmono{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:#5b6470}
+#c .cplate{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:500;
+  background:#f5f6f8;border-radius:5px;padding:2.5px 7px;margin-right:5px;color:#5b6470}
+#c .cbdg{font-size:11px;font-weight:600;padding:3.5px 10px;border-radius:20px}
+#c .cbdg.a{background:var(--green-100);color:#007845}
+#c .cbdg.i{background:#f1f3f5;color:#6b7480}
+#c .cptr{font-weight:600;font-size:14px;letter-spacing:-.02em}
+#c .cptr small{display:block;font-size:10.5px;color:#9aa1a9;font-weight:400}
+#c .cchev{color:#c3c8ce;font-size:14px;text-align:right}
+
+#c .cdrawer{
+  position:fixed;top:56px;right:0;bottom:0;width:440px;background:#fff;z-index:400;
+  border-left:1px solid #ecedef;box-shadow:-24px 0 70px rgba(20,30,45,.1);
+  transform:translateX(100%);transition:.26s cubic-bezier(.32,.72,0,1);overflow-y:auto;
+}
+#c .cdrawer.on{transform:translateX(0)}
+#c .cdh{padding:22px 24px 18px;border-bottom:1px solid #f3f4f6}
+#c .cdh__t{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
+#c .cdh__t h3{margin:0 0 3px;font-size:19px;font-weight:600;letter-spacing:-.03em}
+#c .cdh__t p{margin:0;font-size:12.5px;color:#9aa1a9;font-family:"IBM Plex Mono",monospace}
+#c .cdx{margin-left:auto;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  color:#9aa1a9;font-size:14px;flex:none}
+#c .cdx:hover{background:#f5f6f8}
+#c .cdstats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#f3f4f6;
+  border:1px solid #f3f4f6;border-radius:12px;overflow:hidden}
+#c .cds{background:#fff;padding:12px 14px}
+#c .cds span{display:block;font-size:11px;color:#9aa1a9;margin-bottom:3px}
+#c .cds strong{font-size:17px;font-weight:600;letter-spacing:-.02em}
+#c .cdb{padding:20px 24px}
+#c .cdb h5{margin:0 0 12px;font-size:11px;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;color:#9aa1a9}
+#c .cdkv{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+#c .cdkv span{color:#7b838d}
+#c .cdkv b{font-weight:600}
+#c .cdv{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid #ecedef;
+  border-radius:11px;margin-bottom:8px}
+#c .cdv__i{width:34px;height:34px;border-radius:9px;background:#f5f6f8;display:grid;place-items:center;font-size:15px}
+#c .cdtl{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid #f3f4f6}
+#c .cdtl__d{width:6px;height:6px;border-radius:50%;background:var(--green-500);margin-top:6px;flex:none}
+#c .cdtl__m{flex:1;font-size:12.5px}
+#c .cdtl__m b{font-weight:600}
+#c .cdtl__m span{display:block;font-size:11px;color:#9aa1a9;margin-top:1px}
+#c .cdtl__a{font-weight:600;font-size:13px}
+#c .scrim{position:fixed;inset:56px 0 0;background:rgba(20,30,45,.18);z-index:399;
+  opacity:0;pointer-events:none;transition:.2s}
+#c .scrim.on{opacity:1;pointer-events:auto}
+
+@media(max-width:1200px){
+  #a .kpis,#a .kpis2,#c .mrow{grid-template-columns:repeat(2,1fr)}
+  #b .hero{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="chrome__brand"><span></span> Admin Console · Prototypes</div>
+  <div class="chrome__tabs">
+    <button class="chrome__tab on" data-dir="a">A · Focused Ops<small>Light · evolutionary</small></button>
+    <button class="chrome__tab" data-dir="b">B · Command Center<small>Dark · data-dense</small></button>
+    <button class="chrome__tab" data-dir="c">C · Workspace<small>Modern SaaS</small></button>
+  </div>
+  <div class="chrome__page">
+    <button class="chrome__pagebtn on" data-view="dash">Dashboard</button>
+    <button class="chrome__pagebtn" data-view="cust">Customers</button>
+  </div>
+  <div class="chrome__note">
+    <span>Everything is clickable — nav, tabs, sort, rows</span>
+    <span><kbd>⌘K</kbd> in A</span>
+  </div>
+</div>
+
+<div class="stage">
+
+<!-- ==========================================================
+     DIRECTION A — FOCUSED OPS
+     ========================================================== -->
+<div class="proto on" id="a">
+  <div class="shell">
+    <aside class="side">
+      <div class="side__brand">
+        <div class="side__logo">A</div> Ace Fuel Loyalty
+      </div>
+      <div class="side__search" data-cmdk-open>
+        <span>⌕</span> Jump to… <kbd>⌘K</kbd>
+      </div>
+      <div class="side__scroll">
+
+        <div class="grp open">
+          <button class="grp__head">Operate <span class="grp__chev">▶</span></button>
+          <div class="grp__body">
+            <a class="navlink on"><span class="ico">◧</span> Dashboard</a>
+            <a class="navlink"><span class="ico">⇄</span> Transactions <span class="cnt">312</span></a>
+            <a class="navlink"><span class="ico">☺</span> Customers <span class="cnt">4.2k</span></a>
+            <a class="navlink"><span class="ico">◎</span> Redeem Points</a>
+            <a class="navlink"><span class="ico">±</span> Adjust Points</a>
+          </div>
+        </div>
+
+        <div class="grp">
+          <button class="grp__head">Station Setup <span class="grp__chev">▶</span></button>
+          <div class="grp__body">
+            <a class="navlink"><span class="ico">◍</span> Fuel Types</a>
+            <a class="navlink"><span class="ico">⛽</span> Pumps &amp; Nozzles</a>
+            <a class="navlink"><span class="ico">🚚</span> Vehicle Types</a>
+            <a class="navlink"><span class="ico">⚖</span> Reward Rates</a>
+          </div>
+        </div>
+
+        <div class="grp">
+          <button class="grp__head">People &amp; Shifts <span class="grp__chev">▶</span></button>
+          <div class="grp__body">
+            <a class="navlink"><span class="ico">☰</span> Staff</a>
+            <a class="navlink"><span class="ico">◷</span> Shift Templates</a>
+            <a class="navlink"><span class="ico">↻</span> Cycles</a>
+            <a class="navlink"><span class="ico">✓</span> Attendance</a>
+            <a class="navlink"><span class="ico">⚙</span> Users &amp; Roles</a>
+          </div>
+        </div>
+
+        <div class="grp">
+          <button class="grp__head">App &amp; Comms <span class="grp__chev">▶</span></button>
+          <div class="grp__body">
+            <a class="navlink"><span class="ico">🔔</span> Notifications</a>
+            <a class="navlink"><span class="ico">◐</span> Theme</a>
+            <a class="navlink"><span class="ico">⌕</span> Loyalty Lookup</a>
+          </div>
+        </div>
+
+      </div>
+      <div class="side__foot">
+        <div class="avat">AI</div>
+        <div style="min-width:0">
+          <div style="font-size:12.5px;font-weight:600;letter-spacing:-.01em">Achal I.</div>
+          <div style="font-size:11px;color:var(--n-500)">Administrator</div>
+        </div>
+        <span style="margin-left:auto;color:var(--n-400);font-size:12px">⋯</span>
+      </div>
+    </aside>
+
+    <div class="main">
+
+      <!-- ===== A / DASHBOARD ===== -->
+      <div class="view on" data-view="dash">
+        <div class="top">
+          <div class="crumbs">Operate <span>/</span> <b>Dashboard</b></div>
+          <div class="pagehead">
+            <div>
+              <h1>Overview</h1>
+              <p>Station performance, customer activity, and loyalty engagement.</p>
+            </div>
+            <div class="acts">
+              <button class="btn">↓ Export PDF</button>
+              <button class="btn btn--p">+ New Transaction</button>
+            </div>
+          </div>
+
+          <div class="filtbar">
+            <div class="seg" data-seg>
+              <button>Today</button>
+              <button>7D</button>
+              <button class="on">30D</button>
+              <button>90D</button>
+              <button>YTD</button>
+            </div>
+            <button class="drop">📅 <b>15 Jun – 13 Jul 2026</b> ⌄</button>
+            <div class="divid"></div>
+            <button class="drop">Segment: <b>All customers</b> ⌄</button>
+            <button class="drop">Fuel: <b>All</b> ⌄</button>
+            <button class="btn btn--sm" style="color:var(--n-500)">Reset</button>
+            <div class="right">
+              <span class="stale"><span class="dot"></span> Live · updated 2m ago</span>
+            </div>
+          </div>
+
+          <div class="tabs" data-tabs>
+            <button class="tab on">Overview</button>
+            <button class="tab">Customers</button>
+            <button class="tab">Rewards</button>
+            <button class="tab">Behavior</button>
+          </div>
+        </div>
+
+        <div class="body">
+          <div class="kpis">
+            <div class="kpi">
+              <div class="kpi__t"><span class="ico">₹</span> Total Revenue</div>
+              <div class="kpi__v">₹1.84 Cr</div>
+              <div class="kpi__f">
+                <span class="delta up">▲ 11.4% <small>vs prev 30d</small></span>
+                <span class="spark" data-spark="18,22,19,26,24,31,28,35,33,40,38,46" data-spark-color="#18945c"></span>
+              </div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__t"><span class="ico">⇄</span> Transactions</div>
+              <div class="kpi__v">12,704</div>
+              <div class="kpi__f">
+                <span class="delta up">▲ 8.9% <small>vs prev 30d</small></span>
+                <span class="spark" data-spark="30,28,34,31,38,35,42,39,44,41,48,52" data-spark-color="#249adf"></span>
+              </div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__t"><span class="ico">☺</span> Active Customers</div>
+              <div class="kpi__v">1,946</div>
+              <div class="kpi__f">
+                <span class="delta up">▲ 3.1% <small>vs prev 30d</small></span>
+                <span class="spark" data-spark="22,24,23,27,26,29,28,31,30,33,32,36" data-spark-color="#0080a0"></span>
+              </div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__t"><span class="ico">◎</span> Points Redeemed</div>
+              <div class="kpi__v">3,41,200</div>
+              <div class="kpi__f">
+                <span class="delta dn">▼ 4.2% <small>vs prev 30d</small></span>
+                <span class="spark" data-spark="40,44,38,42,36,39,34,37,32,35,30,28" data-spark-color="#df2935"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpis2">
+            <div class="kpi2"><span>Total Customers</span><strong>4,182</strong><em class="delta up">▲6.2%</em></div>
+            <div class="kpi2"><span>Points Issued</span><strong>9,12,400</strong><em class="delta up">▲9.7%</em></div>
+            <div class="kpi2"><span>Avg Spend / Visit</span><strong>₹1,448</strong><em class="delta up">▲2.3%</em></div>
+            <div class="kpi2"><span>Visits / Customer</span><strong>3.2</strong><em class="delta dn">▼0.4</em></div>
+          </div>
+
+          <div class="charts">
+            <div class="card">
+              <div class="card__h">
+                <div>
+                  <h3>Revenue Trend</h3>
+                  <p>Daily fuel revenue for the selected period</p>
+                </div>
+                <div class="acts">
+                  <span class="pill">▲ 11.4%</span>
+                  <button class="iconbtn">⤢</button>
+                  <button class="iconbtn">⋯</button>
+                </div>
+              </div>
+              <div class="card__b"><div data-chart="line-a"></div></div>
+            </div>
+
+            <div class="card">
+              <div class="card__h">
+                <div>
+                  <h3>Points Issued vs Redeemed</h3>
+                  <p>Loyalty points earned and redeemed over time</p>
+                </div>
+                <div class="acts">
+                  <span class="pill dn">▼ 4.2%</span>
+                  <button class="iconbtn">⤢</button>
+                  <button class="iconbtn">⋯</button>
+                </div>
+              </div>
+              <div class="card__b"><div data-chart="line-b"></div></div>
+            </div>
+
+            <div class="card">
+              <div class="card__h">
+                <div>
+                  <h3>Transactions by Hour</h3>
+                  <p>Hourly demand pattern for staffing and queues</p>
+                </div>
+                <div class="acts">
+                  <button class="iconbtn">⤢</button>
+                  <button class="iconbtn">⋯</button>
+                </div>
+              </div>
+              <div class="card__b"><div data-chart="bar-a"></div></div>
+            </div>
+
+            <div class="card">
+              <div class="card__h">
+                <div>
+                  <h3>Redemption Rate</h3>
+                  <p>Redeemed as a share of issued points</p>
+                </div>
+                <div class="acts">
+                  <span class="pill" style="background:var(--n-100);color:var(--n-600)">Loyalty Health</span>
+                </div>
+              </div>
+              <div class="card__b">
+                <div style="display:flex;align-items:center;gap:24px">
+                  <div data-chart="donut"></div>
+                  <div style="flex:1">
+                    <div style="font-size:32px;font-weight:700;letter-spacing:-.03em;line-height:1">37.4%</div>
+                    <p style="margin:4px 0 16px;font-size:12px;color:var(--n-500)">of issued points have been redeemed</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                      <div>
+                        <div style="font-size:11px;color:var(--n-500);margin-bottom:2px">Issued</div>
+                        <div style="font-weight:700;font-size:15px">9,12,400</div>
+                      </div>
+                      <div>
+                        <div style="font-size:11px;color:var(--n-500);margin-bottom:2px">Redeemed</div>
+                        <div style="font-weight:700;font-size:15px">3,41,200</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== A / CUSTOMERS ===== -->
+      <div class="view" data-view="cust">
+        <div class="top">
+          <div class="crumbs">Operate <span>/</span> <b>Customers</b></div>
+          <div class="pagehead">
+            <div>
+              <h1>Customers</h1>
+              <p>4,182 enrolled members · 1,946 active in the last 30 days</p>
+            </div>
+            <div class="acts">
+              <button class="btn">↓ Export CSV</button>
+              <button class="btn btn--p">+ New Customer</button>
+            </div>
+          </div>
+          <div class="tabs" data-tabs>
+            <button class="tab on">All <span style="color:var(--n-400);font-weight:500">4,182</span></button>
+            <button class="tab">Active <span style="color:var(--n-400);font-weight:500">1,946</span></button>
+            <button class="tab">Inactive <span style="color:var(--n-400);font-weight:500">2,236</span></button>
+            <button class="tab">Rewards Paused <span style="color:var(--n-400);font-weight:500">18</span></button>
+          </div>
+        </div>
+
+        <div class="body">
+          <div class="tablewrap">
+            <div class="selbar" data-selbar>
+              <span data-selcount>2 selected</span>
+              <button class="btn btn--sm">Pause rewards</button>
+              <button class="btn btn--sm">Deactivate</button>
+              <button class="btn btn--sm">Adjust points</button>
+              <button class="btn btn--sm">Export</button>
+              <button class="btn btn--sm" style="margin-left:auto" data-selclear>Clear</button>
+            </div>
+            <div class="tbar">
+              <div class="srch">
+                <span style="color:var(--n-400)">⌕</span>
+                <input placeholder="Search name, phone, or vehicle number…">
+              </div>
+              <button class="btn btn--sm">+ Filter</button>
+              <button class="btn btn--sm">Points: any ⌄</button>
+              <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+                <span style="font-size:11.5px;color:var(--n-500)">Density</span>
+                <div class="seg" style="padding:2px">
+                  <button class="on" style="padding:4px 9px;font-size:11px">Compact</button>
+                  <button style="padding:4px 9px;font-size:11px">Cozy</button>
+                </div>
+                <button class="btn btn--sm">⚙ Columns</button>
+              </div>
+            </div>
+
+            <table data-table>
+              <thead>
+                <tr>
+                  <th style="width:34px"><input type="checkbox" data-selall></th>
+                  <th data-sort="name">Customer <span class="sortico">▲▼</span></th>
+                  <th data-sort="phone">Phone <span class="sortico">▲▼</span></th>
+                  <th data-sort="veh">Vehicles <span class="sortico">▲▼</span></th>
+                  <th data-sort="visits" style="text-align:right">Visits (30d) <span class="sortico">▲▼</span></th>
+                  <th data-sort="spend" style="text-align:right">Spend (30d) <span class="sortico">▲▼</span></th>
+                  <th class="sorted" data-sort="pts" style="text-align:right">Points <span class="sortico">▼</span></th>
+                  <th data-sort="last">Last visit <span class="sortico">▲▼</span></th>
+                  <th data-sort="status">Status <span class="sortico">▲▼</span></th>
+                  <th style="width:70px"></th>
+                </tr>
+              </thead>
+              <tbody data-rows></tbody>
+            </table>
+
+            <div class="pgn">
+              <span>Showing <b>1–8</b> of <b>4,182</b> customers</span>
+              <div class="right">
+                <span>Rows</span>
+                <button class="btn btn--sm">25 ⌄</button>
+                <button class="btn btn--sm">← Prev</button>
+                <span style="padding:0 4px">Page <b>1</b> of 168</span>
+                <button class="btn btn--sm">Next →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- command palette -->
+  <div class="cmdk" data-cmdk>
+    <div class="cmdk__box">
+      <div class="cmdk__in">
+        <span style="color:var(--n-400)">⌕</span>
+        <input placeholder="Search customers, pages, or run a command…" data-cmdk-input>
+      </div>
+      <div class="cmdk__sec">Go to</div>
+      <a class="cmdk__i on"><span class="ico">◧</span> Dashboard <kbd>G D</kbd></a>
+      <a class="cmdk__i"><span class="ico">☺</span> Customers <kbd>G C</kbd></a>
+      <a class="cmdk__i"><span class="ico">⇄</span> Transactions <kbd>G T</kbd></a>
+      <a class="cmdk__i"><span class="ico">⛽</span> Pumps &amp; Nozzles</a>
+      <div class="cmdk__sec">Actions</div>
+      <a class="cmdk__i"><span class="ico">+</span> New transaction <kbd>N</kbd></a>
+      <a class="cmdk__i"><span class="ico">±</span> Adjust points for a customer</a>
+      <a class="cmdk__i"><span class="ico">↓</span> Export dashboard as PDF</a>
+      <div class="cmdk__f"><span>↑↓ navigate</span><span>↵ select</span><span>esc close</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================================
+     DIRECTION B — COMMAND CENTER
+     ========================================================== -->
+<div class="proto" id="b">
+  <div class="shell">
+    <aside class="rail">
+      <div class="rail__logo">A</div>
+      <button class="railbtn on" title="Operate">◧</button>
+      <button class="railbtn" title="Station setup">⛽</button>
+      <button class="railbtn" title="People &amp; shifts">☰</button>
+      <button class="railbtn" title="App &amp; comms">🔔</button>
+      <div class="rail__sp"></div>
+      <button class="railbtn" title="Search">⌕</button>
+      <button class="railbtn" title="Settings">⚙</button>
+      <div style="width:30px;height:30px;border-radius:50%;background:#16212c;color:var(--sky-500);
+        display:grid;place-items:center;font-size:11px;font-weight:700;margin-top:8px">AI</div>
+    </aside>
+
+    <aside class="panel">
+      <h4>Operate</h4>
+      <a class="pl on">◧ Dashboard <span class="k">G D</span></a>
+      <a class="pl">⇄ Transactions <span class="n">312</span></a>
+      <a class="pl">☺ Customers <span class="n">4.2k</span></a>
+      <a class="pl">◎ Redeem Points</a>
+      <a class="pl">± Adjust Points</a>
+      <div class="psep"></div>
+      <h4>Saved views</h4>
+      <a class="pl">★ Today's shift</a>
+      <a class="pl">★ High-value idle 30d</a>
+      <a class="pl">★ Diesel · commercial</a>
+      <div class="psep"></div>
+      <h4>Alerts</h4>
+      <a class="pl" style="color:var(--amber-400)">⚠ Pump 3 · no txns 4h</a>
+      <a class="pl" style="color:var(--red-500)">⚠ Redemption spike +38%</a>
+    </aside>
+
+    <div class="main">
+
+      <!-- ===== B / DASHBOARD ===== -->
+      <div class="view on" data-view="dash">
+        <div class="bhead">
+          <h1>Overview</h1>
+          <span class="live"><i></i> LIVE</span>
+          <span class="sub">Auto-refresh 30s · last 12s ago</span>
+          <div class="right">
+            <button class="bbtn">⌕ Search <span style="font-family:'IBM Plex Mono',monospace;opacity:.5">⌘K</span></button>
+            <button class="bbtn">↓ Export</button>
+            <button class="bbtn p">+ Transaction</button>
+          </div>
+        </div>
+
+        <div class="filts">
+          <button class="chip" data-bchip>TODAY</button>
+          <button class="chip" data-bchip>7D</button>
+          <button class="chip on" data-bchip>30D</button>
+          <button class="chip" data-bchip>90D</button>
+          <button class="chip" data-bchip>YTD</button>
+          <div class="fdiv"></div>
+          <select class="fsel"><option>All fuel types</option><option>Petrol</option><option>Diesel</option><option>CNG</option></select>
+          <select class="fsel"><option>All segments</option><option>Commercial</option><option>Retail</option></select>
+          <select class="fsel"><option>All pumps</option><option>Pump 1</option><option>Pump 2</option><option>Pump 3</option></select>
+          <div class="fdiv"></div>
+          <button class="chip">+ add filter</button>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <span style="font-size:11px;color:#57646f;font-family:'IBM Plex Mono',monospace">15 JUN – 13 JUL 2026</span>
+          </div>
+        </div>
+
+        <div class="bbody">
+          <div class="hero">
+            <div class="hc big">
+              <div class="hc__l">TOTAL REVENUE <span class="tag g">+11.4%</span></div>
+              <div class="hc__v">₹1,84,20,400</div>
+              <div class="hc__f">
+                <span class="bd up">▲ ₹18.8L <small>vs prev period</small></span>
+                <span data-spark="18,22,19,26,24,31,28,35,33,40,38,46" data-spark-color="#39aa71" data-spark-w="120"></span>
+              </div>
+            </div>
+            <div class="hc">
+              <div class="hc__l">TRANSACTIONS</div>
+              <div class="hc__v">12,704</div>
+              <div class="hc__f"><span class="bd up">▲ 8.9%</span>
+                <span data-spark="30,28,34,31,38,35,42,39,44,41,48,52" data-spark-color="#249adf" data-spark-w="70"></span></div>
+            </div>
+            <div class="hc">
+              <div class="hc__l">ACTIVE CUSTOMERS</div>
+              <div class="hc__v">1,946</div>
+              <div class="hc__f"><span class="bd up">▲ 3.1%</span>
+                <span data-spark="22,24,23,27,26,29,28,31,30,33,32,36" data-spark-color="#0080a0" data-spark-w="70"></span></div>
+            </div>
+            <div class="hc">
+              <div class="hc__l">POINTS REDEEMED</div>
+              <div class="hc__v">341.2K</div>
+              <div class="hc__f"><span class="bd dn">▼ 4.2%</span>
+                <span data-spark="40,44,38,42,36,39,34,37,32,35,30,28" data-spark-color="#fa484b" data-spark-w="70"></span></div>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="bcard">
+              <div class="bcard__h">
+                <h3>Revenue &amp; Transactions</h3>
+                <div class="r">
+                  <span class="tag">DAILY</span>
+                  <span class="tag g">+11.4%</span>
+                </div>
+              </div>
+              <div class="bcard__b"><div data-chart="line-b-dark"></div></div>
+            </div>
+
+            <div class="bcard">
+              <div class="bcard__h">
+                <h3>Live Activity</h3>
+                <div class="r"><span class="live"><i></i> 312 today</span></div>
+              </div>
+              <div class="feed">
+                <div class="fi"><span class="fi__t">14:32</span><div class="fi__m"><b>Ramesh Kumar</b><span> · KA01AB1234 · Pump 2</span></div><span class="fi__a">₹2,400</span></div>
+                <div class="fi"><span class="fi__t">14:28</span><div class="fi__m"><b>Priya Nair</b><span> · KA05MJ8891 · Pump 1</span></div><span class="fi__a">₹1,180</span></div>
+                <div class="fi"><span class="fi__t">14:21</span><div class="fi__m"><b>Redemption</b><span> · Vikram Shetty · 500 pts</span></div><span class="fi__a" style="color:var(--red-500)">−500</span></div>
+                <div class="fi"><span class="fi__t">14:19</span><div class="fi__m"><b>Anita Desai</b><span> · TN09QQ3345 · Pump 4</span></div><span class="fi__a">₹3,850</span></div>
+                <div class="fi"><span class="fi__t">14:11</span><div class="fi__m"><b>New member</b><span> · Deepa Menon · KL07AB9090</span></div><span class="fi__a" style="color:var(--green-500)">NEW</span></div>
+                <div class="fi"><span class="fi__t">14:04</span><div class="fi__m"><b>Mohammed Irfan</b><span> · KA02PP1123 · Pump 2</span></div><span class="fi__a">₹900</span></div>
+                <div class="fi"><span class="fi__t">13:58</span><div class="fi__m"><b>Suresh Reddy</b><span> · KA03HH2210 · Pump 3</span></div><span class="fi__a">₹1,650</span></div>
+                <div class="fi"><span class="fi__t">13:47</span><div class="fi__m"><b>Lakshmi Rao</b><span> · walk-in · Pump 1</span></div><span class="fi__a">₹520</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid3">
+            <div class="bcard">
+              <div class="bcard__h"><h3>Transactions by Hour</h3><div class="r"><span class="tag">PEAK 18:00</span></div></div>
+              <div class="bcard__b"><div data-chart="bar-b-dark"></div></div>
+            </div>
+            <div class="bcard">
+              <div class="bcard__h"><h3>Fuel Mix</h3><div class="r"><span class="tag">BY REVENUE</span></div></div>
+              <div class="bcard__b">
+                <div style="display:flex;gap:18px;align-items:center">
+                  <div data-chart="donut-dark"></div>
+                  <div style="flex:1;font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+                    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1a212a">
+                      <span style="color:#8b97a4"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:#249adf;margin-right:6px"></span>Diesel</span><b style="color:#eef3f8">52%</b></div>
+                    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1a212a">
+                      <span style="color:#8b97a4"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:#39aa71;margin-right:6px"></span>Petrol</span><b style="color:#eef3f8">34%</b></div>
+                    <div style="display:flex;justify-content:space-between;padding:5px 0">
+                      <span style="color:#8b97a4"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:#f5a524;margin-right:6px"></span>CNG</span><b style="color:#eef3f8">14%</b></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="bcard">
+              <div class="bcard__h"><h3>Redemption Rate</h3><div class="r"><span class="tag r">−4.2%</span></div></div>
+              <div class="bcard__b">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:600;color:#fff;letter-spacing:-.02em">37.4<span style="font-size:18px;color:#57646f">%</span></div>
+                <div style="height:6px;background:#1a212a;border-radius:3px;margin:12px 0 14px;overflow:hidden">
+                  <div style="width:37.4%;height:100%;background:linear-gradient(90deg,var(--cyan-600),var(--sky-500))"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+                  <div><div style="color:#57646f;font-size:10px;margin-bottom:2px">ISSUED</div><b style="color:#dbe4ec">912,400</b></div>
+                  <div style="text-align:right"><div style="color:#57646f;font-size:10px;margin-bottom:2px">REDEEMED</div><b style="color:#dbe4ec">341,200</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== B / CUSTOMERS ===== -->
+      <div class="view" data-view="cust">
+        <div class="bhead">
+          <h1>Customers</h1>
+          <span class="sub">4,182 members · 1,946 active</span>
+          <div class="right">
+            <button class="bbtn">↓ Export</button>
+            <button class="bbtn p">+ New Customer</button>
+          </div>
+        </div>
+
+        <div class="filts">
+          <button class="chip on" data-bchip>ALL</button>
+          <button class="chip" data-bchip>ACTIVE</button>
+          <button class="chip" data-bchip>INACTIVE</button>
+          <button class="chip" data-bchip>PAUSED</button>
+          <div class="fdiv"></div>
+          <select class="fsel"><option>Points: any</option><option>&gt; 1000</option><option>&gt; 5000</option></select>
+          <select class="fsel"><option>Last visit: any</option><option>Within 7d</option><option>Over 30d ago</option></select>
+          <button class="chip">+ add filter</button>
+          <button class="chip" style="margin-left:auto;color:var(--sky-500)">★ Save as view</button>
+        </div>
+
+        <div class="bbody">
+          <div class="dg">
+            <div class="dg__bar">
+              <div class="dg__srch">
+                <span style="color:#4a5765">⌕</span>
+                <input placeholder="name, phone, plate…">
+                <kbd>/</kbd>
+              </div>
+              <button class="bbtn">⚙ Columns</button>
+              <div class="kbhint" style="margin-left:auto">
+                <span><kbd>J</kbd><kbd>K</kbd> move</span>
+                <span><kbd>↵</kbd> inspect</span>
+                <span><kbd>X</kbd> select</span>
+              </div>
+            </div>
+
+            <table data-btable>
+              <thead>
+                <tr>
+                  <th data-sort="name">Customer</th>
+                  <th data-sort="phone">Phone</th>
+                  <th data-sort="veh">Vehicles</th>
+                  <th data-sort="visits" style="text-align:right">Visits 30d</th>
+                  <th data-sort="spend" style="text-align:right">Spend 30d</th>
+                  <th class="sorted" data-sort="pts" style="text-align:right">Points ▼</th>
+                  <th data-sort="last">Last Visit</th>
+                  <th data-sort="status">Status</th>
+                </tr>
+              </thead>
+              <tbody data-brows></tbody>
+            </table>
+
+            <div class="dg__foot">
+              <span>1–8 of 4,182</span>
+              <span style="color:#3c4753">|</span>
+              <span>Click any row to inspect →</span>
+              <div class="kbhint">
+                <button class="bbtn" style="padding:4px 9px;font-size:11px">← Prev</button>
+                <button class="bbtn" style="padding:4px 9px;font-size:11px">Next →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- inspector -->
+  <div class="insp" data-insp>
+    <div class="insp__h">
+      <div>
+        <h3 data-insp-name>Ramesh Kumar</h3>
+        <p data-insp-phone>+91 98450 12345</p>
+      </div>
+      <button class="bbtn" style="margin-left:auto;padding:4px 9px" data-insp-close>ESC</button>
+    </div>
+    <div class="insp__b">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">
+        <div style="background:#141b23;border:1px solid #1e2731;border-radius:9px;padding:10px 12px">
+          <div style="font-size:10px;color:#57646f;margin-bottom:3px">POINTS</div>
+          <b style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:#fff" data-insp-pts>2,340</b>
+        </div>
+        <div style="background:#141b23;border:1px solid #1e2731;border-radius:9px;padding:10px 12px">
+          <div style="font-size:10px;color:#57646f;margin-bottom:3px">VISITS 30D</div>
+          <b style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:#fff" data-insp-visits>7</b>
+        </div>
+        <div style="background:#141b23;border:1px solid #1e2731;border-radius:9px;padding:10px 12px">
+          <div style="font-size:10px;color:#57646f;margin-bottom:3px">SPEND 30D</div>
+          <b style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:#fff" data-insp-spend>₹14.2K</b>
+        </div>
+      </div>
+
+      <h4 style="margin:0 0 10px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#5f6d7c">Vehicles</h4>
+      <div data-insp-veh style="margin-bottom:20px"></div>
+
+      <h4 style="margin:0 0 10px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#5f6d7c">Recent activity</h4>
+      <div class="kv"><span>13 Jul · Pump 2 · Diesel</span><b>₹2,400</b></div>
+      <div class="kv"><span>09 Jul · Pump 1 · Diesel</span><b>₹1,980</b></div>
+      <div class="kv"><span>06 Jul · Redemption</span><b style="color:var(--red-500)">−500 pts</b></div>
+      <div class="kv"><span>02 Jul · Pump 3 · Diesel</span><b>₹2,110</b></div>
+
+      <div style="display:flex;gap:7px;margin-top:22px">
+        <button class="bbtn p" style="flex:1;justify-content:center">Adjust points</button>
+        <button class="bbtn" style="flex:1;justify-content:center">Full profile</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================================
+     DIRECTION C — WORKSPACE
+     ========================================================== -->
+<div class="proto" id="c">
+  <nav class="cnav">
+    <div class="cnav__r1">
+      <div class="cbrand">
+        <div class="cbrand__m">A</div> Ace Fuel Loyalty
+      </div>
+      <button class="cswitch">⛽ Whitefield Station ⌄</button>
+      <div class="right">
+        <button class="cgs">⌕ Search customers, transactions… <kbd>⌘K</kbd></button>
+        <button class="cbtn" style="padding:8px 10px">🔔</button>
+        <div class="cav">AI</div>
+      </div>
+    </div>
+    <div class="cnav__r2" data-cnav>
+      <button class="cn on">◧ Overview</button>
+      <button class="cn">☺ Customers</button>
+      <button class="cn">⇄ Transactions</button>
+      <button class="cn">⛽ Station</button>
+      <button class="cn">☰ Team &amp; Shifts</button>
+      <button class="cn">🔔 Campaigns</button>
+      <button class="cn">⚙ Settings</button>
+    </div>
+  </nav>
+
+  <!-- ===== C / DASHBOARD ===== -->
+  <div class="view on" data-view="dash">
+    <div class="cwrap">
+      <div class="chead">
+        <div>
+          <h1>Good afternoon, Achal</h1>
+          <p>Whitefield Station is tracking <b style="color:var(--green-600)">11% ahead</b> of last month. Two things need a look — redemptions are down and Pump 3 has been quiet since 10am.</p>
+        </div>
+        <div class="acts">
+          <button class="cbtn">↓ Export PDF</button>
+          <button class="cbtn p">+ New Transaction</button>
+        </div>
+      </div>
+
+      <div class="views" data-views>
+        <button class="view-tab on">Last 30 days</button>
+        <button class="view-tab">Today</button>
+        <button class="view-tab">This week</button>
+        <button class="view-tab">Quarter to date</button>
+        <button class="view-tab">Custom range ⌄</button>
+        <button class="add">⚙ Configure dashboard</button>
+      </div>
+
+      <div class="mrow">
+        <div class="m">
+          <div class="m__l"><span class="m__i" style="background:var(--green-100);color:#007845">₹</span> Total Revenue</div>
+          <div class="m__v">₹1.84 Cr</div>
+          <div class="m__d"><span class="cd up">↑ 11.4%</span> <small>vs previous 30 days</small></div>
+        </div>
+        <div class="m">
+          <div class="m__l"><span class="m__i" style="background:var(--sky-100);color:var(--sky-600)">⇄</span> Transactions</div>
+          <div class="m__v">12,704</div>
+          <div class="m__d"><span class="cd up">↑ 8.9%</span> <small>1,038 more visits</small></div>
+        </div>
+        <div class="m">
+          <div class="m__l"><span class="m__i" style="background:var(--cyan-100);color:var(--cyan-600)">☺</span> Active Customers</div>
+          <div class="m__v">1,946</div>
+          <div class="m__d"><span class="cd up">↑ 3.1%</span> <small>of 4,182 enrolled</small></div>
+        </div>
+        <div class="m">
+          <div class="m__l"><span class="m__i" style="background:var(--red-100);color:#bc001f">◎</span> Points Redeemed</div>
+          <div class="m__v">3.41 L</div>
+          <div class="m__d"><span class="cd dn">↓ 4.2%</span> <small>needs attention</small></div>
+        </div>
+      </div>
+
+      <div class="csec">
+        <div class="csec__h">
+          <h2>Trends</h2>
+          <p>Daily movement across the selected period</p>
+          <span class="r"><button class="cbtn" style="padding:6px 12px;font-size:12px">Compare to ⌄</button></span>
+        </div>
+        <div class="cgrid">
+          <div class="ccard">
+            <div class="ccard__h">
+              <div><h3>Revenue</h3><p>Daily fuel revenue</p></div>
+              <span class="r"><span class="cpill">↑ 11.4%</span></span>
+            </div>
+            <div class="ccard__b"><div data-chart="line-c"></div></div>
+          </div>
+          <div class="ccard">
+            <div class="ccard__h">
+              <div><h3>Points issued vs redeemed</h3><p>Loyalty balance over time</p></div>
+              <span class="r"><span class="cpill dn">↓ 4.2%</span></span>
+            </div>
+            <div class="ccard__b"><div data-chart="line-c2"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="csec">
+        <div class="csec__h">
+          <h2>Who's driving it</h2>
+          <p>Top members and where demand clusters</p>
+        </div>
+        <div class="cgrid">
+          <div class="ccard">
+            <div class="ccard__h">
+              <div><h3>Top customers by spend</h3><p>Last 30 days</p></div>
+              <span class="r"><button class="cico">⤢</button></span>
+            </div>
+            <div class="ccard__b">
+              <div data-topcust></div>
+            </div>
+          </div>
+          <div class="ccard">
+            <div class="ccard__h">
+              <div><h3>Transactions by hour</h3><p>Peaks at 18:00 — staff accordingly</p></div>
+              <span class="r"><button class="cico">⤢</button></span>
+            </div>
+            <div class="ccard__b"><div data-chart="bar-c"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== C / CUSTOMERS ===== -->
+  <div class="view" data-view="cust">
+    <div class="cwrap">
+      <div class="chead">
+        <div>
+          <h1>Customers</h1>
+          <p>4,182 enrolled members. 1,946 have visited in the last 30 days.</p>
+        </div>
+        <div class="acts">
+          <button class="cbtn">↓ Export</button>
+          <button class="cbtn p">+ New Customer</button>
+        </div>
+      </div>
+
+      <div class="views" data-views>
+        <button class="view-tab on">All <span class="n">4,182</span></button>
+        <button class="view-tab">Active <span class="n">1,946</span></button>
+        <button class="view-tab">Inactive <span class="n">2,236</span></button>
+        <button class="view-tab">★ High value <span class="n">214</span></button>
+        <button class="view-tab">★ Lapsed 60d <span class="n">631</span></button>
+        <button class="add">+ Save current view</button>
+      </div>
+
+      <div class="cfilters">
+        <div class="cfs">
+          <span style="color:#a8aeb5">⌕</span>
+          <input placeholder="Search by name, phone, or vehicle…">
+        </div>
+        <button class="cfilt">Points: any ⌄</button>
+        <button class="cfilt">Last visit: any ⌄</button>
+        <button class="cfilt">Vehicle type: any ⌄</button>
+        <button class="cfilt">+ Filter</button>
+        <div class="r">
+          <span style="font-size:12px;color:#9aa1a9">Sort by</span>
+          <button class="cfilt on">Points ↓</button>
+        </div>
+      </div>
+
+      <div class="clist">
+        <div class="chdr">
+          <span></span>
+          <span>Customer</span>
+          <span>Phone</span>
+          <span>Vehicles</span>
+          <span style="text-align:right">Visits 30d</span>
+          <span style="text-align:right">Points ↓</span>
+          <span></span>
+        </div>
+        <div data-crows></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px;font-size:12.5px;color:#7b838d">
+        <span>Showing 1–8 of 4,182</span>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="cbtn" style="padding:7px 12px;font-size:12px">← Previous</button>
+          <button class="cbtn" style="padding:7px 12px;font-size:12px">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scrim" data-cscrim></div>
+  <div class="cdrawer" data-cdrawer>
+    <div class="cdh">
+      <div class="cdh__t">
+        <div class="cpav" data-cd-av style="width:44px;height:44px;border-radius:13px;font-size:14px">RK</div>
+        <div>
+          <h3 data-cd-name>Ramesh Kumar</h3>
+          <p data-cd-phone>+91 98450 12345</p>
+        </div>
+        <button class="cdx" data-cd-close>✕</button>
+      </div>
+      <div class="cdstats">
+        <div class="cds"><span>Points</span><strong data-cd-pts>2,340</strong></div>
+        <div class="cds"><span>Visits 30d</span><strong data-cd-visits>7</strong></div>
+        <div class="cds"><span>Spend 30d</span><strong data-cd-spend>₹14.2K</strong></div>
+      </div>
+    </div>
+    <div class="cdb">
+      <h5>Vehicles</h5>
+      <div data-cd-veh></div>
+
+      <h5 style="margin-top:24px">Details</h5>
+      <div class="cdkv"><span>Status</span><b data-cd-status>Active</b></div>
+      <div class="cdkv"><span>Member since</span><b>14 Mar 2024</b></div>
+      <div class="cdkv"><span>Last visit</span><b data-cd-last>13 Jul 2026</b></div>
+      <div class="cdkv"><span>Rewards</span><b style="color:var(--green-600)">Earning</b></div>
+
+      <h5 style="margin-top:24px">Recent activity</h5>
+      <div class="cdtl"><span class="cdtl__d"></span><div class="cdtl__m"><b>Fuel purchase</b><span>13 Jul · Pump 2 · Diesel · +240 pts</span></div><span class="cdtl__a">₹2,400</span></div>
+      <div class="cdtl"><span class="cdtl__d"></span><div class="cdtl__m"><b>Fuel purchase</b><span>09 Jul · Pump 1 · Diesel · +198 pts</span></div><span class="cdtl__a">₹1,980</span></div>
+      <div class="cdtl"><span class="cdtl__d" style="background:var(--red-500)"></span><div class="cdtl__m"><b>Points redeemed</b><span>06 Jul · Redemption slab 500</span></div><span class="cdtl__a" style="color:var(--red-600)">−500 pts</span></div>
+      <div class="cdtl"><span class="cdtl__d"></span><div class="cdtl__m"><b>Fuel purchase</b><span>02 Jul · Pump 3 · Diesel · +211 pts</span></div><span class="cdtl__a">₹2,110</span></div>
+
+      <div style="display:flex;gap:8px;margin-top:26px">
+        <button class="cbtn p" style="flex:1;justify-content:center">Adjust points</button>
+        <button class="cbtn" style="flex:1;justify-content:center">Edit</button>
+        <button class="cbtn" style="padding:9px 12px">⋯</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /stage -->
+
+<div class="why" data-why>
+  <button class="why__close" data-why-close>✕</button>
+  <div data-why-body></div>
+</div>
+<button class="whytoggle" data-why-toggle>Why this design?</button>
+
+<script>
+/* ============================================================
+   DATA
+   ============================================================ */
+const CUSTOMERS = [
+  {n:"Anita Desai",     p:"+91 98860 77120", v:["TN09QQ3345"],               vis:9, sp:28400, pts:4910, last:"13 Jul", st:1, c:"#0080a0"},
+  {n:"Vikram Shetty",   p:"+91 99640 88123", v:["KA51XY7788","KA51ZZ0091"],  vis:11,sp:24150, pts:3275, last:"13 Jul", st:1, c:"#18945c"},
+  {n:"Ramesh Kumar",    p:"+91 98450 12345", v:["KA01AB1234"],               vis:7, sp:14200, pts:2340, last:"13 Jul", st:1, c:"#10447c"},
+  {n:"Deepa Menon",     p:"+91 94480 66550", v:["KL07AB9090"],               vis:5, sp:11600, pts:1745, last:"11 Jul", st:1, c:"#249adf"},
+  {n:"Priya Nair",      p:"+91 99001 22334", v:["KA05MJ8891","KA05CD4412"],  vis:4, sp:8900,  pts:1180, last:"13 Jul", st:1, c:"#f5a524"},
+  {n:"Suresh Reddy",    p:"+91 90080 55412", v:["KA03HH2210"],               vis:1, sp:1650,  pts:620,  last:"02 May", st:0, c:"#838990"},
+  {n:"Mohammed Irfan",  p:"+91 97400 33221", v:["KA02PP1123"],               vis:2, sp:2400,  pts:90,   last:"12 Jul", st:1, c:"#df2935"},
+  {n:"Lakshmi Rao",     p:"+91 89040 12009", v:[],                           vis:0, sp:0,     pts:0,    last:"—",      st:0, c:"#a7acb2"},
+];
+const REVENUE = [42,48,44,51,47,58,54,49,62,57,66,61,55,71,68,63,74,70,78,72,81,76,85,79,88,83,92,87,95,101];
+const POINTS_I = [30,34,32,38,36,42,40,37,46,43,49,46,42,53,51,48,56,53,59,55,61,58,64,60,66,63,69,66,72,76];
+const POINTS_R = [22,26,21,28,24,31,27,25,33,29,34,30,27,36,32,29,34,30,33,28,31,27,30,26,29,25,28,24,27,23];
+const HOURS = [4,3,2,2,4,9,18,32,41,38,34,30,36,42,38,35,44,58,66,52,38,26,14,7];
+const HOUR_LBL = ["00","","","03","","","06","","","09","","","12","","","15","","","18","","","21","",""];
+
+const WHY = {
+  a: {t:"A · Focused Ops", b:[
+    "<b>Nav: 18 flat links → 4 collapsible groups</b> + ⌘K palette. Only the group you're in stays open, so you never scan past 17 items to find one.",
+    "<b>Filter bar: 5 stacked blocks → one sticky row.</b> Range chips, date, segment, fuel. It stops eating a third of the fold.",
+    "<b>Dashboard tabs</b> replace the 5-section scroll. Overview / Customers / Rewards / Behavior.",
+    "<b>KPIs: 8 equal cards → 4 hero + 4 secondary strip.</b> Revenue and transactions are not the same weight as visits-per-customer.",
+    "<b>List rows → a real table.</b> Sortable columns, multi-select with a bulk-action bar, density toggle, column picker.",
+    "Ships on Bootstrap + your existing Nayara tokens. Lowest-risk path."
+  ]},
+  b: {t:"B · Command Center", b:[
+    "Built for someone who lives in this screen all day — a station manager, not a visitor.",
+    "<b>Icon rail + contextual panel.</b> Nav takes 60px until you need it; the panel shows only the current section plus saved views and live alerts.",
+    "<b>Live activity feed</b> next to the charts. Right now nothing in the console tells you what happened five minutes ago.",
+    "<b>Hero metric hierarchy</b> — revenue is 34px, everything else is 26px. Monospace numerals so columns of digits align.",
+    "<b>Keyboard-first grid</b>: J/K to move, ↵ to inspect, X to select. Row click opens a right-hand inspector instead of a modal.",
+    "Dark UI is a real trade-off: great for a back-office screen that's always on, worse if admins print or use it in daylight."
+  ]},
+  c: {t:"C · Workspace", b:[
+    "For occasional admins — owners who log in twice a week and want the answer, not the dataset.",
+    "<b>Top nav, no sidebar.</b> 7 destinations instead of 18. Sub-pages live inside sections, not the global rail.",
+    "<b>Saved views as tabs</b> on both dashboard and lists. 'High value', 'Lapsed 60d' — the filter combinations people actually re-run.",
+    "<b>The headline does the reading for you</b> — 'tracking 11% ahead, two things need a look' beats a wall of eight identical KPI tiles.",
+    "<b>Side drawer, not modal.</b> The current transactions page renders one modal per row into the DOM; a single drawer is lighter and keeps the list visible behind it.",
+    "<b>Roomier, fewer things per screen.</b> Costs you density — a power user will find it slow."
+  ]}
+};
+
+/* ============================================================
+   CHART HELPERS (inline SVG, no deps)
+   ============================================================ */
+function path(d,w,h,pad=4){
+  const mx=Math.max(...d), mn=Math.min(...d), rg=(mx-mn)||1;
+  return d.map((v,i)=>{
+    const x=pad+(i/(d.length-1))*(w-pad*2);
+    const y=h-pad-((v-mn)/rg)*(h-pad*2);
+    return `${i?'L':'M'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+}
+function spark(d,color,w=64,h=24){
+  const p=path(d,w,h,2);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none">
+    <path d="${p}" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+function lineChart(series,{w=440,h=170,grid="#f1f3f5",labels=[],axis="#a7acb2",area=true}={}){
+  const pad={l:34,r:8,t:8,b:20};
+  const iw=w-pad.l-pad.r, ih=h-pad.t-pad.b;
+  const all=series.flatMap(s=>s.d);
+  const mx=Math.max(...all), mn=0, rg=(mx-mn)||1;
+  const X=i=>pad.l+(i/(series[0].d.length-1))*iw;
+  const Y=v=>pad.t+ih-((v-mn)/rg)*ih;
+  let g='';
+  for(let i=0;i<=4;i++){
+    const y=pad.t+(i/4)*ih;
+    const val=Math.round(mx-(i/4)*rg);
+    g+=`<line x1="${pad.l}" y1="${y}" x2="${w-pad.r}" y2="${y}" stroke="${grid}" stroke-width="1"/>
+        <text x="${pad.l-7}" y="${y+3.5}" fill="${axis}" font-size="9" text-anchor="end" font-family="IBM Plex Mono,monospace">${val}</text>`;
+  }
+  let paths='';
+  series.forEach((s,si)=>{
+    const p=s.d.map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    if(area&&si===0){
+      const ap=p+` L${X(s.d.length-1).toFixed(1)},${(pad.t+ih).toFixed(1)} L${X(0).toFixed(1)},${(pad.t+ih).toFixed(1)} Z`;
+      paths+=`<path d="${ap}" fill="url(#gr${s.c.replace('#','')})" opacity=".13"/>`;
+    }
+    paths+=`<path d="${p}" stroke="${s.c}" stroke-width="${s.dash?1.8:2.2}" fill="none"
+      stroke-linecap="round" stroke-linejoin="round" ${s.dash?'stroke-dasharray="4 3"':''}/>`;
+    const li=s.d.length-1;
+    paths+=`<circle cx="${X(li).toFixed(1)}" cy="${Y(s.d[li]).toFixed(1)}" r="3" fill="${s.c}"/>
+            <circle cx="${X(li).toFixed(1)}" cy="${Y(s.d[li]).toFixed(1)}" r="6" fill="${s.c}" opacity=".18"/>`;
+  });
+  const defs=series.map(s=>`<linearGradient id="gr${s.c.replace('#','')}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="${s.c}"/><stop offset="100%" stop-color="${s.c}" stop-opacity="0"/></linearGradient>`).join('');
+  const leg=series.length>1?`<div style="display:flex;gap:14px;margin-top:6px;font-size:11px">
+    ${series.map(s=>`<span style="display:inline-flex;align-items:center;gap:5px;color:${axis}">
+      <span style="width:8px;height:2px;border-radius:2px;background:${s.c};display:inline-block"></span>${s.n}</span>`).join('')}
+  </div>`:'';
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" fill="none"><defs>${defs}</defs>${g}${paths}</svg>${leg}`;
+}
+function barChart(d,{w=440,h=170,color="#249adf",grid="#f1f3f5",axis="#a7acb2",labels=[],hi=-1,hiColor="#10447c"}={}){
+  const pad={l:30,r:8,t:8,b:22};
+  const iw=w-pad.l-pad.r, ih=h-pad.t-pad.b;
+  const mx=Math.max(...d)||1;
+  const bw=iw/d.length;
+  let g='';
+  for(let i=0;i<=4;i++){
+    const y=pad.t+(i/4)*ih;
+    g+=`<line x1="${pad.l}" y1="${y}" x2="${w-pad.r}" y2="${y}" stroke="${grid}" stroke-width="1"/>
+        <text x="${pad.l-6}" y="${y+3.5}" fill="${axis}" font-size="9" text-anchor="end" font-family="IBM Plex Mono,monospace">${Math.round(mx-(i/4)*mx)}</text>`;
+  }
+  let bars='';
+  d.forEach((v,i)=>{
+    const bh=(v/mx)*ih;
+    const x=pad.l+i*bw+bw*0.16;
+    const y=pad.t+ih-bh;
+    bars+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bw*0.68).toFixed(1)}" height="${Math.max(bh,1).toFixed(1)}"
+      rx="2.5" fill="${i===hi?hiColor:color}" opacity="${i===hi?1:.85}"/>`;
+    if(labels[i])bars+=`<text x="${(pad.l+i*bw+bw/2).toFixed(1)}" y="${h-6}" fill="${axis}" font-size="9"
+      text-anchor="middle" font-family="IBM Plex Mono,monospace">${labels[i]}</text>`;
+  });
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" fill="none">${g}${bars}</svg>`;
+}
+function donut(segs,{size=118,thick=17,track="#f1f3f5"}={}){
+  const r=(size-thick)/2, c=2*Math.PI*r, cx=size/2;
+  let off=0, arcs='';
+  segs.forEach(s=>{
+    const len=(s.v/100)*c;
+    arcs+=`<circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="${s.c}" stroke-width="${thick}"
+      stroke-dasharray="${len.toFixed(2)} ${(c-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"
+      transform="rotate(-90 ${cx} ${cx})" stroke-linecap="butt"/>`;
+    off+=len;
+  });
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="${track}" stroke-width="${thick}"/>${arcs}</svg>`;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const money=n=>"₹"+n.toLocaleString('en-IN');
+const init=n=>n.split(' ').map(w=>w[0]).join('').slice(0,2);
+
+// sparklines
+$$('[data-spark]').forEach(el=>{
+  const d=el.dataset.spark.split(',').map(Number);
+  el.innerHTML=spark(d,el.dataset.sparkColor||'#249adf',+(el.dataset.sparkW||64));
+});
+
+// charts
+$('[data-chart="line-a"]').innerHTML=lineChart([{d:REVENUE,c:"#18945c",n:"Revenue (₹k)"}]);
+$('[data-chart="line-b"]').innerHTML=lineChart([
+  {d:POINTS_I,c:"#0080a0",n:"Issued"},{d:POINTS_R,c:"#f5a524",n:"Redeemed",dash:1}
+]);
+$('[data-chart="bar-a"]').innerHTML=barChart(HOURS,{labels:HOUR_LBL,hi:18,color:"#9bcbff",hiColor:"#10447c"});
+$('[data-chart="donut"]').innerHTML=donut([{v:37.4,c:"#0080a0"}]);
+
+$('[data-chart="line-b-dark"]').innerHTML=lineChart([
+  {d:REVENUE,c:"#249adf",n:"Revenue"},{d:POINTS_I.map(v=>v*0.9),c:"#39aa71",n:"Transactions",dash:1}
+],{grid:"#1a212a",axis:"#57646f",h:200});
+$('[data-chart="bar-b-dark"]').innerHTML=barChart(HOURS,{labels:HOUR_LBL,grid:"#1a212a",axis:"#57646f",
+  color:"#1d4a6b",hi:18,hiColor:"#249adf",h:150,w:340});
+$('[data-chart="donut-dark"]').innerHTML=donut([
+  {v:52,c:"#249adf"},{v:34,c:"#39aa71"},{v:14,c:"#f5a524"}
+],{track:"#1a212a",size:100,thick:15});
+
+$('[data-chart="line-c"]').innerHTML=lineChart([{d:REVENUE,c:"#10447c",n:"Revenue"}],{h:190,grid:"#f3f4f6",axis:"#9aa1a9"});
+$('[data-chart="line-c2"]').innerHTML=lineChart([
+  {d:POINTS_I,c:"#0080a0",n:"Issued"},{d:POINTS_R,c:"#df2935",n:"Redeemed",dash:1}
+],{h:190,grid:"#f3f4f6",axis:"#9aa1a9"});
+$('[data-chart="bar-c"]').innerHTML=barChart(HOURS,{labels:HOUR_LBL,h:190,grid:"#f3f4f6",axis:"#9aa1a9",
+  color:"#b9e4ff",hi:18,hiColor:"#10447c"});
+
+// C: top customers list
+$('[data-topcust]').innerHTML=CUSTOMERS.slice(0,5).map((c,i)=>`
+  <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:${i<4?'1px solid #f3f4f6':'0'}">
+    <span style="width:20px;font-size:12px;color:#c3c8ce;font-weight:600">${i+1}</span>
+    <span class="cpav" style="background:${c.c}1a;color:${c.c}">${init(c.n)}</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:13px;letter-spacing:-.01em">${c.n}</div>
+      <div style="font-size:11.5px;color:#9aa1a9">${c.vis} visits · ${c.v[0]||'no vehicle'}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-weight:600;font-size:13.5px;letter-spacing:-.02em">${money(c.sp)}</div>
+      <div style="font-size:11px;color:#9aa1a9">${c.pts.toLocaleString('en-IN')} pts</div>
+    </div>
+  </div>`).join('');
+
+/* ---------- A: table ---------- */
+let sortKey='pts', sortDir=-1;
+const KEYMAP={name:'n',phone:'p',veh:'v',visits:'vis',spend:'sp',pts:'pts',last:'last',status:'st'};
+function sorted(){
+  const k=KEYMAP[sortKey];
+  return [...CUSTOMERS].sort((x,y)=>{
+    let a=x[k],b=y[k];
+    if(Array.isArray(a)){a=a.length;b=b.length}
+    if(typeof a==='string')return a.localeCompare(b)*sortDir;
+    return (a-b)*sortDir;
+  });
+}
+const sel=new Set();
+function renderA(){
+  $('[data-rows]').innerHTML=sorted().map((c,i)=>`
+    <tr data-i="${i}">
+      <td><input type="checkbox" data-selrow="${c.n}" ${sel.has(c.n)?'checked':''}></td>
+      <td><span class="cnm">
+        <span class="ico" style="background:${c.c}1a;color:${c.c};width:26px;height:26px;border-radius:7px;font-weight:700;font-size:10px">${init(c.n)}</span>
+        ${c.n}</span></td>
+      <td class="mono">${c.p}</td>
+      <td>${c.v.length?c.v.map(v=>`<span class="plate">${v}</span>`).join(''):'<span style="color:var(--n-400);font-size:12px">—</span>'}</td>
+      <td style="text-align:right" class="mono">${c.vis}</td>
+      <td style="text-align:right" class="mono">${c.sp?money(c.sp):'—'}</td>
+      <td style="text-align:right"><span class="pts">${c.pts.toLocaleString('en-IN')}</span></td>
+      <td class="mono" style="color:var(--n-500)">${c.last}</td>
+      <td><span class="badge ${c.st?'act':'ina'}">${c.st?'Active':'Inactive'}</span></td>
+      <td><span class="rowacts">
+        <button class="iconbtn" title="View">◉</button>
+        <button class="iconbtn" title="Adjust points">±</button>
+        <button class="iconbtn" title="More">⋯</button>
+      </span></td>
+    </tr>`).join('');
+  $$('[data-selrow]').forEach(cb=>cb.onchange=()=>{
+    cb.checked?sel.add(cb.dataset.selrow):sel.delete(cb.dataset.selrow);
+    syncSel();
+  });
+}
+function syncSel(){
+  const bar=$('[data-selbar]');
+  bar.classList.toggle('on',sel.size>0);
+  $('[data-selcount]').textContent=`${sel.size} selected`;
+}
+renderA();
+$$('#a thead th[data-sort]').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.sort;
+  if(k===sortKey)sortDir*=-1;else{sortKey=k;sortDir=-1}
+  $$('#a thead th').forEach(t=>{t.classList.remove('sorted');
+    const s=t.querySelector('.sortico'); if(s)s.textContent='▲▼';});
+  th.classList.add('sorted');
+  const ic=th.querySelector('.sortico');
+  if(ic)ic.textContent=sortDir<0?'▼':'▲';
+  renderA();
+});
+$('[data-selall]').onchange=e=>{
+  sel.clear();
+  if(e.target.checked)CUSTOMERS.forEach(c=>sel.add(c.n));
+  renderA();syncSel();
+};
+$('[data-selclear]').onclick=()=>{sel.clear();$('[data-selall]').checked=false;renderA();syncSel()};
+
+// A: nav groups
+$$('#a .grp__head').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
+$$('#a .navlink').forEach(l=>l.onclick=()=>{
+  $$('#a .navlink').forEach(x=>x.classList.remove('on'));l.classList.add('on');
+  const t=l.textContent.trim();
+  if(t.startsWith('Customers'))go('cust'); else if(t.startsWith('Dashboard'))go('dash');
+});
+// A: segmented + tabs
+$$('#a [data-seg] button, #a [data-tabs] .tab').forEach(b=>b.onclick=()=>{
+  [...b.parentElement.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');
+});
+// A: cmdk
+const cmdk=$('[data-cmdk]');
+$('[data-cmdk-open]').onclick=()=>{cmdk.classList.add('on');$('[data-cmdk-input]').focus()};
+cmdk.onclick=e=>{if(e.target===cmdk)cmdk.classList.remove('on')};
+$$('#a .cmdk__i').forEach(i=>i.onclick=()=>{
+  cmdk.classList.remove('on');
+  const t=i.textContent.trim();
+  if(t.startsWith('Customers'))go('cust'); else if(t.startsWith('Dashboard'))go('dash');
+});
+
+/* ---------- B: grid ---------- */
+let bsort='pts', bdir=-1;
+function bsorted(){
+  const k=KEYMAP[bsort];
+  return [...CUSTOMERS].sort((x,y)=>{
+    let a=x[k],b=y[k];
+    if(Array.isArray(a)){a=a.length;b=b.length}
+    if(typeof a==='string')return a.localeCompare(b)*bdir;
+    return (a-b)*bdir;
+  });
+}
+function renderB(){
+  $('[data-brows]').innerHTML=bsorted().map((c,i)=>`
+    <tr data-brow="${i}">
+      <td class="bnm">${c.n}</td>
+      <td>${c.p}</td>
+      <td class="bplate">${c.v.length?c.v.join(' · '):'—'}</td>
+      <td style="text-align:right">${c.vis}</td>
+      <td style="text-align:right">${c.sp?('₹'+(c.sp/1000).toFixed(1)+'K'):'—'}</td>
+      <td class="bpts">${c.pts.toLocaleString('en-IN')}</td>
+      <td style="color:#6b7887">${c.last}</td>
+      <td><span class="bst ${c.st?'a':'i'}"><i></i>${c.st?'ACTIVE':'INACTIVE'}</span></td>
+    </tr>`).join('');
+  $$('[data-brow]').forEach(r=>r.onclick=()=>{
+    $$('[data-brow]').forEach(x=>x.classList.remove('sel'));
+    r.classList.add('sel');
+    openInsp(bsorted()[+r.dataset.brow]);
+  });
+}
+renderB();
+$$('#b thead th[data-sort]').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.sort;
+  if(k===bsort)bdir*=-1;else{bsort=k;bdir=-1}
+  $$('#b thead th').forEach(t=>{t.classList.remove('sorted');t.textContent=t.textContent.replace(/\s*[▼▲]/,'')});
+  th.classList.add('sorted');
+  th.textContent=th.textContent+' '+(bdir<0?'▼':'▲');
+  renderB();
+});
+const insp=$('[data-insp]');
+function openInsp(c){
+  $('[data-insp-name]').textContent=c.n;
+  $('[data-insp-phone]').textContent=c.p;
+  $('[data-insp-pts]').textContent=c.pts.toLocaleString('en-IN');
+  $('[data-insp-visits]').textContent=c.vis;
+  $('[data-insp-spend]').textContent=c.sp?('₹'+(c.sp/1000).toFixed(1)+'K'):'₹0';
+  $('[data-insp-veh]').innerHTML=c.v.length?c.v.map(v=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:#141b23;
+      border:1px solid #1e2731;border-radius:8px;margin-bottom:6px">
+      <span style="font-size:15px">🚗</span>
+      <b style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#dbe4ec">${v}</b>
+      <span class="tag" style="margin-left:auto">DIESEL</span>
+    </div>`).join(''):'<div style="color:#57646f;font-size:12px;padding:8px 0">No vehicles on file</div>';
+  insp.classList.add('on');
+}
+$('[data-insp-close]').onclick=()=>insp.classList.remove('on');
+$$('#b .railbtn').forEach(b=>b.onclick=()=>{
+  $$('#b .railbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+});
+$$('#b .pl').forEach(l=>l.onclick=()=>{
+  $$('#b .pl').forEach(x=>x.classList.remove('on'));l.classList.add('on');
+  const t=l.textContent.trim();
+  if(t.includes('Customers'))go('cust'); else if(t.includes('Dashboard'))go('dash');
+});
+$$('#b [data-bchip]').forEach(c=>c.onclick=()=>{
+  [...c.parentElement.querySelectorAll('[data-bchip]')].forEach(x=>x.classList.remove('on'));
+  c.classList.add('on');
+});
+
+/* ---------- C: list + drawer ---------- */
+function renderC(){
+  $('[data-crows]').innerHTML=CUSTOMERS.map((c,i)=>`
+    <div class="crow" data-crow="${i}">
+      <span></span>
+      <div class="cper">
+        <span class="cpav" style="background:${c.c}1a;color:${c.c}">${init(c.n)}</span>
+        <div style="min-width:0">
+          <div class="cpnm">${c.n}</div>
+          <div class="cpsub">Member since Mar 2024</div>
+        </div>
+      </div>
+      <span class="cmono">${c.p}</span>
+      <span>${c.v.length?c.v.map(v=>`<span class="cplate">${v}</span>`).join(''):'<span style="color:#c3c8ce;font-size:12px">No vehicles</span>'}</span>
+      <span style="text-align:right"><span class="cbdg ${c.st?'a':'i'}">${c.st?'Active':'Inactive'}</span></span>
+      <span style="text-align:right" class="cptr">${c.pts.toLocaleString('en-IN')}<small>points</small></span>
+      <span class="cchev">›</span>
+    </div>`).join('');
+  $$('[data-crow]').forEach(r=>r.onclick=()=>{
+    $$('[data-crow]').forEach(x=>x.classList.remove('sel'));
+    r.classList.add('sel');
+    openDrawer(CUSTOMERS[+r.dataset.crow]);
+  });
+}
+renderC();
+const dr=$('[data-cdrawer]'), sc=$('[data-cscrim]');
+function openDrawer(c){
+  $('[data-cd-name]').textContent=c.n;
+  $('[data-cd-phone]').textContent=c.p;
+  $('[data-cd-pts]').textContent=c.pts.toLocaleString('en-IN');
+  $('[data-cd-visits]').textContent=c.vis;
+  $('[data-cd-spend]').textContent=c.sp?('₹'+(c.sp/1000).toFixed(1)+'K'):'₹0';
+  $('[data-cd-status]').textContent=c.st?'Active':'Inactive';
+  $('[data-cd-last]').textContent=c.last+' 2026';
+  const av=$('[data-cd-av]');
+  av.textContent=init(c.n); av.style.background=c.c+'1a'; av.style.color=c.c;
+  $('[data-cd-veh]').innerHTML=c.v.length?c.v.map(v=>`
+    <div class="cdv">
+      <span class="cdv__i">🚗</span>
+      <div><div style="font-weight:600;font-size:13px;font-family:'IBM Plex Mono',monospace">${v}</div>
+      <div style="font-size:11.5px;color:#9aa1a9">Diesel · Pickup truck</div></div>
+      <span style="margin-left:auto;color:#c3c8ce">›</span>
+    </div>`).join(''):'<div style="color:#9aa1a9;font-size:13px;padding:10px 0">No vehicles on file yet</div>';
+  dr.classList.add('on'); sc.classList.add('on');
+}
+function closeDrawer(){dr.classList.remove('on');sc.classList.remove('on');
+  $$('[data-crow]').forEach(x=>x.classList.remove('sel'))}
+$('[data-cd-close]').onclick=closeDrawer; sc.onclick=closeDrawer;
+$$('#c [data-cnav] .cn').forEach(b=>b.onclick=()=>{
+  $$('#c [data-cnav] .cn').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  const t=b.textContent.trim();
+  if(t.includes('Customers'))go('cust'); else if(t.includes('Overview'))go('dash');
+});
+$$('#c [data-views] .view-tab').forEach(b=>b.onclick=()=>{
+  [...b.parentElement.querySelectorAll('.view-tab')].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+});
+
+/* ============================================================
+   CHROME
+   ============================================================ */
+let dir='a', view='dash';
+function paint(){
+  $$('.proto').forEach(p=>p.classList.toggle('on',p.id===dir));
+  $$('.view').forEach(v=>v.classList.toggle('on',v.dataset.view===view));
+  $$('.chrome__tab').forEach(t=>t.classList.toggle('on',t.dataset.dir===dir));
+  $$('.chrome__pagebtn').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
+  const w=WHY[dir];
+  $('[data-why-body]').innerHTML=`<h6>${w.t}</h6><ul>${w.b.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+  closeDrawer(); insp.classList.remove('on'); cmdk.classList.remove('on');
+  window.scrollTo(0,0);
+}
+function go(v){view=v;paint()}
+$$('.chrome__tab').forEach(t=>t.onclick=()=>{dir=t.dataset.dir;paint()});
+$$('.chrome__pagebtn').forEach(b=>b.onclick=()=>{view=b.dataset.view;paint()});
+
+const why=$('[data-why]'), wt=$('[data-why-toggle]');
+$('[data-why-close]').onclick=()=>{why.classList.add('hide');wt.classList.add('show')};
+wt.onclick=()=>{why.classList.remove('hide');wt.classList.remove('show')};
+
+document.addEventListener('keydown',e=>{
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){
+    e.preventDefault();
+    if(dir==='a'){cmdk.classList.add('on');$('[data-cmdk-input]').focus()}
+    return;
+  }
+  if(e.key==='Escape'){cmdk.classList.remove('on');insp.classList.remove('on');closeDrawer();return}
+  if(typing)return;
+  if(e.key==='1'){dir='a';paint()}
+  if(e.key==='2'){dir='b';paint()}
+  if(e.key==='3'){dir='c';paint()}
+  if(e.key.toLowerCase()==='d'){go('dash')}
+  if(e.key.toLowerCase()==='c'){go('cust')}
+});
+paint();
+</script>
+</body>
+</html>

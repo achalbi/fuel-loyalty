@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nayara Admin — Native App Prototype Options</title>
+<style>
+/* ── Nayara tokens (subset, verbatim from docs/design/tokens.css) ───────── */
+:root{
+  --navy-50:#f1fbff;--navy-100:#e0f2ff;--navy-700:#1d63b0;--navy-800:#0f4f93;--navy-900:#10447c;--navy-950:#052b54;
+  --cyan-600:#0080a0;--green-600:#18945c;--sky-500:#249adf;--amber-400:#f5a524;
+  --bg-canvas:#f9fafc;--bg-surface:#ffffff;--bg-surfaceRaised:#ffffff;--bg-surfaceSunken:#f1f3f5;
+  --bg-brand:#10447c;--bg-brandSubtle:#f1fbff;--bg-inverse:#111820;
+  --text-primary:#111820;--text-secondary:#636a71;--text-tertiary:#838990;--text-disabled:#a7acb2;
+  --text-inverse:#ffffff;--text-onBrand:#ffffff;--text-brand:#1d63b0;--text-link:#006aa8;
+  --border-subtle:#f1f3f5;--border-default:#e2e5e9;--border-strong:#d0d4d9;--border-focus:#249adf;
+  --action-primary:#1d63b0;--action-onPrimary:#ffffff;--action-primaryContainer:#e0f2ff;--action-onPrimaryContainer:#10447c;
+  --action-secondary:#f1fbff;--action-onSecondary:#0f4f93;
+  --accent-default:#0080a0;--accent-container:#def4fd;--accent-onContainer:#00465c;
+  --status-success:#18945c;--status-successText:#007845;--status-successContainer:#dff7e7;
+  --status-warning:#cd7e00;--status-warningText:#744300;--status-warningContainer:#ffeccf;
+  --status-error:#df2935;--status-errorText:#df2935;--status-errorContainer:#ffe5e2;
+  --status-info:#0082c6;--status-infoContainer:#dcf4ff;--status-onInfoContainer:#004370;
+  --reward-points:#cd7e00;--reward-pointsText:#744300;--reward-pointsContainer:#fff8e8;--reward-coin:#f5a524;
+  --fuel-petrol:#18945c;--fuel-diesel:#1d63b0;--fuel-premium:#ad6900;
+  --overlay-scrim:rgba(8,15,24,0.60);--overlay-pressed:rgba(17,24,32,0.08);
+  --gradient-brand-ribbon:linear-gradient(135deg,#10447c 0%,#0080a0 55%,#18945c 100%);
+  --gradient-hero-card:linear-gradient(160deg,#052b54 0%,#10447c 55%,#00465c 100%);
+  --gradient-gold-shine:linear-gradient(120deg,#f8ba69 0%,#f5a524 45%,#cd7e00 100%);
+  --space-xs:4px;--space-sm:8px;--space-md:12px;--space-lg:16px;--space-xl:20px;--space-xxl:24px;
+  --radius-xs:6px;--radius-sm:10px;--radius-md:14px;--radius-lg:18px;--radius-xl:22px;--radius-xxl:28px;--radius-full:999px;
+  --size-hit:48px;--size-tabbar:64px;--size-listrow-lg:72px;
+  --layout-screen-margin:16px;--layout-gutter:12px;--layout-card-padding:20px;
+  --duration-fast:140ms;--duration-base:220ms;--duration-gentle:320ms;
+  --easing-standard:cubic-bezier(.2,0,0,1);--easing-emphasized:cubic-bezier(.05,.7,.1,1);
+  --shadow-e1:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.10);
+  --shadow-e2:0 2px 4px -1px rgba(16,24,40,.06),0 4px 8px -2px rgba(16,24,40,.10);
+  --shadow-e3:0 4px 6px -2px rgba(16,24,40,.05),0 8px 16px -4px rgba(16,24,40,.12);
+  --shadow-e4:0 16px 32px -8px rgba(16,24,40,.16);
+}
+[data-theme="dark"]{
+  --bg-canvas:#080f18;--bg-surface:#0f1822;--bg-surfaceRaised:#18212d;--bg-surfaceSunken:#050a10;
+  --bg-brandSubtle:#0d2038;--bg-inverse:#f9fafc;
+  --text-primary:#f4f7fc;--text-secondary:#d0d4d9;--text-tertiary:#a7acb2;--text-disabled:#636a71;
+  --text-inverse:#111820;--text-brand:#8fd0ff;--text-link:#8fd0ff;
+  --border-subtle:#18212d;--border-default:#242f3c;--border-strong:#37424f;--border-focus:#5cb4f0;
+  --action-primary:#8fd0ff;--action-onPrimary:#052b54;--action-primaryContainer:#0f4f93;--action-onPrimaryContainer:#e0f2ff;
+  --action-secondary:#14283f;--action-onSecondary:#b9e4ff;
+  --accent-default:#96d2e8;--accent-container:#00465c;--accent-onContainer:#def4fd;
+  --status-success:#97d9b1;--status-successText:#97d9b1;--status-successContainer:#004d28;
+  --status-warning:#f8ba69;--status-warningText:#f8ba69;--status-warningContainer:#5d3300;
+  --status-error:#ffa8a1;--status-errorText:#ffa8a1;--status-errorContainer:#7e000b;
+  --status-info:#8fd0ff;--status-infoContainer:#004370;--status-onInfoContainer:#dcf4ff;
+  --reward-points:#f8ba69;--reward-pointsText:#f8ba69;--reward-pointsContainer:#2b1c05;
+  --fuel-petrol:#67c18e;--fuel-diesel:#5cb4f0;--fuel-premium:#f5a524;
+  --gradient-hero-card:linear-gradient(160deg,#0f1822 0%,#10447c 60%,#00465c 100%);
+  --shadow-e1:none;--shadow-e2:none;--shadow-e3:none;--shadow-e4:0 16px 32px -8px rgba(0,0,0,.55);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:"Manrope","Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg-canvas);color:var(--text-primary);
+  padding:40px 24px 80px;transition:background var(--duration-base) var(--easing-standard);
+}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ── Page chrome ───────────────────────────────────────────────────────── */
+.page-head{max-width:1400px;margin:0 auto 36px;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
+.page-head h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.page-head p{color:var(--text-secondary);font-size:14px;max-width:640px;line-height:1.55}
+.ribbon{height:4px;width:120px;border-radius:var(--radius-full);background:var(--gradient-brand-ribbon);margin-bottom:14px}
+.controls{display:flex;gap:8px;align-items:center}
+.ctrl{height:38px;padding:0 14px;border-radius:var(--radius-full);border:1px solid var(--border-default);
+  background:var(--bg-surface);color:var(--text-secondary);font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;transition:all var(--duration-fast) var(--easing-standard)}
+.ctrl:hover{border-color:var(--border-strong);color:var(--text-primary)}
+.ctrl.is-on{background:var(--action-primaryContainer);color:var(--action-onPrimaryContainer);border-color:transparent}
+
+/* ── Option columns ────────────────────────────────────────────────────── */
+.rack{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px}
+@media(max-width:1180px){.rack{grid-template-columns:1fr;justify-items:center}}
+.col{display:flex;flex-direction:column;align-items:center;gap:18px;max-width:430px}
+.col-head{width:100%}
+.col-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  padding:5px 10px;border-radius:var(--radius-full);margin-bottom:10px}
+.tag-a{background:var(--action-primaryContainer);color:var(--action-onPrimaryContainer)}
+.tag-b{background:var(--status-successContainer);color:var(--status-successText)}
+.tag-c{background:var(--reward-pointsContainer);color:var(--reward-pointsText)}
+.col-head h2{font-size:19px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.col-head .why{font-size:13px;color:var(--text-secondary);line-height:1.6}
+.col-head .why b{color:var(--text-primary);font-weight:700}
+.meta-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.meta{font-size:11px;font-weight:700;padding:4px 9px;border-radius:var(--radius-xs);
+  background:var(--bg-surfaceSunken);color:var(--text-secondary);border:1px solid var(--border-subtle)}
+
+/* ── Phone frame ───────────────────────────────────────────────────────── */
+.phone{width:390px;height:800px;border-radius:44px;background:#0b1119;padding:11px;
+  box-shadow:var(--shadow-e4),0 0 0 1px rgba(255,255,255,.06) inset;flex:none;position:relative}
+[data-theme="dark"] .phone{box-shadow:var(--shadow-e4),0 0 0 1px rgba(255,255,255,.10) inset}
+.screen{width:100%;height:100%;border-radius:34px;background:var(--bg-canvas);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.statusbar{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;
+  font-size:13px;font-weight:700;color:var(--text-primary);background:transparent;position:relative;z-index:5}
+.notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:112px;height:28px;border-radius:var(--radius-full);background:#0b1119;z-index:6}
+.sb-icons{display:flex;gap:5px;align-items:center;opacity:.85}
+.sb-icons i{display:block;width:15px;height:10px;border-radius:2px;background:currentColor}
+.sb-icons i:nth-child(2){width:13px}.sb-icons i:nth-child(3){width:20px;border-radius:3px}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;position:relative}
+.body::-webkit-scrollbar{display:none}
+.pad{padding:0 var(--layout-screen-margin)}
+
+/* ── Shared UI atoms ───────────────────────────────────────────────────── */
+.appbar{display:flex;align-items:center;justify-content:space-between;padding:6px var(--layout-screen-margin) 14px;gap:10px}
+.appbar-t{font-size:13px;font-weight:700;color:var(--text-tertiary);letter-spacing:.01em}
+.appbar-h{font-size:21px;font-weight:800;letter-spacing:-.02em;margin-top:1px}
+.avatar{width:36px;height:36px;border-radius:var(--radius-full);background:var(--action-primaryContainer);
+  color:var(--action-onPrimaryContainer);display:grid;place-items:center;font-size:13px;font-weight:800;flex:none}
+.iconbtn{width:38px;height:38px;border-radius:var(--radius-full);border:1px solid var(--border-default);background:var(--bg-surface);
+  color:var(--text-secondary);display:grid;place-items:center;cursor:pointer;flex:none;position:relative;
+  transition:transform var(--duration-fast) var(--easing-standard)}
+.iconbtn:active{transform:scale(.94);background:var(--overlay-pressed)}
+.iconbtn .dot{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:var(--radius-full);
+  background:var(--status-error);border:2px solid var(--bg-surface)}
+.card{background:var(--bg-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-e1);padding:var(--layout-card-padding)}
+[data-theme="dark"] .card{border:1px solid var(--border-default)}
+.sec{margin-top:var(--space-xxl)}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;padding:0 var(--layout-screen-margin);margin-bottom:12px}
+.sec-h h3{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-tertiary)}
+.sec-h a{font-size:12px;font-weight:700;color:var(--text-link);text-decoration:none;cursor:pointer}
+.chip{height:32px;padding:0 13px;border-radius:var(--radius-full);border:1px solid var(--border-default);background:transparent;
+  color:var(--text-secondary);font:inherit;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:5px;
+  cursor:pointer;white-space:nowrap;flex:none;transition:all var(--duration-fast) var(--easing-standard)}
+.chip.is-on{background:var(--accent-container);color:var(--accent-onContainer);border-color:transparent}
+.chiprow{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 var(--layout-screen-margin) 2px}
+.chiprow::-webkit-scrollbar{display:none}
+.btn{height:52px;width:100%;border:none;border-radius:var(--radius-md);background:var(--action-primary);color:var(--action-onPrimary);
+  font:inherit;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:transform var(--duration-fast) var(--easing-standard)}
+.btn:active{transform:scale(.97)}
+.btn.tonal{background:var(--action-secondary);color:var(--action-onSecondary)}
+.btn.ghost{background:transparent;color:var(--text-secondary);border:1px solid var(--border-default)}
+.btn.sm{height:40px;font-size:13.5px;width:auto;padding:0 16px}
+.badge{font-size:11px;font-weight:800;padding:3px 8px;border-radius:var(--radius-xs);letter-spacing:.02em;white-space:nowrap}
+.b-ok{background:var(--status-successContainer);color:var(--status-successText)}
+.b-warn{background:var(--status-warningContainer);color:var(--status-warningText)}
+.b-err{background:var(--status-errorContainer);color:var(--status-errorText)}
+.b-info{background:var(--status-infoContainer);color:var(--status-onInfoContainer)}
+.b-mute{background:var(--bg-surfaceSunken);color:var(--text-tertiary)}
+.b-gold{background:var(--reward-pointsContainer);color:var(--reward-pointsText)}
+.plate{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12px;font-weight:700;letter-spacing:.04em;
+  background:var(--bg-surfaceSunken);border:1px solid var(--border-default);border-radius:var(--radius-xs);padding:3px 7px;color:var(--text-primary)}
+.pts{display:inline-flex;align-items:center;gap:5px;background:var(--reward-pointsContainer);color:var(--reward-pointsText);
+  border-radius:var(--radius-full);padding:4px 10px;font-size:12.5px;font-weight:800}
+.dot-sep{color:var(--text-disabled);margin:0 5px}
+.skeleton{background:var(--border-subtle);border-radius:var(--radius-xs);height:10px}
+.svg-ico{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.svg-ico.sm{width:16px;height:16px}
+.svg-ico.lg{width:24px;height:24px}
+
+/* rows */
+.row{display:flex;align-items:center;gap:12px;padding:12px var(--layout-screen-margin);min-height:var(--size-listrow-lg);cursor:pointer;
+  transition:background var(--duration-fast) var(--easing-standard)}
+.row:active{background:var(--overlay-pressed)}
+.row-ic{width:42px;height:42px;border-radius:var(--radius-full);display:grid;place-items:center;flex:none}
+.row-main{flex:1;min-width:0}
+.row-t{font-size:14.5px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-s{font-size:12.5px;color:var(--text-tertiary);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.row-v{font-size:15px;font-weight:800;text-align:right;flex:none}
+.divide{height:1px;background:var(--border-subtle);margin-left:70px}
+
+/* tab bar */
+.tabbar{height:var(--size-tabbar);flex:none;background:var(--bg-surface);border-top:1px solid var(--border-subtle);
+  display:flex;align-items:stretch;padding-bottom:0;position:relative;z-index:4}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;
+  color:var(--text-tertiary);font-size:10.5px;font-weight:700;border:none;background:none;font-family:inherit;position:relative;
+  transition:color var(--duration-fast) var(--easing-standard)}
+.tab.is-on{color:var(--action-primary)}
+.tab.is-on::after{content:"";position:absolute;bottom:7px;width:4px;height:4px;border-radius:var(--radius-full);background:var(--action-primary)}
+.tab.is-on .svg-ico{stroke-width:2.4}
+.tab .nbadge{position:absolute;top:8px;right:50%;transform:translateX(20px);min-width:16px;height:16px;padding:0 4px;
+  border-radius:var(--radius-full);background:var(--status-error);color:#fff;font-size:9.5px;font-weight:800;display:grid;place-items:center}
+.fab{width:60px;height:60px;border-radius:var(--radius-full);background:var(--gradient-brand-ribbon);color:#fff;
+  display:grid;place-items:center;position:absolute;left:50%;top:-22px;transform:translateX(-50%);cursor:pointer;
+  box-shadow:var(--shadow-e3);border:4px solid var(--bg-surface);z-index:5;transition:transform var(--duration-fast) var(--easing-standard)}
+.fab:active{transform:translateX(-50%) scale(.94)}
+.tabspace{flex:1}
+.home-ind{height:22px;flex:none;background:var(--bg-surface);display:grid;place-items:center}
+.home-ind::after{content:"";width:130px;height:5px;border-radius:var(--radius-full);background:var(--text-primary);opacity:.22}
+
+/* hero / kpi */
+.hero{margin:0 var(--layout-screen-margin);border-radius:var(--radius-lg);background:var(--gradient-hero-card);color:#fff;
+  padding:var(--layout-card-padding);position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient-brand-ribbon)}
+.hero-l{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.66)}
+.hero-cols{display:flex;gap:22px;margin-top:14px}
+.hero-c{flex:1}
+.hero-v{font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.hero-k{font-size:11.5px;color:rgba(255,255,255,.7);margin-top:4px;font-weight:600}
+.hero-foot{margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.16);display:flex;
+  align-items:center;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.82);font-weight:600}
+.kpi-scroll{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:2px var(--layout-screen-margin) 6px}
+.kpi-scroll::-webkit-scrollbar{display:none}
+.kpi{flex:none;width:152px;background:var(--bg-surface);border-radius:var(--radius-md);padding:14px;box-shadow:var(--shadow-e1)}
+[data-theme="dark"] .kpi{border:1px solid var(--border-default)}
+.kpi-ic{width:32px;height:32px;border-radius:var(--radius-sm);display:grid;place-items:center;margin-bottom:10px}
+.kpi-t{font-size:11.5px;font-weight:700;color:var(--text-tertiary);letter-spacing:.01em}
+.kpi-v{font-size:22px;font-weight:800;letter-spacing:-.025em;margin-top:3px}
+.kpi-d{font-size:11px;font-weight:700;margin-top:6px;display:flex;align-items:center;gap:3px}
+.up{color:var(--status-successText)}.down{color:var(--status-errorText)}.flat{color:var(--text-tertiary)}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 var(--layout-screen-margin)}
+.kpi-grid .kpi{width:auto}
+
+/* charts */
+.chart{background:var(--bg-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-e1);padding:16px;margin:0 var(--layout-screen-margin)}
+[data-theme="dark"] .chart{border:1px solid var(--border-default)}
+.chart-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.chart-h h4{font-size:14px;font-weight:800;letter-spacing:-.01em}
+.chart-h p{font-size:11.5px;color:var(--text-tertiary);margin-top:2px}
+.spark{width:100%;height:78px;display:block}
+.bars{display:flex;align-items:flex-end;gap:5px;height:86px;padding-top:6px}
+.bar{flex:1;border-radius:3px 3px 0 0;background:var(--action-primaryContainer);position:relative}
+.bar.hi{background:var(--action-primary)}
+.bar-x{display:flex;gap:5px;margin-top:7px}
+.bar-x span{flex:1;text-align:center;font-size:9px;color:var(--text-disabled);font-weight:700}
+.legend{display:flex;gap:14px;margin-top:12px;font-size:11px;font-weight:700;color:var(--text-secondary)}
+.legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px}
+
+/* alerts / triage (option B) */
+.alert{display:flex;gap:12px;padding:14px;border-radius:var(--radius-md);background:var(--bg-surface);
+  box-shadow:var(--shadow-e1);margin:0 var(--layout-screen-margin) 10px;cursor:pointer;border-left:3px solid var(--border-default);
+  transition:transform var(--duration-fast) var(--easing-standard)}
+[data-theme="dark"] .alert{border:1px solid var(--border-default);border-left:3px solid var(--border-default)}
+.alert:active{transform:scale(.985)}
+.alert.crit{border-left-color:var(--status-error)}
+.alert.warn{border-left-color:var(--status-warning)}
+.alert.info{border-left-color:var(--status-info)}
+.alert.done{border-left-color:var(--status-success);opacity:.62}
+.alert-ic{width:36px;height:36px;border-radius:var(--radius-sm);display:grid;place-items:center;flex:none}
+.alert-b{flex:1;min-width:0}
+.alert-t{font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.35}
+.alert-s{font-size:12px;color:var(--text-secondary);margin-top:4px;line-height:1.45}
+.alert-cta{font-size:12px;font-weight:800;color:var(--text-link);margin-top:9px;display:inline-flex;align-items:center;gap:4px}
+.clear-state{text-align:center;padding:34px 20px}
+.clear-state .ring{width:64px;height:64px;border-radius:var(--radius-full);background:var(--status-successContainer);
+  color:var(--status-successText);display:grid;place-items:center;margin:0 auto 14px}
+.clear-state h4{font-size:16px;font-weight:800}
+.clear-state p{font-size:13px;color:var(--text-tertiary);margin-top:5px}
+
+/* quick actions */
+.qa{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--layout-gutter);padding:0 var(--layout-screen-margin)}
+.qa-i{background:var(--bg-surface);border-radius:var(--radius-md);padding:12px 6px;text-align:center;cursor:pointer;
+  box-shadow:var(--shadow-e1);transition:transform var(--duration-fast) var(--easing-standard)}
+[data-theme="dark"] .qa-i{border:1px solid var(--border-default)}
+.qa-i:active{transform:scale(.97);background:var(--overlay-pressed)}
+.qa-c{width:42px;height:42px;border-radius:var(--radius-full);background:var(--action-primaryContainer);
+  color:var(--action-onPrimaryContainer);display:grid;place-items:center;margin:0 auto 7px}
+.qa-l{font-size:11px;font-weight:700;color:var(--text-secondary);line-height:1.25}
+
+/* search + palette (option C) */
+.searchbar{margin:0 var(--layout-screen-margin);height:50px;border-radius:var(--radius-md);background:var(--bg-surface);
+  border:1px solid var(--border-default);display:flex;align-items:center;gap:10px;padding:0 14px;cursor:pointer;box-shadow:var(--shadow-e1)}
+.searchbar span{font-size:14px;color:var(--text-tertiary);font-weight:600}
+.searchbar kbd{margin-left:auto;font:inherit;font-size:10px;font-weight:800;padding:3px 7px;border-radius:var(--radius-xs);
+  background:var(--bg-surfaceSunken);color:var(--text-tertiary);border:1px solid var(--border-subtle)}
+.cmdbar{position:absolute;left:12px;right:12px;bottom:12px;height:56px;border-radius:var(--radius-full);
+  background:var(--bg-inverse);color:var(--text-inverse);display:flex;align-items:center;gap:11px;padding:0 8px 0 20px;
+  box-shadow:var(--shadow-e4);cursor:pointer;z-index:6;transition:transform var(--duration-fast) var(--easing-standard)}
+.cmdbar:active{transform:scale(.98)}
+.cmdbar .lbl{font-size:14px;font-weight:700;opacity:.72;flex:1}
+.cmdbar .go{width:40px;height:40px;border-radius:var(--radius-full);background:var(--gradient-brand-ribbon);
+  display:grid;place-items:center;color:#fff;flex:none}
+.widget{margin:0 var(--layout-screen-margin) 12px;background:var(--bg-surface);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-e1);padding:16px;position:relative}
+[data-theme="dark"] .widget{border:1px solid var(--border-default)}
+.widget-h{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.widget-h h4{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-tertiary);flex:1}
+.grip{color:var(--text-disabled);cursor:grab}
+.cmd-group{padding:6px var(--layout-screen-margin) 2px;font-size:10.5px;font-weight:800;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--text-tertiary)}
+.cmd{display:flex;align-items:center;gap:12px;padding:11px var(--layout-screen-margin);cursor:pointer;border-radius:var(--radius-sm)}
+.cmd:active{background:var(--overlay-pressed)}
+.cmd-ic{width:34px;height:34px;border-radius:var(--radius-sm);background:var(--bg-surfaceSunken);color:var(--text-secondary);
+  display:grid;place-items:center;flex:none}
+.cmd-t{font-size:14px;font-weight:700;flex:1}
+.cmd-k{font-size:11px;color:var(--text-disabled);font-weight:700}
+
+/* sheets & overlays */
+.sheet-scrim{position:absolute;inset:0;background:var(--overlay-scrim);z-index:8;opacity:0;pointer-events:none;
+  transition:opacity var(--duration-gentle) var(--easing-emphasized)}
+.sheet-scrim.is-open{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg-surface);border-radius:var(--radius-xxl) var(--radius-xxl) 0 0;
+  z-index:9;transform:translateY(100%);transition:transform var(--duration-gentle) var(--easing-emphasized);
+  max-height:82%;overflow-y:auto;scrollbar-width:none;padding-bottom:24px}
+.sheet::-webkit-scrollbar{display:none}
+.sheet.is-open{transform:translateY(0)}
+.handle{width:36px;height:4px;border-radius:var(--radius-full);background:var(--border-strong);margin:10px auto 4px}
+.sheet-h{padding:10px var(--layout-screen-margin) 4px}
+.sheet-h h3{font-size:18px;font-weight:800;letter-spacing:-.02em}
+.sheet-h p{font-size:12.5px;color:var(--text-tertiary);margin-top:3px}
+
+/* back header */
+.backbar{display:flex;align-items:center;gap:12px;padding:4px var(--layout-screen-margin) 12px}
+.backbar h2{font-size:18px;font-weight:800;letter-spacing:-.02em;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* profile */
+.prof{background:var(--bg-brandSubtle);padding:20px var(--layout-screen-margin) 22px;text-align:center}
+[data-theme="dark"] .prof{background:var(--bg-brandSubtle)}
+.prof-av{width:60px;height:60px;border-radius:var(--radius-full);background:var(--action-primary);color:var(--action-onPrimary);
+  display:grid;place-items:center;font-size:21px;font-weight:800;margin:0 auto 11px}
+.prof h2{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.prof .sub{font-size:13px;color:var(--text-secondary);margin-top:4px}
+.balance{text-align:center;padding:22px 0 6px}
+.balance .v{font-size:42px;font-weight:800;letter-spacing:-.035em;line-height:1}
+.balance .k{font-size:12px;color:var(--text-tertiary);font-weight:700;margin-top:6px}
+.meter{height:8px;border-radius:var(--radius-full);background:var(--border-subtle);overflow:hidden;margin:14px 0 8px}
+.meter i{display:block;height:100%;border-radius:var(--radius-full);background:var(--gradient-gold-shine)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border-subtle);border-radius:var(--radius-md);overflow:hidden}
+.grid2 div{background:var(--bg-surface);padding:12px 14px}
+.grid2 span{font-size:11px;color:var(--text-tertiary);font-weight:700;display:block}
+.grid2 strong{font-size:14px;font-weight:800;display:block;margin-top:3px}
+.stickybar{position:absolute;left:0;right:0;bottom:0;background:var(--bg-surface);box-shadow:var(--shadow-e3);
+  border-top:1px solid var(--border-subtle);padding:12px var(--layout-screen-margin) 20px;display:flex;gap:10px;z-index:3}
+.stickybar .btn{flex:1}
+
+/* attendance roster */
+.rost{margin:0 var(--layout-screen-margin) 10px;background:var(--bg-surface);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-e1);padding:14px;display:flex;gap:12px;align-items:center}
+[data-theme="dark"] .rost{border:1px solid var(--border-default)}
+.seg{display:flex;background:var(--bg-surfaceSunken);border-radius:var(--radius-sm);padding:3px;gap:2px;margin-top:10px}
+.seg button{flex:1;height:32px;border:none;border-radius:var(--radius-xs);background:transparent;font:inherit;font-size:11.5px;
+  font-weight:800;color:var(--text-tertiary);cursor:pointer;transition:all var(--duration-fast) var(--easing-standard)}
+.seg button.on{background:var(--bg-surface);color:var(--text-primary);box-shadow:var(--shadow-e1)}
+.seg button.on.ok{color:var(--status-successText)}
+.seg button.on.bad{color:var(--status-errorText)}
+.toast{position:absolute;left:16px;right:16px;bottom:88px;background:var(--bg-inverse);color:var(--text-inverse);
+  border-radius:var(--radius-md);padding:13px 16px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:9px;
+  box-shadow:var(--shadow-e3);z-index:7;opacity:0;transform:translateY(10px);pointer-events:none;
+  transition:all var(--duration-base) var(--easing-standard)}
+.toast.show{opacity:1;transform:translateY(0)}
+.footnote{max-width:1400px;margin:56px auto 0;padding-top:26px;border-top:1px solid var(--border-default);
+  color:var(--text-tertiary);font-size:12.5px;line-height:1.7}
+.footnote b{color:var(--text-secondary)}
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <div>
+    <div class="ribbon"></div>
+    <h1>Nayara Admin — native app, three directions</h1>
+    <p>Same data, same tokens, three different bets about what an admin opens the app to do. Every screen is tappable: switch tabs, open a customer, record attendance, run the command palette. Tokens are pulled verbatim from <code>docs/design/tokens.css</code>.</p>
+  </div>
+  <div class="controls">
+    <button class="ctrl" id="themeBtn">
+      <svg class="svg-ico sm" viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.4-6.4-.7.7M6.3 17.7l-.7.7m12.8 0-.7-.7M6.3 6.3l-.7-.7"/><circle cx="12" cy="12" r="4"/></svg>
+      <span id="themeLbl">Light</span>
+    </button>
+    <button class="ctrl is-on" id="gridBtn">Reset all</button>
+  </div>
+</div>
+
+<div class="rack">
+  <!-- OPTION A -->
+  <div class="col">
+    <div class="col-head">
+      <span class="col-tag tag-a">Option A · Console</span>
+      <h2>Faithful port. Data first.</h2>
+      <p class="why">The web console, made thumb-native. Home is the <b>analytics overview</b>: hero card, swipeable KPI rail, charts. Four tabs mirror the sidebar groups so muscle memory transfers 1:1. <b>Lowest risk, ships fastest</b> — but it inherits the web console's core flaw: it answers "how are we doing?" and never "what needs me?"</p>
+      <div class="meta-row">
+        <span class="meta">4 tabs</span><span class="meta">Dashboard-first</span><span class="meta">Zero re-training</span><span class="meta">Reads, not acts</span>
+      </div>
+    </div>
+    <div class="phone"><div class="notch"></div><div class="screen" id="scrA"></div></div>
+  </div>
+
+  <!-- OPTION B -->
+  <div class="col">
+    <div class="col-head">
+      <span class="col-tag tag-b">Option B · Signal</span>
+      <h2>Triage first. Numbers on demand.</h2>
+      <p class="why">Home is a <b>"needs you today" feed</b> — attendance unrecorded, schedule failed, pump nozzle down, staff unassigned — each card carrying its own one-tap fix. Analytics moves to its own tab. Center FAB matches the staff app, so both apps feel like one product. <b>Best fit for how an owner actually uses a phone:</b> 40 seconds, standing up, deciding something.</p>
+      <div class="meta-row">
+        <span class="meta">4 tabs + FAB</span><span class="meta">Alert-driven</span><span class="meta">Acts, then reports</span><span class="meta">Needs alert rules</span>
+      </div>
+    </div>
+    <div class="phone"><div class="notch"></div><div class="screen" id="scrB"></div></div>
+  </div>
+
+  <!-- OPTION C -->
+  <div class="col">
+    <div class="col-head">
+      <span class="col-tag tag-c">Option C · Palette</span>
+      <h2>Search is the navigation.</h2>
+      <p class="why">No tab bar. A single scrollable home of <b>reorderable widgets</b>, and one persistent command bar: type "att", get Record Attendance; type a plate, get the customer. All 15 admin sections become <b>searchable, not navigable</b> — the IA stops fighting the 5-tab ceiling. <b>Scales as you add sections</b>; costs the most to build and teach.</p>
+      <div class="meta-row">
+        <span class="meta">0 tabs</span><span class="meta">Command palette</span><span class="meta">Infinitely extensible</span><span class="meta">Discoverability risk</span>
+      </div>
+    </div>
+    <div class="phone"><div class="notch"></div><div class="screen" id="scrC"></div></div>
+  </div>
+</div>
+
+<div class="footnote">
+  <b>Reading the prototypes:</b> tap tabs, rows, chips, the FAB, and the command bar — every one is wired. Data is representative of a single Nayara outlet (Andheri East). Contrast pairs, radii, spacing, motion durations and easings all resolve to tokens; nothing is hardcoded.<br>
+  <b>Not shown:</b> login/OTP, offline states, and the 60+ config fields behind Reward Rates / Fuel Types / Pumps — those are form screens and are identical across all three options.
+</div>
+
+<script>
+/* ── icons ─────────────────────────────────────────────────────────────── */
+const P = {
+  home:'<path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  chart:'<path d="M4 20V10m5 10V4m5 16v-7m5 7V8"/>',
+  users:'<path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.2"/><path d="M22 20v-2a4 4 0 0 0-3-3.9M17 3.1a4 4 0 0 1 0 7.8"/>',
+  user:'<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+  ops:'<path d="M4 6h16M4 12h16M4 18h9"/><circle cx="18" cy="18" r="2.6"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 4.6V3a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 17 4.6l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 21 10h.1a2 2 0 1 1 0 4H21"/>',
+  bell:'<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>',
+  fuel:'<path d="M4 20V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v15M3 20h11"/><path d="M13 9h3a2 2 0 0 1 2 2v6a1.8 1.8 0 0 0 3.6 0V9l-2.6-3"/><path d="M6 8h5"/>',
+  receipt:'<path d="M5 3v18l2.2-1.5L9.5 21l2.3-1.5L14 21l2.3-1.5L18.5 21V3z"/><path d="M8 8h7M8 12h7"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/>',
+  gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8M12 8v13"/><path d="M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5M12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5"/>',
+  swap:'<path d="M7 4v13M4 14l3 3 3-3M17 20V7M14 10l3-3 3 3"/>',
+  alert:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17.5v.1"/>',
+  warn:'<circle cx="12" cy="12" r="9"/><path d="M12 8v4.5M12 16v.1"/>',
+  check:'<path d="M4 12.5 9 17.5 20 6.5"/>',
+  x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  chev:'<path d="m9 6 6 6-6 6"/>',
+  back:'<path d="m15 6-6 6 6 6"/>',
+  up:'<path d="M12 19V5M6 11l6-6 6 6"/>',
+  down:'<path d="M12 5v14M6 13l6 6 6-6"/>',
+  filter:'<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
+  drag:'<circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/>',
+  palette:'<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="15.5" cy="10" r="1.2"/>',
+  dl:'<path d="M12 4v11M7 11l5 5 5-5M4 20h16"/>',
+  car:'<path d="M5 17h14M4 17v-4l2-5h12l2 5v4"/><circle cx="7.5" cy="17.5" r="1.6"/><circle cx="16.5" cy="17.5" r="1.6"/>',
+  send:'<path d="m4 12 16-8-6 16-2.5-6z"/>',
+  pen:'<path d="M4 20h4L19 9a2.5 2.5 0 0 0-3.5-3.5L4.5 16.5z"/>',
+  eye:'<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12"/><circle cx="12" cy="12" r="2.8"/>',
+  coin:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M14.5 9.8c0-1-1.1-1.7-2.5-1.7s-2.5.7-2.5 1.6c0 2.3 5 1.4 5 3.9 0 1-1.1 1.7-2.5 1.7s-2.5-.8-2.5-1.8"/>',
+};
+const ic=(n,c='')=>`<svg class="svg-ico ${c}" viewBox="0 0 24 24">${P[n]||''}</svg>`;
+
+/* ── seed data (one Nayara outlet) ─────────────────────────────────────── */
+const D = {
+  station:'Nayara · Andheri East',
+  kpis:[
+    {k:'Revenue',v:'₹8.4L',d:'+12.4%',dir:'up',ic:'coin',bg:'var(--status-successContainer)',fg:'var(--status-successText)',note:'this month'},
+    {k:'Transactions',v:'1,284',d:'+6.1%',dir:'up',ic:'receipt',bg:'var(--action-primaryContainer)',fg:'var(--action-onPrimaryContainer)',note:'this month'},
+    {k:'Active members',v:'1,036',d:'−2.3%',dir:'down',ic:'users',bg:'var(--accent-container)',fg:'var(--accent-onContainer)',note:'last 30 days'},
+    {k:'Points issued',v:'1.84L',d:'+9.7%',dir:'up',ic:'coin',bg:'var(--reward-pointsContainer)',fg:'var(--reward-pointsText)',note:'this month'},
+    {k:'Points redeemed',v:'62,500',d:'+18.2%',dir:'up',ic:'gift',bg:'var(--reward-pointsContainer)',fg:'var(--reward-pointsText)',note:'this month'},
+    {k:'Avg spend / visit',v:'₹1,096',d:'flat',dir:'flat',ic:'chart',bg:'var(--bg-surfaceSunken)',fg:'var(--text-secondary)',note:'vs ₹1,092'},
+    {k:'Total customers',v:'4,182',d:'+64 new',dir:'up',ic:'user',bg:'var(--action-primaryContainer)',fg:'var(--action-onPrimaryContainer)',note:'all time'},
+    {k:'Visits / customer',v:'3.1',d:'+0.2',dir:'up',ic:'swap',bg:'var(--bg-surfaceSunken)',fg:'var(--text-secondary)',note:'this month'},
+  ],
+  customers:[
+    {n:'Rakesh Mehta',p:'••••• 4471',plate:'MH 04 DK 8821',pts:'12,480',tier:'Gold',v:34},
+    {n:'Sunita Iyer',p:'••••• 9012',plate:'MH 02 CB 1147',pts:'8,220',tier:'Gold',v:27},
+    {n:'Farid Qureshi',p:'••••• 3388',plate:'MH 01 AT 0092',pts:'5,140',tier:'Silver',v:19},
+    {n:'Deepa Rane',p:'••••• 7756',plate:'MH 03 BX 4410',pts:'3,900',tier:'Silver',v:14},
+    {n:'Anil Bhosale',p:'••••• 2201',plate:'MH 47 KL 6633',pts:'2,310',tier:'Member',v:9},
+    {n:'Zoya Shaikh',p:'••••• 5590',plate:'MH 12 QP 7781',pts:'1,780',tier:'Member',v:6},
+  ],
+  txns:[
+    {n:'Rakesh Mehta',t:'Today · 08:42 AM',a:'₹2,400',f:'Petrol',pump:'Pump 2 · Nozzle 1',pts:'+288'},
+    {n:'Sunita Iyer',t:'Today · 08:15 AM',a:'₹1,850',f:'Diesel',pump:'Pump 1 · Nozzle 3',pts:'+185'},
+    {n:'Walk-in',t:'Today · 07:58 AM',a:'₹900',f:'Petrol',pump:'Pump 3 · Nozzle 2',pts:'—'},
+    {n:'Deepa Rane',t:'Today · 07:31 AM',a:'₹3,200',f:'Premium',pump:'Pump 2 · Nozzle 4',pts:'+448'},
+    {n:'Farid Qureshi',t:'Yest · 09:12 PM',a:'₹1,200',f:'Diesel',pump:'Pump 1 · Nozzle 1',pts:'+120'},
+  ],
+  staff:[
+    {n:'Imran Sayyed',s:'Morning A · 06:00',st:'Present'},
+    {n:'Vikas Pawar',s:'Morning A · 06:00',st:'Present'},
+    {n:'Nilesh Kadam',s:'Morning A · 06:00',st:'Absent'},
+    {n:'Sameer Gupta',s:'Morning A · 06:00',st:'Present'},
+    {n:'Rehana Khan',s:'Morning A · 06:00',st:'Late'},
+  ],
+  fuelColor:{Petrol:'var(--fuel-petrol)',Diesel:'var(--fuel-diesel)',Premium:'var(--fuel-premium)'},
+};
+
+/* ── chart helpers ─────────────────────────────────────────────────────── */
+function spark(pts,stroke,fill){
+  const w=280,h=78,max=Math.max(...pts),min=Math.min(...pts),rng=(max-min)||1;
+  const xy=pts.map((v,i)=>[i*(w/(pts.length-1)), h-6-((v-min)/rng)*(h-16)]);
+  const d=xy.map((p,i)=>`${i?'L':'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  const area=`${d} L${w} ${h} L0 ${h} Z`;
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <path d="${area}" fill="${fill}" opacity=".18"/>
+    <path d="${d}" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${xy.at(-1)[0]-1.5}" cy="${xy.at(-1)[1]}" r="3.4" fill="${stroke}"/></svg>`;
+}
+function bars(vals,labels,hiIdx){
+  const max=Math.max(...vals);
+  return `<div class="bars">${vals.map((v,i)=>`<div class="bar ${i===hiIdx?'hi':''}" style="height:${(v/max*100).toFixed(0)}%"></div>`).join('')}</div>
+  <div class="bar-x">${labels.map(l=>`<span>${l}</span>`).join('')}</div>`;
+}
+const TREND=[42,51,47,63,58,71,66,79,74,88,82,96];
+const REV=[31,44,39,58,52,67,61,74,70,85,79,92];
+
+/* ── shared partials ───────────────────────────────────────────────────── */
+const statusbar=()=>`<div class="statusbar"><span class="tnum">9:41</span>
+  <span class="sb-icons"><i></i><i></i><i></i></span></div>`;
+const homeInd=()=>`<div class="home-ind"></div>`;
+
+const kpiCard=(m)=>`<div class="kpi">
+  <div class="kpi-ic" style="background:${m.bg};color:${m.fg}">${ic(m.ic,'sm')}</div>
+  <div class="kpi-t">${m.k}</div>
+  <div class="kpi-v tnum">${m.v}</div>
+  <div class="kpi-d ${m.dir}">${m.dir==='up'?ic('up','sm'):m.dir==='down'?ic('down','sm'):''}<span class="tnum">${m.d}</span></div>
+</div>`;
+
+const custRow=(c,opt)=>`<div class="row" data-act="${opt}:customer">
+  <div class="row-ic" style="background:var(--action-primaryContainer);color:var(--action-onPrimaryContainer);font-weight:800;font-size:14px">${c.n[0]}</div>
+  <div class="row-main">
+    <div class="row-t">${c.n}</div>
+    <div class="row-s"><span class="plate">${c.plate}</span><span>${c.v} visits</span></div>
+  </div>
+  <div class="row-v"><span class="pts tnum">${ic('coin','sm')}${c.pts}</span></div>
+</div>`;
+
+const txnRow=(t)=>`<div class="row">
+  <div class="row-ic" style="background:var(--status-successContainer);color:var(--status-successText)">${ic('up','sm')}</div>
+  <div class="row-main">
+    <div class="row-t">${t.n}</div>
+    <div class="row-s"><span style="color:${D.fuelColor[t.f]};font-weight:800">${t.f}</span><span class="dot-sep">·</span><span>${t.pump}</span></div>
+  </div>
+  <div style="text-align:right">
+    <div class="row-v tnum">${t.a}</div>
+    <div style="font-size:11.5px;font-weight:800;color:var(--status-successText);margin-top:3px" class="tnum">${t.pts}</div>
+  </div>
+</div>`;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   OPTION A — CONSOLE
+   ═══════════════════════════════════════════════════════════════════════ */
+const A = {
+  tabs:[['overview','Overview','chart'],['customers','Customers','users'],['ops','Ops','ops'],['settings','Settings','gear']],
+  screens:{
+    overview:()=>`
+      <div class="body">
+        <div class="appbar">
+          <div><div class="appbar-t">${D.station}</div><div class="appbar-h">Overview</div></div>
+          <div style="display:flex;gap:8px">
+            <button class="iconbtn">${ic('dl','sm')}</button>
+            <div class="avatar">AK</div>
+          </div>
+        </div>
+        <div class="chiprow" style="margin-bottom:16px">
+          <button class="chip is-on" data-chipgroup="A-range">This month</button>
+          <button class="chip" data-chipgroup="A-range">Today</button>
+          <button class="chip" data-chipgroup="A-range">This week</button>
+          <button class="chip" data-chipgroup="A-range">Last month</button>
+          <button class="chip" data-chipgroup="A-range">${ic('filter','sm')}Custom</button>
+        </div>
+        <div class="hero">
+          <div class="hero-l">1 – 13 July · all fuel types</div>
+          <div class="hero-cols">
+            <div class="hero-c"><div class="hero-v tnum">₹8.4L</div><div class="hero-k">Revenue</div></div>
+            <div class="hero-c"><div class="hero-v tnum">1,284</div><div class="hero-k">Transactions</div></div>
+            <div class="hero-c"><div class="hero-v tnum">1.84L</div><div class="hero-k">Points issued</div></div>
+          </div>
+          <div class="hero-foot"><span>vs previous period</span><span style="color:#97d9b1;font-weight:800" class="tnum">▲ 12.4%</span></div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>KPI overview</h3><a>All 8 ›</a></div>
+          <div class="kpi-scroll">${D.kpis.slice(0,5).map(kpiCard).join('')}</div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Trends</h3><a>Compare ›</a></div>
+          <div class="chart">
+            <div class="chart-h"><div><h4>Revenue trend</h4><p>Daily · last 12 days</p></div><span class="badge b-ok">+12.4%</span></div>
+            ${spark(REV,'var(--status-success)','var(--status-success)')}
+          </div>
+          <div class="chart" style="margin-top:12px">
+            <div class="chart-h"><div><h4>Points issued vs redeemed</h4><p>Daily · last 12 days</p></div><span class="badge b-gold">34% rate</span></div>
+            ${spark(TREND,'var(--action-primary)','var(--action-primary)')}
+            <div class="legend"><span><i style="background:var(--action-primary)"></i>Issued</span><span><i style="background:var(--reward-coin)"></i>Redeemed</span></div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Behaviour</h3><a>More ›</a></div>
+          <div class="chart">
+            <div class="chart-h"><div><h4>Transactions by hour</h4><p>Peak 08:00 – 10:00</p></div></div>
+            ${bars([12,9,7,14,38,52,61,48,33,29,41,55,44,26],['00','02','04','06','08','10','12','14','16','18','20','22','','' ].slice(0,14),6)}
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Top customers by spend</h3><a>See all ›</a></div>
+          ${D.customers.slice(0,3).map((c,i)=>`<div class="row" data-act="A:customer">
+            <div class="row-ic" style="background:var(--reward-pointsContainer);color:var(--reward-pointsText);font-weight:800">${i+1}</div>
+            <div class="row-main"><div class="row-t">${c.n}</div><div class="row-s">${c.v} visits · ${c.tier}</div></div>
+            <div class="row-v tnum">₹${(48-i*9)}k</div></div>${i<2?'<div class="divide"></div>':''}`).join('')}
+        </div>
+        <div style="height:24px"></div>
+      </div>`,
+
+    customers:()=>`
+      <div class="body">
+        <div class="appbar">
+          <div><div class="appbar-t">4,182 members</div><div class="appbar-h">Customers</div></div>
+          <button class="iconbtn">${ic('plus','sm')}</button>
+        </div>
+        <div class="searchbar">${ic('search','sm')}<span>Name, phone or plate</span></div>
+        <div class="chiprow" style="margin-top:14px">
+          <button class="chip is-on" data-chipgroup="A-cust">All</button>
+          <button class="chip" data-chipgroup="A-cust">Active</button>
+          <button class="chip" data-chipgroup="A-cust">Inactive</button>
+          <button class="chip" data-chipgroup="A-cust">Rewards paused</button>
+        </div>
+        <div style="margin-top:14px">
+          ${D.customers.map((c,i)=>custRow(c,'A')+(i<D.customers.length-1?'<div class="divide"></div>':'')).join('')}
+        </div>
+        <div style="text-align:center;padding:18px;font-size:12px;color:var(--text-tertiary);font-weight:700">Showing 6 of 4,182</div>
+      </div>`,
+
+    ops:()=>`
+      <div class="body">
+        <div class="appbar">
+          <div><div class="appbar-t">Today · Sun 13 Jul</div><div class="appbar-h">Operations</div></div>
+          <button class="iconbtn">${ic('bell','sm')}<span class="dot"></span></button>
+        </div>
+        <div class="qa">
+          <div class="qa-i" data-act="A:attendance"><div class="qa-c">${ic('cal','sm')}</div><div class="qa-l">Record<br>attendance</div></div>
+          <div class="qa-i"><div class="qa-c">${ic('swap','sm')}</div><div class="qa-l">Adjust<br>points</div></div>
+          <div class="qa-i"><div class="qa-c">${ic('gift','sm')}</div><div class="qa-l">Redeem<br>points</div></div>
+          <div class="qa-i"><div class="qa-c">${ic('send','sm')}</div><div class="qa-l">Send<br>notice</div></div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Staff on shift</h3><a>Manage ›</a></div>
+          <div class="rost" style="justify-content:space-between">
+            <div><div style="font-size:11.5px;font-weight:800;color:var(--text-tertiary);letter-spacing:.05em">MORNING A · 06:00 – 14:00</div>
+            <div style="font-size:16px;font-weight:800;margin-top:4px" class="tnum">5 rostered</div></div>
+            <span class="badge b-err">Not recorded</span>
+          </div>
+          ${D.staff.slice(0,3).map(s=>`<div class="row">
+            <div class="row-ic" style="background:var(--bg-surfaceSunken);color:var(--text-secondary);font-weight:800">${s.n[0]}</div>
+            <div class="row-main"><div class="row-t">${s.n}</div><div class="row-s">${s.s}</div></div>
+            <span class="badge b-mute">Pending</span></div>`).join('')}
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Recent transactions</h3><a>All ›</a></div>
+          ${D.txns.slice(0,4).map((t,i)=>txnRow(t)+(i<3?'<div class="divide"></div>':'')).join('')}
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Pumps &amp; nozzles</h3><a>Configure ›</a></div>
+          <div class="pad"><div class="card" style="padding:16px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span class="badge b-ok">Pump 1 · 4 active</span>
+              <span class="badge b-ok">Pump 2 · 4 active</span>
+              <span class="badge b-warn">Pump 3 · 1 down</span>
+            </div>
+            <p style="font-size:12px;color:var(--text-tertiary);margin-top:11px;line-height:1.5">Nozzle selection is <b style="color:var(--text-primary)">enabled</b> — staff pick from My Pump.</p>
+          </div></div>
+        </div>
+        <div style="height:24px"></div>
+      </div>`,
+
+    settings:()=>`
+      <div class="body">
+        <div class="appbar"><div><div class="appbar-t">Admin</div><div class="appbar-h">Settings</div></div></div>
+        ${[['Users','5 accounts · 2 admins','users'],['Reward rates','₹100 = 12 pts · 3 overrides','coin'],
+           ['Fuel types','Petrol, Diesel, Premium','fuel'],['Vehicle types','8 types configured','car'],
+           ['Pumps','3 pumps · 12 nozzles','fuel'],['Shifts &amp; cycles','4 shifts · 2 cycles','clock'],
+           ['Notifications','3 schedules · 1,204 tokens','bell'],['Theme','Nayara Navy #10447C','palette']]
+          .map((s,i)=>`<div class="row">
+            <div class="row-ic" style="background:var(--bg-surfaceSunken);color:var(--text-secondary)">${ic(s[2],'sm')}</div>
+            <div class="row-main"><div class="row-t">${s[0]}</div><div class="row-s">${s[1]}</div></div>
+            ${ic('chev','sm')}</div>${i<7?'<div class="divide"></div>':''}`).join('')}
+        <div class="pad" style="margin-top:20px"><button class="btn ghost">Sign out</button></div>
+        <div style="height:24px"></div>
+      </div>`,
+
+    customer:()=>`
+      <div class="body" style="padding-bottom:96px">
+        <div class="backbar"><button class="iconbtn" data-act="A:back">${ic('back','sm')}</button><h2>Customer</h2>
+          <button class="iconbtn">${ic('pen','sm')}</button></div>
+        <div class="prof">
+          <div class="prof-av">RM</div>
+          <h2>Rakesh Mehta</h2>
+          <div class="sub">+91 ••••• 4471 <span class="dot-sep">·</span> Member since Mar 2024</div>
+          <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
+            <span class="badge b-gold">Gold tier</span><span class="badge b-ok">Active</span>
+          </div>
+        </div>
+        <div class="pad" style="margin-top:-14px">
+          <div class="card">
+            <div class="balance">
+              <div class="v tnum" style="color:var(--reward-pointsText)">12,480</div>
+              <div class="k">POINTS · ≈ ₹1,248 REDEEMABLE</div>
+            </div>
+            <div class="meter"><i style="width:72%"></i></div>
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;color:var(--text-tertiary)">
+              <span>Gold</span><span class="tnum">4,520 pts to Platinum</span></div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Vehicles</h3><a>+ Add</a></div>
+          <div class="chiprow"><span class="plate">MH 04 DK 8821</span><span class="plate">MH 04 CJ 1290</span></div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Snapshot</h3></div>
+          <div class="pad"><div class="grid2">
+            <div><span>Visits</span><strong class="tnum">34</strong></div>
+            <div><span>Lifetime spend</span><strong class="tnum">₹48,200</strong></div>
+            <div><span>Avg / visit</span><strong class="tnum">₹1,418</strong></div>
+            <div><span>Redeemed</span><strong class="tnum">6,100 pts</strong></div>
+          </div></div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Points ledger</h3><a>Full history ›</a></div>
+          ${[['Earned','Today · 08:42','+288','ok'],['Redeemed','9 Jul · 18:20','−2,000','gold'],['Earned','7 Jul · 07:55','+185','ok']]
+            .map((l,i)=>`<div class="row">
+            <div class="row-ic" style="background:${l[3]==='ok'?'var(--status-successContainer)':'var(--reward-pointsContainer)'};color:${l[3]==='ok'?'var(--status-successText)':'var(--reward-pointsText)'}">${ic(l[3]==='ok'?'up':'gift','sm')}</div>
+            <div class="row-main"><div class="row-t">${l[0]}</div><div class="row-s">${l[1]}</div></div>
+            <div class="row-v tnum" style="color:${l[3]==='ok'?'var(--status-successText)':'var(--text-primary)'}">${l[2]}</div></div>${i<2?'<div class="divide"></div>':''}`).join('')}
+        </div>
+        <div style="height:20px"></div>
+      </div>
+      <div class="stickybar">
+        <button class="btn tonal" data-act="A:toast">${ic('swap','sm')}Adjust</button>
+        <button class="btn" data-act="A:toast">${ic('gift','sm')}Redeem</button>
+      </div>`,
+
+    attendance:()=>`
+      <div class="body" style="padding-bottom:96px">
+        <div class="backbar"><button class="iconbtn" data-act="A:back">${ic('back','sm')}</button><h2>Record attendance</h2></div>
+        <div class="pad"><div class="card" style="padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:11.5px;font-weight:800;color:var(--text-tertiary);letter-spacing:.05em">SHIFT WINDOW</div>
+              <div style="font-size:15px;font-weight:800;margin-top:4px">Morning A</div>
+              <div style="font-size:12.5px;color:var(--text-secondary);margin-top:2px" class="tnum">13 Jul · 06:00 AM → 02:00 PM</div></div>
+            <button class="btn sm ghost">Change</button>
+          </div>
+        </div></div>
+        <div class="sec-h" style="margin-top:20px"><h3>Roster · 5 staff</h3><a data-act="A:markall">Mark all present</a></div>
+        ${D.staff.map(s=>`<div class="rost" style="flex-direction:column;align-items:stretch;gap:0">
+          <div style="display:flex;gap:11px;align-items:center">
+            <div class="row-ic" style="background:var(--bg-surfaceSunken);color:var(--text-secondary);font-weight:800;width:38px;height:38px">${s.n[0]}</div>
+            <div class="row-main"><div class="row-t">${s.n}</div><div class="row-s">Employee code set · +91 ••••• 33${Math.floor(Math.random()*90+10)}</div></div>
+          </div>
+          <div class="seg" data-seg>
+            <button class="${s.st==='Present'?'on ok':''}">Present</button>
+            <button class="${s.st==='Absent'?'on bad':''}">Absent</button>
+            <button class="${s.st==='Late'?'on':''}">Late</button>
+            <button>Leave</button>
+          </div>
+        </div>`).join('')}
+        <div class="pad" style="margin-top:6px">
+          <div class="card" style="padding:14px;display:flex;gap:10px;align-items:flex-start;background:var(--status-warningContainer)">
+            ${ic('warn','sm')}
+            <div style="font-size:12.5px;color:var(--status-onWarningContainer,#5d3300);line-height:1.5">
+              <b>Entries are immutable after save.</b> Corrections mean invalidating the run and recording a new one.</div>
+          </div>
+        </div>
+        <div style="height:20px"></div>
+      </div>
+      <div class="stickybar"><button class="btn" data-act="A:toast">Save attendance run</button></div>`,
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   OPTION B — SIGNAL
+   ═══════════════════════════════════════════════════════════════════════ */
+const B = {
+  tabs:[['today','Today','home',3],['insights','Insights','chart'],['fab'],['people','People','users'],['more','More','ops']],
+  screens:{
+    today:()=>`
+      <div class="body">
+        <div class="appbar">
+          <div><div class="appbar-t">Sunday, 13 July</div><div class="appbar-h">Good morning, Achal</div></div>
+          <div class="avatar">AK</div>
+        </div>
+        <div class="pad" style="margin-bottom:16px">
+          <div class="card" style="padding:15px 18px;display:flex;align-items:center;gap:14px;background:var(--gradient-hero-card);color:#fff;position:relative;overflow:hidden">
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:800;letter-spacing:.07em;color:rgba(255,255,255,.66)">TODAY SO FAR</div>
+              <div style="display:flex;gap:20px;margin-top:8px">
+                <div><div style="font-size:20px;font-weight:800" class="tnum">₹64,200</div><div style="font-size:10.5px;color:rgba(255,255,255,.66);font-weight:700;margin-top:2px">REVENUE</div></div>
+                <div><div style="font-size:20px;font-weight:800" class="tnum">58</div><div style="font-size:10.5px;color:rgba(255,255,255,.66);font-weight:700;margin-top:2px">FILLS</div></div>
+                <div><div style="font-size:20px;font-weight:800" class="tnum">7,104</div><div style="font-size:10.5px;color:rgba(255,255,255,.66);font-weight:700;margin-top:2px">PTS</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sec-h" style="margin-top:0"><h3>Needs you · 3</h3><a>Dismiss all</a></div>
+        <div class="alert crit" data-act="B:attendance">
+          <div class="alert-ic" style="background:var(--status-errorContainer);color:var(--status-errorText)">${ic('cal','sm')}</div>
+          <div class="alert-b">
+            <div class="alert-t">Morning A attendance not recorded</div>
+            <div class="alert-s">Shift closed 2h ago · 5 staff rostered, 0 entries. The window is still open to record.</div>
+            <div class="alert-cta">Record now ${ic('chev','sm')}</div>
+          </div>
+        </div>
+        <div class="alert warn" data-act="B:toast">
+          <div class="alert-ic" style="background:var(--status-warningContainer);color:var(--status-warningText)">${ic('fuel','sm')}</div>
+          <div class="alert-b">
+            <div class="alert-t">Pump 3 · Nozzle 2 marked inactive</div>
+            <div class="alert-s">No transactions through it in 4 days. Staff may be avoiding a faulty nozzle.</div>
+            <div class="alert-cta">Open pump settings ${ic('chev','sm')}</div>
+          </div>
+        </div>
+        <div class="alert info" data-act="B:toast">
+          <div class="alert-ic" style="background:var(--status-infoContainer);color:var(--status-onInfoContainer)">${ic('bell','sm')}</div>
+          <div class="alert-b">
+            <div class="alert-t">"Weekend fuel bonus" sends in 3 hours</div>
+            <div class="alert-s">1,204 active tokens · last run delivered 1,186 of 1,204.</div>
+            <div class="alert-cta">Review or send now ${ic('chev','sm')}</div>
+          </div>
+        </div>
+        <div class="alert done">
+          <div class="alert-ic" style="background:var(--status-successContainer);color:var(--status-successText)">${ic('check','sm')}</div>
+          <div class="alert-b">
+            <div class="alert-t">Night shift attendance recorded</div>
+            <div class="alert-s">Yesterday 22:00 · 4 present, 0 absent · by Imran Sayyed</div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Pulse</h3><a data-act="B:insights">Full analytics ›</a></div>
+          <div class="chart">
+            <div class="chart-h"><div><h4>Revenue · last 12 days</h4><p>₹8.4L this month</p></div><span class="badge b-ok">+12.4%</span></div>
+            ${spark(REV,'var(--status-success)','var(--status-success)')}
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>Live at the forecourt</h3><a>All ›</a></div>
+          ${D.txns.slice(0,3).map((t,i)=>txnRow(t)+(i<2?'<div class="divide"></div>':'')).join('')}
+        </div>
+        <div style="height:24px"></div>
+      </div>`,
+
+    insights:()=>`
+      <div class="body">
+        <div class="appbar">
+          <div><div class="appbar-t">${D.station}</div><div class="appbar-h">Insights</div></div>
+          <button class="iconbtn">${ic('dl','sm')}</button>
+        </div>
+        <div class="chiprow" style="margin-bottom:16px">
+          <button class="chip is-on" data-chipgroup="B-range">This month</button>
+          <button class="chip" data-chipgroup="B-range">Today</button>
+          <button class="chip" data-chipgroup="B-range">This week</button>
+          <button class="chip" data-chipgroup="B-range">Last month</button>
+        </div>
+        <div class="kpi-grid">${D.kpis.slice(0,4).map(kpiCard).join('')}</div>
+        <div class="sec">
+          <div class="chart">
+            <div class="chart-h"><div><h4>Transactions trend</h4><p>Daily · this month</p></div><span class="badge b-ok">+6.1%</span></div>
+            ${spark(TREND,'var(--action-primary)','var(--action-primary)')}
+          </div>
+          <div class="chart" style="margin-top:12px">
+            <div class="chart-h"><div><h4>Transactions by hour</h4><p>Staffing signal · peak 08–10</p></div></div>
+            ${bars([12,9,7,14,38,52,61,48,33,29,41,55,44,26],['00','02','04','06','08','10','12','14','16','18','20','22','',''].slice(0,14),6)}
+          </div>
+          <div class="chart" style="margin-top:12px">
+            <div class="chart-h"><div><h4>Redemption rate</h4><p>Redeemed ÷ issued, this month</p></div><span class="badge b-gold">Loyalty health</span></div>
+            <div style="text-align:center;padding:8px 0 2px">
+              <div style="font-size:38px;font-weight:800;letter-spacing:-.03em;color:var(--reward-pointsText)" class="tnum">33.9%</div>
+            </div>
+            <div class="meter"><i style="width:33.9%"></i></div>
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;color:var(--text-tertiary);margin-top:4px">
+              <span class="tnum">Issued 1,84,320</span><span class="tnum">Redeemed 62,500</span></div>
+          </div>
+        </div>
+        <div style="height:24px"></div>
+      </div>`,
+
+    people:()=>`
+      <div class="body">
+        <div class="appbar">
+          <div><div class="appbar-t">Members &amp; staff</div><div class="appbar-h">People</div></div>
+          <button class="iconbtn">${ic('plus','sm')}</button>
+        </div>
+        <div class="searchbar">${ic('search','sm')}<span>Name, phone or plate</span></div>
+        <div class="chiprow" style="margin-top:14px">
+          <button class="chip is-on" data-chipgroup="B-people">Members</button>
+          <button class="chip" data-chipgroup="B-people">Staff</button>
+          <button class="chip" data-chipgroup="B-people">Admins</button>
+        </div>
+        <div class="sec-h" style="margin-top:18px"><h3>Recently active</h3><a>Sort ›</a></div>
+        ${D.customers.map((c,i)=>custRow(c,'B')+(i<D.customers.length-1?'<div class="divide"></div>':'')).join('')}
+        <div style="text-align:center;padding:18px;font-size:12px;color:var(--text-tertiary);font-weight:700">Showing 6 of 4,182</div>
+      </div>`,
+
+    more:()=>`
+      <div class="body">
+        <div class="appbar"><div><div class="appbar-t">Admin</div><div class="appbar-h">More</div></div></div>
+        <div class="sec-h" style="margin-top:0"><h3>Operations</h3></div>
+        ${[['Attendance runs','1 unrecorded shift','cal','b-err'],['Shifts &amp; cycles','4 shifts · 2 cycles','clock',''],
+           ['Transactions','1,284 this month','receipt',''],['Notifications','3 schedules · 1 due','bell','b-warn']]
+          .map((s,i)=>`<div class="row" ${s[0].startsWith('Attendance')?'data-act="B:attendance"':''}>
+            <div class="row-ic" style="background:var(--bg-surfaceSunken);color:var(--text-secondary)">${ic(s[2],'sm')}</div>
+            <div class="row-main"><div class="row-t">${s[0]}</div><div class="row-s">${s[1]}</div></div>
+            ${s[3]?`<span class="badge ${s[3]}">!</span>`:''}${ic('chev','sm')}</div>${i<3?'<div class="divide"></div>':''}`).join('')}
+        <div class="sec-h" style="margin-top:24px"><h3>Configuration</h3></div>
+        ${[['Reward rates','₹100 = 12 pts','coin'],['Fuel types','3 active','fuel'],['Vehicle types','8 configured','car'],
+           ['Pumps &amp; nozzles','3 pumps · 12 nozzles','fuel'],['Users','5 accounts','users'],['Theme','Nayara Navy','palette']]
+          .map((s,i)=>`<div class="row">
+            <div class="row-ic" style="background:var(--bg-surfaceSunken);color:var(--text-secondary)">${ic(s[2],'sm')}</div>
+            <div class="row-main"><div class="row-t">${s[0]}</div><div class="row-s">${s[1]}</div></div>
+            ${ic('chev','sm')}</div>${i<5?'<div class="divide"></div>':''}`).join('')}
+        <div class="pad" style="margin-top:20px"><button class="btn ghost">Sign out</button></div>
+        <div style="height:24px"></div>
+      </div>`,
+
+    customer:()=>A.screens.customer().replaceAll('A:back','B:back').replaceAll('A:toast','B:toast'),
+    attendance:()=>A.screens.attendance().replaceAll('A:back','B:back').replaceAll('A:toast','B:toast').replaceAll('A:markall','B:markall'),
+  },
+  sheet:()=>`
+    <div class="handle"></div>
+    <div class="sheet-h"><h3>Quick action</h3><p>One tap from anywhere in the app</p></div>
+    <div style="padding:14px 0 4px">
+      ${[['Adjust points','Add or deduct from a member','swap','var(--action-primaryContainer)','var(--action-onPrimaryContainer)'],
+         ['Redeem points','Process a counter redemption','gift','var(--reward-pointsContainer)','var(--reward-pointsText)'],
+         ['Record attendance','Morning A is unrecorded','cal','var(--status-errorContainer)','var(--status-errorText)'],
+         ['Send notification','Broadcast to 1,204 devices','send','var(--accent-container)','var(--accent-onContainer)'],
+         ['Look up member','By phone, name or plate','search','var(--bg-surfaceSunken)','var(--text-secondary)']]
+        .map(a=>`<div class="cmd" data-act="${a[0].includes('attendance')?'B:attendance':'B:toast'}">
+          <div class="cmd-ic" style="background:${a[3]};color:${a[4]}">${ic(a[2],'sm')}</div>
+          <div style="flex:1"><div class="cmd-t">${a[0]}</div>
+          <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px;font-weight:600">${a[1]}</div></div>
+          ${ic('chev','sm')}</div>`).join('')}
+    </div>`
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   OPTION C — PALETTE
+   ═══════════════════════════════════════════════════════════════════════ */
+const C = {
+  screens:{
+    home:()=>`
+      <div class="body" style="padding-bottom:84px">
+        <div class="appbar">
+          <div><div class="appbar-t">${D.station}</div><div class="appbar-h">Sunday, 13 July</div></div>
+          <div style="display:flex;gap:8px">
+            <button class="iconbtn">${ic('bell','sm')}<span class="dot"></span></button>
+            <div class="avatar">AK</div>
+          </div>
+        </div>
+
+        <div class="widget" style="background:var(--gradient-hero-card);color:#fff;border:none">
+          <div class="widget-h"><h4 style="color:rgba(255,255,255,.66)">Today so far</h4>
+            <span class="grip" style="color:rgba(255,255,255,.4)">${ic('drag','sm')}</span></div>
+          <div style="display:flex;gap:20px">
+            <div style="flex:1"><div style="font-size:26px;font-weight:800;letter-spacing:-.02em" class="tnum">₹64,200</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.68);font-weight:700;margin-top:3px">REVENUE</div></div>
+            <div style="flex:1"><div style="font-size:26px;font-weight:800;letter-spacing:-.02em" class="tnum">58</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.68);font-weight:700;margin-top:3px">FILLS</div></div>
+            <div style="flex:1"><div style="font-size:26px;font-weight:800;letter-spacing:-.02em" class="tnum">7,104</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.68);font-weight:700;margin-top:3px">POINTS</div></div>
+          </div>
+        </div>
+
+        <div class="widget" style="border-left:3px solid var(--status-error)">
+          <div class="widget-h"><h4>Needs attention</h4><span class="badge b-err">3</span><span class="grip">${ic('drag','sm')}</span></div>
+          <div style="display:flex;gap:10px;align-items:center;cursor:pointer" data-act="C:attendance">
+            <div class="alert-ic" style="background:var(--status-errorContainer);color:var(--status-errorText);width:32px;height:32px">${ic('cal','sm')}</div>
+            <div style="flex:1"><div style="font-size:13.5px;font-weight:800">Morning A attendance unrecorded</div>
+              <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:2px">Shift closed 2h ago · 5 staff</div></div>
+            ${ic('chev','sm')}
+          </div>
+          <div class="divide" style="margin:11px 0 11px 42px"></div>
+          <div style="display:flex;gap:10px;align-items:center;cursor:pointer" data-act="C:toast">
+            <div class="alert-ic" style="background:var(--status-warningContainer);color:var(--status-warningText);width:32px;height:32px">${ic('fuel','sm')}</div>
+            <div style="flex:1"><div style="font-size:13.5px;font-weight:800">Pump 3 · Nozzle 2 inactive</div>
+              <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:2px">No fills in 4 days</div></div>
+            ${ic('chev','sm')}
+          </div>
+        </div>
+
+        <div class="widget">
+          <div class="widget-h"><h4>Revenue · 12 days</h4><span class="badge b-ok">+12.4%</span><span class="grip">${ic('drag','sm')}</span></div>
+          ${spark(REV,'var(--status-success)','var(--status-success)')}
+          <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11.5px;font-weight:700;color:var(--text-tertiary)">
+            <span class="tnum">₹8.4L this month</span><span class="tnum">Avg ₹1,096 / visit</span></div>
+        </div>
+
+        <div class="widget">
+          <div class="widget-h"><h4>Loyalty health</h4><span class="grip">${ic('drag','sm')}</span></div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="flex:none;text-align:center">
+              <div style="font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--reward-pointsText)" class="tnum">33.9%</div>
+              <div style="font-size:10.5px;font-weight:800;color:var(--text-tertiary);letter-spacing:.05em;margin-top:2px">REDEEMED</div>
+            </div>
+            <div style="flex:1">
+              <div class="meter" style="margin:0 0 9px"><i style="width:33.9%"></i></div>
+              <div style="font-size:11.5px;color:var(--text-tertiary);font-weight:700;line-height:1.5" class="tnum">
+                1,84,320 issued<br>62,500 redeemed</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="widget">
+          <div class="widget-h"><h4>Latest fills</h4><a style="font-size:11.5px;font-weight:800;color:var(--text-link);cursor:pointer">All ›</a><span class="grip">${ic('drag','sm')}</span></div>
+          ${D.txns.slice(0,3).map((t,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;${i<2?'border-bottom:1px solid var(--border-subtle)':''}">
+            <div style="width:6px;height:6px;border-radius:99px;background:${D.fuelColor[t.f]};flex:none"></div>
+            <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.n}</div>
+              <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">${t.t} · ${t.f}</div></div>
+            <div style="font-size:14px;font-weight:800" class="tnum">${t.a}</div></div>`).join('')}
+        </div>
+
+        <div class="pad" style="margin-top:4px">
+          <button class="btn ghost" style="height:44px;font-size:13px">${ic('plus','sm')}Add widget</button>
+        </div>
+        <div style="height:20px"></div>
+      </div>
+      <div class="cmdbar" data-act="C:palette">
+        ${ic('search','sm')}<span class="lbl">Search or run a command</span>
+        <div class="go">${ic('scan','sm')}</div>
+      </div>`,
+
+    palette:()=>`
+      <div class="body" style="padding-bottom:84px">
+        <div style="padding:10px var(--layout-screen-margin) 14px;display:flex;gap:10px;align-items:center">
+          <button class="iconbtn" data-act="C:back">${ic('x','sm')}</button>
+          <div style="flex:1;height:46px;border-radius:var(--radius-md);background:var(--bg-surfaceSunken);
+            display:flex;align-items:center;gap:9px;padding:0 14px;border:2px solid var(--border-focus)">
+            ${ic('search','sm')}
+            <span style="font-size:15px;font-weight:700;color:var(--text-primary)">att</span>
+            <span style="width:1.5px;height:19px;background:var(--border-focus);animation:none"></span>
+          </div>
+        </div>
+        <div class="cmd-group">Best match</div>
+        <div class="cmd" data-act="C:attendance">
+          <div class="cmd-ic" style="background:var(--status-errorContainer);color:var(--status-errorText)">${ic('cal','sm')}</div>
+          <div style="flex:1"><div class="cmd-t">Record attendance</div>
+            <div style="font-size:11.5px;color:var(--status-errorText);font-weight:700;margin-top:2px">Morning A is unrecorded · 5 staff</div></div>
+          <span class="cmd-k">↵</span>
+        </div>
+        <div class="cmd-group" style="margin-top:8px">Commands</div>
+        ${[['Attendance runs','View past runs · 128 recorded','cal'],
+           ['Attendance — invalidate a run','Correct a saved run','x'],
+           ['Shift cycles','Rotation sequences · 2 active','swap']]
+          .map(c=>`<div class="cmd" data-act="C:toast">
+            <div class="cmd-ic">${ic(c[2],'sm')}</div>
+            <div style="flex:1"><div class="cmd-t">${c[0]}</div>
+              <div style="font-size:11.5px;color:var(--text-tertiary);font-weight:600;margin-top:2px">${c[1]}</div></div>
+            ${ic('chev','sm')}</div>`).join('')}
+        <div class="cmd-group" style="margin-top:8px">Members matching "att"</div>
+        <div class="cmd" data-act="C:customer">
+          <div class="cmd-ic" style="background:var(--action-primaryContainer);color:var(--action-onPrimaryContainer);font-weight:800">R</div>
+          <div style="flex:1"><div class="cmd-t">Rakesh Mehta</div>
+            <div style="font-size:11.5px;color:var(--text-tertiary);font-weight:600;margin-top:2px">MH 04 DK 8821 · 12,480 pts</div></div>
+          ${ic('chev','sm')}
+        </div>
+        <div class="cmd-group" style="margin-top:8px">Recent</div>
+        ${[['Reward rates','coin'],['Send notification','send'],['Pumps &amp; nozzles','fuel'],['Theme','palette']]
+          .map(c=>`<div class="cmd" data-act="C:toast">
+            <div class="cmd-ic">${ic(c[1],'sm')}</div>
+            <div class="cmd-t">${c[0]}</div>${ic('chev','sm')}</div>`).join('')}
+        <div style="height:20px"></div>
+      </div>
+      <div class="cmdbar" data-act="C:back">
+        ${ic('search','sm')}<span class="lbl" style="opacity:1;color:#fff">att</span>
+        <div class="go">${ic('chev','sm')}</div>
+      </div>`,
+
+    customer:()=>A.screens.customer().replaceAll('A:back','C:back').replaceAll('A:toast','C:toast'),
+    attendance:()=>A.screens.attendance().replaceAll('A:back','C:back').replaceAll('A:toast','C:toast').replaceAll('A:markall','C:markall'),
+  }
+};
+
+/* ── renderers ─────────────────────────────────────────────────────────── */
+const state={A:{tab:'overview',deep:null},B:{tab:'today',deep:null,sheet:false},C:{view:'home'}};
+
+function tabbarA(){
+  return `<div class="tabbar">${A.tabs.map(t=>`
+    <button class="tab ${state.A.tab===t[0]&&!state.A.deep?'is-on':''}" data-tab="A:${t[0]}">
+      ${ic(t[2],'lg')}<span>${t[1]}</span></button>`).join('')}</div>${homeInd()}`;
+}
+function tabbarB(){
+  return `<div class="tabbar">
+    ${B.tabs.map(t=>{
+      if(t[0]==='fab') return `<div class="tabspace"><div class="fab" data-act="B:sheet">${ic('plus','lg')}</div></div>`;
+      const on=state.B.tab===t[0]&&!state.B.deep;
+      return `<button class="tab ${on?'is-on':''}" data-tab="B:${t[0]}">
+        ${ic(t[2],'lg')}<span>${t[1]}</span>${t[3]?`<span class="nbadge tnum">${t[3]}</span>`:''}</button>`;
+    }).join('')}
+  </div>${homeInd()}`;
+}
+
+function renderA(){
+  const s=state.A.deep?A.screens[state.A.deep]():A.screens[state.A.tab]();
+  document.getElementById('scrA').innerHTML=statusbar()+s+(state.A.deep?homeInd():tabbarA())+toastEl('A');
+}
+function renderB(){
+  const s=state.B.deep?B.screens[state.B.deep]():B.screens[state.B.tab]();
+  document.getElementById('scrB').innerHTML=statusbar()+s+(state.B.deep?homeInd():tabbarB())
+    +`<div class="sheet-scrim ${state.B.sheet?'is-open':''}" data-act="B:closesheet"></div>
+      <div class="sheet ${state.B.sheet?'is-open':''}">${B.sheet()}</div>`+toastEl('B');
+}
+function renderC(){
+  const s=C.screens[state.C.view]();
+  const needsInd=['customer','attendance'].includes(state.C.view);
+  document.getElementById('scrC').innerHTML=statusbar()+s+(needsInd?homeInd():'')+toastEl('C');
+}
+const toastEl=(o)=>`<div class="toast" id="toast${o}">${ic('check','sm')}<span>Saved · attendance run recorded</span></div>`;
+function render(){renderA();renderB();renderC();}
+
+/* ── interaction ───────────────────────────────────────────────────────── */
+document.addEventListener('click',e=>{
+  const tabEl=e.target.closest('[data-tab]');
+  if(tabEl){const[o,t]=tabEl.dataset.tab.split(':');state[o].tab=t;state[o].deep=null;if(o==='B')state.B.sheet=false;render();return;}
+
+  const chip=e.target.closest('[data-chipgroup]');
+  if(chip){const g=chip.dataset.chipgroup;
+    chip.closest('.chiprow').querySelectorAll(`[data-chipgroup="${g}"]`).forEach(c=>c.classList.remove('is-on'));
+    chip.classList.add('is-on');return;}
+
+  const segBtn=e.target.closest('.seg button');
+  if(segBtn){const seg=segBtn.closest('.seg');
+    seg.querySelectorAll('button').forEach(b=>b.className='');
+    const i=[...seg.children].indexOf(segBtn);
+    segBtn.className='on '+(i===0?'ok':i===1?'bad':'');return;}
+
+  const act=e.target.closest('[data-act]');
+  if(!act)return;
+  const[o,a]=act.dataset.act.split(':');
+
+  switch(a){
+    case 'customer': o==='C'?state.C.view='customer':state[o].deep='customer'; if(o==='B')state.B.sheet=false; render(); break;
+    case 'attendance': o==='C'?state.C.view='attendance':state[o].deep='attendance'; if(o==='B')state.B.sheet=false; render(); break;
+    case 'back': o==='C'?state.C.view='home':state[o].deep=null; render(); break;
+    case 'insights': state.B.tab='insights'; state.B.deep=null; render(); break;
+    case 'sheet': state.B.sheet=true; render(); break;
+    case 'closesheet': state.B.sheet=false; render(); break;
+    case 'palette': state.C.view='palette'; render(); break;
+    case 'markall':
+      act.closest('.body').querySelectorAll('.seg').forEach(s=>{
+        s.querySelectorAll('button').forEach(b=>b.className='');
+        s.children[0].className='on ok';});
+      toast(o,'All 5 staff marked present'); break;
+    case 'toast': toast(o,'Saved'); break;
+  }
+});
+function toast(o,msg){
+  const t=document.getElementById('toast'+o); if(!t)return;
+  t.querySelector('span').textContent=msg;
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1900);
+}
+
+/* theme */
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const dark=document.documentElement.dataset.theme==='dark';
+  document.documentElement.dataset.theme=dark?'light':'dark';
+  document.getElementById('themeLbl').textContent=dark?'Light':'Dark';
+  render();
+});
+document.getElementById('gridBtn').addEventListener('click',()=>{
+  state.A={tab:'overview',deep:null};state.B={tab:'today',deep:null,sheet:false};state.C={view:'home'};render();
+});
+
+render();
+</script>
+</body>
+</html>

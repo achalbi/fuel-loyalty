@@ -1,0 +1,86 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Ace Fuel Loyalty — logo prototypes</title>
+<style>
+  :root{--navy:#10447C;--cyan:#0080A0;--green:#18945C;--sky:#249ADF;--amber:#F5A524;
+        --ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--surface:#fff;--bg:#f5f8fb;}
+  *{box-sizing:border-box}
+  body{margin:0;padding:40px;background:var(--bg);color:var(--ink);
+       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  header{max-width:1180px;margin:0 auto 32px}
+  h1{margin:0 0 6px;font-size:26px;letter-spacing:-.02em}
+  header p{margin:0;color:var(--muted)}
+  .swatches{display:flex;gap:8px;margin-top:16px}
+  .sw{width:70px;height:34px;border-radius:8px;display:flex;align-items:flex-end;justify-content:center;
+      font-size:9px;color:#fff;padding-bottom:3px;font-family:ui-monospace,monospace}
+  .grid{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+        box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .hero{height:200px;display:flex;align-items:center;justify-content:center;background:
+        linear-gradient(135deg,#fbfdff,#eef4fa)}
+  .hero img{width:132px;height:132px}
+  .meta{padding:16px 18px 6px}
+  .name{font-weight:650;font-size:16px}
+  .tag{color:var(--muted);font-size:13px;margin-top:2px}
+  .row{display:flex;align-items:center;gap:18px;padding:14px 18px;border-top:1px solid var(--line)}
+  .row.dark{background:#0b2140}
+  .lockup{display:flex;align-items:center;gap:10px;font-weight:650;font-size:14px}
+  .row.dark .lockup{color:#fff}
+  .sizes{display:flex;align-items:flex-end;gap:14px;margin-left:auto}
+  .sizes figure{margin:0;text-align:center}
+  .sizes figcaption{font-size:10px;color:var(--muted);margin-top:4px;font-family:ui-monospace,monospace}
+  .row.dark figcaption{color:#8fb0d6}
+  .i64{width:48px;height:48px}.i32{width:32px;height:32px}.i16{width:16px;height:16px}
+  .notes{padding:12px 18px 16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+  .notes b{color:var(--ink);font-weight:600}
+</style>
+<header>
+  <h1>Fuel-pump brand marks — round 2</h1>
+  <p>Six new marks (G–L) exploring the C × E direction — tile + ring + points — followed by round 1. One shared pump glyph, Nayara tokens throughout.</p>
+  <div class="swatches">
+    <div class="sw" style="background:#10447C">#10447C</div>
+    <div class="sw" style="background:#0080A0">#0080A0</div>
+    <div class="sw" style="background:#18945C">#18945C</div>
+    <div class="sw" style="background:#249ADF">#249ADF</div>
+    <div class="sw" style="background:#F5A524">#F5A524</div>
+  </div>
+</header>
+<div class="grid" id="grid"></div>
+<script>
+const items = [
+  ["g-tile-ring.svg","G · Tile + Ring","NEW — C's tile wrapping E's ring","Direct C×E hybrid: the squircle keeps the app-icon contrast, the ring keeps the points meaning. <b>The safest pick of the round.</b>"],
+  ["h-ring-bold.svg","H · Ring Bold","NEW — E, thickened","E with a 44px ring instead of 30px. Same idea, but it <b>no longer collapses at 16px</b> — this is the fix for E's one flaw."],
+  ["i-fuel-coin.svg","I · Fuel Coin","NEW — amber rim, navy face","Points as currency. The milled coin edge is distinctive and the amber rim survives on both light and dark chrome."],
+  ["j-points-tile.svg","J · Points Tile","NEW — pips instead of a ring","Sky→navy tile; three rising amber pips read as points accruing. <b>Cleanest at 16px</b> of anything here."],
+  ["k-tier-ring.svg","K · Tier Ring","NEW — four segments = tiers","Ring split into four brand-coloured arcs (bronze→gold tiers). Most literal about a tiered programme; busiest at small sizes."],
+  ["l-gauge-pump.svg","L · Gauge Pump","NEW — fuel gauge as progress","Deep navy tile, pump above a fuel-gauge sweep. Rewards read as “filling up.” Most detail, needs the most size."],
+  ["c-reward-pump.svg","C · Reward Pump","Round 1 — you picked this","Squircle tile, amber spark. Still the strongest pure app icon."],
+  ["e-loyalty-ring.svg","E · Loyalty Ring","Round 1 — you picked this","Progress ring, navy pump. Best meaning, thinnest ring — see H."],
+  ["a-pump-pin.svg","A · Pump Pin","Round 1","Station-locator pin."],
+  ["b-fuel-drop.svg","B · Fuel Drop","Round 1","Droplet, green→cyan."],
+  ["d-hex-pump.svg","D · Hex Pump","Round 1","Hexagon plate, fleet flavour."],
+  ["f-ace-monogram.svg","F · Ace Monogram","Round 1","“A” + nozzle hose, flat."],
+];
+document.getElementById("grid").innerHTML = items.map(([f,n,t,d]) => `
+  <div class="card">
+    <div class="hero"><img src="${f}"></div>
+    <div class="meta"><div class="name">${n}</div><div class="tag">${t}</div></div>
+    <div class="row">
+      <div class="lockup"><img src="${f}" class="i32"><span>Ace Fuel Loyalty</span></div>
+      <div class="sizes">
+        <figure><img src="${f}" class="i64"><figcaption>48</figcaption></figure>
+        <figure><img src="${f}" class="i32"><figcaption>32</figcaption></figure>
+        <figure><img src="${f}" class="i16"><figcaption>16</figcaption></figure>
+      </div>
+    </div>
+    <div class="row dark">
+      <div class="lockup"><img src="${f}" class="i32"><span>Ace Fuel Loyalty</span></div>
+      <div class="sizes">
+        <figure><img src="${f}" class="i64"><figcaption>48</figcaption></figure>
+        <figure><img src="${f}" class="i32"><figcaption>32</figcaption></figure>
+        <figure><img src="${f}" class="i16"><figcaption>16</figcaption></figure>
+      </div>
+    </div>
+    <div class="notes">${d}</div>
+  </div>`).join("");
+</script>
