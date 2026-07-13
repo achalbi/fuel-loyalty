@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="loyalty_title">લોયલ્ટી તપાસ</string>
+    <string name="loyalty_subtitle">તમારા હાલના લોયલ્ટી પોઇન્ટ્સ અને તાજેતરની મુલાકાતો જોવા માટે તમારો મોબાઇલ નંબર દાખલ કરો.</string>
+    <string name="loyalty_phone_label">મોબાઇલ નંબર</string>
+    <string name="loyalty_check_points">પોઇન્ટ્સ જુઓ</string>
+    <string name="loyalty_total_points">કુલ પોઇન્ટ્સ</string>
+    <string name="loyalty_activities_recent">છેલ્લી 5 લોયલ્ટી પ્રવૃત્તિઓ</string>
+    <string name="loyalty_activities_all">લોયલ્ટી પ્રવૃત્તિઓ</string>
+    <string name="loyalty_no_activity">લોયલ્ટી પ્રવૃત્તિ મળી નથી.</string>
+    <string name="loyalty_status_paused">આ ગ્રાહક માટે રિવોર્ડ્સ હાલમાં થોભાવવામાં આવ્યા છે. કૃપા કરીને સ્ટેશન સ્ટાફનો સંપર્ક કરો.</string>
+    <string name="loyalty_status_unlocked">રિવોર્ડ્સ અનલૉક: %1$d પોઇન્ટ્સ. ન્યૂનતમ રિડેમ્પશન: %2$d પોઇન્ટ્સ.</string>
+    <string name="loyalty_status_locked">રિવોર્ડ્સ અનલૉક કરવા માટે હજુ %1$d પોઇન્ટ્સ જોઈએ. ન્યૂનતમ રિડેમ્પશન: %2$d પોઇન્ટ્સ.</string>
+    <string name="loyalty_offline">ઑફલાઇન — છેલ્લું જાણીતું બેલેન્સ બતાવી રહ્યું છે</string>
+    <string name="loyalty_last_updated">છેલ્લે અપડેટ %1$s</string>
+    <string name="staff_login">સ્ટાફ લોગિન</string>
+    <string name="staff_home">સ્ટાફ હોમ</string>
+    <string name="language_label">ભાષા</string>
+</resources>

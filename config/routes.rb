@@ -10,6 +10,80 @@ Rails.application.routes.draw do
   resource :password, only: %i[edit update]
   resource :my_pump, only: %i[show update], controller: "my_pumps"
 
+  # JSON API for the native mobile apps (token auth). See docs/native-handoff/11.
+  namespace :api, defaults: { format: :json } do
+    namespace :v1 do
+      post "auth/login", to: "auth/sessions#create"
+      post "auth/refresh", to: "auth/sessions#refresh"
+      delete "auth/logout", to: "auth/sessions#destroy"
+      get "auth/me", to: "auth/sessions#me"
+
+      get "theme", to: "theme#show"
+      post "loyalty/lookup", to: "loyalty#lookup"
+
+      resource :my_pump, only: %i[show update], controller: "my_pump"
+      resource :password, only: :update, controller: "password"
+
+      namespace :staff do
+        resources :customers, only: %i[index show create update] do
+          collection do
+            get :lookup
+          end
+          member do
+            get :ledger
+            patch :activate
+            patch :deactivate
+            patch :pause_rewards
+            patch :resume_rewards
+          end
+          resources :vehicles, only: %i[create update destroy]
+        end
+        post "redemptions", to: "redemptions#create"
+        get "transactions/lookup", to: "transactions#lookup"
+        post "transactions", to: "transactions#create"
+        post "transactions/recognize_plate", to: "transactions#recognize_plate"
+        post "transactions/register_customer", to: "transactions#register_customer"
+      end
+
+      namespace :admin do
+        post "points_adjustments", to: "points_adjustments#create"
+        get "dashboard", to: "dashboard#data"
+        get "transactions", to: "transactions#index"
+        resources :users, only: %i[index show create update]
+        resources :fuel_types, only: %i[index create update destroy]
+        resources :vehicle_types, only: %i[index create update destroy]
+        resources :fuel_pumps, only: %i[index create update destroy] do
+          patch :feature_settings, on: :collection
+        end
+        get "reward_rates", to: "reward_rates#show"
+        match "reward_rates", to: "reward_rates#update", via: %i[patch put]
+        get "theme_settings", to: "theme_settings#show"
+        match "theme_settings", to: "theme_settings#update", via: %i[patch put]
+        resources :staff_members, only: %i[index update destroy] do
+          resources :shift_assignments, only: :create
+        end
+        resources :shift_templates, only: %i[index create update]
+        resources :shift_cycles, only: %i[index create update destroy] do
+          member do
+            patch :activate
+            patch :deactivate
+          end
+        end
+        resources :attendance_runs, only: %i[index new create show destroy] do
+          member do
+            patch :invalidate
+            patch :mark_valid
+          end
+        end
+        resources :schedules, only: %i[index create update destroy] do
+          post :send_now, on: :member
+        end
+        post "schedules/run", to: "schedules#run"
+        post "notifications/send", to: "notifications#deliver"
+      end
+    end
+  end
+
   root "dashboard#show"
 
   get "/loyalty", to: "loyalty#new", as: :new_loyalty

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="loyalty_title">లాయల్టీ పరిశీలన</string>
+    <string name="loyalty_subtitle">మీ ప్రస్తుత లాయల్టీ పాయింట్లు మరియు ఇటీవలి సందర్శనలు చూడటానికి మీ మొబైల్ నంబర్ నమోదు చేయండి.</string>
+    <string name="loyalty_phone_label">మొబైల్ నంబర్</string>
+    <string name="loyalty_check_points">పాయింట్లు చూడండి</string>
+    <string name="loyalty_total_points">మొత్తం పాయింట్లు</string>
+    <string name="loyalty_activities_recent">చివరి 5 లాయల్టీ కార్యకలాపాలు</string>
+    <string name="loyalty_activities_all">లాయల్టీ కార్యకలాపాలు</string>
+    <string name="loyalty_no_activity">లాయల్టీ కార్యకలాపాలు కనబడలేదు.</string>
+    <string name="loyalty_status_paused">ఈ కస్టమర్‌కు రివార్డులు ప్రస్తుతం నిలిపివేయబడ్డాయి. దయచేసి స్టేషన్ సిబ్బందిని సంప్రదించండి.</string>
+    <string name="loyalty_status_unlocked">రివార్డులు అన్లాక్ అయ్యాయి: %1$d పాయింట్లు. కనిష్ట రిడెంప్షన్: %2$d పాయింట్లు.</string>
+    <string name="loyalty_status_locked">రివార్డులు అన్లాక్ కావడానికి ఇంకా %1$d పాయింట్లు కావాలి. కనిష్ట రిడెంప్షన్: %2$d పాయింట్లు.</string>
+    <string name="loyalty_offline">ఆఫ్‌లైన్ — చివరిగా తెలిసిన బ్యాలెన్స్ చూపిస్తోంది</string>
+    <string name="loyalty_last_updated">చివరిగా అప్‌డేట్ చేయబడింది %1$s</string>
+    <string name="staff_login">స్టాఫ్ లాగిన్</string>
+    <string name="staff_home">స్టాఫ్ హోమ్</string>
+    <string name="language_label">భాష</string>
+</resources>

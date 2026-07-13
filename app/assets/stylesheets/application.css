@@ -71,41 +71,43 @@
 }
 
 :root {
-  --fl-primary: #43b05c;
-  --fl-primary-strong: #33954a;
-  --fl-primary-accent: #78cd8b;
-  --fl-primary-contrast: #081e0f;
-  --fl-primary-contrast-rgb: 8, 30, 15;
-  --fl-primary-soft: rgba(67, 176, 92, 0.14);
-  --fl-success: #2f9e44;
-  --fl-info: #2d8b73;
-  --fl-warning: #d4a017;
-  --fl-danger: #e36b6b;
-  --fl-bg: #f6f1e6;
-  --fl-surface: #fffaf0;
-  --fl-surface-elevated: #fffdf8;
-  --fl-surface-muted: #f1e8d6;
-  --fl-text: #251d12;
-  --fl-muted: #7a6c57;
-  --fl-border: #e4d7bb;
-  --fl-shadow: 0 1rem 2.5rem rgba(50, 35, 0, 0.08);
-  --fl-overlay: rgba(9, 8, 6, 0.52);
+  /* Nayara token set (docs/design/design-tokens.json) — anchors from the
+     Nayara Energy logo: navy #10447C · cyan #0080A0 · green #18945C. */
+  --fl-primary: #1d63b0;
+  --fl-primary-strong: #10447c;
+  --fl-primary-accent: #4c94e9;
+  --fl-primary-contrast: #ffffff;
+  --fl-primary-contrast-rgb: 255, 255, 255;
+  --fl-primary-soft: rgba(29, 99, 176, 0.12);
+  --fl-success: #18945c;
+  --fl-info: #0080a0;
+  --fl-warning: #cd7e00;
+  --fl-danger: #df2935;
+  --fl-bg: #f9fafc;
+  --fl-surface: #ffffff;
+  --fl-surface-elevated: #ffffff;
+  --fl-surface-muted: #f1f3f5;
+  --fl-text: #111820;
+  --fl-muted: #636a71;
+  --fl-border: #e2e5e9;
+  --fl-shadow: 0 1rem 2.5rem rgba(16, 24, 40, 0.08);
+  --fl-overlay: rgba(8, 15, 24, 0.6);
   --fl-gray-50: var(--fl-bg);
   --fl-gray-100: var(--fl-surface-muted);
   --fl-gray-200: var(--fl-border);
-  --fl-gray-400: #b3a486;
+  --fl-gray-400: #a7acb2;
   --fl-gray-500: var(--fl-muted);
-  --fl-gray-700: #4c3d29;
+  --fl-gray-700: #4d535b;
   --fl-gray-800: var(--fl-text);
   --fl-shell-width: 240px;
   --fl-shell-width-collapsed: 60px;
   --fl-topbar-height: 56px;
   --bs-primary: var(--fl-primary);
-  --bs-primary-rgb: 67, 176, 92;
-  --bs-success-rgb: 47, 158, 68;
-  --bs-info-rgb: 45, 139, 115;
-  --bs-warning-rgb: 212, 160, 23;
-  --bs-danger-rgb: 227, 107, 107;
+  --bs-primary-rgb: 29, 99, 176;
+  --bs-success-rgb: 24, 148, 92;
+  --bs-info-rgb: 0, 128, 160;
+  --bs-warning-rgb: 205, 126, 0;
+  --bs-danger-rgb: 223, 41, 53;
   --bs-body-bg: var(--fl-bg);
   --bs-body-color: var(--fl-text);
   --bs-border-color: var(--fl-border);
@@ -122,32 +124,33 @@
 }
 
 html[data-theme="dark"] {
-  --fl-primary: #6fd88a;
-  --fl-primary-strong: #86e39d;
-  --fl-primary-accent: #9ae7ae;
-  --fl-primary-contrast: #07200d;
-  --fl-primary-contrast-rgb: 7, 32, 13;
-  --fl-primary-soft: rgba(111, 216, 138, 0.18);
-  --fl-success: #62cc7f;
-  --fl-info: #55b9a2;
-  --fl-warning: #f0c863;
-  --fl-danger: #ff8d8d;
-  --fl-bg: #15120d;
-  --fl-surface: #1d1812;
-  --fl-surface-elevated: #262018;
-  --fl-surface-muted: #332919;
-  --fl-text: #f5ead2;
-  --fl-muted: #c0b08d;
-  --fl-border: #433626;
-  --fl-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.38);
-  --fl-overlay: rgba(0, 0, 0, 0.68);
-  --fl-gray-400: #9e8f71;
-  --fl-gray-700: #e1d5bc;
-  --bs-primary-rgb: 111, 216, 138;
-  --bs-success-rgb: 98, 204, 127;
-  --bs-info-rgb: 85, 185, 162;
-  --bs-warning-rgb: 240, 200, 99;
-  --bs-danger-rgb: 255, 141, 141;
+  /* Nayara dark: navy-tinted surfaces, sky-300 primary (AA on #0F1822). */
+  --fl-primary: #8fd0ff;
+  --fl-primary-strong: #b9e4ff;
+  --fl-primary-accent: #5cb4f0;
+  --fl-primary-contrast: #052b54;
+  --fl-primary-contrast-rgb: 5, 43, 84;
+  --fl-primary-soft: rgba(143, 208, 255, 0.16);
+  --fl-success: #97d9b1;
+  --fl-info: #96d2e8;
+  --fl-warning: #f8ba69;
+  --fl-danger: #ffa8a1;
+  --fl-bg: #080f18;
+  --fl-surface: #0f1822;
+  --fl-surface-elevated: #18212d;
+  --fl-surface-muted: #242f3c;
+  --fl-text: #f4f7fc;
+  --fl-muted: #a7acb2;
+  --fl-border: #242f3c;
+  --fl-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.55);
+  --fl-overlay: rgba(0, 0, 0, 0.7);
+  --fl-gray-400: #838990;
+  --fl-gray-700: #d0d4d9;
+  --bs-primary-rgb: 143, 208, 255;
+  --bs-success-rgb: 151, 217, 177;
+  --bs-info-rgb: 150, 210, 232;
+  --bs-warning-rgb: 248, 186, 105;
+  --bs-danger-rgb: 255, 168, 161;
   color-scheme: dark;
 }
 
@@ -156,7 +159,7 @@ body {
   font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.9375rem;
   line-height: 1.45;
-  background: radial-gradient(circle at top, rgba(67, 176, 92, 0.1), transparent 34%), var(--fl-gray-50);
+  background: radial-gradient(circle at top, rgba(29, 99, 176, 0.06), transparent 34%), var(--fl-gray-50);
   color: var(--fl-gray-800);
   overflow-x: hidden;
 }
@@ -166,7 +169,7 @@ a {
 }
 
 html[data-theme="dark"] body {
-  background: radial-gradient(circle at top, rgba(111, 216, 138, 0.12), transparent 36%), var(--fl-gray-50);
+  background: radial-gradient(circle at top, rgba(143, 208, 255, 0.08), transparent 36%), var(--fl-gray-50);
 }
 
 ::selection {

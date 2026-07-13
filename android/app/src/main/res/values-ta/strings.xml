@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="loyalty_title">லாயல்ட்டி பார்வை</string>
+    <string name="loyalty_subtitle">உங்கள் தற்போதைய லாயல்ட்டி புள்ளிகளையும் சமீபத்திய வருகைகளையும் பார்க்க உங்கள் மொபைல் எண்ணை உள்ளிடுங்கள்.</string>
+    <string name="loyalty_phone_label">மொபைல் எண்</string>
+    <string name="loyalty_check_points">புள்ளிகளை பார்க்கவும்</string>
+    <string name="loyalty_total_points">மொத்த புள்ளிகள்</string>
+    <string name="loyalty_activities_recent">கடைசி 5 லாயல்ட்டி செயல்பாடுகள்</string>
+    <string name="loyalty_activities_all">லாயல்ட்டி செயல்பாடுகள்</string>
+    <string name="loyalty_no_activity">லாயல்ட்டி செயல்பாடு எதுவும் இல்லை.</string>
+    <string name="loyalty_status_paused">இந்த வாடிக்கையாளருக்கு வெகுமதிகள் தற்போது இடைநிறுத்தப்பட்டுள்ளன. தயவுசெய்து நிலைய பணியாளர்களை தொடர்பு கொள்ளுங்கள்.</string>
+    <string name="loyalty_status_unlocked">வெகுமதிகள் திறக்கப்பட்டன: %1$d புள்ளிகள். குறைந்தபட்ச மீட்டெடுப்பு: %2$d புள்ளிகள்.</string>
+    <string name="loyalty_status_locked">வெகுமதிகளை திறக்க இன்னும் %1$d புள்ளிகள் தேவை. குறைந்தபட்ச மீட்டெடுப்பு: %2$d புள்ளிகள்.</string>
+    <string name="loyalty_offline">ஆஃப்லைன் — கடைசியாக அறியப்பட்ட இருப்பு காட்டப்படுகிறது</string>
+    <string name="loyalty_last_updated">கடைசியாக புதுப்பிக்கப்பட்டது %1$s</string>
+    <string name="staff_login">ஸ்டாஃப் லாகின்</string>
+    <string name="staff_home">ஸ்டாஃப் ஹோம்</string>
+    <string name="language_label">மொழி</string>
+</resources>

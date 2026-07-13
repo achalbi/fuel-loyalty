@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="loyalty_title">ಲಾಯಲ್ಟಿ ಪರಿಶೀಲನೆ</string>
+    <string name="loyalty_subtitle">ನಿಮ್ಮ ಇಂದಿನ ಲಾಯಲ್ಟಿ ಪಾಯಿಂಟ್‌ಗಳು ಮತ್ತು ಇತ್ತೀಚಿನ ಭೇಟಿಗಳನ್ನು ನೋಡಲು ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.</string>
+    <string name="loyalty_phone_label">ಮೊಬೈಲ್ ಸಂಖ್ಯೆ</string>
+    <string name="loyalty_check_points">ಪಾಯಿಂಟ್‌ಗಳನ್ನು ನೋಡಿ</string>
+    <string name="loyalty_total_points">ಒಟ್ಟು ಪಾಯಿಂಟ್‌ಗಳು</string>
+    <string name="loyalty_activities_recent">ಕೊನೆಯ 5 ಲಾಯಲ್ಟಿ ಚಟುವಟಿಕೆಗಳು</string>
+    <string name="loyalty_activities_all">ಲಾಯಲ್ಟಿ ಚಟುವಟಿಕೆಗಳು</string>
+    <string name="loyalty_no_activity">ಯಾವುದೇ ಲಾಯಲ್ಟಿ ಚಟುವಟಿಕೆ ಕಂಡುಬಂದಿಲ್ಲ.</string>
+    <string name="loyalty_status_paused">ಈ ಗ್ರಾಹಕರಿಗೆ ರಿವಾರ್ಡ್‌ಗಳನ್ನು ಪ್ರಸ್ತುತ ವಿರಾಮಗೊಳಿಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ಸ್ಟೇಷನ್ ಸಿಬ್ಬಂದಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ.</string>
+    <string name="loyalty_status_unlocked">ರಿವಾರ್ಡ್‌ಗಳು ಅನ್ಲಾಕ್ ಆಗಿವೆ: %1$d ಪಾಯಿಂಟ್‌ಗಳು. ಕನಿಷ್ಠ ರಿಡೆಂಪ್ಷನ್: %2$d ಪಾಯಿಂಟ್‌ಗಳು.</string>
+    <string name="loyalty_status_locked">ರಿವಾರ್ಡ್‌ಗಳನ್ನು ಅನ್ಲಾಕ್ ಮಾಡಲು ಇನ್ನೂ %1$d ಪಾಯಿಂಟ್‌ಗಳು ಬೇಕು. ಕನಿಷ್ಠ ರಿಡೆಂಪ್ಷನ್: %2$d ಪಾಯಿಂಟ್‌ಗಳು.</string>
+    <string name="loyalty_offline">ಆಫ್‌ಲೈನ್ — ಕೊನೆಯ ತಿಳಿದ ಬಾಕಿ ತೋರಿಸಲಾಗುತ್ತಿದೆ</string>
+    <string name="loyalty_last_updated">ಕೊನೆಯ ಬಾರಿ ಅಪ್‌ಡೇಟ್ ಆಗಿದ್ದು %1$s</string>
+    <string name="staff_login">ಸ್ಟಾಫ್ ಲಾಗಿನ್</string>
+    <string name="staff_home">ಸ್ಟಾಫ್ ಹೋಮ್</string>
+    <string name="language_label">ಭಾಷೆ</string>
+</resources>

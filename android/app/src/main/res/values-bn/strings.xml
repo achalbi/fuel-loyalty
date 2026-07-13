@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="loyalty_title">লয়্যালটি দেখুন</string>
+    <string name="loyalty_subtitle">আপনার বর্তমান লয়্যালটি পয়েন্ট এবং সাম্প্রতিক ভিজিট দেখতে আপনার মোবাইল নম্বর লিখুন।</string>
+    <string name="loyalty_phone_label">মোবাইল নম্বর</string>
+    <string name="loyalty_check_points">পয়েন্ট দেখুন</string>
+    <string name="loyalty_total_points">মোট পয়েন্ট</string>
+    <string name="loyalty_activities_recent">শেষ 5টি লয়্যালটি কার্যকলাপ</string>
+    <string name="loyalty_activities_all">লয়্যালটি কার্যকলাপ</string>
+    <string name="loyalty_no_activity">কোনও লয়্যালটি কার্যকলাপ পাওয়া যায়নি।</string>
+    <string name="loyalty_status_paused">এই গ্রাহকের জন্য রিওয়ার্ড বর্তমানে সাময়িকভাবে বন্ধ রাখা হয়েছে। অনুগ্রহ করে স্টেশন কর্মীদের সাথে যোগাযোগ করুন।</string>
+    <string name="loyalty_status_unlocked">রিওয়ার্ড আনলক: %1$d পয়েন্ট. ন্যূনতম রিডেম্পশন: %2$d পয়েন্ট.</string>
+    <string name="loyalty_status_locked">রিওয়ার্ড আনলক করতে আরও %1$d পয়েন্ট দরকার। ন্যূনতম রিডেম্পশন: %2$d পয়েন্ট.</string>
+    <string name="loyalty_offline">অফলাইন — সর্বশেষ জানা ব্যালেন্স দেখানো হচ্ছে</string>
+    <string name="loyalty_last_updated">সর্বশেষ আপডেট %1$s</string>
+    <string name="staff_login">স্টাফ লগইন</string>
+    <string name="staff_home">স্টাফ হোম</string>
+    <string name="language_label">ভাষা</string>
+</resources>

@@ -19,6 +19,8 @@ gem "jbuilder"
 gem "devise"
 gem "pundit"
 gem "googleauth"
+# JSON Web Tokens for the native-app /api/v1 token auth (see docs/native-handoff/03).
+gem "jwt", "~> 2.9"
 # Use Redis adapter to run Action Cable in production
 # gem "redis", ">= 4.0.1"
 

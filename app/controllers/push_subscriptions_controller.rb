@@ -1,11 +1,20 @@
 class PushSubscriptionsController < ApplicationController
+  # JSON registration endpoint for both the web PWA and the native app. The native
+  # client authenticates with a JWT and has no session cookie / CSRF token, so the
+  # inherited forgery check would 422 every cookieless POST. The payload is just an
+  # FCM registration token (no cookie-based state to protect), so skip CSRF here.
+  skip_before_action :verify_authenticity_token
+
   def create
     token = PushSubscription.normalize_token(subscription_params.fetch(:token))
     existing = PushSubscription.exists?(token: token)
 
+    # `platform` is optional: some clients (e.g. the native app via kotlinx, which
+    # drops default-valued fields) omit it. The model coerces a blank/unknown value
+    # to "unknown", so only the token is truly required.
     subscription = PushSubscription.register!(
       token: token,
-      platform: subscription_params.fetch(:platform),
+      platform: subscription_params[:platform],
       last_used_at: Time.current
     )
 

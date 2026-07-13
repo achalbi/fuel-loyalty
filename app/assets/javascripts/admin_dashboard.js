@@ -24,15 +24,15 @@
     const css = getComputedStyle(document.documentElement);
 
     return {
-      primary: css.getPropertyValue("--fl-primary").trim() || "#43b05c",
-      primarySoft: css.getPropertyValue("--fl-primary-soft").trim() || "rgba(67, 176, 92, 0.14)",
-      success: css.getPropertyValue("--fl-success").trim() || "#2f9e44",
-      info: css.getPropertyValue("--fl-info").trim() || "#2d8b73",
-      warning: css.getPropertyValue("--fl-warning").trim() || "#d4a017",
-      danger: css.getPropertyValue("--fl-danger").trim() || "#e36b6b",
-      border: css.getPropertyValue("--fl-gray-200").trim() || "#e4d7bb",
-      muted: css.getPropertyValue("--fl-gray-500").trim() || "#7a6c57",
-      text: css.getPropertyValue("--fl-gray-800").trim() || "#251d12"
+      primary: css.getPropertyValue("--fl-primary").trim() || "#1d63b0",
+      primarySoft: css.getPropertyValue("--fl-primary-soft").trim() || "rgba(29, 99, 176, 0.12)",
+      success: css.getPropertyValue("--fl-success").trim() || "#18945c",
+      info: css.getPropertyValue("--fl-info").trim() || "#0080a0",
+      warning: css.getPropertyValue("--fl-warning").trim() || "#cd7e00",
+      danger: css.getPropertyValue("--fl-danger").trim() || "#df2935",
+      border: css.getPropertyValue("--fl-gray-200").trim() || "#e2e5e9",
+      muted: css.getPropertyValue("--fl-gray-500").trim() || "#636a71",
+      text: css.getPropertyValue("--fl-gray-800").trim() || "#111820"
     };
   };
 

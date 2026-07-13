@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ace Fuel Loyalty</string>
+
+    <!-- Public loyalty screen (localized; see res/values-<lang>) -->
+    <string name="loyalty_title">Loyalty Lookup</string>
+    <string name="loyalty_subtitle">Enter your mobile number to view your current loyalty points and recent visits.</string>
+    <string name="loyalty_phone_label">Phone number</string>
+    <string name="loyalty_check_points">Check Points</string>
+    <string name="loyalty_total_points">Total Points</string>
+    <string name="loyalty_activities_recent">Last 5 Loyalty Activities</string>
+    <string name="loyalty_activities_all">Loyalty Activities</string>
+    <string name="loyalty_no_activity">No loyalty activity found.</string>
+    <string name="loyalty_status_paused">Rewards are currently paused for this customer. Please contact station staff.</string>
+    <string name="loyalty_status_unlocked">Rewards unlocked: %1$d points. Minimum redemption: %2$d points.</string>
+    <string name="loyalty_status_locked">%1$d points more to unlock rewards. Minimum redemption: %2$d points.</string>
+    <string name="loyalty_offline">Offline — showing last known balance</string>
+    <string name="loyalty_last_updated">Last updated %1$s</string>
+    <string name="staff_login">Staff Login</string>
+    <string name="staff_home">Staff Home</string>
+    <string name="language_label">Language</string>
+</resources>

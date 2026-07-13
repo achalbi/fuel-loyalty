@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="loyalty_title">ਲੌਇਲਟੀ ਜਾਂਚ</string>
+    <string name="loyalty_subtitle">ਆਪਣੇ ਮੌਜੂਦਾ ਲੌਇਲਟੀ ਪੌਇੰਟ ਅਤੇ ਹਾਲੀਆ ਦੌਰੇ ਵੇਖਣ ਲਈ ਆਪਣਾ ਮੋਬਾਇਲ ਨੰਬਰ ਦਿਓ।</string>
+    <string name="loyalty_phone_label">ਮੋਬਾਇਲ ਨੰਬਰ</string>
+    <string name="loyalty_check_points">ਪੌਇੰਟ ਵੇਖੋ</string>
+    <string name="loyalty_total_points">ਕੁੱਲ ਪੌਇੰਟ</string>
+    <string name="loyalty_activities_recent">ਆਖ਼ਰੀ 5 ਲੌਇਲਟੀ ਸਰਗਰਮੀਆਂ</string>
+    <string name="loyalty_activities_all">ਲੌਇਲਟੀ ਸਰਗਰਮੀਆਂ</string>
+    <string name="loyalty_no_activity">ਕੋਈ ਲੌਇਲਟੀ ਸਰਗਰਮੀ ਨਹੀਂ ਮਿਲੀ।</string>
+    <string name="loyalty_status_paused">ਇਸ ਗਾਹਕ ਲਈ ਇਨਾਮ ਇਸ ਵੇਲੇ ਰੋਕ ਦਿੱਤੇ ਗਏ ਹਨ। ਕਿਰਪਾ ਕਰਕੇ ਸਟੇਸ਼ਨ ਸਟਾਫ਼ ਨਾਲ ਸੰਪਰਕ ਕਰੋ।</string>
+    <string name="loyalty_status_unlocked">ਇਨਾਮ ਖੁੱਲ ਗਏ: %1$d ਪੌਇੰਟ. ਘੱਟੋ-ਘੱਟ ਰੀਡੈਂਪਸ਼ਨ: %2$d ਪੌਇੰਟ.</string>
+    <string name="loyalty_status_locked">ਇਨਾਮ ਖੋਲ੍ਹਣ ਲਈ ਹੋਰ %1$d ਪੌਇੰਟ ਚਾਹੀਦੇ ਹਨ। ਘੱਟੋ-ਘੱਟ ਰੀਡੈਂਪਸ਼ਨ: %2$d ਪੌਇੰਟ.</string>
+    <string name="loyalty_offline">ਆਫਲਾਈਨ — ਆਖ਼ਰੀ ਜਾਣਿਆ ਬਕਾਇਆ ਵਿਖਾਇਆ ਜਾ ਰਿਹਾ ਹੈ</string>
+    <string name="loyalty_last_updated">ਆਖ਼ਰੀ ਅਪਡੇਟ %1$s</string>
+    <string name="staff_login">ਸਟਾਫ਼ ਲਾਗਇਨ</string>
+    <string name="staff_home">ਸਟਾਫ਼ ਹੋਮ</string>
+    <string name="language_label">ਭਾਸ਼ਾ</string>
+</resources>

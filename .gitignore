@@ -37,3 +37,10 @@
 /.cache/
 /.local/
 .DS_Store
+
+# Ignore vendored gems (installed via `bundle install --path vendor/bundle`).
+/vendor/bundle
+
+# Ignore editor local-history and Firebase client config (contains project keys).
+.history/
+/google-services.json

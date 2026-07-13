@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="loyalty_title">ଲୟାଲ୍ଟି ଯାଞ୍ଚ</string>
+    <string name="loyalty_subtitle">ଆପଣଙ୍କର ବର୍ତ୍ତମାନର ଲୟାଲ୍ଟି ପଏଣ୍ଟ ଏବଂ ସମ୍ପ୍ରତିକ ଭ୍ରମଣ ଦେଖିବା ପାଇଁ ଆପଣଙ୍କର ମୋବାଇଲ୍ ନମ୍ବର ଦିଅନ୍ତୁ।</string>
+    <string name="loyalty_phone_label">ମୋବାଇଲ୍ ନମ୍ବର</string>
+    <string name="loyalty_check_points">ପଏଣ୍ଟ ଦେଖନ୍ତୁ</string>
+    <string name="loyalty_total_points">ମୋଟ ପଏଣ୍ଟ</string>
+    <string name="loyalty_activities_recent">ଶେଷ 5 ଲୟାଲ୍ଟି କାର୍ଯ୍ୟକଳାପ</string>
+    <string name="loyalty_activities_all">ଲୟାଲ୍ଟି କାର୍ଯ୍ୟକଳାପ</string>
+    <string name="loyalty_no_activity">କୌଣସି ଲୟାଲ୍ଟି କାର୍ଯ୍ୟକଳାପ ମିଳିଲା ନାହିଁ।</string>
+    <string name="loyalty_status_paused">ଏହି ଗ୍ରାହକଙ୍କ ପାଇଁ ରିୱାର୍ଡ ବର୍ତ୍ତମାନ ବନ୍ଦ ରଖାଯାଇଛି। ଦୟାକରି ଷ୍ଟେସନ୍ କର୍ମଚାରୀଙ୍କ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ।</string>
+    <string name="loyalty_status_unlocked">ରିୱାର୍ଡ ଅନଲକ୍: %1$d ପଏଣ୍ଟ. ସର୍ବନିମ୍ନ ରିଡେମ୍ପସନ୍: %2$d ପଏଣ୍ଟ.</string>
+    <string name="loyalty_status_locked">ରିୱାର୍ଡ ଅନଲକ୍ କରିବାକୁ ଆଉ %1$d ପଏଣ୍ଟ ଦରକାର। ସର୍ବନିମ୍ନ ରିଡେମ୍ପସନ୍: %2$d ପଏଣ୍ଟ.</string>
+    <string name="loyalty_offline">ଅଫଲାଇନ୍ — ଶେଷ ଜଣା ବାଲାନ୍ସ ଦେଖାଯାଉଛି</string>
+    <string name="loyalty_last_updated">ଶେଷ ଅପଡେଟ୍ %1$s</string>
+    <string name="staff_login">ଷ୍ଟାଫ୍ ଲଗଇନ୍</string>
+    <string name="staff_home">ଷ୍ଟାଫ୍ ହୋମ୍</string>
+    <string name="language_label">ଭାଷା</string>
+</resources>

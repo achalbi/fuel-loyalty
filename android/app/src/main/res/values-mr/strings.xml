@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="loyalty_title">लॉयल्टी तपासणी</string>
+    <string name="loyalty_subtitle">तुमचे सध्याचे लॉयल्टी पॉइंट्स आणि अलीकडील भेटी पाहण्यासाठी तुमचा मोबाईल नंबर टाका.</string>
+    <string name="loyalty_phone_label">मोबाईल नंबर</string>
+    <string name="loyalty_check_points">पॉइंट्स पाहा</string>
+    <string name="loyalty_total_points">एकूण पॉइंट्स</string>
+    <string name="loyalty_activities_recent">शेवटच्या 5 लॉयल्टी नोंदी</string>
+    <string name="loyalty_activities_all">लॉयल्टी नोंदी</string>
+    <string name="loyalty_no_activity">लॉयल्टी नोंदी आढळल्या नाहीत.</string>
+    <string name="loyalty_status_paused">या ग्राहकासाठी रिवॉर्ड्स सध्या थांबवले आहेत. कृपया स्टेशन कर्मचाऱ्यांशी संपर्क साधा.</string>
+    <string name="loyalty_status_unlocked">रिवॉर्ड्स अनलॉक: %1$d पॉइंट्स. किमान रिडेम्प्शन: %2$d पॉइंट्स.</string>
+    <string name="loyalty_status_locked">रिवॉर्ड्स अनलॉक करण्यासाठी अजून %1$d पॉइंट्स आवश्यक आहेत. किमान रिडेम्प्शन: %2$d पॉइंट्स.</string>
+    <string name="loyalty_offline">ऑफलाइन — शेवटचा ज्ञात शिल्लक दाखवत आहे</string>
+    <string name="loyalty_last_updated">शेवटचे अपडेट %1$s</string>
+    <string name="staff_login">स्टाफ लॉगिन</string>
+    <string name="staff_home">स्टाफ होम</string>
+    <string name="language_label">भाषा</string>
+</resources>

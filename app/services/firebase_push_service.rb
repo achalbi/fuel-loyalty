@@ -10,6 +10,10 @@ class FirebasePushService
   INVALID_TOKEN_CODES = %w[UNREGISTERED INVALID_ARGUMENT].freeze
   NOTIFICATION_ICON_PATH = "/notification-pump-icon.svg".freeze
   NOTIFICATION_BADGE_PATH = "/notification-pump-badge.svg".freeze
+  # Must match the channel created in the Android client (AceFuelApp.PUSH_CHANNEL_ID)
+  # and the manifest default_notification_channel_id, so backgrounded devices display
+  # the system-tray notification on a valid channel.
+  ANDROID_NOTIFICATION_CHANNEL_ID = "fuel_loyalty_broadcast".freeze
 
   Result = Struct.new(:requested, :sent, :failed, :invalidated, :batches, :errors, keyword_init: true) do
     def as_json(*)
@@ -130,6 +134,14 @@ class FirebasePushService
           message: message,
           link: FirebaseAppConfig.notification_link,
           notification_id: SecureRandom.uuid
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channel_id: ANDROID_NOTIFICATION_CHANNEL_ID,
+            default_sound: true,
+            notification_priority: "PRIORITY_HIGH"
+          }
         },
         webpush: {
           headers: {

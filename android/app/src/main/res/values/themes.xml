@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Framework-only base theme (no Material XML dependency); Compose drives the real UI. -->
+    <style name="Theme.AceFuelLoyalty" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Nayara bg.canvas (neutral-50) -->
+        <item name="android:windowBackground">#F9FAFC</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="loyalty_title">ലോയൽറ്റി പരിശോധിക്കൽ</string>
+    <string name="loyalty_subtitle">നിങ്ങളുടെ നിലവിലെ ലോയൽറ്റി പോയിന്റുകളും സമീപകാല സന്ദർശനങ്ങളും കാണാൻ നിങ്ങളുടെ മൊബൈൽ നമ്പർ നൽകുക.</string>
+    <string name="loyalty_phone_label">മൊബൈൽ നമ്പർ</string>
+    <string name="loyalty_check_points">പോയിന്റുകൾ കാണുക</string>
+    <string name="loyalty_total_points">ആകെ പോയിന്റുകൾ</string>
+    <string name="loyalty_activities_recent">അവസാന 5 ലോയൽറ്റി പ്രവർത്തനങ്ങൾ</string>
+    <string name="loyalty_activities_all">ലോയൽറ്റി പ്രവർത്തനങ്ങൾ</string>
+    <string name="loyalty_no_activity">ലോയൽറ്റി പ്രവർത്തനങ്ങളൊന്നും കണ്ടെത്തിയില്ല.</string>
+    <string name="loyalty_status_paused">ഈ ഉപഭോക്താവിന് റിവാർഡുകൾ നിലവിൽ താൽക്കാലികമായി നിർത്തിവച്ചിരിക്കുന്നു. ദയവായി സ്റ്റേഷൻ ജീവനക്കാരെ ബന്ധപ്പെടുക.</string>
+    <string name="loyalty_status_unlocked">റിവാർഡുകൾ തുറന്നു: %1$d പോയിന്റുകൾ. കുറഞ്ഞ റിഡംപ്ഷൻ: %2$d പോയിന്റുകൾ.</string>
+    <string name="loyalty_status_locked">റിവാർഡുകൾ തുറക്കാൻ ഇനി %1$d പോയിന്റുകൾ വേണം. കുറഞ്ഞ റിഡംപ്ഷൻ: %2$d പോയിന്റുകൾ.</string>
+    <string name="loyalty_offline">ഓഫ്‌ലൈൻ — അവസാനം അറിയാവുന്ന ബാലൻസ് കാണിക്കുന്നു</string>
+    <string name="loyalty_last_updated">അവസാനം അപ്ഡേറ്റ് ചെയ്തത് %1$s</string>
+    <string name="staff_login">സ്റ്റാഫ് ലോഗിൻ</string>
+    <string name="staff_home">സ്റ്റാഫ് ഹോം</string>
+    <string name="language_label">ഭാഷ</string>
+</resources>

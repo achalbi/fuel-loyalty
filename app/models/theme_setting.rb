@@ -1,7 +1,9 @@
 class ThemeSetting < ApplicationRecord
-  DEFAULT_PRIMARY_COLOR = "#43B05C".freeze
-  DARK_TEXT_COLOR = "#081E0F".freeze
-  LIGHT_TEXT_COLOR = "#F7FFF8".freeze
+  # Nayara action primary (navy-700, docs/design/design-tokens.json).
+  DEFAULT_PRIMARY_COLOR = "#1D63B0".freeze
+  # Navy-tinted contrast pair (Nayara navy-950 / white).
+  DARK_TEXT_COLOR = "#052B54".freeze
+  LIGHT_TEXT_COLOR = "#FFFFFF".freeze
 
   before_validation :normalize_primary_color
 
