@@ -105,7 +105,7 @@ substitutions:
   _AR_REPOSITORY: cloud-run-source-deploy
   _AR_PROJECT_ID: thoughtbasics
   _SERVICE_NAME: fuel-loyalty-git
- ̰  REPO_NAME: achalbi-fuel-loyalty
+  REPO_NAME: achalbi-fuel-loyalty
   _APP_URL: 'https://fly.thoughtbasics.com'
   _MAILER_FROM: 'no-reply@fly.thoughtbasics.com'
   _ADMIN_NOTIFICATION_API_TOKEN: 'd95d8bc24135f6a1e0b090f691c6f947e023ee0dcf72fad90ec94dcfa65cad5c'
