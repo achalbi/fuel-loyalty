@@ -62,7 +62,12 @@ class ServiceContainer(context: Context) {
 
     // Plate recognition uploads an image and blocks on an external ALPR round-trip,
     // so it needs a longer budget than the 10s OkHttp default used for JSON calls.
+    // connectTimeout is set explicitly (rather than inheriting the 10s default) so
+    // the connection phase is bounded independently of the 45s work budget — an
+    // unreachable server (e.g. a dead adb-reverse tunnel) fails at ~15s instead of
+    // masquerading as a read timeout at the connect boundary.
     private val plateOkHttpClient = okHttpClient.newBuilder()
+        .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
         .callTimeout(45, java.util.concurrent.TimeUnit.SECONDS)
         .writeTimeout(45, java.util.concurrent.TimeUnit.SECONDS)
         .readTimeout(45, java.util.concurrent.TimeUnit.SECONDS)
