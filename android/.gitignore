@@ -15,3 +15,12 @@ build/
 /keystore.properties
 *.jks
 *.keystore
+
+# Fastlane (Play publishing)
+/fastlane/play-service-account.json
+/fastlane/report.xml
+/fastlane/Preview.html
+/fastlane/screenshots
+/fastlane/test_output
+/vendor/bundle
+.env*

@@ -1,0 +1,2 @@
+json_key_file("fastlane/play-service-account.json") # gitignored Play service-account key
+package_name("com.acefuel.loyalty")

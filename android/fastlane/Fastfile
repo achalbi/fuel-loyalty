@@ -1,0 +1,51 @@
+# Play Store publishing for com.acefuel.loyalty.
+#
+# Prereqs (one-time, see ../PLAY_RELEASE.md):
+#   - release.jks + keystore.properties present (signs the AAB)
+#   - fastlane/play-service-account.json present (Play Developer API key)
+#   - the app + its FIRST release already created manually in the Play Console
+#
+# Routine use:
+#   bundle exec fastlane internal            # build + upload AAB to Internal testing
+#   bundle exec fastlane promote_production  # promote the internal release to production
+
+default_platform(:android)
+
+platform :android do
+  desc "Build the signed release AAB (requires keystore.properties)."
+  lane :build_aab do
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      project_dir: ".", # this dir is `android/`, which holds gradlew
+    )
+  end
+
+  desc "Build and upload the release AAB to the Internal testing track (as draft)."
+  lane :internal do
+    build_aab
+    upload_to_play_store(
+      track: "internal",
+      release_status: "draft", # review in the Console, then roll out
+      aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true,
+    )
+  end
+
+  desc "Promote the current Internal testing release to Production."
+  lane :promote_production do
+    upload_to_play_store(
+      track: "internal",
+      track_promote_to: "production",
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true,
+    )
+  end
+end

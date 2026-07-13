@@ -1,0 +1,8 @@
+# Ruby tooling for the Android app (Play Store publishing via Fastlane).
+# Isolated from the Rails app's root Gemfile.
+#
+#   cd android && bundle install
+#   bundle exec fastlane internal
+source "https://rubygems.org"
+
+gem "fastlane"
