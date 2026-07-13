@@ -29,12 +29,18 @@ data class PumpEditorState(
     val removedNozzleIds: List<Long> = emptyList(),
     val saving: Boolean = false,
     val error: String? = null,
+    // Values captured when the editor opened, used to detect unsaved changes.
+    val initialActive: Boolean = true,
+    val initialNozzles: List<NozzleFormRow> = emptyList(),
 ) {
     val isCreate: Boolean get() = pumpId == null
+    val dirty: Boolean
+        get() = active != initialActive || nozzles != initialNozzles || removedNozzleIds.isNotEmpty()
 }
 
 data class PumpsUiState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val error: String? = null,
     val pumps: List<FuelPumpDto> = emptyList(),
     val fuelTypes: List<FuelTypeDto> = emptyList(),
@@ -59,8 +65,17 @@ class PumpsViewModel(private val repository: PumpsRepository) : ViewModel() {
         load()
     }
 
-    fun load() {
-        _state.update { it.copy(loading = true, error = null) }
+    fun load() = fetch(refresh = false)
+
+    fun refresh() = fetch(refresh = true)
+
+    private fun fetch(refresh: Boolean) {
+        if (refresh) {
+            if (_state.value.refreshing) return
+            _state.update { it.copy(refreshing = true) }
+        } else {
+            _state.update { it.copy(loading = true, error = null) }
+        }
         viewModelScope.launch {
             val typesResult = repository.loadFuelTypes()
             val fuelTypes = (typesResult as? ApiResult.Success)?.data ?: _state.value.fuelTypes
@@ -68,6 +83,7 @@ class PumpsViewModel(private val repository: PumpsRepository) : ViewModel() {
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         loading = false,
+                        refreshing = false,
                         error = null,
                         pumps = pumpsResult.data.fuelPumps,
                         nozzleFeatureEnabled = pumpsResult.data.rewardSetting.nozzleFeatureEnabled,
@@ -75,20 +91,21 @@ class PumpsViewModel(private val repository: PumpsRepository) : ViewModel() {
                     )
                 }
                 is ApiResult.Error -> _state.update {
-                    it.copy(loading = false, error = pumpsResult.message, fuelTypes = fuelTypes)
+                    it.copy(loading = false, refreshing = false, error = pumpsResult.message, fuelTypes = fuelTypes)
                 }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(loading = false, error = NETWORK_MESSAGE, fuelTypes = fuelTypes)
+                    it.copy(loading = false, refreshing = false, error = NETWORK_MESSAGE, fuelTypes = fuelTypes)
                 }
             }
         }
     }
 
-    fun refresh() = load()
-
     fun dismissNotice() = _state.update { it.copy(notice = null) }
 
     fun dismissActionError() = _state.update { it.copy(actionError = null) }
+
+    /** One-shot consume of a load error once it has been surfaced over stale data. */
+    fun consumeError() = _state.update { it.copy(error = null) }
 
     // --- feature toggle -----------------------------------------------------
 
@@ -119,6 +136,14 @@ class PumpsViewModel(private val repository: PumpsRepository) : ViewModel() {
     fun openCreate() {
         val nextNumber = (_state.value.pumps.maxOfOrNull { it.sequenceNumber } ?: 0) + 1
         val first = _state.value.activeFuelTypes.firstOrNull()
+        val rows = listOf(
+            NozzleFormRow(
+                key = nextKey(),
+                fuelTypeCode = first?.code.orEmpty(),
+                fuelTypeName = first?.name.orEmpty(),
+                active = true,
+            ),
+        )
         _state.update {
             it.copy(
                 actionError = null,
@@ -127,20 +152,24 @@ class PumpsViewModel(private val repository: PumpsRepository) : ViewModel() {
                     pumpId = null,
                     titleName = "Pump $nextNumber",
                     active = true,
-                    nozzles = listOf(
-                        NozzleFormRow(
-                            key = nextKey(),
-                            fuelTypeCode = first?.code.orEmpty(),
-                            fuelTypeName = first?.name.orEmpty(),
-                            active = true,
-                        ),
-                    ),
+                    nozzles = rows,
+                    initialActive = true,
+                    initialNozzles = rows,
                 ),
             )
         }
     }
 
     fun openEdit(pump: FuelPumpDto) {
+        val rows = pump.nozzles.map { nozzle ->
+            NozzleFormRow(
+                key = nextKey(),
+                id = nozzle.id,
+                fuelTypeCode = nozzle.fuelTypeCode,
+                fuelTypeName = nozzle.fuelTypeName,
+                active = nozzle.active,
+            )
+        }
         _state.update {
             it.copy(
                 actionError = null,
@@ -149,15 +178,9 @@ class PumpsViewModel(private val repository: PumpsRepository) : ViewModel() {
                     pumpId = pump.id,
                     titleName = pump.displayName,
                     active = pump.active,
-                    nozzles = pump.nozzles.map { nozzle ->
-                        NozzleFormRow(
-                            key = nextKey(),
-                            id = nozzle.id,
-                            fuelTypeCode = nozzle.fuelTypeCode,
-                            fuelTypeName = nozzle.fuelTypeName,
-                            active = nozzle.active,
-                        )
-                    },
+                    nozzles = rows,
+                    initialActive = pump.active,
+                    initialNozzles = rows,
                 ),
             )
         }

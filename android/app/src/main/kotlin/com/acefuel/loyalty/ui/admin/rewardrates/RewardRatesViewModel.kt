@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 
 data class RewardRatesUiState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val loadError: String? = null,
 
     // Shared display context (from the saved reward setting).
@@ -22,6 +23,9 @@ data class RewardRatesUiState(
     val rupeesPerRewardUnit: String = "",
     val minimumRedeemablePoints: String = "",
     val cashValuePerPoint: String = "",
+    val savedRupeesPerRewardUnit: String = "",
+    val savedMinimumRedeemablePoints: String = "",
+    val savedCashValuePerPoint: String = "",
     val savingSettings: Boolean = false,
     val settingsError: String? = null,
     val settingsMessage: String? = null,
@@ -29,6 +33,7 @@ data class RewardRatesUiState(
     // (B) Vehicle-type overrides form.
     val vehicleTypes: List<VehicleTypeRewardRateDto> = emptyList(),
     val vehicleInputs: Map<String, String> = emptyMap(),
+    val savedVehicleInputs: Map<String, String> = emptyMap(),
     val savingVehicle: Boolean = false,
     val vehicleError: String? = null,
     val vehicleMessage: String? = null,
@@ -36,10 +41,19 @@ data class RewardRatesUiState(
     // (C) Fuel-type fallback form.
     val fuelTypes: List<FuelRewardRateDto> = emptyList(),
     val fuelInputs: Map<String, String> = emptyMap(),
+    val savedFuelInputs: Map<String, String> = emptyMap(),
     val savingFuel: Boolean = false,
     val fuelError: String? = null,
     val fuelMessage: String? = null,
-)
+) {
+    // Per-section unsaved-changes tracking (drives the "Unsaved changes" chip).
+    val settingsDirty: Boolean
+        get() = rupeesPerRewardUnit != savedRupeesPerRewardUnit ||
+            minimumRedeemablePoints != savedMinimumRedeemablePoints ||
+            cashValuePerPoint != savedCashValuePerPoint
+    val vehicleDirty: Boolean get() = vehicleInputs != savedVehicleInputs
+    val fuelDirty: Boolean get() = fuelInputs != savedFuelInputs
+}
 
 class RewardRatesViewModel(private val repository: RewardRatesRepository) : ViewModel() {
 
@@ -50,18 +64,39 @@ class RewardRatesViewModel(private val repository: RewardRatesRepository) : View
         load()
     }
 
-    fun load() {
-        _state.update { it.copy(loading = true, loadError = null) }
+    fun load() = fetch(refresh = false)
+
+    fun refresh() = fetch(refresh = true)
+
+    private fun fetch(refresh: Boolean) {
+        if (refresh) {
+            if (_state.value.refreshing) return
+            _state.update { it.copy(refreshing = true) }
+        } else {
+            _state.update { it.copy(loading = true, loadError = null) }
+        }
         viewModelScope.launch {
             when (val result = repository.load()) {
-                is ApiResult.Success -> _state.update { seedAll(it, result.data) }
-                is ApiResult.Error -> _state.update { it.copy(loading = false, loadError = result.message) }
+                // On refresh, keep sections the user has edited — reseeding
+                // would silently discard their unsaved input.
+                is ApiResult.Success -> _state.update { seedAll(it, result.data, preserveDirty = refresh) }
+                is ApiResult.Error -> _state.update {
+                    it.copy(loading = false, refreshing = false, loadError = result.message)
+                }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(loading = false, loadError = "Couldn't reach the server. Try again.")
+                    it.copy(loading = false, refreshing = false, loadError = "Couldn't reach the server. Try again.")
                 }
             }
         }
     }
+
+    // ---- One-shot success message consumption (snackbar feedback) ----
+
+    fun consumeSettingsMessage() = _state.update { it.copy(settingsMessage = null) }
+
+    fun consumeVehicleMessage() = _state.update { it.copy(vehicleMessage = null) }
+
+    fun consumeFuelMessage() = _state.update { it.copy(fuelMessage = null) }
 
     // ---- Field edits ----
 
@@ -156,8 +191,18 @@ class RewardRatesViewModel(private val repository: RewardRatesRepository) : View
 
     // ---- Seeding helpers (inputs reflect the server's normalized values) ----
 
-    private fun seedAll(s: RewardRatesUiState, data: RewardRatesResponse): RewardRatesUiState =
-        seedFuel(seedVehicle(seedSettings(s.copy(loading = false, loadError = null), data), data), data)
+    private fun seedAll(
+        s: RewardRatesUiState,
+        data: RewardRatesResponse,
+        preserveDirty: Boolean = false,
+    ): RewardRatesUiState {
+        var next = s.copy(loading = false, refreshing = false, loadError = null)
+        if (!(preserveDirty && s.settingsDirty)) next = seedSettings(next, data)
+        if (!(preserveDirty && s.vehicleDirty)) next = seedVehicle(next, data)
+        if (!(preserveDirty && s.fuelDirty)) next = seedFuel(next, data)
+        // Reference/shared data (unit, increment, type lists) always refreshes.
+        return seedShared(next, data)
+    }
 
     private fun seedShared(s: RewardRatesUiState, data: RewardRatesResponse): RewardRatesUiState =
         s.copy(
@@ -168,24 +213,36 @@ class RewardRatesViewModel(private val repository: RewardRatesRepository) : View
 
     private fun seedSettings(s: RewardRatesUiState, data: RewardRatesResponse): RewardRatesUiState {
         val rs = data.rewardSetting
+        val rupees = rs.rupeesPerRewardUnit?.toString().orEmpty()
+        val minimum = rs.minimumRedeemablePoints?.toString().orEmpty()
+        val cash = rs.cashValuePerPoint?.let(::formatDecimal).orEmpty()
         return seedShared(s, data).copy(
-            rupeesPerRewardUnit = rs.rupeesPerRewardUnit?.toString().orEmpty(),
-            minimumRedeemablePoints = rs.minimumRedeemablePoints?.toString().orEmpty(),
-            cashValuePerPoint = rs.cashValuePerPoint?.let(::formatDecimal).orEmpty(),
+            rupeesPerRewardUnit = rupees,
+            minimumRedeemablePoints = minimum,
+            cashValuePerPoint = cash,
+            savedRupeesPerRewardUnit = rupees,
+            savedMinimumRedeemablePoints = minimum,
+            savedCashValuePerPoint = cash,
         )
     }
 
-    private fun seedVehicle(s: RewardRatesUiState, data: RewardRatesResponse): RewardRatesUiState =
-        seedShared(s, data).copy(
+    private fun seedVehicle(s: RewardRatesUiState, data: RewardRatesResponse): RewardRatesUiState {
+        val inputs = data.vehicleTypeRewardRates.associate { it.code to it.rewardPointsPer100?.toString().orEmpty() }
+        return seedShared(s, data).copy(
             vehicleTypes = data.vehicleTypeRewardRates,
-            vehicleInputs = data.vehicleTypeRewardRates.associate { it.code to it.rewardPointsPer100?.toString().orEmpty() },
+            vehicleInputs = inputs,
+            savedVehicleInputs = inputs,
         )
+    }
 
-    private fun seedFuel(s: RewardRatesUiState, data: RewardRatesResponse): RewardRatesUiState =
-        seedShared(s, data).copy(
+    private fun seedFuel(s: RewardRatesUiState, data: RewardRatesResponse): RewardRatesUiState {
+        val inputs = data.fuelRewardRates.associate { it.fuelType to it.pointsPer100?.toString().orEmpty() }
+        return seedShared(s, data).copy(
             fuelTypes = data.fuelRewardRates,
-            fuelInputs = data.fuelRewardRates.associate { it.fuelType to it.pointsPer100?.toString().orEmpty() },
+            fuelInputs = inputs,
+            savedFuelInputs = inputs,
         )
+    }
 
     private fun sanitizeDecimal(input: String): String {
         val sb = StringBuilder()

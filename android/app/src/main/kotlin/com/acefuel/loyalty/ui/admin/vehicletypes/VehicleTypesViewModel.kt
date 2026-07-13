@@ -43,16 +43,26 @@ data class VehicleTypeForm(
 
 data class VehicleTypesUiState(
     val loading: Boolean = false,
+    val refreshing: Boolean = false,
     val items: List<VehicleTypeDto> = emptyList(),
+    // Load failures only; mutations report through [actionError].
     val error: String? = null,
+    val actionError: String? = null,
+    val notice: String? = null,
     val editorOpen: Boolean = false,
     val editingId: Long? = null,
     val form: VehicleTypeForm = VehicleTypeForm(),
+    /** Form values captured when the sheet opened, used to detect unsaved changes. */
+    val initialForm: VehicleTypeForm? = null,
     val saving: Boolean = false,
     val formError: String? = null,
+    val nameError: String? = null,
     val deletingId: Long? = null,
+    /** Row just deleted on the server; drives the Undo snackbar. */
+    val deletedForUndo: VehicleTypeDto? = null,
 ) {
     val isEditing: Boolean get() = editingId != null
+    val editorDirty: Boolean get() = initialForm != null && form != initialForm
 }
 
 private const val NETWORK_MESSAGE = "Couldn't reach the server. Try again."
@@ -68,18 +78,25 @@ class VehicleTypesViewModel(
         load()
     }
 
-    fun refresh() = load()
+    fun load() = fetch(refresh = false)
 
-    private fun load() {
-        _state.update { it.copy(loading = true, error = null) }
+    fun refresh() = fetch(refresh = true)
+
+    private fun fetch(refresh: Boolean) {
+        if (refresh) {
+            if (_state.value.refreshing) return
+            _state.update { it.copy(refreshing = true) }
+        } else {
+            _state.update { it.copy(loading = true, error = null) }
+        }
         viewModelScope.launch {
             when (val result = repository.list()) {
                 is ApiResult.Success ->
-                    _state.update { it.copy(loading = false, items = result.data) }
+                    _state.update { it.copy(loading = false, refreshing = false, error = null, items = result.data) }
                 is ApiResult.Error ->
-                    _state.update { it.copy(loading = false, error = result.message) }
+                    _state.update { it.copy(loading = false, refreshing = false, error = result.message) }
                 is ApiResult.NetworkError ->
-                    _state.update { it.copy(loading = false, error = NETWORK_MESSAGE) }
+                    _state.update { it.copy(loading = false, refreshing = false, error = NETWORK_MESSAGE) }
             }
         }
     }
@@ -88,36 +105,52 @@ class VehicleTypesViewModel(
 
     fun openCreate() {
         _state.update {
-            it.copy(editorOpen = true, editingId = null, form = VehicleTypeForm(), formError = null)
+            it.copy(
+                editorOpen = true,
+                editingId = null,
+                form = VehicleTypeForm(),
+                initialForm = VehicleTypeForm(),
+                formError = null,
+                nameError = null,
+            )
         }
     }
 
     fun openEdit(item: VehicleTypeDto) {
+        val form = VehicleTypeForm(
+            name = item.name,
+            shortName = item.shortName,
+            appLabelSource = item.appLabelSource,
+            code = item.code,
+            iconName = item.iconName,
+            minimumRedeemablePoints = item.minimumRedeemablePoints,
+            active = item.active,
+        )
         _state.update {
             it.copy(
                 editorOpen = true,
                 editingId = item.id,
                 formError = null,
-                form = VehicleTypeForm(
-                    name = item.name,
-                    shortName = item.shortName,
-                    appLabelSource = item.appLabelSource,
-                    code = item.code,
-                    iconName = item.iconName,
-                    minimumRedeemablePoints = item.minimumRedeemablePoints,
-                    active = item.active,
-                ),
+                nameError = null,
+                form = form,
+                initialForm = form,
             )
         }
     }
 
     fun closeEditor() {
-        _state.update { it.copy(editorOpen = false, formError = null) }
+        _state.update { it.copy(editorOpen = false, formError = null, nameError = null, initialForm = null) }
     }
 
-    fun dismissError() {
-        _state.update { it.copy(error = null) }
-    }
+    // --- one-shot message consumption -----------------------------------------
+
+    fun consumeError() = _state.update { it.copy(error = null) }
+
+    fun consumeActionError() = _state.update { it.copy(actionError = null) }
+
+    fun consumeNotice() = _state.update { it.copy(notice = null) }
+
+    fun consumeDeleted() = _state.update { it.copy(deletedForUndo = null) }
 
     // --- form field updates --------------------------------------------------
 
@@ -125,7 +158,10 @@ class VehicleTypesViewModel(
         _state.update { it.copy(form = transform(it.form)) }
     }
 
-    fun onNameChange(value: String) = updateForm { it.copy(name = value) }
+    fun onNameChange(value: String) {
+        _state.update { it.copy(form = it.form.copy(name = value), nameError = null) }
+    }
+
     fun onShortNameChange(value: String) = updateForm { it.copy(shortName = value) }
     fun onAppLabelSourceChange(value: String) = updateForm { it.copy(appLabelSource = value) }
     fun onCodeChange(value: String) = updateForm { it.copy(code = value) }
@@ -149,7 +185,7 @@ class VehicleTypesViewModel(
         val current = _state.value
         val form = current.form
         if (form.name.isBlank()) {
-            _state.update { it.copy(formError = "Vehicle type name is required.") }
+            _state.update { it.copy(nameError = "Vehicle type name is required.") }
             return
         }
 
@@ -165,14 +201,22 @@ class VehicleTypesViewModel(
             active = form.active,
         )
 
-        _state.update { it.copy(saving = true, formError = null) }
+        _state.update { it.copy(saving = true, formError = null, nameError = null) }
         viewModelScope.launch {
             val result =
                 if (editingId == null) repository.create(request)
                 else repository.update(editingId, request)
             when (result) {
                 is ApiResult.Success -> {
-                    _state.update { it.copy(saving = false, editorOpen = false, formError = null) }
+                    _state.update {
+                        it.copy(
+                            saving = false,
+                            editorOpen = false,
+                            formError = null,
+                            initialForm = null,
+                            notice = if (editingId == null) "Vehicle type created." else "Vehicle type updated.",
+                        )
+                    }
                     load()
                 }
                 is ApiResult.Error ->
@@ -183,19 +227,58 @@ class VehicleTypesViewModel(
         }
     }
 
-    fun delete(id: Long) {
-        _state.update { it.copy(deletingId = id, error = null) }
+    fun delete(item: VehicleTypeDto) {
+        if (_state.value.deletingId != null) return
+        val index = _state.value.items.indexOfFirst { it.id == item.id }
+        // Optimistic removal; the row is restored if the server rejects it.
+        _state.update { s ->
+            s.copy(deletingId = item.id, actionError = null, items = s.items.filterNot { it.id == item.id })
+        }
         viewModelScope.launch {
-            when (val result = repository.delete(id)) {
+            when (val result = repository.delete(item.id)) {
                 is ApiResult.Success ->
-                    _state.update {
-                        it.copy(deletingId = null, items = it.items.filterNot { row -> row.id == id })
-                    }
-                is ApiResult.Error ->
-                    _state.update { it.copy(deletingId = null, error = result.message) }
-                is ApiResult.NetworkError ->
-                    _state.update { it.copy(deletingId = null, error = NETWORK_MESSAGE) }
+                    _state.update { it.copy(deletingId = null, deletedForUndo = item) }
+                is ApiResult.Error -> restoreAfterFailedDelete(item, index, result.message)
+                is ApiResult.NetworkError -> restoreAfterFailedDelete(item, index, NETWORK_MESSAGE)
             }
+        }
+    }
+
+    /** Re-creates a just-deleted vehicle type with its previous attributes. */
+    fun undoDelete(item: VehicleTypeDto) {
+        val request = VehicleTypeRequest(
+            name = item.name,
+            shortName = item.shortName,
+            appLabelSource = item.appLabelSource,
+            code = item.code,
+            iconName = item.iconName,
+            minimumRedeemablePoints = item.minimumRedeemablePoints,
+            active = item.active,
+        )
+        viewModelScope.launch {
+            when (val result = repository.create(request)) {
+                is ApiResult.Success -> {
+                    _state.update { it.copy(notice = "Vehicle type restored.") }
+                    load()
+                }
+                is ApiResult.Error -> _state.update { it.copy(actionError = result.message) }
+                is ApiResult.NetworkError -> _state.update { it.copy(actionError = NETWORK_MESSAGE) }
+            }
+        }
+    }
+
+    private fun restoreAfterFailedDelete(item: VehicleTypeDto, index: Int, message: String) {
+        _state.update { s ->
+            // Only re-insert if the row isn't already present — a refresh that
+            // landed between the optimistic remove and the failure may have
+            // restored it, and a duplicate id crashes the keyed LazyColumn.
+            if (s.items.any { it.id == item.id }) {
+                return@update s.copy(deletingId = null, actionError = message)
+            }
+            val restored = s.items.toMutableList().apply {
+                add(index.coerceIn(0, size), item)
+            }
+            s.copy(deletingId = null, actionError = message, items = restored)
         }
     }
 }

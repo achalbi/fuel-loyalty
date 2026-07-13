@@ -25,6 +25,14 @@ data class StepRow(
     val templateId: Long? = null,
 )
 
+/** Values captured when the editor opens, used to detect unsaved changes. */
+data class CycleEditorSnapshot(
+    val name: String,
+    val startsOn: String,
+    val active: Boolean,
+    val stepTemplateIds: List<Long?>,
+)
+
 /** Non-null on [CyclesUiState] while the create/edit form is open. */
 data class CycleEditorState(
     val cycleId: Long? = null,
@@ -34,14 +42,24 @@ data class CycleEditorState(
     val steps: List<StepRow> = emptyList(),
     val saving: Boolean = false,
     val error: String? = null,
+    val nameError: String? = null,
+    val initial: CycleEditorSnapshot? = null,
 ) {
     val isCreate: Boolean get() = cycleId == null
     val canAddStep: Boolean get() = steps.size < MAX_CYCLE_STEPS
     val selectedCount: Int get() = steps.count { it.templateId != null }
+    val dirty: Boolean
+        get() = initial != null && (
+            name != initial.name ||
+                startsOn != initial.startsOn ||
+                active != initial.active ||
+                steps.map { it.templateId } != initial.stepTemplateIds
+            )
 }
 
 data class CyclesUiState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val error: String? = null,
     val cycles: List<ShiftCycleDto> = emptyList(),
     val templates: List<ShiftTemplateDto> = emptyList(),
@@ -66,34 +84,45 @@ class CyclesViewModel(private val repository: CyclesRepository) : ViewModel() {
         load()
     }
 
-    fun load() {
-        _state.update { it.copy(loading = true, error = null) }
+    fun load() = fetch(refresh = false)
+
+    fun refresh() = fetch(refresh = true)
+
+    private fun fetch(refresh: Boolean) {
+        if (refresh) {
+            if (_state.value.refreshing) return
+            _state.update { it.copy(refreshing = true) }
+        } else {
+            _state.update { it.copy(loading = true, error = null) }
+        }
         viewModelScope.launch {
             val templatesResult = repository.loadTemplates()
             val templates = (templatesResult as? ApiResult.Success)?.data ?: _state.value.templates
             when (val cyclesResult = repository.loadCycles()) {
                 is ApiResult.Success -> _state.update {
-                    it.copy(loading = false, error = null, cycles = cyclesResult.data, templates = templates)
+                    it.copy(loading = false, refreshing = false, error = null, cycles = cyclesResult.data, templates = templates)
                 }
                 is ApiResult.Error -> _state.update {
-                    it.copy(loading = false, error = cyclesResult.message, templates = templates)
+                    it.copy(loading = false, refreshing = false, error = cyclesResult.message, templates = templates)
                 }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(loading = false, error = NETWORK_MESSAGE, templates = templates)
+                    it.copy(loading = false, refreshing = false, error = NETWORK_MESSAGE, templates = templates)
                 }
             }
         }
     }
 
-    fun refresh() = load()
-
     fun dismissNotice() = _state.update { it.copy(notice = null) }
 
     fun dismissActionError() = _state.update { it.copy(actionError = null) }
 
+    /** One-shot consume of a load error once it has been surfaced over stale data. */
+    fun consumeError() = _state.update { it.copy(error = null) }
+
     // --- editor lifecycle ---------------------------------------------------
 
     fun openCreate() {
+        val steps = List(INITIAL_STEP_SLOTS) { StepRow(key = nextKey()) }
         _state.update {
             it.copy(
                 actionError = null,
@@ -103,7 +132,13 @@ class CyclesViewModel(private val repository: CyclesRepository) : ViewModel() {
                     name = "",
                     startsOn = LocalDate.now().toString(),
                     active = true,
-                    steps = List(INITIAL_STEP_SLOTS) { StepRow(key = nextKey()) },
+                    steps = steps,
+                    initial = CycleEditorSnapshot(
+                        name = "",
+                        startsOn = LocalDate.now().toString(),
+                        active = true,
+                        stepTemplateIds = steps.map { row -> row.templateId },
+                    ),
                 ),
             )
         }
@@ -124,6 +159,12 @@ class CyclesViewModel(private val repository: CyclesRepository) : ViewModel() {
                     startsOn = cycle.startsOn.orEmpty(),
                     active = cycle.active,
                     steps = rows,
+                    initial = CycleEditorSnapshot(
+                        name = cycle.name,
+                        startsOn = cycle.startsOn.orEmpty(),
+                        active = cycle.active,
+                        stepTemplateIds = rows.map { row -> row.templateId },
+                    ),
                 ),
             )
         }
@@ -131,7 +172,7 @@ class CyclesViewModel(private val repository: CyclesRepository) : ViewModel() {
 
     fun closeEditor() = _state.update { it.copy(editor = null) }
 
-    fun editorSetName(name: String) = updateEditor { it.copy(name = name.take(80), error = null) }
+    fun editorSetName(name: String) = updateEditor { it.copy(name = name.take(80), error = null, nameError = null) }
 
     fun editorSetStartsOn(isoDate: String) = updateEditor { it.copy(startsOn = isoDate, error = null) }
 
@@ -159,7 +200,7 @@ class CyclesViewModel(private val repository: CyclesRepository) : ViewModel() {
         if (editor.saving) return
 
         if (editor.name.isBlank()) {
-            updateEditor { it.copy(error = "Enter a name for the cycle.") }
+            updateEditor { it.copy(nameError = "Enter a name for the cycle.") }
             return
         }
         if (editor.startsOn.isBlank()) {

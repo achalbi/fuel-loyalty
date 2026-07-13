@@ -2,9 +2,16 @@
 <resources>
     <!-- Framework-only base theme (no Material XML dependency); Compose drives the real UI. -->
     <style name="Theme.AceFuelLoyalty" parent="android:Theme.Material.Light.NoActionBar">
-        <!-- Nayara bg.canvas (neutral-50) -->
-        <item name="android:windowBackground">#F9FAFC</item>
+        <!-- Nayara app canvas (matches Compose colorScheme.background) -->
+        <item name="android:windowBackground">#ECEFF4</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- Cold-start splash (AndroidX SplashScreen API; brand navy-950 backdrop). -->
+    <style name="Theme.AceFuelLoyalty.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#052B54</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.AceFuelLoyalty</item>
     </style>
 </resources>

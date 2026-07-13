@@ -25,9 +25,13 @@ data class UserForm(
 
 data class AdminUsersUiState(
     val loading: Boolean = false,
+    val refreshing: Boolean = false,
     val users: List<AdminUserDto> = emptyList(),
     val query: String = "",
     val error: String? = null,
+    // One-shot snackbar messages; the screen consumes them after showing.
+    val successMessage: String? = null,
+    val actionError: String? = null,
     // --- create/edit sheet ---
     val sheetOpen: Boolean = false,
     val editingId: Long? = null, // null while creating
@@ -59,18 +63,38 @@ class UsersViewModel(private val repository: UsersRepository) : ViewModel() {
         load()
     }
 
-    fun load() {
-        _state.update { it.copy(loading = true, error = null) }
+    fun load() = fetch(asRefresh = false)
+
+    fun refresh() = fetch(asRefresh = true)
+
+    private fun fetch(asRefresh: Boolean) {
+        _state.update {
+            if (asRefresh) it.copy(refreshing = true) else it.copy(loading = true, error = null)
+        }
         viewModelScope.launch {
             when (val result = repository.list()) {
-                is ApiResult.Success -> _state.update { it.copy(loading = false, users = result.data) }
-                is ApiResult.Error -> _state.update { it.copy(loading = false, error = result.message) }
-                is ApiResult.NetworkError -> _state.update { it.copy(loading = false, error = NETWORK_MESSAGE) }
+                is ApiResult.Success ->
+                    _state.update { it.copy(loading = false, refreshing = false, error = null, users = result.data) }
+                is ApiResult.Error -> onFetchFailure(result.message)
+                is ApiResult.NetworkError -> onFetchFailure(NETWORK_MESSAGE)
             }
         }
     }
 
-    fun refresh() = load()
+    /** Empty screen keeps the full-area error; stale data stays visible with a snackbar. */
+    private fun onFetchFailure(message: String) {
+        _state.update {
+            if (it.users.isEmpty()) {
+                it.copy(loading = false, refreshing = false, error = message)
+            } else {
+                it.copy(loading = false, refreshing = false, actionError = message)
+            }
+        }
+    }
+
+    fun consumeSuccessMessage() = _state.update { it.copy(successMessage = null) }
+
+    fun consumeActionError() = _state.update { it.copy(actionError = null) }
 
     fun onQueryChange(query: String) = _state.update { it.copy(query = query) }
 
@@ -113,8 +137,13 @@ class UsersViewModel(private val repository: UsersRepository) : ViewModel() {
                 is ApiResult.Error -> _state.update {
                     if (it.editingId == user.id) it.copy(formLoading = false, formError = result.message) else it
                 }
+                // The row prefill is still usable — surface the failed refresh as a snackbar.
                 is ApiResult.NetworkError -> _state.update {
-                    if (it.editingId == user.id) it.copy(formLoading = false) else it
+                    if (it.editingId == user.id) {
+                        it.copy(formLoading = false, actionError = "Couldn't refresh this user's details. Showing cached values.")
+                    } else {
+                        it
+                    }
                 }
             }
         }
@@ -193,7 +222,14 @@ class UsersViewModel(private val repository: UsersRepository) : ViewModel() {
             }
             when (result) {
                 is ApiResult.Success -> {
-                    _state.update { it.copy(saving = false, sheetOpen = false, editingId = null) }
+                    _state.update {
+                        it.copy(
+                            saving = false,
+                            sheetOpen = false,
+                            editingId = null,
+                            successMessage = if (editingId != null) "Changes saved." else "User created.",
+                        )
+                    }
                     load()
                 }
                 is ApiResult.Error -> {

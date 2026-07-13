@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 data class CustomersUiState(
     val query: String = "",
     val loading: Boolean = false,
+    val refreshing: Boolean = false,
     val customers: List<CustomerSummaryDto> = emptyList(),
     val error: String? = null,
 )
@@ -26,6 +27,10 @@ class CustomersViewModel(private val repository: StaffRepository) : ViewModel() 
     val state: StateFlow<CustomersUiState> = _state.asStateFlow()
 
     private var searchJob: Job? = null
+
+    // Monotonic id per request; a response only lands if it is still the
+    // newest, so a slow stale query can't overwrite fresher results.
+    private var searchEpoch = 0
 
     init {
         search("")
@@ -40,18 +45,27 @@ class CustomersViewModel(private val repository: StaffRepository) : ViewModel() 
         }
     }
 
-    fun refresh() = search(_state.value.query)
+    fun refresh() = search(_state.value.query, asRefresh = true)
 
-    private fun search(query: String) {
-        _state.update { it.copy(loading = true, error = null) }
+    fun retry() = search(_state.value.query)
+
+    fun consumeError() = _state.update { it.copy(error = null) }
+
+    private fun search(query: String, asRefresh: Boolean = false) {
+        val epoch = ++searchEpoch
+        _state.update { it.copy(loading = !asRefresh, refreshing = asRefresh, error = null) }
         viewModelScope.launch {
-            when (val result = repository.customers(query)) {
+            val result = repository.customers(query)
+            if (epoch != searchEpoch) return@launch // superseded by a newer search
+            when (result) {
                 is ApiResult.Success ->
-                    _state.update { it.copy(loading = false, customers = result.data) }
+                    _state.update { it.copy(loading = false, refreshing = false, customers = result.data) }
                 is ApiResult.Error ->
-                    _state.update { it.copy(loading = false, error = result.message) }
+                    _state.update { it.copy(loading = false, refreshing = false, error = result.message) }
                 is ApiResult.NetworkError ->
-                    _state.update { it.copy(loading = false, error = "Couldn't reach the server. Try again.") }
+                    _state.update {
+                        it.copy(loading = false, refreshing = false, error = "Couldn't reach the server. Try again.")
+                    }
             }
         }
     }

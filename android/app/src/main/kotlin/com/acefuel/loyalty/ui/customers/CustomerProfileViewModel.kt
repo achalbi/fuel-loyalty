@@ -12,16 +12,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+enum class ProfileAction { Pause, Active }
+
 data class ProfileUiState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val profile: CustomerProfileDto? = null,
+    /** Initial-load failure; full-area ErrorState when there is no profile. */
     val error: String? = null,
+    /** One-shot failure while data is on screen — surfaced as a snackbar. */
+    val transientError: String? = null,
+    /** One-shot success message after pause/activate — success snackbar. */
+    val actionMessage: String? = null,
     val ledger: List<LedgerEntryDto> = emptyList(),
     val ledgerPage: Int = 0,
     val ledgerTotal: Int = 0,
     val ledgerHasMore: Boolean = false,
     val ledgerLoading: Boolean = false,
-    val actionInFlight: Boolean = false,
+    val actionInFlight: ProfileAction? = null,
 )
 
 class CustomerProfileViewModel(
@@ -37,7 +45,7 @@ class CustomerProfileViewModel(
         loadMoreLedger()
     }
 
-    private fun load() {
+    fun load() {
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             when (val result = repository.customerProfile(customerId)) {
@@ -45,6 +53,52 @@ class CustomerProfileViewModel(
                 is ApiResult.Error -> _state.update { it.copy(loading = false, error = result.message) }
                 is ApiResult.NetworkError ->
                     _state.update { it.copy(loading = false, error = "Couldn't reach the server. Try again.") }
+            }
+        }
+    }
+
+    /** Full retry after an initial-load failure: profile plus first ledger page. */
+    fun retry() {
+        load()
+        if (_state.value.ledger.isEmpty()) loadMoreLedger()
+    }
+
+    fun refresh() {
+        if (_state.value.refreshing) return
+        _state.update { it.copy(refreshing = true) }
+        viewModelScope.launch {
+            when (val result = repository.customerProfile(customerId)) {
+                is ApiResult.Success -> {
+                    _state.update { it.copy(refreshing = false, profile = result.data) }
+                    refreshLedger()
+                }
+                is ApiResult.Error ->
+                    _state.update { it.copy(refreshing = false, transientError = result.message) }
+                is ApiResult.NetworkError ->
+                    _state.update {
+                        it.copy(refreshing = false, transientError = "Couldn't reach the server. Try again.")
+                    }
+            }
+        }
+    }
+
+    /** Reload the first ledger page after a successful profile refresh. */
+    private suspend fun refreshLedger() {
+        if (_state.value.ledgerLoading) return
+        // Hold ledgerLoading for the whole reload so a concurrent "Load more"
+        // (gated on !ledgerLoading) can't append a stale page over page 1.
+        _state.update { it.copy(ledgerLoading = true) }
+        val result = repository.customerLedger(customerId, 1)
+        _state.update {
+            when (result) {
+                is ApiResult.Success -> it.copy(
+                    ledgerLoading = false,
+                    ledger = result.data.entries,
+                    ledgerPage = result.data.page,
+                    ledgerTotal = result.data.total,
+                    ledgerHasMore = result.data.hasMore,
+                )
+                else -> it.copy(ledgerLoading = false) // keep the stale ledger
             }
         }
     }
@@ -65,31 +119,57 @@ class CustomerProfileViewModel(
                         ledgerHasMore = result.data.hasMore,
                     )
                 }
-                else -> _state.update { it.copy(ledgerLoading = false) }
+                is ApiResult.Error ->
+                    _state.update { it.copy(ledgerLoading = false, transientError = result.message) }
+                is ApiResult.NetworkError ->
+                    _state.update {
+                        it.copy(
+                            ledgerLoading = false,
+                            transientError = "Couldn't load more ledger entries. Try again.",
+                        )
+                    }
             }
         }
     }
 
     fun togglePaused() {
         val profile = _state.value.profile ?: return
-        runAction { repository.setPaused(customerId, !profile.rewardsPaused) }
+        val pausing = !profile.rewardsPaused
+        runAction(ProfileAction.Pause, if (pausing) "Rewards paused" else "Rewards resumed") {
+            repository.setPaused(customerId, pausing)
+        }
     }
 
     fun toggleActive() {
         val profile = _state.value.profile ?: return
-        runAction { repository.setActive(customerId, !profile.active) }
+        val deactivating = profile.active
+        runAction(ProfileAction.Active, if (deactivating) "Customer marked inactive" else "Customer marked active") {
+            repository.setActive(customerId, !profile.active)
+        }
     }
 
-    private fun runAction(block: suspend () -> ApiResult<CustomerProfileDto>) {
-        _state.update { it.copy(actionInFlight = true, error = null) }
+    // One-shot consumers so each snackbar fires exactly once.
+    fun consumeActionMessage() = _state.update { it.copy(actionMessage = null) }
+
+    fun consumeTransientError() = _state.update { it.copy(transientError = null) }
+
+    private fun runAction(
+        kind: ProfileAction,
+        successMessage: String,
+        block: suspend () -> ApiResult<CustomerProfileDto>,
+    ) {
+        if (_state.value.actionInFlight != null) return
+        _state.update { it.copy(actionInFlight = kind, transientError = null) }
         viewModelScope.launch {
             when (val result = block()) {
                 is ApiResult.Success ->
-                    _state.update { it.copy(actionInFlight = false, profile = result.data) }
+                    _state.update { it.copy(actionInFlight = null, profile = result.data, actionMessage = successMessage) }
                 is ApiResult.Error ->
-                    _state.update { it.copy(actionInFlight = false, error = result.message) }
+                    _state.update { it.copy(actionInFlight = null, transientError = result.message) }
                 is ApiResult.NetworkError ->
-                    _state.update { it.copy(actionInFlight = false, error = "Couldn't reach the server. Try again.") }
+                    _state.update {
+                        it.copy(actionInFlight = null, transientError = "Couldn't reach the server. Try again.")
+                    }
             }
         }
     }

@@ -16,4 +16,17 @@
     <string name="staff_login">ಸ್ಟಾಫ್ ಲಾಗಿನ್</string>
     <string name="staff_home">ಸ್ಟಾಫ್ ಹೋಮ್</string>
     <string name="language_label">ಭಾಷೆ</string>
+
+    <!-- Design system (shared components) -->
+    <string name="ds_retry">ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ</string>
+    <string name="ds_error_title">ಏನೋ ತಪ್ಪಾಗಿದೆ</string>
+    <string name="ds_empty_title">ಇಲ್ಲಿ ಇನ್ನೂ ಏನೂ ಇಲ್ಲ</string>
+    <string name="ds_search_hint">ಹುಡುಕಿ</string>
+    <string name="ds_clear">ಅಳಿಸಿ</string>
+    <string name="ds_cancel">ರದ್ದುಮಾಡಿ</string>
+    <string name="ds_confirm">ದೃಢೀಕರಿಸಿ</string>
+    <string name="ds_delete">ಅಳಿಸಿಹಾಕಿ</string>
+    <string name="ds_done">ಮುಗಿಯಿತು</string>
+    <string name="ds_back">ಹಿಂದೆ</string>
+    <string name="ds_undo">ರದ್ದುಗೊಳಿಸಿ</string>
 </resources>

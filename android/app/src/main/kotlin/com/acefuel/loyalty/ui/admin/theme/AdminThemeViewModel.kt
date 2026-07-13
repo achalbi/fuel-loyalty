@@ -24,6 +24,7 @@ fun hexDigitsOf(hex: String): String = hex.removePrefix("#").uppercase()
 
 data class AdminThemeUiState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val saving: Boolean = false,
     /** Six hex digits without '#', always uppercase; what the field shows. */
     val input: String = "",
@@ -50,25 +51,46 @@ class AdminThemeViewModel(private val repository: AdminThemeRepository) : ViewMo
         load()
     }
 
-    fun load() {
-        _state.update { it.copy(loading = true, loadError = null) }
+    fun load() = fetch(refresh = false)
+
+    fun refresh() = fetch(refresh = true)
+
+    private fun fetch(refresh: Boolean) {
+        if (refresh) {
+            if (_state.value.refreshing) return
+            _state.update { it.copy(refreshing = true) }
+        } else {
+            _state.update { it.copy(loading = true, loadError = null) }
+        }
         viewModelScope.launch {
             when (val result = repository.load()) {
                 is ApiResult.Success -> _state.update {
+                    // On refresh, don't overwrite an edited-but-unsaved hex —
+                    // back-navigation already protects it; refresh must too.
+                    val keepInput = refresh && it.dirty
                     it.copy(
                         loading = false,
+                        refreshing = false,
                         savedColor = result.data.primaryColor,
                         updatedAt = result.data.updatedAt,
-                        input = hexDigitsOf(result.data.primaryColor),
+                        input = if (keepInput) it.input else hexDigitsOf(result.data.primaryColor),
                     )
                 }
-                is ApiResult.Error -> _state.update { it.copy(loading = false, loadError = result.message) }
+                is ApiResult.Error -> _state.update {
+                    it.copy(loading = false, refreshing = false, loadError = result.message)
+                }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(loading = false, loadError = "Couldn't reach the server. Try again.")
+                    it.copy(loading = false, refreshing = false, loadError = "Couldn't reach the server. Try again.")
                 }
             }
         }
     }
+
+    /** One-shot consume once the success snackbar has been shown. */
+    fun consumeMessage() = _state.update { it.copy(successMessage = null) }
+
+    /** One-shot consume once the error snackbar has been shown. */
+    fun consumeSaveError() = _state.update { it.copy(saveError = null) }
 
     fun onInputChange(raw: String) {
         val cleaned = raw.replace("#", "").uppercase().take(6)

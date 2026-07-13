@@ -21,6 +21,8 @@ data class StaffProfileEditorState(
     val active: Boolean,
     val saving: Boolean = false,
     val error: String? = null,
+    // Only set on a submit attempt so the field isn't red while still untouched.
+    val nameError: String? = null,
 )
 
 /** Non-null on [AdminStaffUiState] while the Assign-shift form is open. */
@@ -35,10 +37,12 @@ data class ShiftAssignerState(
 
 data class AdminStaffUiState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val error: String? = null,
     val staff: List<StaffMemberDto> = emptyList(),
     val stats: StaffStatsDto = StaffStatsDto(),
     val shiftTemplates: List<ShiftTemplateDto> = emptyList(),
+    // One-shot snackbar messages; the screen consumes them after showing.
     val notice: String? = null,
     val actionError: String? = null,
     val deletingStaffId: Long? = null,
@@ -55,8 +59,14 @@ class AdminStaffViewModel(private val repository: AdminStaffRepository) : ViewMo
         load()
     }
 
-    fun load() {
-        _state.update { it.copy(loading = true, error = null) }
+    fun load() = fetch(asRefresh = false)
+
+    fun refresh() = fetch(asRefresh = true)
+
+    private fun fetch(asRefresh: Boolean) {
+        _state.update {
+            if (asRefresh) it.copy(refreshing = true) else it.copy(loading = true, error = null)
+        }
         viewModelScope.launch {
             // Shift templates power the Assign-shift dropdown; a failure here is
             // non-fatal (the assign sheet just shows the "No shifts yet" state).
@@ -66,23 +76,29 @@ class AdminStaffViewModel(private val repository: AdminStaffRepository) : ViewMo
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         loading = false,
+                        refreshing = false,
                         error = null,
                         staff = result.data.staffMembers,
                         stats = result.data.stats,
                         shiftTemplates = templates,
                     )
                 }
-                is ApiResult.Error -> _state.update {
-                    it.copy(loading = false, error = result.message, shiftTemplates = templates)
-                }
-                is ApiResult.NetworkError -> _state.update {
-                    it.copy(loading = false, error = NETWORK_MESSAGE, shiftTemplates = templates)
-                }
+                is ApiResult.Error -> onFetchFailure(result.message, templates)
+                is ApiResult.NetworkError -> onFetchFailure(NETWORK_MESSAGE, templates)
             }
         }
     }
 
-    fun refresh() = load()
+    /** Empty screen keeps the full-area error; stale data stays visible with a snackbar. */
+    private fun onFetchFailure(message: String, templates: List<ShiftTemplateDto>) {
+        _state.update {
+            if (it.staff.isEmpty()) {
+                it.copy(loading = false, refreshing = false, error = message, shiftTemplates = templates)
+            } else {
+                it.copy(loading = false, refreshing = false, actionError = message, shiftTemplates = templates)
+            }
+        }
+    }
 
     fun dismissNotice() = _state.update { it.copy(notice = null) }
 
@@ -110,7 +126,7 @@ class AdminStaffViewModel(private val repository: AdminStaffRepository) : ViewMo
 
     fun closeEditProfile() = _state.update { it.copy(profileEditor = null) }
 
-    fun editorSetName(value: String) = updateEditor { it.copy(name = value, error = null) }
+    fun editorSetName(value: String) = updateEditor { it.copy(name = value, error = null, nameError = null) }
 
     fun editorSetEmployeeCode(value: String) = updateEditor { it.copy(employeeCode = value) }
 
@@ -123,10 +139,10 @@ class AdminStaffViewModel(private val repository: AdminStaffRepository) : ViewMo
         val editor = _state.value.profileEditor ?: return
         if (editor.saving) return
         if (editor.name.isBlank()) {
-            updateEditor { it.copy(error = "Name is required.") }
+            updateEditor { it.copy(nameError = "Name is required.") }
             return
         }
-        updateEditor { it.copy(saving = true, error = null) }
+        updateEditor { it.copy(saving = true, error = null, nameError = null) }
         viewModelScope.launch {
             val result = repository.updateProfile(
                 id = editor.staffId,

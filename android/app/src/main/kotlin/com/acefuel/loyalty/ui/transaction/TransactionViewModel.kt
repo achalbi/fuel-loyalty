@@ -26,17 +26,23 @@ data class TxnUiState(
     val phoneNumber: String = "",
     val lookupLoading: Boolean = false,
     val lookupError: String? = null,
+    // True once a lookup has returned, so "no matches" reads as a real empty
+    // result rather than the initial blank state.
+    val lookupCompleted: Boolean = false,
     val matches: List<VehicleMatchDto> = emptyList(),
     val phoneCustomer: StaffCustomerDto? = null,
     val selectedMatchIndex: Int? = null,
     val selectedVehicleId: Long? = null,
     val myPump: MyPumpDto? = null,
+    val myPumpLoading: Boolean = true,
+    val myPumpError: String? = null,
     val fuelAmount: String = "",
     val paymentMode: String = "cash",
     val selectedNozzleId: Long? = null,
     val creating: Boolean = false,
     val createError: String? = null,
     val result: TransactionCreateResponse? = null,
+    val showCeremony: Boolean = false,
 ) {
     val selectedCustomer: StaffCustomerDto?
         get() = when (lookupMode) {
@@ -49,6 +55,18 @@ data class TxnUiState(
         get() = when (lookupMode) {
             MODE_VEHICLE -> selectedMatchIndex?.let { matches.getOrNull(it) }?.let { it.vehicleId to it.fuelTypeCode }
             else -> phoneCustomer?.vehicles?.firstOrNull { it.id == selectedVehicleId }?.let { it.id to it.fuelTypeCode }
+        }
+
+    val selectedVehicleNumber: String?
+        get() = when (lookupMode) {
+            MODE_VEHICLE -> selectedMatchIndex?.let { matches.getOrNull(it)?.vehicleNumber }
+            else -> phoneCustomer?.vehicles?.firstOrNull { it.id == selectedVehicleId }?.vehicleNumber
+        }
+
+    val selectedFuelTypeLabel: String?
+        get() = when (lookupMode) {
+            MODE_VEHICLE -> selectedMatchIndex?.let { matches.getOrNull(it)?.fuelType }
+            else -> phoneCustomer?.vehicles?.firstOrNull { it.id == selectedVehicleId }?.fuelType
         }
 
     val phoneVehicles: List<StaffVehicleDto>
@@ -81,10 +99,15 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
         loadMyPump()
     }
 
-    private fun loadMyPump() {
+    fun loadMyPump() {
+        _state.update { it.copy(myPumpLoading = true, myPumpError = null) }
         viewModelScope.launch {
-            (repository.myPump() as? ApiResult.Success)?.let { res ->
-                _state.update { it.copy(myPump = res.data) }
+            when (val r = repository.myPump()) {
+                is ApiResult.Success -> _state.update { it.copy(myPumpLoading = false, myPump = r.data) }
+                is ApiResult.Error -> _state.update { it.copy(myPumpLoading = false, myPumpError = r.message) }
+                is ApiResult.NetworkError -> _state.update {
+                    it.copy(myPumpLoading = false, myPumpError = "Couldn't load your pump. Check your connection.")
+                }
             }
         }
     }
@@ -93,30 +116,49 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
         _state.update {
             it.copy(
                 lookupMode = mode, matches = emptyList(), phoneCustomer = null,
-                selectedMatchIndex = null, selectedVehicleId = null,
+                selectedMatchIndex = null, selectedVehicleId = null, lookupCompleted = false,
                 selectedNozzleId = null, lookupError = null, result = null, createError = null,
             )
         }
     }
 
-    fun onVehicleNumberChange(value: String) = _state.update { it.copy(vehicleNumber = value.uppercase()) }
-    fun onPhoneNumberChange(value: String) = _state.update { it.copy(phoneNumber = value.filter(Char::isDigit).take(10)) }
-    fun onFuelAmountChange(value: String) = _state.update { it.copy(fuelAmount = value.filter { c -> c.isDigit() || c == '.' }) }
+    fun onVehicleNumberChange(value: String) =
+        _state.update { it.copy(vehicleNumber = value.uppercase(), lookupCompleted = false) }
+
+    fun onPhoneNumberChange(value: String) =
+        _state.update { it.copy(phoneNumber = value.filter(Char::isDigit).take(10)) }
+
+    fun onFuelAmountChange(value: String) = _state.update { current ->
+        // Digits plus at most one decimal point.
+        var seenDot = false
+        val cleaned = buildString {
+            for (c in value) {
+                when {
+                    c.isDigit() -> append(c)
+                    c == '.' && !seenDot -> { seenDot = true; append(c) }
+                }
+            }
+        }
+        current.copy(fuelAmount = cleaned)
+    }
+
     fun setPayment(mode: String) = _state.update { it.copy(paymentMode = mode) }
 
     fun lookup() {
         val s = _state.value
+        if (s.lookupLoading) return // guard against a second IME/tap racing the first
         _state.update {
             it.copy(
                 lookupLoading = true, lookupError = null, matches = emptyList(), phoneCustomer = null,
-                selectedMatchIndex = null, selectedVehicleId = null, selectedNozzleId = null, result = null,
+                selectedMatchIndex = null, selectedVehicleId = null, selectedNozzleId = null,
+                lookupCompleted = false, result = null,
             )
         }
         viewModelScope.launch {
             if (s.lookupMode == MODE_VEHICLE) {
                 when (val r = repository.vehicleLookup(s.vehicleNumber)) {
                     is ApiResult.Success -> _state.update {
-                        it.copy(lookupLoading = false, matches = r.data,
+                        it.copy(lookupLoading = false, matches = r.data, lookupCompleted = true,
                             selectedMatchIndex = if (r.data.size == 1) 0 else null)
                     }.also { if (r.data.size == 1) autoSelectNozzle() }
                     is ApiResult.Error -> _state.update { it.copy(lookupLoading = false, lookupError = r.message) }
@@ -126,7 +168,7 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
                 when (val r = repository.lookupCustomer(s.phoneNumber)) {
                     is ApiResult.Success -> _state.update {
                         val autoVehicle = if (r.data.vehicles.size == 1) r.data.vehicles.first().id else null
-                        it.copy(lookupLoading = false, phoneCustomer = r.data, selectedVehicleId = autoVehicle)
+                        it.copy(lookupLoading = false, phoneCustomer = r.data, selectedVehicleId = autoVehicle, lookupCompleted = true)
                     }.also { autoSelectNozzle() }
                     is ApiResult.Error -> _state.update { it.copy(lookupLoading = false, lookupError = r.message) }
                     is ApiResult.NetworkError -> _state.update { it.copy(lookupLoading = false, lookupError = "Couldn't reach the server. Try again.") }
@@ -156,6 +198,7 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
 
     fun create() {
         val s = _state.value
+        if (s.creating) return // reentrancy guard: never post the same transaction twice
         val vehicle = s.selectedVehicle ?: return
         val amount = s.fuelAmount.toDoubleOrNull() ?: return
         _state.update { it.copy(creating = true, createError = null) }
@@ -170,14 +213,22 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
                 paymentMode = s.paymentMode,
             )
             when (val r = repository.createTransaction(request)) {
-                is ApiResult.Success -> _state.update { it.copy(creating = false, result = r.data) }
+                is ApiResult.Success -> _state.update { it.copy(creating = false, result = r.data, showCeremony = true) }
                 is ApiResult.Error -> _state.update { it.copy(creating = false, createError = r.message) }
                 is ApiResult.NetworkError -> _state.update { it.copy(creating = false, createError = "Couldn't reach the server. Try again.") }
             }
         }
     }
 
+    /** Overlay auto-dismissed; the inline summary card stays behind it. */
+    fun ceremonyFinished() = _state.update { it.copy(showCeremony = false) }
+
+    /** One-shot: create failures are surfaced via snackbar, then cleared. */
+    fun consumeCreateError() = _state.update { it.copy(createError = null) }
+
     fun startAnother() {
-        _state.update { TxnUiState(myPump = it.myPump) }
+        _state.update {
+            TxnUiState(myPump = it.myPump, myPumpLoading = it.myPumpLoading, myPumpError = it.myPumpError)
+        }
     }
 }

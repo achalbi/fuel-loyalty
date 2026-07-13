@@ -24,6 +24,7 @@ data class ScheduleForm(
 
 data class AdminSchedulesUiState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val loadError: String? = null,
     val schedules: List<ScheduleDto> = emptyList(),
 
@@ -31,18 +32,17 @@ data class AdminSchedulesUiState(
     val sendTitle: String = "",
     val sendMessage: String = "",
     val sending: Boolean = false,
-    val sendError: String? = null,
-    val sendResult: String? = null,
 
     // Run Scheduler
     val running: Boolean = false,
-    val runError: String? = null,
-    val runResult: String? = null,
 
-    // Per-row (Send Now / Delete) feedback
+    // One-shot snackbar feedback (send/run/row/save results); the screen
+    // consumes these after showing.
+    val successMessage: String? = null,
+    val errorMessage: String? = null,
+
+    // Per-row busy marker + pending delete confirmation
     val rowActionId: Long? = null,
-    val rowError: String? = null,
-    val rowMessage: String? = null,
     val pendingDeleteId: Long? = null,
 
     // Create / Edit form
@@ -50,7 +50,8 @@ data class AdminSchedulesUiState(
     val editingId: Long? = null,
     val form: ScheduleForm = ScheduleForm(),
     val saving: Boolean = false,
-    val formError: String? = null,
+    val formError: String? = null, // server/base message shown inline in the sheet
+    val formFieldErrors: Map<String, List<String>> = emptyMap(),
 ) {
     val editing: Boolean get() = editingId != null
 }
@@ -64,45 +65,62 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
         load()
     }
 
-    fun load() {
-        _state.update { it.copy(loading = true, loadError = null) }
+    fun load() = fetch(asRefresh = false)
+
+    fun refresh() = fetch(asRefresh = true)
+
+    private fun fetch(asRefresh: Boolean) {
+        _state.update {
+            if (asRefresh) it.copy(refreshing = true) else it.copy(loading = true, loadError = null)
+        }
         viewModelScope.launch {
             when (val result = repository.list()) {
-                is ApiResult.Success -> _state.update { it.copy(loading = false, schedules = result.data) }
-                is ApiResult.Error -> _state.update { it.copy(loading = false, loadError = result.friendly()) }
-                is ApiResult.NetworkError -> _state.update {
-                    it.copy(loading = false, loadError = NETWORK_ERROR)
+                is ApiResult.Success -> _state.update {
+                    it.copy(loading = false, refreshing = false, loadError = null, schedules = result.data)
                 }
+                is ApiResult.Error -> onFetchFailure(result.friendly())
+                is ApiResult.NetworkError -> onFetchFailure(NETWORK_ERROR)
             }
         }
     }
 
+    /** Empty list keeps the inline load error; stale data stays visible with a snackbar. */
+    private fun onFetchFailure(message: String) {
+        _state.update {
+            if (it.schedules.isEmpty()) {
+                it.copy(loading = false, refreshing = false, loadError = message)
+            } else {
+                it.copy(loading = false, refreshing = false, errorMessage = message)
+            }
+        }
+    }
+
+    fun consumeSuccessMessage() = _state.update { it.copy(successMessage = null) }
+
+    fun consumeErrorMessage() = _state.update { it.copy(errorMessage = null) }
+
     // ---- Ad-hoc Send Now ----
 
-    fun onSendTitleChange(v: String) = _state.update {
-        it.copy(sendTitle = v.take(TITLE_MAX), sendError = null, sendResult = null)
-    }
+    fun onSendTitleChange(v: String) = _state.update { it.copy(sendTitle = v.take(TITLE_MAX)) }
 
-    fun onSendMessageChange(v: String) = _state.update {
-        it.copy(sendMessage = v.take(MESSAGE_MAX), sendError = null, sendResult = null)
-    }
+    fun onSendMessageChange(v: String) = _state.update { it.copy(sendMessage = v.take(MESSAGE_MAX)) }
 
     fun sendNotification() {
         val s = _state.value
         val title = s.sendTitle.trim()
         val message = s.sendMessage.trim()
         if (title.isEmpty() || message.isEmpty()) {
-            _state.update { it.copy(sendError = "Enter a title and a message before sending.") }
+            _state.update { it.copy(errorMessage = "Enter a title and a message before sending.") }
             return
         }
-        _state.update { it.copy(sending = true, sendError = null, sendResult = null) }
+        _state.update { it.copy(sending = true) }
         viewModelScope.launch {
             when (val result = repository.sendNotification(title, message)) {
                 is ApiResult.Success -> _state.update {
-                    it.copy(sending = false, sendResult = deliverySummary(result.data), sendTitle = "", sendMessage = "")
+                    it.copy(sending = false, successMessage = deliverySummary(result.data), sendTitle = "", sendMessage = "")
                 }
-                is ApiResult.Error -> _state.update { it.copy(sending = false, sendError = result.friendly()) }
-                is ApiResult.NetworkError -> _state.update { it.copy(sending = false, sendError = NETWORK_ERROR) }
+                is ApiResult.Error -> _state.update { it.copy(sending = false, errorMessage = result.friendly()) }
+                is ApiResult.NetworkError -> _state.update { it.copy(sending = false, errorMessage = NETWORK_ERROR) }
             }
         }
     }
@@ -110,12 +128,12 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
     // ---- Run Scheduler ----
 
     fun runScheduler() {
-        _state.update { it.copy(running = true, runError = null, runResult = null) }
+        _state.update { it.copy(running = true) }
         viewModelScope.launch {
             when (val result = repository.runScheduler()) {
-                is ApiResult.Success -> _state.update { it.copy(running = false, runResult = runSummary(result.data)) }
-                is ApiResult.Error -> _state.update { it.copy(running = false, runError = result.friendly()) }
-                is ApiResult.NetworkError -> _state.update { it.copy(running = false, runError = NETWORK_ERROR) }
+                is ApiResult.Success -> _state.update { it.copy(running = false, successMessage = runSummary(result.data)) }
+                is ApiResult.Error -> _state.update { it.copy(running = false, errorMessage = result.friendly()) }
+                is ApiResult.NetworkError -> _state.update { it.copy(running = false, errorMessage = NETWORK_ERROR) }
             }
             // A run may have flipped last_sent_at / active — refresh silently.
             reloadSilently()
@@ -125,18 +143,18 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
     // ---- Per-row actions ----
 
     fun sendRow(id: Long) {
-        _state.update { it.copy(rowActionId = id, rowError = null, rowMessage = null) }
+        _state.update { it.copy(rowActionId = id) }
         viewModelScope.launch {
             when (val result = repository.sendNow(id)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         rowActionId = null,
-                        rowMessage = deliverySummary(result.data.delivery),
+                        successMessage = deliverySummary(result.data.delivery),
                         schedules = it.schedules.map { s -> if (s.id == id) result.data.schedule else s },
                     )
                 }
-                is ApiResult.Error -> _state.update { it.copy(rowActionId = null, rowError = result.friendly()) }
-                is ApiResult.NetworkError -> _state.update { it.copy(rowActionId = null, rowError = NETWORK_ERROR) }
+                is ApiResult.Error -> _state.update { it.copy(rowActionId = null, errorMessage = result.friendly()) }
+                is ApiResult.NetworkError -> _state.update { it.copy(rowActionId = null, errorMessage = NETWORK_ERROR) }
             }
         }
     }
@@ -147,18 +165,18 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
 
     fun confirmDelete() {
         val id = _state.value.pendingDeleteId ?: return
-        _state.update { it.copy(pendingDeleteId = null, rowActionId = id, rowError = null, rowMessage = null) }
+        _state.update { it.copy(pendingDeleteId = null, rowActionId = id) }
         viewModelScope.launch {
             when (val result = repository.delete(id)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         rowActionId = null,
-                        rowMessage = "Schedule deleted.",
+                        successMessage = "Schedule deleted.",
                         schedules = it.schedules.filterNot { s -> s.id == id },
                     )
                 }
-                is ApiResult.Error -> _state.update { it.copy(rowActionId = null, rowError = result.friendly()) }
-                is ApiResult.NetworkError -> _state.update { it.copy(rowActionId = null, rowError = NETWORK_ERROR) }
+                is ApiResult.Error -> _state.update { it.copy(rowActionId = null, errorMessage = result.friendly()) }
+                is ApiResult.NetworkError -> _state.update { it.copy(rowActionId = null, errorMessage = NETWORK_ERROR) }
             }
         }
     }
@@ -166,7 +184,14 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
     // ---- Create / Edit form ----
 
     fun openCreate() = _state.update {
-        it.copy(formOpen = true, editingId = null, saving = false, formError = null, form = ScheduleForm())
+        it.copy(
+            formOpen = true,
+            editingId = null,
+            saving = false,
+            formError = null,
+            formFieldErrors = emptyMap(),
+            form = ScheduleForm(),
+        )
     }
 
     fun openEdit(schedule: ScheduleDto) {
@@ -177,6 +202,7 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
                 editingId = schedule.id,
                 saving = false,
                 formError = null,
+                formFieldErrors = emptyMap(),
                 form = ScheduleForm(
                     title = schedule.title,
                     message = schedule.message,
@@ -192,33 +218,61 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
         }
     }
 
-    fun closeForm() = _state.update { it.copy(formOpen = false, saving = false, formError = null) }
+    fun closeForm() = _state.update {
+        it.copy(formOpen = false, saving = false, formError = null, formFieldErrors = emptyMap())
+    }
 
-    fun onFormTitle(v: String) = updateForm { it.copy(title = v.take(TITLE_MAX)) }
-    fun onFormMessage(v: String) = updateForm { it.copy(message = v.take(MESSAGE_MAX)) }
-    fun onFormFrequency(v: String) = updateForm { it.copy(frequency = v) }
-    fun onFormHour(v: String) = updateForm { it.copy(hour = v) }
-    fun onFormMinute(v: String) = updateForm { it.copy(minute = v) }
-    fun onFormDate(v: String) = updateForm { it.copy(scheduledDate = v.filter { c -> c.isDigit() || c == '-' }.take(10)) }
-    fun onFormDayOfWeek(v: Int) = updateForm { it.copy(dayOfWeek = v) }
-    fun onFormDayOfMonth(v: String) = updateForm { it.copy(dayOfMonth = v) }
-    fun onFormActive(v: Boolean) = updateForm { it.copy(active = v) }
+    fun onFormTitle(v: String) = updateForm("title") { it.copy(title = v.take(TITLE_MAX)) }
+    fun onFormMessage(v: String) = updateForm("message") { it.copy(message = v.take(MESSAGE_MAX)) }
 
-    private inline fun updateForm(block: (ScheduleForm) -> ScheduleForm) =
-        _state.update { it.copy(form = block(it.form), formError = null) }
+    // Frequency swaps the conditional fields, so drop their stale errors too.
+    fun onFormFrequency(v: String) = _state.update {
+        it.copy(
+            form = it.form.copy(frequency = v),
+            formError = null,
+            formFieldErrors = it.formFieldErrors - "scheduled_date" - "day_of_month",
+        )
+    }
+
+    /** The wire format stays "HH":"MM" strings; the screen's TimeField converts at the boundary. */
+    fun onFormTime(hour: String, minute: String) = updateForm(null) {
+        it.copy(hour = hour.padStart(2, '0'), minute = minute.padStart(2, '0'))
+    }
+
+    fun onFormDate(v: String) = updateForm("scheduled_date") { it.copy(scheduledDate = v) }
+    fun onFormDayOfWeek(v: Int) = updateForm(null) { it.copy(dayOfWeek = v) }
+    fun onFormDayOfMonth(v: String) = updateForm("day_of_month") { it.copy(dayOfMonth = v) }
+    fun onFormActive(v: Boolean) = updateForm(null) { it.copy(active = v) }
+
+    /** Applies [block] and clears the field's own validation error (if [key] is set). */
+    private inline fun updateForm(key: String?, block: (ScheduleForm) -> ScheduleForm) =
+        _state.update {
+            it.copy(
+                form = block(it.form),
+                formError = null,
+                formFieldErrors = if (key != null) it.formFieldErrors - key else it.formFieldErrors,
+            )
+        }
 
     fun saveForm() {
         val s = _state.value
         val f = s.form
         val title = f.title.trim()
         val message = f.message.trim()
-        when {
-            title.isEmpty() -> return _state.update { it.copy(formError = "Title can't be blank.") }
-            message.isEmpty() -> return _state.update { it.copy(formError = "Message can't be blank.") }
-            f.frequency == "once" && f.scheduledDate.isBlank() ->
-                return _state.update { it.copy(formError = "Pick a date for a one-time schedule.") }
-            f.frequency == "monthly" && (f.dayOfMonth.toIntOrNull() !in 1..31) ->
-                return _state.update { it.copy(formError = "Day of month must be between 1 and 31.") }
+
+        val fieldErrors = buildMap<String, List<String>> {
+            if (title.isEmpty()) put("title", listOf("Title can't be blank."))
+            if (message.isEmpty()) put("message", listOf("Message can't be blank."))
+            if (f.frequency == "once" && f.scheduledDate.isBlank()) {
+                put("scheduled_date", listOf("Pick a date for a one-time schedule."))
+            }
+            if (f.frequency == "monthly" && f.dayOfMonth.toIntOrNull() !in 1..31) {
+                put("day_of_month", listOf("Day of month must be between 1 and 31."))
+            }
+        }
+        if (fieldErrors.isNotEmpty()) {
+            _state.update { it.copy(formFieldErrors = fieldErrors, formError = null) }
+            return
         }
 
         val request = ScheduleRequest(
@@ -232,7 +286,7 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
             active = f.active,
         )
 
-        _state.update { it.copy(saving = true, formError = null) }
+        _state.update { it.copy(saving = true, formError = null, formFieldErrors = emptyMap()) }
         viewModelScope.launch {
             val result = if (s.editingId != null) repository.update(s.editingId, request) else repository.create(request)
             when (result) {
@@ -241,8 +295,7 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
                         it.copy(
                             saving = false,
                             formOpen = false,
-                            rowMessage = if (s.editingId != null) "Schedule updated." else "Schedule created.",
-                            rowError = null,
+                            successMessage = if (s.editingId != null) "Schedule updated." else "Schedule created.",
                         )
                     }
                     reloadSilently()

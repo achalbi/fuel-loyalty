@@ -15,10 +15,12 @@ data class RedeemUiState(
     val customer: StaffCustomerDto? = null,
     val lookupLoading: Boolean = false,
     val lookupMessage: String? = null,
+    val lookupRetryable: Boolean = false,
     val selectedPoints: Int? = null,
     val redeeming: Boolean = false,
     val successMessage: String? = null,
     val redeemError: String? = null,
+    val redeemRetryable: Boolean = false,
 ) {
     /** Amounts selectable in the picker: min..max stepping by the increment. */
     val pointOptions: List<Int>
@@ -43,7 +45,7 @@ class RedeemViewModel(private val repository: StaffRepository) : ViewModel() {
     fun lookup(phoneNumber: String) {
         _state.update {
             it.copy(
-                lookupLoading = true, lookupMessage = null, customer = null,
+                lookupLoading = true, lookupMessage = null, lookupRetryable = false, customer = null,
                 selectedPoints = null, successMessage = null, redeemError = null,
             )
         }
@@ -55,7 +57,11 @@ class RedeemViewModel(private val repository: StaffRepository) : ViewModel() {
                     _state.update { it.copy(lookupLoading = false, lookupMessage = result.message) }
                 is ApiResult.NetworkError ->
                     _state.update {
-                        it.copy(lookupLoading = false, lookupMessage = "Couldn't reach the server. Try again.")
+                        it.copy(
+                            lookupLoading = false,
+                            lookupMessage = "Couldn't reach the server. Try again.",
+                            lookupRetryable = true,
+                        )
                     }
             }
         }
@@ -81,12 +87,21 @@ class RedeemViewModel(private val repository: StaffRepository) : ViewModel() {
                     )
                 }
                 is ApiResult.Error -> _state.update {
-                    it.copy(redeeming = false, redeemError = result.message)
+                    it.copy(redeeming = false, redeemError = result.message, redeemRetryable = false)
                 }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(redeeming = false, redeemError = "Couldn't reach the server. Try again.")
+                    it.copy(
+                        redeeming = false,
+                        redeemError = "Couldn't reach the server. Try again.",
+                        redeemRetryable = true,
+                    )
                 }
             }
         }
     }
+
+    // One-shot consumers so the overlay/snackbar fire exactly once.
+    fun consumeSuccessMessage() = _state.update { it.copy(successMessage = null) }
+
+    fun consumeRedeemError() = _state.update { it.copy(redeemError = null, redeemRetryable = false) }
 }

@@ -99,6 +99,11 @@ object NayaraPalette {
     val DarkSurface = Color(0xFF0F1822)
     val DarkRaised = Color(0xFF18212D)
     val DarkOverlay = Color(0xFF242F3C)
+    // Extra surface steps for the M3 container roles (clean, no purple tint).
+    val SurfaceCanvas = Color(0xFFECEFF4)       // light app background (cards pop on it)
+    val SurfaceDarkLowest = Color(0xFF060B12)
+    val SurfaceDarkContainer = Color(0xFF141D28)
+    val SurfaceDarkHighest = Color(0xFF1F2937)
     val White = Color(0xFFFFFFFF)
     val Black = Color(0xFF000000)
 }

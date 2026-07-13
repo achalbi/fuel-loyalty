@@ -19,4 +19,17 @@
     <string name="staff_login">Staff Login</string>
     <string name="staff_home">Staff Home</string>
     <string name="language_label">Language</string>
+
+    <!-- Design system (shared components; localized for public-facing surfaces) -->
+    <string name="ds_retry">Try again</string>
+    <string name="ds_error_title">Something went wrong</string>
+    <string name="ds_empty_title">Nothing here yet</string>
+    <string name="ds_search_hint">Search</string>
+    <string name="ds_clear">Clear</string>
+    <string name="ds_cancel">Cancel</string>
+    <string name="ds_confirm">Confirm</string>
+    <string name="ds_delete">Delete</string>
+    <string name="ds_done">Done</string>
+    <string name="ds_back">Back</string>
+    <string name="ds_undo">Undo</string>
 </resources>

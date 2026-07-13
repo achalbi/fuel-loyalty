@@ -1,6 +1,11 @@
 package com.acefuel.loyalty.ui.admin.cycles
 
-import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,23 +16,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -39,19 +38,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,14 +56,28 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
+import com.acefuel.loyalty.ui.designsystem.ActiveChip
+import com.acefuel.loyalty.ui.designsystem.ConfirmDialog
+import com.acefuel.loyalty.ui.designsystem.DateField
+import com.acefuel.loyalty.ui.designsystem.EmptyState
+import com.acefuel.loyalty.ui.designsystem.ErrorState
+import com.acefuel.loyalty.ui.designsystem.FormField
+import com.acefuel.loyalty.ui.designsystem.InlineErrorCard
+import com.acefuel.loyalty.ui.designsystem.NayaraCard
+import com.acefuel.loyalty.ui.designsystem.NayaraPullToRefresh
+import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
+import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
+import com.acefuel.loyalty.ui.designsystem.SkeletonList
+import com.acefuel.loyalty.ui.designsystem.rememberHaptics
+import com.acefuel.loyalty.ui.designsystem.showError
+import com.acefuel.loyalty.ui.designsystem.showSuccess
 import com.acefuel.loyalty.ui.theme.NayaraButton
+import com.acefuel.loyalty.ui.theme.NayaraMotion
 import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
+import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.NayaraTonalButton
 import com.acefuel.loyalty.ui.theme.nayara
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,26 +89,58 @@ fun AdminCyclesScreen(onBack: () -> Unit) {
     val vm: CyclesViewModel = viewModel(factory = viewModelFactory { initializer { CyclesViewModel(repo) } })
     val state by vm.state.collectAsStateWithLifecycle()
 
+    val snackbar = remember { SnackbarHostState() }
+    val haptics = rememberHaptics()
+
     val editor = state.editor
+    // Keeps the editor content on screen while its exit animation runs.
+    var lastEditor by remember { mutableStateOf<CycleEditorState?>(null) }
+    if (editor != null) lastEditor = editor
+
+    var showDiscardConfirm by remember { mutableStateOf(false) }
+    val requestCloseEditor: () -> Unit = {
+        if (state.editor?.dirty == true) showDiscardConfirm = true else vm.closeEditor()
+    }
+
+    BackHandler(enabled = editor != null) { requestCloseEditor() }
+
+    // Show first, consume after: consuming inside the effect nulls the key it
+    // is launched on, which would cancel the still-suspended showSnackbar.
+    LaunchedEffect(state.notice) {
+        val msg = state.notice ?: return@LaunchedEffect
+        haptics.confirm()
+        snackbar.showSuccess(msg)
+        vm.dismissNotice()
+    }
+    LaunchedEffect(state.actionError) {
+        val msg = state.actionError ?: return@LaunchedEffect
+        haptics.reject()
+        snackbar.showError(msg)
+        vm.dismissActionError()
+    }
+    // Load failures with stale data on screen surface as a snackbar; the
+    // full-area ErrorState handles the nothing-to-show case below.
+    LaunchedEffect(state.error) {
+        val msg = state.error ?: return@LaunchedEffect
+        if (state.cycles.isNotEmpty()) {
+            haptics.reject()
+            snackbar.showError(msg)
+            vm.consumeError()
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        when {
-                            editor == null -> "Shift Cycles"
-                            editor.isCreate -> "New Cycle"
-                            else -> "Edit Cycle"
-                        },
-                    )
+            NayaraTopBar(
+                title = when {
+                    editor == null -> "Shift Cycles"
+                    editor.isCreate -> "New Cycle"
+                    else -> "Edit Cycle"
                 },
-                navigationIcon = {
-                    IconButton(onClick = { if (editor != null) vm.closeEditor() else onBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                onBack = { if (editor != null) requestCloseEditor() else onBack() },
             )
         },
+        snackbarHost = { NayaraSnackbarHost(snackbar) },
         floatingActionButton = {
             if (editor == null && !(state.loading && state.cycles.isEmpty())) {
                 FloatingActionButton(onClick = { vm.openCreate() }) {
@@ -107,15 +150,51 @@ fun AdminCyclesScreen(onBack: () -> Unit) {
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            when {
-                editor != null -> CycleEditor(editor, state.activeTemplates, state.templates, vm)
-                state.loading && state.cycles.isEmpty() ->
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+            AnimatedContent(
+                targetState = editor != null,
+                transitionSpec = {
+                    fadeIn(tween(NayaraMotion.Base, easing = NayaraMotion.Enter)) togetherWith
+                        fadeOut(tween(NayaraMotion.Fast, easing = NayaraMotion.Exit))
+                },
+                label = "cycles-list-editor",
+            ) { editing ->
+                if (editing) {
+                    lastEditor?.let {
+                        CycleEditor(it, state.activeTemplates, state.templates, vm, onCancel = requestCloseEditor)
                     }
-                else -> CycleList(state, vm)
+                } else {
+                    when {
+                        state.loading && state.cycles.isEmpty() ->
+                            SkeletonList(Modifier.padding(NayaraSpacing.ScreenMargin), count = 5, showAvatar = false)
+                        state.error != null && state.cycles.isEmpty() ->
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                ErrorState(state.error!!, onRetry = vm::load)
+                            }
+                        else -> NayaraPullToRefresh(
+                            isRefreshing = state.refreshing,
+                            onRefresh = vm::refresh,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            CycleList(state, vm)
+                        }
+                    }
+                }
             }
         }
+    }
+
+    if (showDiscardConfirm) {
+        ConfirmDialog(
+            title = "Discard changes?",
+            text = "You have unsaved changes in this cycle. Discard them?",
+            confirmLabel = "Discard",
+            destructive = true,
+            onConfirm = {
+                showDiscardConfirm = false
+                vm.closeEditor()
+            },
+            onDismiss = { showDiscardConfirm = false },
+        )
     }
 }
 
@@ -124,40 +203,44 @@ private fun CycleList(state: CyclesUiState, vm: CyclesViewModel) {
     var pendingDelete by remember { mutableStateOf<ShiftCycleDto?>(null) }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(vertical = 12.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = NayaraSpacing.ScreenMargin),
+        verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+        contentPadding = PaddingValues(top = NayaraSpacing.Md, bottom = 96.dp),
     ) {
-        state.error?.let { item(key = "err") { InfoCard(it, isError = true, onDismiss = null) } }
-        state.actionError?.let { item(key = "aerr") { InfoCard(it, isError = true, onDismiss = { vm.dismissActionError() }) } }
-        state.notice?.let { item(key = "notice") { InfoCard(it, isError = false, onDismiss = { vm.dismissNotice() }) } }
-
-        if (state.cycles.isEmpty() && state.error == null) {
-            item(key = "empty") { EmptyNote("No shift cycles yet. Tap + to create one.") }
+        if (state.cycles.isEmpty()) {
+            item(key = "empty") {
+                EmptyState(
+                    title = "No shift cycles yet",
+                    message = "Tap + to create one.",
+                    icon = Icons.Filled.EventRepeat,
+                )
+            }
         } else {
             items(state.cycles, key = { "cycle-${it.id}" }) { cycle ->
                 CycleCard(
                     cycle = cycle,
-                    busy = state.togglingId == cycle.id || state.deletingId == cycle.id,
+                    toggling = state.togglingId == cycle.id,
+                    deleting = state.deletingId == cycle.id,
                     onEdit = { vm.openEdit(cycle) },
                     onToggleActive = { vm.setActive(cycle.id, !cycle.active) },
                     onDelete = { pendingDelete = cycle },
+                    modifier = Modifier.animateItem(),
                 )
             }
         }
     }
 
     pendingDelete?.let { cycle ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete shift cycle") },
-            text = { Text("Delete this unused shift cycle?") },
-            confirmButton = {
-                TextButton(onClick = { pendingDelete = null; vm.deleteCycle(cycle.id) }) { Text("Delete") }
+        ConfirmDialog(
+            title = "Delete shift cycle",
+            text = "Delete \"${cycle.name}\"? This can't be undone.",
+            confirmLabel = "Delete",
+            destructive = true,
+            onConfirm = {
+                pendingDelete = null
+                vm.deleteCycle(cycle.id)
             },
-            dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
-            },
+            onDismiss = { pendingDelete = null },
         )
     }
 }
@@ -165,20 +248,23 @@ private fun CycleList(state: CyclesUiState, vm: CyclesViewModel) {
 @Composable
 private fun CycleCard(
     cycle: ShiftCycleDto,
-    busy: Boolean,
+    toggling: Boolean,
+    deleting: Boolean,
     onEdit: () -> Unit,
     onToggleActive: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val busy = toggling || deleting
+    NayaraCard(modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+        Column(modifier = Modifier.padding(NayaraSpacing.Lg), verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(cycle.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                StatusBadge(cycle.active)
+                ActiveChip(active = cycle.active)
             }
 
             LabeledLine("Cycle Starts", cycle.startsAtLabel?.takeIf { it.isNotBlank() } ?: cycle.startsOn ?: "—")
@@ -196,12 +282,20 @@ private fun CycleCard(
                     Text("Edit")
                 }
                 NayaraOutlinedButton(onClick = onToggleActive, enabled = !busy, modifier = Modifier.weight(1f)) {
-                    Text(if (cycle.active) "Deactivate" else "Activate")
+                    if (toggling) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(if (cycle.active) "Deactivate" else "Activate")
+                    }
                 }
             }
             if (cycle.deletable) {
                 NayaraOutlinedButton(onClick = onDelete, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                    Text("Delete", color = MaterialTheme.nayara.statusError)
+                    if (deleting) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Delete", color = MaterialTheme.nayara.statusError)
+                    }
                 }
             } else {
                 Text(
@@ -211,21 +305,6 @@ private fun CycleCard(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun StatusBadge(active: Boolean) {
-    val nayara = MaterialTheme.nayara
-    val bg = if (active) nayara.statusSuccessContainer else nayara.bgSurfaceSunken
-    val fg = if (active) nayara.statusOnSuccessContainer else nayara.textSecondary
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(bg)
-            .padding(horizontal = 10.dp, vertical = 3.dp),
-    ) {
-        Text(if (active) "Active" else "Inactive", style = MaterialTheme.typography.labelMedium, color = fg)
     }
 }
 
@@ -243,38 +322,6 @@ private fun LabeledLine(label: String, value: String) {
     }
 }
 
-@Composable
-private fun InfoCard(message: String, isError: Boolean, onDismiss: (() -> Unit)?) {
-    val container = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.nayara.statusSuccessContainer
-    val onContainer = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.nayara.statusOnSuccessContainer
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = container),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 14.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(message, color = onContainer, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            if (onDismiss != null) {
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Filled.Close, contentDescription = "Dismiss", tint = onContainer)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyNote(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.nayara.textSecondary,
-        modifier = Modifier.padding(vertical = 24.dp),
-    )
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CycleEditor(
@@ -282,35 +329,36 @@ private fun CycleEditor(
     activeTemplates: List<ShiftTemplateDto>,
     allTemplates: List<ShiftTemplateDto>,
     vm: CyclesViewModel,
+    onCancel: () -> Unit,
 ) {
-    var showDatePicker by remember { mutableStateOf(false) }
+    val haptics = rememberHaptics()
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        OutlinedTextField(
+        FormField(
             value = editor.name,
             onValueChange = vm::editorSetName,
-            label = { Text("Cycle Name") },
-            singleLine = true,
-            supportingText = { Text("Required · up to 80 characters") },
-            modifier = Modifier.fillMaxWidth(),
+            label = "Cycle Name",
+            errors = editor.nameError?.let(::listOf),
+            helper = "Required · up to 80 characters",
         )
 
-        Column {
-            Text("Cycle Starts On", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.nayara.textSecondary)
-            Spacer(Modifier.height(6.dp))
-            NayaraOutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.DateRange, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (editor.startsOn.isBlank()) "Choose start date" else displayDate(editor.startsOn))
-            }
-        }
+        DateField(
+            label = "Cycle Starts On",
+            value = runCatching { LocalDate.parse(editor.startsOn) }.getOrNull(),
+            onChange = { vm.editorSetStartsOn(it.toString()) },
+            placeholder = "Choose start date",
+        )
 
         Text("Shift Order In The Cycle", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         if (activeTemplates.isEmpty()) {
-            EmptyNote("No shift templates are available yet — add one before building a cycle.")
+            Text(
+                "No shift templates are available yet — add one before building a cycle.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.nayara.textSecondary,
+            )
         }
         editor.steps.forEachIndexed { index, row ->
             StepPicker(
@@ -318,7 +366,10 @@ private fun CycleEditor(
                 row = row,
                 options = optionsFor(row, activeTemplates, allTemplates),
                 canRemove = editor.steps.size > 1,
-                onSelect = { vm.editorSetStep(row.key, it) },
+                onSelect = {
+                    haptics.tick()
+                    vm.editorSetStep(row.key, it)
+                },
                 onRemove = { vm.editorRemoveStep(row.key) },
             )
         }
@@ -343,13 +394,19 @@ private fun CycleEditor(
                     color = MaterialTheme.nayara.textSecondary,
                 )
             }
-            Switch(checked = editor.active, onCheckedChange = vm::editorSetActive)
+            Switch(
+                checked = editor.active,
+                onCheckedChange = {
+                    haptics.tick()
+                    vm.editorSetActive(it)
+                },
+            )
         }
 
-        editor.error?.let { InfoCard(it, isError = true, onDismiss = null) }
+        editor.error?.let { InlineErrorCard(it) }
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            NayaraOutlinedButton(onClick = { vm.closeEditor() }, enabled = !editor.saving, modifier = Modifier.weight(1f)) {
+            NayaraOutlinedButton(onClick = onCancel, enabled = !editor.saving, modifier = Modifier.weight(1f)) {
                 Text("Cancel")
             }
             NayaraButton(
@@ -360,24 +417,6 @@ private fun CycleEditor(
             ) {
                 Text(if (editor.isCreate) "Create Cycle" else "Save Changes")
             }
-        }
-    }
-
-    if (showDatePicker) {
-        val dpState = rememberDatePickerState(initialSelectedDateMillis = isoToMillis(editor.startsOn))
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    dpState.selectedDateMillis?.let { vm.editorSetStartsOn(millisToIso(it)) }
-                    showDatePicker = false
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            },
-        ) {
-            DatePicker(state = dpState)
         }
     }
 }
@@ -446,14 +485,3 @@ private fun optionsFor(
 }
 
 private fun stepLetter(index: Int): String = ('A' + (index % 26)).toString()
-
-private fun isoToMillis(iso: String): Long? = runCatching {
-    LocalDate.parse(iso).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-}.getOrNull()
-
-private fun millisToIso(millis: Long): String =
-    Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
-
-private fun displayDate(iso: String): String = runCatching {
-    LocalDate.parse(iso).format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
-}.getOrDefault(iso)

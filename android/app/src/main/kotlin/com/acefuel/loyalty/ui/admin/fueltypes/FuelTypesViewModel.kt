@@ -29,6 +29,7 @@ data class FuelTypeFormState(
 
 data class FuelTypesUiState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val error: String? = null,
     val fuelTypes: List<FuelTypeDto> = emptyList(),
     val form: FuelTypeFormState = FuelTypeFormState(),
@@ -46,28 +47,38 @@ class FuelTypesViewModel(private val repository: FuelTypesRepository) : ViewMode
         load()
     }
 
-    fun load() {
-        _state.update { it.copy(loading = true, error = null) }
+    fun load() = fetch(refresh = false)
+
+    fun refresh() = fetch(refresh = true)
+
+    private fun fetch(refresh: Boolean) {
+        if (refresh) {
+            if (_state.value.refreshing) return
+            _state.update { it.copy(refreshing = true) }
+        } else {
+            _state.update { it.copy(loading = true, error = null) }
+        }
         viewModelScope.launch {
             when (val result = repository.loadFuelTypes()) {
                 is ApiResult.Success -> _state.update {
-                    it.copy(loading = false, error = null, fuelTypes = result.data)
+                    it.copy(loading = false, refreshing = false, error = null, fuelTypes = result.data)
                 }
                 is ApiResult.Error -> _state.update {
-                    it.copy(loading = false, error = result.message)
+                    it.copy(loading = false, refreshing = false, error = result.message)
                 }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(loading = false, error = NETWORK_MESSAGE)
+                    it.copy(loading = false, refreshing = false, error = NETWORK_MESSAGE)
                 }
             }
         }
     }
 
-    fun refresh() = load()
-
     fun dismissNotice() = _state.update { it.copy(notice = null) }
 
     fun dismissActionError() = _state.update { it.copy(actionError = null) }
+
+    /** One-shot consume of a load error once it has been surfaced over stale data. */
+    fun consumeError() = _state.update { it.copy(error = null) }
 
     // --- form -------------------------------------------------------------
 

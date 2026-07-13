@@ -1,6 +1,11 @@
 package com.acefuel.loyalty.ui.redeem
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,32 +15,33 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,118 +50,196 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
 import com.acefuel.loyalty.core.network.dto.StaffCustomerDto
+import com.acefuel.loyalty.ui.designsystem.ConfirmDialog
+import com.acefuel.loyalty.ui.designsystem.FormField
+import com.acefuel.loyalty.ui.designsystem.InlineErrorCard
+import com.acefuel.loyalty.ui.designsystem.NayaraCard
+import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
+import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
+import com.acefuel.loyalty.ui.designsystem.SkeletonCard
+import com.acefuel.loyalty.ui.designsystem.SuccessOverlay
+import com.acefuel.loyalty.ui.designsystem.rememberHaptics
+import com.acefuel.loyalty.ui.designsystem.showError
 import com.acefuel.loyalty.ui.theme.NayaraButton
+import com.acefuel.loyalty.ui.theme.NayaraMotion
+import com.acefuel.loyalty.ui.theme.NayaraNumerals
+import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RedeemScreen(onBack: () -> Unit) {
+fun RedeemScreen(onBack: (() -> Unit)? = null) {
     val container = LocalContainer.current
     val viewModel: RedeemViewModel = viewModel(
         factory = viewModelFactory { initializer { RedeemViewModel(container.staffRepository) } },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     var phone by rememberSaveable { mutableStateOf("") }
+    // Plain remember (not saveable): the confirm summary reads ViewModel state,
+    // which resets on process death — a restored dialog could open uninvited.
+    var showConfirm by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    val haptics = rememberHaptics()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Redeem Points") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+    // Redeem failures surface as a snackbar (form state is kept for retry).
+    LaunchedEffect(state.redeemError) {
+        val message = state.redeemError ?: return@LaunchedEffect
+        haptics.reject()
+        val result = snackbar.showError(message, actionLabel = if (state.redeemRetryable) "Retry" else null)
+        viewModel.consumeRedeemError()
+        if (result == SnackbarResult.ActionPerformed) viewModel.redeem()
+    }
+    LaunchedEffect(state.lookupMessage) {
+        if (state.lookupMessage != null) haptics.reject()
+    }
+
+    // Keep the last message so the overlay text survives its exit animation.
+    var lastSuccessMessage by remember { mutableStateOf<String?>(null) }
+    state.successMessage?.let { lastSuccessMessage = it }
+
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = { NayaraTopBar(title = "Redeem Points", onBack = onBack) },
+            snackbarHost = { NayaraSnackbarHost(snackbar) },
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = NayaraSpacing.ScreenMargin, vertical = NayaraSpacing.Lg),
+                verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+            ) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    FormField(
+                        value = phone,
+                        onValueChange = { phone = it.filter(Char::isDigit).take(10) },
+                        label = "Phone number",
+                        prefix = { Text("+91 ") },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Phone,
+                            imeAction = ImeAction.Search,
+                        ),
+                        keyboardActions = KeyboardActions(onSearch = {
+                            if (phone.length == 10) viewModel.lookup(phone)
+                        }),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(NayaraSpacing.Md))
+                    NayaraButton(
+                        onClick = { viewModel.lookup(phone) },
+                        enabled = phone.length == 10,
+                        loading = state.lookupLoading,
+                    ) {
+                        Text("Look Up")
                     }
-                },
-            )
-        },
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-        ) {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = { phone = it.filter(Char::isDigit).take(10) },
-                    label = { Text("Phone number") },
-                    prefix = { Text("+91 ") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(12.dp))
-                NayaraButton(
-                    onClick = { viewModel.lookup(phone) },
-                    enabled = phone.length == 10,
-                    loading = state.lookupLoading,
+                }
+
+                state.lookupMessage?.let {
+                    InlineErrorCard(
+                        message = it,
+                        onRetry = if (state.lookupRetryable && phone.length == 10) ({ viewModel.lookup(phone) }) else null,
+                    )
+                }
+
+                if (state.lookupLoading) {
+                    SkeletonCard(lines = 4)
+                }
+
+                val customer = state.customer
+                AnimatedVisibility(
+                    visible = customer != null,
+                    enter = fadeIn(tween(NayaraMotion.Base)) +
+                        expandVertically(tween(NayaraMotion.Base, easing = NayaraMotion.Enter)),
                 ) {
-                    Text("Look Up")
-                }
-            }
+                    val c = customer ?: return@AnimatedVisibility
+                    Column {
+                        CustomerCard(c)
 
-            state.lookupMessage?.let {
-                Spacer(Modifier.height(12.dp))
-                Text(it, color = MaterialTheme.colorScheme.error)
-            }
-
-            val customer = state.customer
-            if (customer != null) {
-                Spacer(Modifier.height(20.dp))
-                CustomerCard(customer)
-
-                Spacer(Modifier.height(16.dp))
-                when {
-                    customer.rewardsPaused -> BlockedNote(
-                        "Rewards are paused for this customer. Resume rewards to redeem points.",
-                    )
-                    state.pointOptions.isEmpty() -> BlockedNote(
-                        "This customer does not have enough redeemable points yet. " +
-                            "Minimum redemption for this customer is ${customer.minimumRedeemablePoints} points.",
-                    )
-                    else -> RedeemForm(state, customer, viewModel)
-                }
-            }
-
-            state.successMessage?.let {
-                Spacer(Modifier.height(16.dp))
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.nayara.statusSuccessContainer)) {
-                    Text(
-                        it,
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.nayara.statusOnSuccessContainer,
-                    )
+                        Spacer(Modifier.height(NayaraSpacing.Lg))
+                        when {
+                            c.rewardsPaused -> BlockedNote(
+                                "Rewards are paused for this customer. Resume rewards to redeem points.",
+                            )
+                            state.pointOptions.isEmpty() -> BlockedNote(
+                                "This customer does not have enough redeemable points yet. " +
+                                    "Minimum redemption for this customer is ${c.minimumRedeemablePoints} points.",
+                            )
+                            else -> RedeemForm(state, c, viewModel, onSubmit = { showConfirm = true })
+                        }
+                    }
                 }
             }
         }
+
+        SuccessOverlay(
+            visible = state.successMessage != null,
+            title = "Points redeemed",
+            subtitle = lastSuccessMessage,
+            onFinished = viewModel::consumeSuccessMessage,
+        )
+    }
+
+    val confirmCustomer = state.customer
+    val confirmPoints = state.selectedPoints
+    if (showConfirm && confirmCustomer != null && confirmPoints != null) {
+        val cash = confirmCustomer.cashValuePerPoint
+        val valueText = if (cash != null && cash > 0) " (₹%.2f)".format(confirmPoints * cash) else ""
+        ConfirmDialog(
+            title = "Redeem points?",
+            text = "Redeem $confirmPoints points$valueText for " +
+                "${confirmCustomer.name ?: "this customer"}? This cannot be undone.",
+            confirmLabel = "Redeem",
+            onConfirm = {
+                showConfirm = false
+                viewModel.redeem()
+            },
+            onDismiss = { showConfirm = false },
+        )
     }
 }
 
 @Composable
 private fun CustomerCard(customer: StaffCustomerDto) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(20.dp)) {
+    NayaraCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(NayaraSpacing.CardPadding)) {
             Text(customer.name ?: "Customer", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
                 "${customer.statusLabel} · ${customer.rewardsStatusLabel}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.nayara.textSecondary,
             )
-            customer.phoneNumber?.let { Text("+91 $it", style = MaterialTheme.typography.bodySmall) }
-            Spacer(Modifier.height(12.dp))
-            Text("${customer.totalPoints}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("Available points", style = MaterialTheme.typography.labelMedium)
-            Spacer(Modifier.height(12.dp))
+            customer.phoneNumber?.let {
+                Text(
+                    "+91 $it",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.nayara.textSecondary,
+                )
+            }
+            Spacer(Modifier.height(NayaraSpacing.Md))
+            Text(
+                "${customer.totalPoints}",
+                style = NayaraNumerals.Large,
+                color = MaterialTheme.nayara.textPrimary,
+            )
+            Text(
+                "Available points",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.nayara.textSecondary,
+            )
+            Spacer(Modifier.height(NayaraSpacing.Md))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Stat("Minimum", "${customer.minimumRedeemablePoints}")
                 Stat("Max redeemable", "${customer.maxRedeemablePoints}")
                 Stat("Vehicles", "${customer.vehicles.size}")
             }
             customer.maxRedeemableCashReward?.let {
-                Spacer(Modifier.height(8.dp))
-                Text("Max cash reward: ₹%.2f".format(it), style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(NayaraSpacing.Sm))
+                Text(
+                    "Max cash reward: ₹%.2f".format(it),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.nayara.textSecondary,
+                )
             }
         }
     }
@@ -164,7 +248,7 @@ private fun CustomerCard(customer: StaffCustomerDto) {
 @Composable
 private fun Stat(label: String, value: String) {
     Column {
-        Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text(value, style = NayaraNumerals.Default, color = MaterialTheme.nayara.textPrimary)
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.nayara.textSecondary)
     }
 }
@@ -179,9 +263,15 @@ private fun BlockedNote(message: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RedeemForm(state: RedeemUiState, customer: StaffCustomerDto, viewModel: RedeemViewModel) {
+private fun RedeemForm(
+    state: RedeemUiState,
+    customer: StaffCustomerDto,
+    viewModel: RedeemViewModel,
+    onSubmit: () -> Unit,
+) {
     var expanded by remember { mutableStateOf(false) }
     val options = state.pointOptions
+    val haptics = rememberHaptics()
 
     fun label(points: Int): String {
         val cash = customer.cashValuePerPoint
@@ -204,6 +294,7 @@ private fun RedeemForm(state: RedeemUiState, customer: StaffCustomerDto, viewMod
                 DropdownMenuItem(
                     text = { Text(label(points)) },
                     onClick = {
+                        haptics.tick()
                         viewModel.selectPoints(points)
                         expanded = false
                     },
@@ -211,21 +302,16 @@ private fun RedeemForm(state: RedeemUiState, customer: StaffCustomerDto, viewMod
             }
         }
     }
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(NayaraSpacing.Xs))
     Text(
         "Points can only be redeemed in multiples of ${customer.redemptionIncrement}.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.nayara.textSecondary,
     )
 
-    state.redeemError?.let {
-        Spacer(Modifier.height(12.dp))
-        Text(it, color = MaterialTheme.colorScheme.error)
-    }
-
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(NayaraSpacing.Lg))
     NayaraButton(
-        onClick = { viewModel.redeem() },
+        onClick = onSubmit,
         enabled = state.canRedeem,
         loading = state.redeeming,
         modifier = Modifier.fillMaxWidth(),

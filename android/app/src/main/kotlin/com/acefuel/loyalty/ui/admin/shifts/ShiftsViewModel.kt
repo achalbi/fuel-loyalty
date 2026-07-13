@@ -10,11 +10,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.roundToLong
 
+private const val NETWORK_MESSAGE = "Couldn't reach the server. Try again."
+
 /** Create/edit form buffer. [id] is null while creating a brand-new template. */
 data class ShiftFormState(
     val id: Long? = null,
     val name: String = "",
-    val startTime: String = "",
+    val startTime: String = "", // wire "HH:MM"; the screen's TimeField converts at the boundary
     val durationHours: String = "8",
     val active: Boolean = true,
 ) {
@@ -23,12 +25,17 @@ data class ShiftFormState(
 
 data class AdminShiftsUiState(
     val loading: Boolean = false,
+    val refreshing: Boolean = false,
     val templates: List<ShiftTemplateDto> = emptyList(),
     val error: String? = null,
+    // One-shot snackbar messages; the screen consumes them after showing.
+    val successMessage: String? = null,
+    val actionError: String? = null,
     /** Non-null while the create/edit sheet is open. */
     val form: ShiftFormState? = null,
     val saving: Boolean = false,
-    val formError: String? = null,
+    val formError: String? = null, // server/base message shown inline in the sheet
+    val formFieldErrors: Map<String, List<String>> = emptyMap(),
 )
 
 class ShiftsViewModel(private val repository: ShiftsRepository) : ViewModel() {
@@ -40,22 +47,41 @@ class ShiftsViewModel(private val repository: ShiftsRepository) : ViewModel() {
         load()
     }
 
-    fun load() {
-        _state.update { it.copy(loading = true, error = null) }
+    fun load() = fetch(asRefresh = false)
+
+    fun refresh() = fetch(asRefresh = true)
+
+    private fun fetch(asRefresh: Boolean) {
+        _state.update {
+            if (asRefresh) it.copy(refreshing = true) else it.copy(loading = true, error = null)
+        }
         viewModelScope.launch {
             when (val result = repository.loadShiftTemplates()) {
                 is ApiResult.Success ->
-                    _state.update { it.copy(loading = false, templates = result.data) }
-                is ApiResult.Error ->
-                    _state.update { it.copy(loading = false, error = result.message) }
-                is ApiResult.NetworkError ->
-                    _state.update { it.copy(loading = false, error = "Couldn't reach the server. Try again.") }
+                    _state.update { it.copy(loading = false, refreshing = false, error = null, templates = result.data) }
+                is ApiResult.Error -> onFetchFailure(result.message)
+                is ApiResult.NetworkError -> onFetchFailure(NETWORK_MESSAGE)
             }
         }
     }
 
+    /** Empty screen keeps the full-area error; stale data stays visible with a snackbar. */
+    private fun onFetchFailure(message: String) {
+        _state.update {
+            if (it.templates.isEmpty()) {
+                it.copy(loading = false, refreshing = false, error = message)
+            } else {
+                it.copy(loading = false, refreshing = false, actionError = message)
+            }
+        }
+    }
+
+    fun consumeSuccessMessage() = _state.update { it.copy(successMessage = null) }
+
+    fun consumeActionError() = _state.update { it.copy(actionError = null) }
+
     fun openCreate() {
-        _state.update { it.copy(form = ShiftFormState(), formError = null) }
+        _state.update { it.copy(form = ShiftFormState(), formError = null, formFieldErrors = emptyMap()) }
     }
 
     fun openEdit(template: ShiftTemplateDto) {
@@ -69,75 +95,86 @@ class ShiftsViewModel(private val repository: ShiftsRepository) : ViewModel() {
                     active = template.active,
                 ),
                 formError = null,
+                formFieldErrors = emptyMap(),
             )
         }
     }
 
     fun dismissForm() {
-        _state.update { it.copy(form = null, formError = null, saving = false) }
+        _state.update { it.copy(form = null, formError = null, formFieldErrors = emptyMap(), saving = false) }
     }
 
-    fun onNameChange(value: String) = updateForm { it.copy(name = value) }
-    fun onStartTimeChange(value: String) = updateForm { it.copy(startTime = value) }
-    fun onDurationChange(value: String) = updateForm { it.copy(durationHours = value) }
-    fun onActiveChange(value: Boolean) = updateForm { it.copy(active = value) }
+    fun onNameChange(value: String) = updateForm("name") { it.copy(name = value) }
+    fun onStartTimeChange(value: String) = updateForm("start_time") { it.copy(startTime = value) }
+    fun onDurationChange(value: String) = updateForm("duration") { it.copy(durationHours = value) }
+    fun onActiveChange(value: Boolean) = updateForm(null) { it.copy(active = value) }
 
     /** Adjusts the duration by [deltaHours], snapping to the 0.25 step and clamping at the min. */
     fun stepDuration(deltaHours: Double) {
         val current = _state.value.form?.durationHours?.trim()?.toDoubleOrNull() ?: DEFAULT_HOURS
         val snapped = ((current + deltaHours) / STEP).roundToLong() * STEP
-        updateForm { it.copy(durationHours = formatHours(maxOf(MIN_HOURS, snapped))) }
+        updateForm("duration") { it.copy(durationHours = formatHours(maxOf(MIN_HOURS, snapped))) }
     }
 
     fun submitForm() {
         val form = _state.value.form ?: return
 
         val name = form.name.trim()
-        when {
-            name.isEmpty() -> {
-                _state.update { it.copy(formError = "Enter a shift name.") }
-                return
-            }
-            name.length > MAX_NAME -> {
-                _state.update { it.copy(formError = "Name must be $MAX_NAME characters or fewer.") }
-                return
-            }
-        }
         val startTime = form.startTime.trim()
-        if (!START_TIME_REGEX.matches(startTime)) {
-            _state.update { it.copy(formError = "Enter the start time as HH:MM (00:00–23:59).") }
-            return
-        }
         val hours = form.durationHours.trim().toDoubleOrNull()
-        if (hours == null || hours < MIN_HOURS) {
-            _state.update { it.copy(formError = "Enter a duration of at least ${formatHours(MIN_HOURS)} hours.") }
+
+        val fieldErrors = buildMap<String, List<String>> {
+            when {
+                name.isEmpty() -> put("name", listOf("Enter a shift name."))
+                name.length > MAX_NAME -> put("name", listOf("Name must be $MAX_NAME characters or fewer."))
+            }
+            if (!START_TIME_REGEX.matches(startTime)) {
+                put("start_time", listOf("Pick the shift start time."))
+            }
+            if (hours == null || hours < MIN_HOURS) {
+                put("duration", listOf("Enter a duration of at least ${formatHours(MIN_HOURS)} hours."))
+            }
+        }
+        if (fieldErrors.isNotEmpty()) {
+            _state.update { it.copy(formFieldErrors = fieldErrors, formError = null) }
             return
         }
 
-        _state.update { it.copy(saving = true, formError = null) }
+        _state.update { it.copy(saving = true, formError = null, formFieldErrors = emptyMap()) }
         viewModelScope.launch {
             val result = if (form.id == null) {
-                repository.createShiftTemplate(name, startTime, hours, form.active)
+                repository.createShiftTemplate(name, startTime, hours!!, form.active)
             } else {
-                repository.updateShiftTemplate(form.id, name, startTime, hours, form.active)
+                repository.updateShiftTemplate(form.id, name, startTime, hours!!, form.active)
             }
             when (result) {
                 is ApiResult.Success -> {
-                    _state.update { it.copy(saving = false, form = null, formError = null) }
+                    _state.update {
+                        it.copy(
+                            saving = false,
+                            form = null,
+                            formError = null,
+                            successMessage = if (form.id != null) "Shift updated." else "Shift created.",
+                        )
+                    }
                     load()
                 }
                 is ApiResult.Error ->
                     _state.update { it.copy(saving = false, formError = result.message) }
                 is ApiResult.NetworkError ->
-                    _state.update { it.copy(saving = false, formError = "Couldn't reach the server. Try again.") }
+                    _state.update { it.copy(saving = false, formError = NETWORK_MESSAGE) }
             }
         }
     }
 
-    private fun updateForm(transform: (ShiftFormState) -> ShiftFormState) {
+    /** Applies [transform] and clears the field's own validation error (if [key] is set). */
+    private fun updateForm(key: String?, transform: (ShiftFormState) -> ShiftFormState) {
         _state.update { current ->
             val form = current.form ?: return@update current
-            current.copy(form = transform(form))
+            current.copy(
+                form = transform(form),
+                formFieldErrors = if (key != null) current.formFieldErrors - key else current.formFieldErrors,
+            )
         }
     }
 

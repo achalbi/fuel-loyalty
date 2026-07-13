@@ -16,4 +16,17 @@
     <string name="staff_login">ଷ୍ଟାଫ୍ ଲଗଇନ୍</string>
     <string name="staff_home">ଷ୍ଟାଫ୍ ହୋମ୍</string>
     <string name="language_label">ଭାଷା</string>
+
+    <!-- Design system (shared components) -->
+    <string name="ds_retry">ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ</string>
+    <string name="ds_error_title">କିଛି ଭୁଲ ହୋଇଗଲା</string>
+    <string name="ds_empty_title">ଏଠାରେ ଏପର୍ଯ୍ୟନ୍ତ କିଛି ନାହିଁ</string>
+    <string name="ds_search_hint">ଖୋଜନ୍ତୁ</string>
+    <string name="ds_clear">ସଫା କରନ୍ତୁ</string>
+    <string name="ds_cancel">ବାତିଲ କରନ୍ତୁ</string>
+    <string name="ds_confirm">ନିଶ୍ଚିତ କରନ୍ତୁ</string>
+    <string name="ds_delete">ବିଲୋପ କରନ୍ତୁ</string>
+    <string name="ds_done">ହୋଇଗଲା</string>
+    <string name="ds_back">ପଛକୁ</string>
+    <string name="ds_undo">ପୂର୍ବବତ୍ କରନ୍ତୁ</string>
 </resources>

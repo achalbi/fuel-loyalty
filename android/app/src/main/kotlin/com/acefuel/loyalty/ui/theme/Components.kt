@@ -45,7 +45,7 @@ fun NayaraButton(
         onClick = onClick,
         enabled = enabled && !loading,
         shape = MaterialTheme.shapes.medium,
-        modifier = modifier.heightIn(min = 52.dp),
+        modifier = modifier.heightIn(min = 48.dp),
     ) {
         if (loading) {
             CircularProgressIndicator(
@@ -75,7 +75,7 @@ fun NayaraTonalButton(
             containerColor = MaterialTheme.nayara.actionSecondary,
             contentColor = MaterialTheme.nayara.actionOnSecondary,
         ),
-        modifier = modifier.heightIn(min = 52.dp),
+        modifier = modifier.heightIn(min = 48.dp),
     ) {
         content()
     }
@@ -93,7 +93,7 @@ fun NayaraOutlinedButton(
         onClick = onClick,
         enabled = enabled,
         shape = MaterialTheme.shapes.medium,
-        modifier = modifier.heightIn(min = 52.dp),
+        modifier = modifier.heightIn(min = 48.dp),
     ) {
         content()
     }
@@ -130,7 +130,7 @@ fun NayaraHeroCard(
             Box(Modifier.weight(1f).fillMaxHeight().background(NayaraPalette.Green600))
         }
         CompositionLocalProvider(LocalContentColor provides NayaraPalette.White) {
-            Column(Modifier.fillMaxWidth().padding(20.dp), content = content)
+            Column(Modifier.fillMaxWidth().padding(NayaraSpacing.Lg), content = content)
         }
     }
 }

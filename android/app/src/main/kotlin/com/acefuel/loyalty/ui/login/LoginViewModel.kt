@@ -38,4 +38,9 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
             }
         }
     }
+
+    /** Editing either field dismisses a stale failure message. */
+    fun clearError() {
+        if (_state.value is LoginUiState.Error) _state.value = LoginUiState.Idle
+    }
 }

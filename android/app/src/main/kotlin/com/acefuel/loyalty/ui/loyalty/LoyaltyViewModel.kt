@@ -8,6 +8,7 @@ import com.acefuel.loyalty.core.network.dto.LoyaltyResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 sealed interface LoyaltyUiState {
@@ -26,9 +27,12 @@ class LoyaltyViewModel(private val repository: LoyaltyRepository) : ViewModel() 
     private val _state = MutableStateFlow<LoyaltyUiState>(LoyaltyUiState.Idle)
     val state: StateFlow<LoyaltyUiState> = _state.asStateFlow()
 
+    private var lookupJob: Job? = null
+
     fun lookup(phoneNumber: String) {
+        lookupJob?.cancel() // a new lookup supersedes any in-flight one
         _state.value = LoyaltyUiState.Loading
-        viewModelScope.launch {
+        lookupJob = viewModelScope.launch {
             _state.value = when (val result = repository.lookup(phoneNumber)) {
                 is ApiResult.Success -> LoyaltyUiState.Success(result.data)
                 is ApiResult.Error -> LoyaltyUiState.Error(result.message)
@@ -46,6 +50,7 @@ class LoyaltyViewModel(private val repository: LoyaltyRepository) : ViewModel() 
     }
 
     fun reset() {
+        lookupJob?.cancel() // editing mid-lookup must drop the pending response
         _state.value = LoyaltyUiState.Idle
     }
 }

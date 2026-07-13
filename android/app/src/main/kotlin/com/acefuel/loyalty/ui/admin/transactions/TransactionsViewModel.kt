@@ -3,6 +3,7 @@ package com.acefuel.loyalty.ui.admin.transactions
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.acefuel.loyalty.core.network.ApiResult
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,12 @@ val SORT_OPTIONS = listOf(
 
 data class TransactionsUiState(
     val loading: Boolean = false,
+    /** Pull-to-refresh in progress (rows stay visible). */
+    val refreshing: Boolean = false,
+    /** Full-area failure — only set when there are no rows to keep on screen. */
     val error: String? = null,
+    /** One-shot failure with stale rows kept on screen; consumed by the snackbar. */
+    val errorMessage: String? = null,
     val transactions: List<AdminTransactionDto> = emptyList(),
     val range: String = "all",
     val sort: String = "time_desc",
@@ -51,33 +57,62 @@ class TransactionsViewModel(private val repository: TransactionsRepository) : Vi
     private val _state = MutableStateFlow(TransactionsUiState())
     val state: StateFlow<TransactionsUiState> = _state.asStateFlow()
 
+    private var loadJob: Job? = null
+
+    // Navigation state (page/range/sort/counters) matching the rows currently
+    // on screen. A failed load that keeps stale rows rolls back to this so the
+    // "Showing X–Y" caption and Prev/Next never desync from what's displayed.
+    private var lastGood: TransactionsUiState? = null
+
     init {
         load()
     }
 
-    fun load() {
-        _state.update { it.copy(loading = true, error = null) }
+    fun load() = load(asRefresh = false)
+
+    /** Pull-to-refresh: keeps rows visible; falls back to a full load when the list is empty. */
+    fun refresh() = load(asRefresh = _state.value.transactions.isNotEmpty())
+
+    private fun load(asRefresh: Boolean) {
+        loadJob?.cancel()
+        _state.update { it.copy(loading = !asRefresh, refreshing = asRefresh, error = null) }
         val s = _state.value
-        viewModelScope.launch {
+        loadJob = viewModelScope.launch {
             when (val result = repository.loadTransactions(s.range, s.sort, null, null, s.page)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         loading = false,
+                        refreshing = false,
                         error = null,
                         transactions = result.data.transactions,
                         page = result.data.page,
                         perPage = result.data.perPage,
                         total = result.data.total,
                         hasMore = result.data.hasMore,
-                    )
+                    ).also { committed -> lastGood = committed }
                 }
-                is ApiResult.Error -> _state.update { it.copy(loading = false, error = result.message) }
-                is ApiResult.NetworkError -> _state.update { it.copy(loading = false, error = NETWORK_MESSAGE) }
+                is ApiResult.Error -> fail(result.message)
+                is ApiResult.NetworkError -> fail(NETWORK_MESSAGE)
             }
         }
     }
 
-    fun refresh() = load()
+    /** Stale rows on screen -> one-shot snackbar + rollback; empty screen -> full-area error. */
+    private fun fail(message: String) = _state.update {
+        if (it.transactions.isNotEmpty()) {
+            val good = lastGood
+            val reverted = if (good != null) {
+                it.copy(page = good.page, range = good.range, sort = good.sort, perPage = good.perPage, total = good.total, hasMore = good.hasMore)
+            } else {
+                it
+            }
+            reverted.copy(loading = false, refreshing = false, errorMessage = message)
+        } else {
+            it.copy(loading = false, refreshing = false, error = message)
+        }
+    }
+
+    fun consumeErrorMessage() = _state.update { it.copy(errorMessage = null) }
 
     fun setRange(range: String) {
         if (_state.value.range == range) return

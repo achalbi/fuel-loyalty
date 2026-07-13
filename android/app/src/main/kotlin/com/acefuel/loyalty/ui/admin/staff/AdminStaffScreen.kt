@@ -1,62 +1,74 @@
 package com.acefuel.loyalty.ui.admin.staff
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
+import com.acefuel.loyalty.ui.designsystem.ActiveChip
+import com.acefuel.loyalty.ui.designsystem.Avatar
+import com.acefuel.loyalty.ui.designsystem.ConfirmDialog
+import com.acefuel.loyalty.ui.designsystem.EmptyState
+import com.acefuel.loyalty.ui.designsystem.ErrorState
+import com.acefuel.loyalty.ui.designsystem.FormField
+import com.acefuel.loyalty.ui.designsystem.InlineErrorCard
+import com.acefuel.loyalty.ui.designsystem.NayaraCard
+import com.acefuel.loyalty.ui.designsystem.NayaraPullToRefresh
+import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
+import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
+import com.acefuel.loyalty.ui.designsystem.PickerField
+import com.acefuel.loyalty.ui.designsystem.SkeletonList
+import com.acefuel.loyalty.ui.designsystem.SkeletonStatCard
+import com.acefuel.loyalty.ui.designsystem.rememberHaptics
+import com.acefuel.loyalty.ui.designsystem.showError
+import com.acefuel.loyalty.ui.designsystem.showSuccess
 import com.acefuel.loyalty.ui.theme.NayaraButton
+import com.acefuel.loyalty.ui.theme.NayaraNumerals
 import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
+import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,71 +81,82 @@ fun AdminStaffScreen(onBack: () -> Unit) {
     val vm: AdminStaffViewModel = viewModel(factory = viewModelFactory { initializer { AdminStaffViewModel(repo) } })
     val state by vm.state.collectAsStateWithLifecycle()
 
+    val snackbar = remember { SnackbarHostState() }
+    val haptics = rememberHaptics()
     var pendingDelete by remember { mutableStateOf<StaffMemberDto?>(null) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    LaunchedEffect(state.notice) {
+        state.notice?.let {
+            haptics.confirm()
+            snackbar.showSuccess(it)
+            vm.dismissNotice()
+        }
+    }
+    LaunchedEffect(state.actionError) {
+        state.actionError?.let {
+            haptics.reject()
+            snackbar.showError(it)
+            vm.dismissActionError()
+        }
+    }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Staff") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
-        },
+        topBar = { NayaraTopBar(title = "Staff", onBack = onBack) },
+        snackbarHost = { NayaraSnackbarHost(snackbar) },
     ) { innerPadding ->
         when {
             state.loading && state.staff.isEmpty() && state.error == null ->
+                StaffSkeleton(Modifier.fillMaxSize().padding(innerPadding))
+
+            state.error != null && state.staff.isEmpty() ->
                 Box(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentAlignment = Alignment.Center,
-                ) { CircularProgressIndicator() }
+                ) { ErrorState(message = state.error!!, onRetry = vm::load) }
 
-            else -> LazyColumn(
+            else -> NayaraPullToRefresh(
+                isRefreshing = state.refreshing,
+                onRefresh = vm::refresh,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                item(key = "stats") { StatsRow(state.stats) }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = NayaraSpacing.ScreenMargin,
+                        end = NayaraSpacing.ScreenMargin,
+                        top = NayaraSpacing.ScreenMargin,
+                        bottom = NayaraSpacing.Xxl,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+                ) {
+                    item(key = "stats") { StatsRow(state.stats) }
 
-                state.notice?.let { msg ->
-                    item(key = "notice") { NoticeCard(msg, onDismiss = { vm.dismissNotice() }) }
-                }
-                state.actionError?.let { msg ->
-                    item(key = "action-error") { ErrorCard(msg, onDismiss = { vm.dismissActionError() }) }
-                }
+                    item(key = "list-header") {
+                        Text(
+                            "Staff Members",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.nayara.textSecondary,
+                        )
+                    }
 
-                item(key = "list-header") {
-                    Text(
-                        "Staff Members",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-
-                when {
-                    state.error != null && state.staff.isEmpty() ->
-                        item(key = "load-error") { ErrorCard(state.error!!, onDismiss = null) }
-
-                    state.staff.isEmpty() ->
+                    if (state.staff.isEmpty()) {
                         item(key = "empty") {
-                            Text(
-                                "No staff accounts available yet.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.nayara.textSecondary,
+                            EmptyState(
+                                title = "No staff yet",
+                                message = "Staff accounts appear here once they're created under Users.",
                             )
                         }
-
-                    else -> items(state.staff, key = { "staff-${it.id}" }) { staff ->
-                        StaffCard(
-                            staff = staff,
-                            deleting = state.deletingStaffId == staff.id,
-                            onEdit = { vm.openEditProfile(staff) },
-                            onAssign = { vm.openAssignShift(staff) },
-                            onDelete = { pendingDelete = staff },
-                        )
+                    } else {
+                        items(state.staff, key = { "staff-${it.id}" }) { staff ->
+                            StaffCard(
+                                staff = staff,
+                                busy = state.deletingStaffId == staff.id,
+                                onEdit = { vm.openEditProfile(staff) },
+                                onAssign = { vm.openAssignShift(staff) },
+                                onDelete = { pendingDelete = staff },
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
                     }
                 }
             }
@@ -141,39 +164,97 @@ fun AdminStaffScreen(onBack: () -> Unit) {
     }
 
     pendingDelete?.let { staff ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text("Remove ${staff.name ?: "this staff member"}?") },
-            text = {
-                Text(
-                    "Soft-deleting keeps their historical records but removes them from the staff list. " +
-                        "Deactivate the account first if they can still sign in.",
-                )
+        ConfirmDialog(
+            title = "Remove ${staff.name ?: "this staff member"}?",
+            text = "Soft-deleting keeps their historical records but removes them from the staff list. " +
+                "Deactivate the account first if they can still sign in.",
+            confirmLabel = "Remove",
+            destructive = true,
+            onConfirm = {
+                vm.softDelete(staff.id)
+                pendingDelete = null
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    vm.softDelete(staff.id)
-                    pendingDelete = null
-                }) { Text("Remove", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
-            },
+            onDismiss = { pendingDelete = null },
         )
     }
 
     val editor = state.profileEditor
     if (editor != null) {
-        ModalBottomSheet(onDismissRequest = { vm.closeEditProfile() }, sheetState = sheetState) {
-            ProfileEditorSheet(editor = editor, vm = vm)
+        // Snapshot the just-opened editor so we can tell "dirty" from "untouched".
+        val initial = remember(editor.staffId) { editor }
+        val dirty = editor.name != initial.name ||
+            editor.employeeCode != initial.employeeCode ||
+            editor.subtitle != initial.subtitle ||
+            editor.active != initial.active
+        GuardedSheet(dirty = dirty, onClose = vm::closeEditProfile) { requestClose ->
+            ProfileEditorSheet(editor = editor, vm = vm, onCancel = requestClose)
         }
     }
 
     val assigner = state.shiftAssigner
     if (assigner != null) {
-        ModalBottomSheet(onDismissRequest = { vm.closeAssignShift() }, sheetState = sheetState) {
-            ShiftAssignerSheet(assigner = assigner, templates = state.shiftTemplates, vm = vm)
+        val initial = remember(assigner.staffId) { assigner }
+        val dirty = assigner.selectedTemplateId != initial.selectedTemplateId ||
+            assigner.notes != initial.notes
+        GuardedSheet(dirty = dirty, onClose = vm::closeAssignShift) { requestClose ->
+            ShiftAssignerSheet(
+                assigner = assigner,
+                templates = state.shiftTemplates,
+                vm = vm,
+                onCancel = requestClose,
+            )
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Dismiss-guarded bottom sheet
+// ---------------------------------------------------------------------------
+
+/**
+ * ModalBottomSheet that blocks swipe/scrim dismissal while [dirty] and asks
+ * for confirmation instead, so half-filled forms aren't lost by accident.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GuardedSheet(
+    dirty: Boolean,
+    onClose: () -> Unit,
+    content: @Composable ColumnScope.(requestClose: () -> Unit) -> Unit,
+) {
+    val dirtyState = rememberUpdatedState(dirty)
+    var confirmDiscard by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { value ->
+            if (value == SheetValue.Hidden && dirtyState.value) {
+                confirmDiscard = true
+                false
+            } else {
+                true
+            }
+        },
+    )
+    // Route onDismissRequest through the dirty check too: the system back
+    // gesture calls it directly, bypassing confirmValueChange.
+    ModalBottomSheet(
+        onDismissRequest = { if (dirtyState.value) confirmDiscard = true else onClose() },
+        sheetState = sheetState,
+    ) {
+        content { if (dirtyState.value) confirmDiscard = true else onClose() }
+    }
+    if (confirmDiscard) {
+        ConfirmDialog(
+            title = "Discard changes?",
+            text = "You have unsaved changes. Close without saving?",
+            confirmLabel = "Discard",
+            destructive = true,
+            onConfirm = {
+                confirmDiscard = false
+                onClose()
+            },
+            onDismiss = { confirmDiscard = false },
+        )
     }
 }
 
@@ -195,18 +276,30 @@ private fun StatsRow(stats: StaffStatsDto) {
 
 @Composable
 private fun StatCard(modifier: Modifier, value: Int, label: String, valueColor: androidx.compose.ui.graphics.Color) {
-    Card(modifier = modifier) {
+    NayaraCard(modifier = modifier) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("$value", style = MaterialTheme.typography.headlineMedium, color = valueColor)
+            Text("$value", style = NayaraNumerals.Large, color = valueColor)
             Text(
                 label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.nayara.textSecondary,
             )
         }
+    }
+}
+
+@Composable
+private fun StaffSkeleton(modifier: Modifier = Modifier) {
+    Column(modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SkeletonStatCard(Modifier.weight(1f))
+            SkeletonStatCard(Modifier.weight(1f))
+            SkeletonStatCard(Modifier.weight(1f))
+        }
+        SkeletonList(count = 6)
     }
 }
 
@@ -217,19 +310,20 @@ private fun StatCard(modifier: Modifier, value: Int, label: String, valueColor: 
 @Composable
 private fun StaffCard(
     staff: StaffMemberDto,
-    deleting: Boolean,
+    busy: Boolean,
     onEdit: () -> Unit,
     onAssign: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    NayaraCard(modifier = modifier.fillMaxWidth()) {
+        Column(Modifier.padding(NayaraSpacing.Lg), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Avatar(staff.avatarInitial ?: staff.name?.firstOrNull()?.uppercase() ?: "?")
+                Avatar(name = staff.name, size = 42.dp)
                 Column(Modifier.weight(1f)) {
                     Text(
                         staff.name ?: "Staff member",
@@ -241,7 +335,7 @@ private fun StaffCard(
                         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.nayara.textSecondary)
                     }
                 }
-                StatusPill(staff.active)
+                ActiveChip(staff.active)
             }
 
             AssignedShiftBlock(staff)
@@ -261,49 +355,17 @@ private fun StaffCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                TextButton(onClick = onEdit) { Text("Edit profile") }
-                TextButton(onClick = onAssign) { Text("Assign Shift") }
+                TextButton(onClick = onEdit, enabled = !busy) { Text("Edit profile") }
+                TextButton(onClick = onAssign, enabled = !busy) { Text("Assign Shift") }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = onDelete, enabled = !deleting) {
+                TextButton(onClick = onDelete, enabled = !busy) {
                     Text(
-                        if (deleting) "Removing…" else "Delete",
-                        color = if (deleting) MaterialTheme.nayara.textTertiary else MaterialTheme.colorScheme.error,
+                        if (busy) "Removing…" else "Delete",
+                        color = if (busy) MaterialTheme.nayara.textTertiary else MaterialTheme.colorScheme.error,
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun Avatar(initial: String) {
-    Box(
-        modifier = Modifier
-            .size(42.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.nayara.actionPrimaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            initial,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.nayara.actionOnPrimaryContainer,
-        )
-    }
-}
-
-@Composable
-private fun StatusPill(active: Boolean) {
-    val container = if (active) MaterialTheme.nayara.statusSuccessContainer else MaterialTheme.nayara.bgSurfaceSunken
-    val content = if (active) MaterialTheme.nayara.statusOnSuccessContainer else MaterialTheme.nayara.textSecondary
-    Surface(color = container, shape = MaterialTheme.shapes.small) {
-        Text(
-            if (active) "Active" else "Inactive",
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = content,
-        )
     }
 }
 
@@ -342,39 +404,41 @@ private fun AssignedShiftBlock(staff: StaffMemberDto) {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun ProfileEditorSheet(editor: StaffProfileEditorState, vm: AdminStaffViewModel) {
+private fun ProfileEditorSheet(
+    editor: StaffProfileEditorState,
+    vm: AdminStaffViewModel,
+    onCancel: () -> Unit,
+) {
+    val haptics = rememberHaptics()
     val scroll = rememberScrollState()
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(scroll)
+            .imePadding()
+            .navigationBarsPadding()
             .padding(horizontal = 20.dp)
             .padding(bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text("Edit ${editor.staffLabel}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
-        OutlinedTextField(
+        FormField(
             value = editor.name,
             onValueChange = vm::editorSetName,
-            label = { Text("Name") },
-            singleLine = true,
-            isError = editor.name.isBlank(),
-            modifier = Modifier.fillMaxWidth(),
+            label = "Name",
+            errors = editor.nameError?.let(::listOf),
         )
-        OutlinedTextField(
+        FormField(
             value = editor.employeeCode,
             onValueChange = vm::editorSetEmployeeCode,
-            label = { Text("Employee Code (Optional)") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            label = "Employee Code (Optional)",
         )
-        OutlinedTextField(
+        FormField(
             value = editor.subtitle,
             onValueChange = vm::editorSetSubtitle,
-            label = { Text("Subtitle (Optional)") },
-            supportingText = { Text("${editor.subtitle.length}/120") },
-            modifier = Modifier.fillMaxWidth(),
+            label = "Subtitle (Optional)",
+            helper = "${editor.subtitle.length}/120",
         )
 
         Row(
@@ -390,16 +454,20 @@ private fun ProfileEditorSheet(editor: StaffProfileEditorState, vm: AdminStaffVi
                     color = MaterialTheme.nayara.textSecondary,
                 )
             }
-            Switch(checked = editor.active, onCheckedChange = { vm.editorSetActive(it) })
+            Switch(
+                checked = editor.active,
+                onCheckedChange = {
+                    haptics.tick()
+                    vm.editorSetActive(it)
+                },
+            )
         }
 
-        editor.error?.let {
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-        }
+        editor.error?.let { InlineErrorCard(it) }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             NayaraOutlinedButton(
-                onClick = { vm.closeEditProfile() },
+                onClick = onCancel,
                 enabled = !editor.saving,
                 modifier = Modifier.weight(1f),
             ) { Text("Cancel") }
@@ -422,12 +490,15 @@ private fun ShiftAssignerSheet(
     assigner: ShiftAssignerState,
     templates: List<ShiftTemplateDto>,
     vm: AdminStaffViewModel,
+    onCancel: () -> Unit,
 ) {
     val scroll = rememberScrollState()
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(scroll)
+            .imePadding()
+            .navigationBarsPadding()
             .padding(horizontal = 20.dp)
             .padding(bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -440,37 +511,31 @@ private fun ShiftAssignerSheet(
         )
 
         if (templates.isEmpty()) {
-            Text("No shifts yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(
-                "Create a shift template under Shifts first, then assign it here.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.nayara.textSecondary,
+            EmptyState(
+                title = "No shifts yet",
+                message = "Create a shift template under Shifts first, then assign it here.",
             )
             NayaraOutlinedButton(
-                onClick = { vm.closeAssignShift() },
+                onClick = onCancel,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Close") }
         } else {
-            Text("Shift", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.nayara.textSecondary)
             ShiftDropdown(
                 templates = templates,
                 selectedId = assigner.selectedTemplateId,
                 onSelect = { vm.assignerSelectTemplate(it) },
             )
-            OutlinedTextField(
+            FormField(
                 value = assigner.notes,
                 onValueChange = vm::assignerSetNotes,
-                label = { Text("Assignment Notes (Optional)") },
-                modifier = Modifier.fillMaxWidth(),
+                label = "Assignment Notes (Optional)",
             )
 
-            assigner.error?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-            }
+            assigner.error?.let { InlineErrorCard(it) }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 NayaraOutlinedButton(
-                    onClick = { vm.closeAssignShift() },
+                    onClick = onCancel,
                     enabled = !assigner.saving,
                     modifier = Modifier.weight(1f),
                 ) { Text("Cancel") }
@@ -491,82 +556,36 @@ private fun ShiftDropdown(
     selectedId: Long?,
     onSelect: (Long) -> Unit,
 ) {
+    val haptics = rememberHaptics()
     var expanded by remember { mutableStateOf(false) }
+    var fieldWidthPx by remember { mutableStateOf(0) }
+    val fieldWidth = with(LocalDensity.current) { fieldWidthPx.toDp() }
     val selected = templates.firstOrNull { it.id == selectedId }
-    val label = selected?.let { templateLabel(it) } ?: "Choose the shift this staff member should load under"
-    Box(Modifier.fillMaxWidth()) {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                label,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Start,
-                color = if (selected == null) MaterialTheme.nayara.textTertiary else MaterialTheme.nayara.textPrimary,
-            )
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { fieldWidthPx = it.size.width },
+    ) {
+        PickerField(
+            label = "Shift",
+            value = selected?.let { templateLabel(it) } ?: "Choose a shift",
+            onClick = { expanded = true },
+        )
+        // Anchor the menu to the field's full width so long labels don't clip.
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.width(fieldWidth),
+        ) {
             templates.forEach { template ->
                 DropdownMenuItem(
                     text = { Text(templateLabel(template)) },
                     onClick = {
+                        haptics.tick()
                         onSelect(template.id)
                         expanded = false
                     },
                 )
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Notice / error cards
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun NoticeCard(message: String, onDismiss: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.nayara.statusSuccessContainer),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 14.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.nayara.statusOnSuccessContainer,
-                modifier = Modifier.weight(1f).padding(vertical = 8.dp),
-            )
-            TextButton(onClick = onDismiss) {
-                Text("Dismiss", color = MaterialTheme.nayara.statusOnSuccessContainer)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ErrorCard(message: String, onDismiss: (() -> Unit)?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 14.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.weight(1f).padding(vertical = 8.dp),
-            )
-            if (onDismiss != null) {
-                TextButton(onClick = onDismiss) {
-                    Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
-                }
             }
         }
     }

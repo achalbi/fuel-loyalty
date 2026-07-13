@@ -1,7 +1,8 @@
 package com.acefuel.loyalty.ui.admin.transactions
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,13 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,18 +26,21 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,7 +48,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
+import com.acefuel.loyalty.ui.designsystem.EmptyState
+import com.acefuel.loyalty.ui.designsystem.ErrorState
+import com.acefuel.loyalty.ui.designsystem.NayaraCard
+import com.acefuel.loyalty.ui.designsystem.NayaraPullToRefresh
+import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
+import com.acefuel.loyalty.ui.designsystem.PickerField
+import com.acefuel.loyalty.ui.designsystem.SkeletonList
+import com.acefuel.loyalty.ui.designsystem.rememberHaptics
+import com.acefuel.loyalty.ui.designsystem.showError
+import com.acefuel.loyalty.ui.theme.NayaraMotion
+import com.acefuel.loyalty.ui.theme.NayaraNumerals
 import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
+import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -61,6 +74,23 @@ fun AdminTransactionsScreen(onBack: () -> Unit) {
     }
     val vm: TransactionsViewModel = viewModel(factory = viewModelFactory { initializer { TransactionsViewModel(repo) } })
     val state by vm.state.collectAsStateWithLifecycle()
+    val haptics = rememberHaptics()
+    val snackbar = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+
+    // Failure with stale rows kept on screen -> one-shot error snackbar.
+    LaunchedEffect(state.errorMessage) {
+        state.errorMessage?.let {
+            haptics.reject()
+            snackbar.showError(it)
+            vm.consumeErrorMessage()
+        }
+    }
+
+    // Page change jumps back to the top of the new page.
+    LaunchedEffect(state.page) {
+        listState.animateScrollToItem(0)
+    }
 
     Scaffold(
         topBar = {
@@ -73,40 +103,57 @@ fun AdminTransactionsScreen(onBack: () -> Unit) {
                 },
             )
         },
+        snackbarHost = { NayaraSnackbarHost(snackbar) },
     ) { innerPadding ->
-        Box(Modifier.fillMaxSize().padding(innerPadding)) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(vertical = 12.dp),
+        Column(Modifier.fillMaxSize().padding(innerPadding)) {
+            // Paging / re-filter with rows still on screen.
+            if (state.loading && state.transactions.isNotEmpty()) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+            NayaraPullToRefresh(
+                isRefreshing = state.refreshing,
+                onRefresh = vm::refresh,
+                modifier = Modifier.weight(1f),
             ) {
-                item(key = "filters") { FilterSection(state, vm) }
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().padding(horizontal = NayaraSpacing.ScreenMargin),
+                    verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+                    contentPadding = PaddingValues(top = NayaraSpacing.Md, bottom = NayaraSpacing.Xxl),
+                ) {
+                    item(key = "filters") { FilterSection(state, vm) }
 
-                when {
-                    state.loading && state.transactions.isEmpty() ->
-                        item(key = "loading") { CenteredSpinner() }
-                    state.error != null ->
-                        item(key = "error") { ErrorCard(state.error) }
-                    state.transactions.isEmpty() ->
-                        item(key = "empty") {
-                            EmptyCard(
-                                title = "No transactions found",
-                                body = if (state.range == "today") {
-                                    "No fuel transactions have been recorded today. Switch to All to see earlier activity."
-                                } else {
-                                    "No fuel transactions have been recorded yet."
-                                },
-                            )
+                    when {
+                        state.loading && state.transactions.isEmpty() ->
+                            item(key = "skeleton") { SkeletonList(count = 8, showAvatar = false) }
+                        state.error != null && state.transactions.isEmpty() ->
+                            item(key = "error") {
+                                ErrorState(state.error ?: "Something went wrong.", onRetry = vm::load)
+                            }
+                        state.transactions.isEmpty() ->
+                            item(key = "empty") {
+                                EmptyState(
+                                    title = "No transactions found",
+                                    message = if (state.range == "today") {
+                                        "No fuel transactions have been recorded today."
+                                    } else {
+                                        "No fuel transactions have been recorded yet."
+                                    },
+                                    actionLabel = if (state.range != "all") "Show all" else null,
+                                    onAction = if (state.range != "all") ({ vm.setRange("all") }) else null,
+                                )
+                            }
+                        else -> {
+                            items(state.transactions, key = { "txn-${it.id}" }) { txn ->
+                                TransactionCard(
+                                    txn = txn,
+                                    expanded = state.expandedId == txn.id,
+                                    onClick = { vm.toggleExpanded(txn.id) },
+                                    modifier = Modifier.animateItem(),
+                                )
+                            }
+                            item(key = "pagination") { PaginationRow(state, vm) }
                         }
-                    else -> {
-                        items(state.transactions, key = { "txn-${it.id}" }) { txn ->
-                            TransactionCard(
-                                txn = txn,
-                                expanded = state.expandedId == txn.id,
-                                onClick = { vm.toggleExpanded(txn.id) },
-                            )
-                        }
-                        item(key = "pagination") { PaginationRow(state, vm) }
                     }
                 }
             }
@@ -120,13 +167,17 @@ fun AdminTransactionsScreen(onBack: () -> Unit) {
 
 @Composable
 private fun FilterSection(state: TransactionsUiState, vm: TransactionsViewModel) {
+    val haptics = rememberHaptics()
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Range", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.nayara.textSecondary)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RANGE_OPTIONS.forEach { (value, label) ->
                 FilterChip(
                     selected = state.range == value,
-                    onClick = { vm.setRange(value) },
+                    onClick = {
+                        haptics.tick()
+                        vm.setRange(value)
+                    },
                     label = { Text(label) },
                 )
             }
@@ -134,7 +185,10 @@ private fun FilterSection(state: TransactionsUiState, vm: TransactionsViewModel)
         Text("Sort", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.nayara.textSecondary)
         SortDropdown(
             selectedLabel = state.sortLabel,
-            onSelect = { vm.setSort(it) },
+            onSelect = {
+                haptics.tick()
+                vm.setSort(it)
+            },
         )
     }
 }
@@ -144,28 +198,17 @@ private fun FilterSection(state: TransactionsUiState, vm: TransactionsViewModel)
 private fun SortDropdown(selectedLabel: String, onSelect: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxWidth()) {
-        PickerField(label = "Sort by", value = selectedLabel, modifier = Modifier.fillMaxWidth()) { expanded = true }
+        PickerField(
+            label = "Sort by",
+            value = selectedLabel,
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+        )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             SORT_OPTIONS.forEach { (value, text) ->
                 DropdownMenuItem(text = { Text(text) }, onClick = { onSelect(value); expanded = false })
             }
         }
-    }
-}
-
-/** Read-only text field that behaves as a button (a transparent overlay captures taps). */
-@Composable
-private fun PickerField(label: String, value: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(modifier) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            label = { Text(label) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Box(Modifier.matchParentSize().clickable(onClick = onClick))
     }
 }
 
@@ -175,9 +218,14 @@ private fun PickerField(label: String, value: String, modifier: Modifier = Modif
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TransactionCard(txn: AdminTransactionDto, expanded: Boolean, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
-        Column(Modifier.padding(16.dp)) {
+private fun TransactionCard(
+    txn: AdminTransactionDto,
+    expanded: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    NayaraCard(onClick = onClick, modifier = modifier.fillMaxWidth()) {
+        Column(Modifier.padding(NayaraSpacing.Lg)) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -198,8 +246,8 @@ private fun TransactionCard(txn: AdminTransactionDto, expanded: Boolean, onClick
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         formatAmount(txn.fuelAmount),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = NayaraNumerals.Default,
+                        color = MaterialTheme.nayara.textPrimary,
                     )
                     Text(
                         paymentModeLabel(txn.paymentMode),
@@ -220,10 +268,16 @@ private fun TransactionCard(txn: AdminTransactionDto, expanded: Boolean, onClick
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.nayara.textTertiary,
                 )
+                val chevronRotation by animateFloatAsState(
+                    targetValue = if (expanded) 180f else 0f,
+                    animationSpec = tween(NayaraMotion.Base, easing = NayaraMotion.Standard),
+                    label = "chevron",
+                )
                 Icon(
-                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    imageVector = Icons.Filled.KeyboardArrowDown,
                     contentDescription = if (expanded) "Collapse" else "Expand",
                     tint = MaterialTheme.nayara.textTertiary,
+                    modifier = Modifier.rotate(chevronRotation),
                 )
             }
 
@@ -287,38 +341,6 @@ private fun PaginationRow(state: TransactionsUiState, vm: TransactionsViewModel)
             NayaraOutlinedButton(onClick = { vm.prevPage() }, enabled = state.canPrev && !state.loading) { Text("Previous") }
             Text("Page ${state.page}", style = MaterialTheme.typography.labelMedium)
             NayaraOutlinedButton(onClick = { vm.nextPage() }, enabled = state.canNext && !state.loading) { Text("Next") }
-        }
-    }
-}
-
-// ============================================================================
-// Shared building blocks
-// ============================================================================
-
-@Composable
-private fun CenteredSpinner() {
-    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-}
-
-@Composable
-private fun ErrorCard(message: String?, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        ),
-    ) {
-        Text(message ?: "Something went wrong.", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-@Composable
-private fun EmptyCard(title: String, body: String) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.nayara.textSecondary)
         }
     }
 }

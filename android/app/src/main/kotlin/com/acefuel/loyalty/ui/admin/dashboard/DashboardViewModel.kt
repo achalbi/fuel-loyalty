@@ -12,6 +12,8 @@ import kotlinx.coroutines.launch
 
 data class DashboardUiState(
     val loading: Boolean = false,
+    /** Pull-to-refresh in progress (content stays visible). */
+    val refreshing: Boolean = false,
     val data: DashboardResponse? = null,
     val error: String? = null,
     /** null = the API's default rolling 30-day range. */
@@ -51,12 +53,13 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
         load()
     }
 
-    fun refresh() = load()
+    /** Pull-to-refresh: keeps content visible; falls back to a full load when there's nothing shown yet. */
+    fun refresh() = load(asRefresh = _state.value.data != null)
 
-    private fun load() {
+    private fun load(asRefresh: Boolean = false) {
         val current = _state.value
         loadJob?.cancel()
-        _state.update { it.copy(loading = true, error = null) }
+        _state.update { it.copy(loading = !asRefresh, refreshing = asRefresh, error = null) }
         loadJob = viewModelScope.launch {
             val result = repository.loadDashboard(
                 preset = current.preset,
@@ -65,11 +68,11 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
             )
             when (result) {
                 is ApiResult.Success ->
-                    _state.update { it.copy(loading = false, data = result.data, error = null) }
+                    _state.update { it.copy(loading = false, refreshing = false, data = result.data, error = null) }
                 is ApiResult.Error ->
-                    _state.update { it.copy(loading = false, error = result.message) }
+                    _state.update { it.copy(loading = false, refreshing = false, error = result.message) }
                 is ApiResult.NetworkError ->
-                    _state.update { it.copy(loading = false, error = "Couldn't reach the server. Try again.") }
+                    _state.update { it.copy(loading = false, refreshing = false, error = "Couldn't reach the server. Try again.") }
             }
         }
     }

@@ -5,6 +5,7 @@ package com.acefuel.loyalty.ui.admin.users
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,41 +20,61 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
+import com.acefuel.loyalty.ui.designsystem.ActiveChip
+import com.acefuel.loyalty.ui.designsystem.Avatar
+import com.acefuel.loyalty.ui.designsystem.ChipTone
+import com.acefuel.loyalty.ui.designsystem.ConfirmDialog
+import com.acefuel.loyalty.ui.designsystem.EmptyState
+import com.acefuel.loyalty.ui.designsystem.ErrorState
+import com.acefuel.loyalty.ui.designsystem.FormField
+import com.acefuel.loyalty.ui.designsystem.InlineErrorCard
+import com.acefuel.loyalty.ui.designsystem.NayaraCard
+import com.acefuel.loyalty.ui.designsystem.NayaraPullToRefresh
+import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
+import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
+import com.acefuel.loyalty.ui.designsystem.PasswordField
+import com.acefuel.loyalty.ui.designsystem.SearchField
+import com.acefuel.loyalty.ui.designsystem.SkeletonCard
+import com.acefuel.loyalty.ui.designsystem.SkeletonList
+import com.acefuel.loyalty.ui.designsystem.StatusChip
+import com.acefuel.loyalty.ui.designsystem.rememberHaptics
+import com.acefuel.loyalty.ui.designsystem.showError
+import com.acefuel.loyalty.ui.designsystem.showSuccess
 import com.acefuel.loyalty.ui.theme.NayaraButton
 import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
+import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
 
 @Composable
@@ -65,19 +86,27 @@ fun AdminUsersScreen(onBack: () -> Unit) {
     val vm: UsersViewModel = viewModel(factory = viewModelFactory { initializer { UsersViewModel(repo) } })
     val state by vm.state.collectAsStateWithLifecycle()
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val snackbar = remember { SnackbarHostState() }
+    val haptics = rememberHaptics()
+
+    LaunchedEffect(state.successMessage) {
+        state.successMessage?.let {
+            haptics.confirm()
+            snackbar.showSuccess(it)
+            vm.consumeSuccessMessage()
+        }
+    }
+    LaunchedEffect(state.actionError) {
+        state.actionError?.let {
+            haptics.reject()
+            snackbar.showError(it)
+            vm.consumeActionError()
+        }
+    }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Users") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
-        },
+        topBar = { NayaraTopBar(title = "Users", onBack = onBack) },
+        snackbarHost = { NayaraSnackbarHost(snackbar) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 text = { Text("Add User") },
@@ -86,49 +115,65 @@ fun AdminUsersScreen(onBack: () -> Unit) {
             )
         },
     ) { innerPadding ->
-        when {
-            state.loading && state.users.isEmpty() && state.error == null ->
-                Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+        Column(Modifier.fillMaxSize().padding(innerPadding)) {
+            // Pinned above the list so it stays reachable while scrolling.
+            SearchField(
+                value = state.query,
+                onValueChange = vm::onQueryChange,
+                placeholder = "Search by name, username, phone or email",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
 
-            else -> {
-                val users = state.filteredUsers
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    item(key = "search") {
-                        OutlinedTextField(
-                            value = state.query,
-                            onValueChange = vm::onQueryChange,
-                            label = { Text("Search by name, username, phone or email") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+            when {
+                state.loading && state.users.isEmpty() && state.error == null ->
+                    SkeletonList(Modifier.padding(horizontal = 16.dp), count = 8)
+
+                state.error != null && state.users.isEmpty() ->
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        ErrorState(message = state.error!!, onRetry = vm::load)
                     }
 
-                    state.error?.let { message ->
-                        item(key = "load-error") { ErrorCard(message) }
-                    }
+                else -> {
+                    val users = state.filteredUsers
+                    NayaraPullToRefresh(
+                        isRefreshing = state.refreshing,
+                        onRefresh = vm::refresh,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 112.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            when {
+                                users.isEmpty() && state.query.isBlank() ->
+                                    item(key = "empty") {
+                                        EmptyState(
+                                            title = "No users yet",
+                                            message = "Users can sign in to the staff and admin apps.",
+                                            icon = Icons.Filled.PersonAdd,
+                                            actionLabel = "Add your first user",
+                                            onAction = vm::openCreate,
+                                        )
+                                    }
 
-                    when {
-                        users.isEmpty() && state.error == null ->
-                            item(key = "empty") {
-                                Text(
-                                    if (state.query.isBlank()) {
-                                        "No users available yet."
-                                    } else {
-                                        "No users matched that search."
-                                    },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.nayara.textSecondary,
-                                )
+                                users.isEmpty() ->
+                                    item(key = "no-match") {
+                                        EmptyState(
+                                            title = "No matches",
+                                            message = "No users matched that search.",
+                                            icon = Icons.Filled.SearchOff,
+                                        )
+                                    }
+
+                                else -> items(users, key = { "u-${it.id}" }) { user ->
+                                    UserRow(
+                                        user = user,
+                                        onEdit = { vm.openEdit(user) },
+                                        modifier = Modifier.animateItem(),
+                                    )
+                                }
                             }
-
-                        else -> items(users, key = { "u-${it.id}" }) { user ->
-                            UserRow(user = user, onEdit = { vm.openEdit(user) })
                         }
                     }
                 }
@@ -137,9 +182,62 @@ fun AdminUsersScreen(onBack: () -> Unit) {
     }
 
     if (state.sheetOpen) {
-        ModalBottomSheet(onDismissRequest = { vm.closeSheet() }, sheetState = sheetState) {
-            UserFormSheet(state = state, vm = vm)
+        // Snapshot the prefill (re-captured when the GET :id refresh lands) to detect edits.
+        val initialForm = remember(state.editingId, state.formLoading) { state.form }
+        val dirty = !state.formLoading && state.form != initialForm
+        GuardedSheet(dirty = dirty, onClose = vm::closeSheet) { requestClose ->
+            UserFormSheet(state = state, vm = vm, onCancel = requestClose)
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Dismiss-guarded bottom sheet
+// ---------------------------------------------------------------------------
+
+/**
+ * ModalBottomSheet that blocks swipe/scrim dismissal while [dirty] and asks
+ * for confirmation instead, so half-filled forms aren't lost by accident.
+ */
+@Composable
+private fun GuardedSheet(
+    dirty: Boolean,
+    onClose: () -> Unit,
+    content: @Composable ColumnScope.(requestClose: () -> Unit) -> Unit,
+) {
+    val dirtyState = rememberUpdatedState(dirty)
+    var confirmDiscard by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { value ->
+            if (value == SheetValue.Hidden && dirtyState.value) {
+                confirmDiscard = true
+                false
+            } else {
+                true
+            }
+        },
+    )
+    // Route onDismissRequest through the dirty check too: the system back
+    // gesture calls it directly, bypassing confirmValueChange.
+    ModalBottomSheet(
+        onDismissRequest = { if (dirtyState.value) confirmDiscard = true else onClose() },
+        sheetState = sheetState,
+    ) {
+        content { if (dirtyState.value) confirmDiscard = true else onClose() }
+    }
+    if (confirmDiscard) {
+        ConfirmDialog(
+            title = "Discard changes?",
+            text = "You have unsaved changes. Close without saving?",
+            confirmLabel = "Discard",
+            destructive = true,
+            onConfirm = {
+                confirmDiscard = false
+                onClose()
+            },
+            onDismiss = { confirmDiscard = false },
+        )
     }
 }
 
@@ -148,34 +246,39 @@ fun AdminUsersScreen(onBack: () -> Unit) {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun UserRow(user: AdminUserDto, onEdit: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), onClick = onEdit) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+private fun UserRow(user: AdminUserDto, onEdit: () -> Unit, modifier: Modifier = Modifier) {
+    NayaraCard(onClick = onEdit, modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(NayaraSpacing.Lg),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+        ) {
+            Avatar(name = user.name ?: user.username)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     user.name ?: user.username ?: "User",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    RoleBadge(user.role)
-                    StatusPill(user.active)
-                }
+                Text(
+                    user.phoneNumber?.takeIf { it.isNotBlank() }?.let { "+91 $it" } ?: "Mobile not set",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.nayara.textSecondary,
+                )
+                Text(
+                    user.email?.takeIf { it.isNotBlank() } ?: "Email not set",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.nayara.textTertiary,
+                )
             }
-            Text(
-                user.phoneNumber?.takeIf { it.isNotBlank() }?.let { "+91 $it" } ?: "Mobile not set",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.nayara.textSecondary,
-            )
-            Text(
-                user.email?.takeIf { it.isNotBlank() } ?: "Email not set",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.nayara.textTertiary,
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                RoleBadge(user.role)
+                ActiveChip(user.active)
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.nayara.textTertiary,
             )
         }
     }
@@ -184,30 +287,11 @@ private fun UserRow(user: AdminUserDto, onEdit: () -> Unit) {
 @Composable
 private fun RoleBadge(role: String) {
     val isAdmin = role.equals("admin", ignoreCase = true)
-    val container = if (isAdmin) MaterialTheme.nayara.statusInfoContainer else MaterialTheme.nayara.bgSurfaceSunken
-    val content = if (isAdmin) MaterialTheme.nayara.statusOnInfoContainer else MaterialTheme.nayara.textSecondary
-    Surface(color = container, shape = MaterialTheme.shapes.small) {
-        Text(
-            if (isAdmin) "Admin" else "Staff",
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = content,
-        )
-    }
-}
-
-@Composable
-private fun StatusPill(active: Boolean) {
-    val container = if (active) MaterialTheme.nayara.statusSuccessContainer else MaterialTheme.nayara.bgSurfaceSunken
-    val content = if (active) MaterialTheme.nayara.statusOnSuccessContainer else MaterialTheme.nayara.textSecondary
-    Surface(color = container, shape = MaterialTheme.shapes.small) {
-        Text(
-            if (active) "Active" else "Inactive",
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = content,
-        )
-    }
+    StatusChip(
+        label = if (isAdmin) "Admin" else "Staff",
+        tone = if (isAdmin) ChipTone.Info else ChipTone.Neutral,
+        showDot = false,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -215,7 +299,8 @@ private fun StatusPill(active: Boolean) {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun UserFormSheet(state: AdminUsersUiState, vm: UsersViewModel) {
+private fun UserFormSheet(state: AdminUsersUiState, vm: UsersViewModel, onCancel: () -> Unit) {
+    val haptics = rememberHaptics()
     val scroll = rememberScrollState()
     Column(
         modifier = Modifier
@@ -234,16 +319,14 @@ private fun UserFormSheet(state: AdminUsersUiState, vm: UsersViewModel) {
         )
 
         if (state.formLoading) {
-            Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
+            SkeletonCard(lines = 5)
             return@Column
         }
 
         val form = state.form
         val errors = state.fieldErrors
 
-        state.formError?.let { ErrorCard(it) }
+        state.formError?.let { InlineErrorCard(it) }
 
         FormField(
             value = form.name,
@@ -280,12 +363,18 @@ private fun UserFormSheet(state: AdminUsersUiState, vm: UsersViewModel) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = form.role == "admin",
-                    onClick = { vm.onRole("admin") },
+                    onClick = {
+                        haptics.tick()
+                        vm.onRole("admin")
+                    },
                     label = { Text("Admin") },
                 )
                 FilterChip(
                     selected = form.role == "staff",
-                    onClick = { vm.onRole("staff") },
+                    onClick = {
+                        haptics.tick()
+                        vm.onRole("staff")
+                    },
                     label = { Text("Staff") },
                 )
             }
@@ -298,12 +387,18 @@ private fun UserFormSheet(state: AdminUsersUiState, vm: UsersViewModel) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = form.active,
-                    onClick = { vm.onActive(true) },
+                    onClick = {
+                        haptics.tick()
+                        vm.onActive(true)
+                    },
                     label = { Text("Active") },
                 )
                 FilterChip(
                     selected = !form.active,
-                    onClick = { vm.onActive(false) },
+                    onClick = {
+                        haptics.tick()
+                        vm.onActive(false)
+                    },
                     label = { Text("Inactive") },
                 )
             }
@@ -315,28 +410,24 @@ private fun UserFormSheet(state: AdminUsersUiState, vm: UsersViewModel) {
             FieldError(errors["active"])
         }
 
-        FormField(
+        PasswordField(
             value = form.password,
             onValueChange = vm::onPassword,
             label = "Password",
             errors = errors["password"],
             helper = if (state.isEditing) "Leave blank to keep the existing password." else null,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            visualTransformation = PasswordVisualTransformation(),
         )
-        FormField(
+        PasswordField(
             value = form.passwordConfirmation,
             onValueChange = vm::onPasswordConfirmation,
             label = "Password confirmation",
             errors = errors["password_confirmation"],
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            visualTransformation = PasswordVisualTransformation(),
         )
 
         Spacer(Modifier.padding(top = 2.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             NayaraOutlinedButton(
-                onClick = { vm.closeSheet() },
+                onClick = onCancel,
                 enabled = !state.saving,
                 modifier = Modifier.weight(1f),
             ) { Text("Cancel") }
@@ -351,59 +442,12 @@ private fun UserFormSheet(state: AdminUsersUiState, vm: UsersViewModel) {
 }
 
 @Composable
-private fun FormField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    errors: List<String>?,
-    helper: String? = null,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
-    prefix: (@Composable () -> Unit)? = null,
-) {
-    val supporting: (@Composable () -> Unit)? = if (!errors.isNullOrEmpty()) {
-        { Text(errors.joinToString(" "), color = MaterialTheme.colorScheme.error) }
-    } else if (helper != null) {
-        { Text(helper) }
-    } else {
-        null
-    }
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = true,
-        isError = !errors.isNullOrEmpty(),
-        keyboardOptions = keyboardOptions,
-        visualTransformation = visualTransformation,
-        prefix = prefix,
-        supportingText = supporting,
-        modifier = Modifier.fillMaxWidth(),
-    )
-}
-
-@Composable
 private fun FieldError(errors: List<String>?) {
     if (!errors.isNullOrEmpty()) {
         Text(
             errors.joinToString(" "),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
-        )
-    }
-}
-
-@Composable
-private fun ErrorCard(message: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-    ) {
-        Text(
-            message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-            modifier = Modifier.padding(14.dp),
         )
     }
 }

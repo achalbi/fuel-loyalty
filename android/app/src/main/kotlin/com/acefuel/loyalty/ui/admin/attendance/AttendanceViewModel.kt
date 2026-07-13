@@ -3,14 +3,15 @@ package com.acefuel.loyalty.ui.admin.attendance
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.acefuel.loyalty.core.network.ApiResult
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
+
+private const val NETWORK_MESSAGE = "Couldn't reach the server. Try again."
 
 /** Which sub-view of the single Attendance screen is currently visible. */
 enum class AttendanceScreenMode { LIST, DETAIL, PLANNER }
@@ -29,10 +30,15 @@ data class DraftEntry(
 
 data class AttendanceUiState(
     val mode: AttendanceScreenMode = AttendanceScreenMode.LIST,
+    /** One-shot success message -> success snackbar. */
     val actionMessage: String? = null,
+    /** One-shot failure with content kept on screen -> error snackbar. */
+    val actionError: String? = null,
 
     // --- list ---
     val listLoading: Boolean = false,
+    /** Pull-to-refresh in progress (rows stay visible). */
+    val refreshing: Boolean = false,
     val listError: String? = null,
     val runs: List<AttendanceRunDto> = emptyList(),
     val filter: String = "all",
@@ -47,6 +53,7 @@ data class AttendanceUiState(
     // --- detail ---
     val detailLoading: Boolean = false,
     val detailError: String? = null,
+    val selectedRunId: Long? = null,
     val selectedRun: AttendanceRunDto? = null,
     val detailActionInFlight: Boolean = false,
 
@@ -55,7 +62,7 @@ data class AttendanceUiState(
     val templatesLoading: Boolean = false,
     val templatesError: String? = null,
     val selectedShiftId: Long? = null,
-    val startMillis: Long? = null,
+    val plannerDate: LocalDate? = null,
     val startHour: Int = 9,
     val startMinute: Int = 0,
     val plannerLoading: Boolean = false,
@@ -69,11 +76,18 @@ data class AttendanceUiState(
     val staffLoaded: Boolean = false,
     val runNotes: String = "",
     val markInvalid: Boolean = false,
+    // True once the operator actually edits the roster — a freshly loaded,
+    // untouched roster must not trip the discard-changes guard.
+    val plannerTouched: Boolean = false,
     val saving: Boolean = false,
     val saveError: String? = null,
 ) {
     val selectedShift: ShiftTemplateDto?
         get() = shiftTemplates.firstOrNull { it.id == selectedShiftId }
+
+    /** Leaving the planner after a real edit would silently lose work. */
+    val plannerDirty: Boolean
+        get() = plannerTouched
 }
 
 class AttendanceViewModel(private val repository: AttendanceRepository) : ViewModel() {
@@ -81,20 +95,34 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
     private val _state = MutableStateFlow(AttendanceUiState())
     val state: StateFlow<AttendanceUiState> = _state.asStateFlow()
 
+    private var listJob: Job? = null
+    private var detailJob: Job? = null
+    private var templatesJob: Job? = null
+    private var plannerJob: Job? = null
+
+    // List navigation state matching the rows on screen; a failed reload that
+    // keeps stale rows rolls back to this so filter chips / page counter agree.
+    private var lastGoodList: AttendanceUiState? = null
+
     init {
         reloadList()
     }
 
     // ------------------------------------------------------------------ list
 
-    fun reloadList() {
-        _state.update { it.copy(listLoading = true, listError = null) }
+    /** Pull-to-refresh: keeps rows visible; falls back to a full load when the list is empty. */
+    fun refresh() = reloadList(asRefresh = _state.value.runs.isNotEmpty())
+
+    fun reloadList(asRefresh: Boolean = false) {
+        listJob?.cancel()
+        _state.update { it.copy(listLoading = !asRefresh, refreshing = asRefresh, listError = null) }
         val s = _state.value
-        viewModelScope.launch {
+        listJob = viewModelScope.launch {
             when (val result = repository.loadRuns(s.filter, s.startDate, s.endDate, s.page)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         listLoading = false,
+                        refreshing = false,
                         runs = result.data.attendanceRuns,
                         filter = result.data.filter,
                         startDate = result.data.startDate,
@@ -104,13 +132,32 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
                         total = result.data.total,
                         showingFrom = result.data.showingFrom,
                         showingTo = result.data.showingTo,
-                    )
+                    ).also { committed -> lastGoodList = committed }
                 }
-                is ApiResult.Error -> _state.update { it.copy(listLoading = false, listError = result.message) }
-                is ApiResult.NetworkError -> _state.update {
-                    it.copy(listLoading = false, listError = "Couldn't reach the server. Try again.")
-                }
+                is ApiResult.Error -> failList(result.message)
+                is ApiResult.NetworkError -> failList(NETWORK_MESSAGE)
             }
+        }
+    }
+
+    /** Stale rows on screen -> one-shot snackbar + rollback; empty screen -> full-area error. */
+    private fun failList(message: String) = _state.update {
+        if (it.runs.isNotEmpty()) {
+            // Revert the optimistic filter/date/page to match the rows still on
+            // screen, so the chips and page counter don't lie about the data.
+            val good = lastGoodList
+            val reverted = if (good != null) {
+                it.copy(
+                    filter = good.filter, startDate = good.startDate, endDate = good.endDate,
+                    page = good.page, totalPages = good.totalPages, total = good.total,
+                    showingFrom = good.showingFrom, showingTo = good.showingTo,
+                )
+            } else {
+                it
+            }
+            reverted.copy(listLoading = false, refreshing = false, actionError = message)
+        } else {
+            it.copy(listLoading = false, refreshing = false, listError = message)
         }
     }
 
@@ -130,6 +177,19 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
         reloadList()
     }
 
+    /** Clears both bounds with a single reload (used to fire two). */
+    fun clearDates() {
+        if (_state.value.startDate == null && _state.value.endDate == null) return
+        _state.update { it.copy(startDate = null, endDate = null, page = 1) }
+        reloadList()
+    }
+
+    /** Empty-state "Show all": drops every filter with a single reload. */
+    fun resetFilters() {
+        _state.update { it.copy(filter = "all", startDate = null, endDate = null, page = 1) }
+        reloadList()
+    }
+
     fun goToPage(page: Int) {
         val target = page.coerceIn(1, _state.value.totalPages)
         if (target == _state.value.page) return
@@ -139,21 +199,34 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
 
     fun consumeActionMessage() = _state.update { it.copy(actionMessage = null) }
 
+    fun consumeActionError() = _state.update { it.copy(actionError = null) }
+
     // ---------------------------------------------------------------- detail
 
     fun openRun(id: Long) {
+        detailJob?.cancel()
         _state.update {
-            it.copy(mode = AttendanceScreenMode.DETAIL, detailLoading = true, detailError = null, selectedRun = null)
+            it.copy(
+                mode = AttendanceScreenMode.DETAIL,
+                detailLoading = true,
+                detailError = null,
+                selectedRunId = id,
+                selectedRun = null,
+            )
         }
-        viewModelScope.launch {
+        detailJob = viewModelScope.launch {
             when (val result = repository.showRun(id)) {
                 is ApiResult.Success -> _state.update { it.copy(detailLoading = false, selectedRun = result.data) }
                 is ApiResult.Error -> _state.update { it.copy(detailLoading = false, detailError = result.message) }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(detailLoading = false, detailError = "Couldn't reach the server. Try again.")
+                    it.copy(detailLoading = false, detailError = NETWORK_MESSAGE)
                 }
             }
         }
+    }
+
+    fun retryDetail() {
+        _state.value.selectedRunId?.let { openRun(it) }
     }
 
     fun invalidateSelected() = mutateSelected { repository.invalidateRun(it) }
@@ -162,15 +235,15 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
 
     private fun mutateSelected(block: suspend (Long) -> ApiResult<AttendanceRunDto>) {
         val run = _state.value.selectedRun ?: return
-        _state.update { it.copy(detailActionInFlight = true, detailError = null) }
+        _state.update { it.copy(detailActionInFlight = true) }
         viewModelScope.launch {
             when (val result = block(run.id)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(detailActionInFlight = false, selectedRun = result.data)
                 }
-                is ApiResult.Error -> _state.update { it.copy(detailActionInFlight = false, detailError = result.message) }
+                is ApiResult.Error -> _state.update { it.copy(detailActionInFlight = false, actionError = result.message) }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(detailActionInFlight = false, detailError = "Couldn't reach the server. Try again.")
+                    it.copy(detailActionInFlight = false, actionError = NETWORK_MESSAGE)
                 }
             }
         }
@@ -178,7 +251,7 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
 
     fun deleteSelected() {
         val run = _state.value.selectedRun ?: return
-        _state.update { it.copy(detailActionInFlight = true, detailError = null) }
+        _state.update { it.copy(detailActionInFlight = true) }
         viewModelScope.launch {
             when (val result = repository.deleteRun(run.id)) {
                 is ApiResult.Success -> {
@@ -187,15 +260,16 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
                             detailActionInFlight = false,
                             mode = AttendanceScreenMode.LIST,
                             selectedRun = null,
+                            selectedRunId = null,
                             page = 1,
                             actionMessage = result.data.message ?: "Invalid attendance record deleted.",
                         )
                     }
                     reloadList()
                 }
-                is ApiResult.Error -> _state.update { it.copy(detailActionInFlight = false, detailError = result.message) }
+                is ApiResult.Error -> _state.update { it.copy(detailActionInFlight = false, actionError = result.message) }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(detailActionInFlight = false, detailError = "Couldn't reach the server. Try again.")
+                    it.copy(detailActionInFlight = false, actionError = NETWORK_MESSAGE)
                 }
             }
         }
@@ -204,12 +278,11 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
     // --------------------------------------------------------------- planner
 
     fun openPlanner() {
-        val todayMillis = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         _state.update {
             it.copy(
                 mode = AttendanceScreenMode.PLANNER,
                 selectedShiftId = null,
-                startMillis = todayMillis,
+                plannerDate = LocalDate.now(),
                 startHour = 9,
                 startMinute = 0,
                 plannerError = null,
@@ -222,6 +295,7 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
                 staffLoaded = false,
                 runNotes = "",
                 markInvalid = false,
+                plannerTouched = false,
                 saveError = null,
             )
         }
@@ -235,15 +309,16 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
     }
 
     fun loadShiftTemplates() {
+        templatesJob?.cancel()
         _state.update { it.copy(templatesLoading = true, templatesError = null) }
-        viewModelScope.launch {
+        templatesJob = viewModelScope.launch {
             when (val result = repository.loadShiftTemplates()) {
                 is ApiResult.Success -> _state.update {
                     it.copy(templatesLoading = false, shiftTemplates = result.data.filter { t -> t.active })
                 }
                 is ApiResult.Error -> _state.update { it.copy(templatesLoading = false, templatesError = result.message) }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(templatesLoading = false, templatesError = "Couldn't reach the server. Try again.")
+                    it.copy(templatesLoading = false, templatesError = NETWORK_MESSAGE)
                 }
             }
         }
@@ -260,6 +335,7 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
                 // a fresh selection invalidates any previously loaded roster
                 staffLoaded = false,
                 draftEntries = emptyList(),
+                plannerTouched = false,
                 plannerBaseErrors = emptyList(),
                 windowStart = null,
                 windowEnd = null,
@@ -267,14 +343,15 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
         }
     }
 
-    fun setStartDate(millis: Long) = _state.update { it.copy(startMillis = millis) }
+    fun setPlannerDate(date: LocalDate) = _state.update { it.copy(plannerDate = date) }
 
     fun setStartTime(hour: Int, minute: Int) = _state.update { it.copy(startHour = hour, startMinute = minute) }
 
     fun loadStaff() {
         val shiftId = _state.value.selectedShiftId ?: return
+        plannerJob?.cancel()
         _state.update { it.copy(plannerLoading = true, plannerError = null, plannerBaseErrors = emptyList()) }
-        viewModelScope.launch {
+        plannerJob = viewModelScope.launch {
             when (val result = repository.loadPlanner(shiftId, composeStartsAt())) {
                 is ApiResult.Success -> {
                     val data = result.data
@@ -301,6 +378,7 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
                             windowEnd = data.endsAt,
                             draftEntries = entries,
                             staffLoaded = data.errors.isEmpty() && entries.isNotEmpty(),
+                            plannerTouched = false, // freshly loaded roster is untouched
                             saveError = null,
                         )
                     }
@@ -311,7 +389,7 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
                 is ApiResult.NetworkError -> _state.update {
                     it.copy(
                         plannerLoading = false,
-                        plannerError = "Couldn't reach the server. Try again.",
+                        plannerError = NETWORK_MESSAGE,
                         staffLoaded = false,
                         draftEntries = emptyList(),
                     )
@@ -321,7 +399,7 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
     }
 
     fun markAllPresent() = _state.update { s ->
-        s.copy(draftEntries = s.draftEntries.map { it.copy(status = "present") })
+        s.copy(draftEntries = s.draftEntries.map { it.copy(status = "present") }, plannerTouched = true)
     }
 
     fun updateEntryStatus(index: Int, status: String) = updateEntry(index) { it.copy(status = status) }
@@ -341,15 +419,19 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
 
     private inline fun updateEntry(index: Int, transform: (DraftEntry) -> DraftEntry) = _state.update { s ->
         if (index !in s.draftEntries.indices) return@update s
-        s.copy(draftEntries = s.draftEntries.toMutableList().also { it[index] = transform(it[index]) })
+        s.copy(
+            draftEntries = s.draftEntries.toMutableList().also { it[index] = transform(it[index]) },
+            plannerTouched = true,
+        )
     }
 
-    fun setRunNotes(notes: String) = _state.update { it.copy(runNotes = notes) }
+    fun setRunNotes(notes: String) = _state.update { it.copy(runNotes = notes, plannerTouched = true) }
 
-    fun setMarkInvalid(value: Boolean) = _state.update { it.copy(markInvalid = value) }
+    fun setMarkInvalid(value: Boolean) = _state.update { it.copy(markInvalid = value, plannerTouched = true) }
 
     fun save() {
         val s = _state.value
+        if (s.saving) return
         val shiftTemplateId = s.plannerShiftTemplateId
         val start = s.windowStart
         val end = s.windowEnd
@@ -397,7 +479,7 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
                 }
                 is ApiResult.Error -> _state.update { it.copy(saving = false, saveError = result.message) }
                 is ApiResult.NetworkError -> _state.update {
-                    it.copy(saving = false, saveError = "Couldn't reach the server. Try again.")
+                    it.copy(saving = false, saveError = NETWORK_MESSAGE)
                 }
             }
         }
@@ -406,8 +488,7 @@ class AttendanceViewModel(private val repository: AttendanceRepository) : ViewMo
     // ----------------------------------------------------------------- utils
 
     private fun composeStartsAt(): String? {
-        val millis = _state.value.startMillis ?: return null
-        val date = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+        val date = _state.value.plannerDate ?: return null
         return date.atTime(_state.value.startHour, _state.value.startMinute).toString()
     }
 

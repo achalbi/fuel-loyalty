@@ -1,7 +1,13 @@
 package com.acefuel.loyalty.ui.admin.attendance
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,18 +19,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,22 +37,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -60,12 +59,30 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
+import com.acefuel.loyalty.ui.designsystem.ChipTone
+import com.acefuel.loyalty.ui.designsystem.ConfirmDialog
+import com.acefuel.loyalty.ui.designsystem.DateField
+import com.acefuel.loyalty.ui.designsystem.EmptyState
+import com.acefuel.loyalty.ui.designsystem.ErrorState
+import com.acefuel.loyalty.ui.designsystem.InlineErrorCard
+import com.acefuel.loyalty.ui.designsystem.NayaraCard
+import com.acefuel.loyalty.ui.designsystem.NayaraPullToRefresh
+import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
+import com.acefuel.loyalty.ui.designsystem.PickerField
+import com.acefuel.loyalty.ui.designsystem.SkeletonCard
+import com.acefuel.loyalty.ui.designsystem.SkeletonList
+import com.acefuel.loyalty.ui.designsystem.StatusChip
+import com.acefuel.loyalty.ui.designsystem.TimeField
+import com.acefuel.loyalty.ui.designsystem.rememberHaptics
+import com.acefuel.loyalty.ui.designsystem.showError
+import com.acefuel.loyalty.ui.designsystem.showSuccess
 import com.acefuel.loyalty.ui.theme.NayaraButton
+import com.acefuel.loyalty.ui.theme.NayaraMotion
 import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
+import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
-import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 // Canonical status order + labels (Rails AttendanceEntry.statuses / humanize).
@@ -82,6 +99,14 @@ private fun statusLabel(status: String): String =
     STATUS_OPTIONS.firstOrNull { it.first == status }?.second
         ?: status.replace('_', ' ').replaceFirstChar { it.uppercase() }
 
+private fun statusTone(status: String): ChipTone = when (status) {
+    "present", "late" -> ChipTone.Success
+    "absent" -> ChipTone.Error
+    "half_day" -> ChipTone.Warning
+    "leave" -> ChipTone.Info
+    else -> ChipTone.Neutral
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminAttendanceScreen(onBack: () -> Unit) {
@@ -91,16 +116,34 @@ fun AdminAttendanceScreen(onBack: () -> Unit) {
     }
     val vm: AttendanceViewModel = viewModel(factory = viewModelFactory { initializer { AttendanceViewModel(repo) } })
     val state by vm.state.collectAsStateWithLifecycle()
+    val haptics = rememberHaptics()
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(state.actionMessage) {
         state.actionMessage?.let {
-            snackbarHostState.showSnackbar(it)
+            haptics.confirm()
+            snackbarHostState.showSuccess(it)
             vm.consumeActionMessage()
         }
     }
+    LaunchedEffect(state.actionError) {
+        state.actionError?.let {
+            haptics.reject()
+            snackbarHostState.showError(it)
+            vm.consumeActionError()
+        }
+    }
 
-    BackHandler(enabled = state.mode != AttendanceScreenMode.LIST) { vm.backToList() }
+    // Leaving the planner with unsaved entries requires an explicit discard.
+    var confirmDiscard by remember { mutableStateOf(false) }
+    val leaveCurrentMode: () -> Unit = {
+        if (state.mode == AttendanceScreenMode.PLANNER && state.plannerDirty) {
+            confirmDiscard = true
+        } else {
+            vm.backToList()
+        }
+    }
+    BackHandler(enabled = state.mode != AttendanceScreenMode.LIST) { leaveCurrentMode() }
 
     val title = when (state.mode) {
         AttendanceScreenMode.LIST -> "Attendance"
@@ -113,7 +156,7 @@ fun AdminAttendanceScreen(onBack: () -> Unit) {
             TopAppBar(
                 title = { Text(title) },
                 navigationIcon = {
-                    IconButton(onClick = { if (state.mode == AttendanceScreenMode.LIST) onBack() else vm.backToList() }) {
+                    IconButton(onClick = { if (state.mode == AttendanceScreenMode.LIST) onBack() else leaveCurrentMode() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -126,15 +169,59 @@ fun AdminAttendanceScreen(onBack: () -> Unit) {
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { NayaraSnackbarHost(snackbarHostState) },
+        bottomBar = {
+            // Pinned save bar — always reachable while editing the roster.
+            if (state.mode == AttendanceScreenMode.PLANNER && state.staffLoaded && state.draftEntries.isNotEmpty()) {
+                Surface(shadowElevation = 8.dp) {
+                    NayaraButton(
+                        onClick = { vm.save() },
+                        enabled = !state.saving,
+                        loading = state.saving,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(16.dp),
+                    ) { Text("Save Attendance") }
+                }
+            }
+        },
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding)) {
-            when (state.mode) {
-                AttendanceScreenMode.LIST -> ListContent(state, vm)
-                AttendanceScreenMode.DETAIL -> DetailContent(state, vm)
-                AttendanceScreenMode.PLANNER -> PlannerContent(state, vm)
+            AnimatedContent(
+                targetState = state.mode,
+                transitionSpec = {
+                    val forward = targetState.ordinal > initialState.ordinal
+                    val enter = slideInHorizontally(
+                        animationSpec = tween(NayaraMotion.Base, easing = NayaraMotion.Emphasized),
+                        initialOffsetX = { if (forward) it / 4 else -it / 4 },
+                    ) + fadeIn(tween(NayaraMotion.Base))
+                    val exit = slideOutHorizontally(
+                        animationSpec = tween(NayaraMotion.Base, easing = NayaraMotion.Emphasized),
+                        targetOffsetX = { if (forward) -it / 4 else it / 4 },
+                    ) + fadeOut(tween(NayaraMotion.Base))
+                    enter togetherWith exit
+                },
+                label = "attendance-mode",
+            ) { mode ->
+                when (mode) {
+                    AttendanceScreenMode.LIST -> ListContent(state, vm)
+                    AttendanceScreenMode.DETAIL -> DetailContent(state, vm)
+                    AttendanceScreenMode.PLANNER -> PlannerContent(state, vm)
+                }
             }
         }
+    }
+
+    if (confirmDiscard) {
+        ConfirmDialog(
+            title = "Discard changes?",
+            text = "Your attendance entries have not been saved. Leave the planner and discard them?",
+            confirmLabel = "Discard",
+            onConfirm = { confirmDiscard = false; vm.backToList() },
+            onDismiss = { confirmDiscard = false },
+            destructive = true,
+        )
     }
 }
 
@@ -144,84 +231,94 @@ fun AdminAttendanceScreen(onBack: () -> Unit) {
 
 @Composable
 private fun ListContent(state: AttendanceUiState, vm: AttendanceViewModel) {
-    var datePickerFor by remember { mutableStateOf<String?>(null) } // "start" | "end"
+    val haptics = rememberHaptics()
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(vertical = 12.dp),
+    NayaraPullToRefresh(
+        isRefreshing = state.refreshing,
+        onRefresh = vm::refresh,
+        modifier = Modifier.fillMaxSize(),
     ) {
-        item(key = "filters") {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Record State", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.nayara.textSecondary)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("all" to "All", "valid" to "Valid", "invalid" to "Invalid").forEach { (value, label) ->
-                        FilterChip(
-                            selected = state.filter == value,
-                            onClick = { vm.setFilter(value) },
-                            label = { Text(label) },
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = NayaraSpacing.ScreenMargin),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+            contentPadding = PaddingValues(top = NayaraSpacing.Md, bottom = NayaraSpacing.Xl),
+        ) {
+            item(key = "filters") {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Record State", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.nayara.textSecondary)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("all" to "All", "valid" to "Valid", "invalid" to "Invalid").forEach { (value, label) ->
+                            FilterChip(
+                                selected = state.filter == value,
+                                onClick = {
+                                    haptics.tick()
+                                    vm.setFilter(value)
+                                },
+                                label = { Text(label) },
+                            )
+                        }
+                    }
+                    Text("Attendance Date", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.nayara.textSecondary)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DateField(
+                            label = "From",
+                            value = parseIsoDate(state.startDate),
+                            onChange = { vm.setStartDate(it.toString()) },
+                            modifier = Modifier.weight(1f),
+                            placeholder = "Any",
+                        )
+                        DateField(
+                            label = "To",
+                            value = parseIsoDate(state.endDate),
+                            onChange = { vm.setEndDate(it.toString()) },
+                            modifier = Modifier.weight(1f),
+                            placeholder = "Any",
+                        )
+                    }
+                    if (state.startDate != null || state.endDate != null) {
+                        TextButton(onClick = { vm.clearDates() }) { Text("Clear dates") }
+                    }
+                }
+            }
+
+            when {
+                state.listLoading && state.runs.isEmpty() ->
+                    item(key = "skeleton") { SkeletonList(count = 6, showAvatar = false) }
+                state.listError != null && state.runs.isEmpty() ->
+                    item(key = "error") {
+                        ErrorState(state.listError ?: "Something went wrong.", onRetry = { vm.reloadList() })
+                    }
+                state.runs.isEmpty() && !state.listLoading -> {
+                    val filtersActive = state.filter != "all" || state.startDate != null || state.endDate != null
+                    item(key = "empty") {
+                        EmptyState(
+                            title = "No attendance found",
+                            message = if (filtersActive) {
+                                "Nothing matches the current filters. Try another filter or start a new attendance run."
+                            } else {
+                                "Start a new attendance run to see recorded shift windows here."
+                            },
+                            actionLabel = if (filtersActive) "Show all" else null,
+                            onAction = if (filtersActive) ({ vm.resetFilters() }) else null,
                         )
                     }
                 }
-                Text("Attendance Date", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.nayara.textSecondary)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PickerField(
-                        label = "From",
-                        value = state.startDate ?: "Any",
-                        modifier = Modifier.weight(1f),
-                        onClick = { datePickerFor = "start" },
-                    )
-                    PickerField(
-                        label = "To",
-                        value = state.endDate ?: "Any",
-                        modifier = Modifier.weight(1f),
-                        onClick = { datePickerFor = "end" },
-                    )
-                }
-                if (state.startDate != null || state.endDate != null) {
-                    TextButton(onClick = { vm.setStartDate(null); vm.setEndDate(null) }) { Text("Clear dates") }
+                else -> {
+                    items(state.runs, key = { "run-${it.id}" }) { run ->
+                        RunCard(run, onClick = { vm.openRun(run.id) }, modifier = Modifier.animateItem())
+                    }
+                    item(key = "pagination") { PaginationRow(state, vm) }
                 }
             }
         }
-
-        when {
-            state.listLoading && state.runs.isEmpty() ->
-                item(key = "loading") { CenteredSpinner() }
-            state.listError != null ->
-                item(key = "error") { ErrorCard(state.listError) }
-            state.runs.isEmpty() ->
-                item(key = "empty") {
-                    EmptyCard(
-                        title = "No attendance found for the current filters",
-                        body = "Try another filter or start a new attendance run to see recorded shift windows here.",
-                    )
-                }
-            else -> {
-                items(state.runs, key = { "run-${it.id}" }) { run -> RunCard(run, onClick = { vm.openRun(run.id) }) }
-                item(key = "pagination") { PaginationRow(state, vm) }
-            }
-        }
-    }
-
-    if (datePickerFor != null) {
-        val initial = if (datePickerFor == "start") isoDateToMillis(state.startDate) else isoDateToMillis(state.endDate)
-        DatePickerModal(
-            initialMillis = initial,
-            onConfirm = { millis ->
-                val iso = millisToIsoDate(millis)
-                if (datePickerFor == "start") vm.setStartDate(iso) else vm.setEndDate(iso)
-                datePickerFor = null
-            },
-            onDismiss = { datePickerFor = null },
-        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RunCard(run: AttendanceRunDto, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
-        Column(Modifier.padding(16.dp)) {
+private fun RunCard(run: AttendanceRunDto, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    NayaraCard(onClick = onClick, modifier = modifier.fillMaxWidth()) {
+        Column(Modifier.padding(NayaraSpacing.Lg)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
                     Text(run.shiftName ?: "Shift", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -231,11 +328,7 @@ private fun RunCard(run: AttendanceRunDto, onClick: () -> Unit) {
                         color = MaterialTheme.nayara.textSecondary,
                     )
                 }
-                if (run.stale) {
-                    TagLabel("Invalid", MaterialTheme.nayara.statusErrorContainer, MaterialTheme.nayara.statusOnErrorContainer)
-                } else {
-                    TagLabel("Valid", MaterialTheme.nayara.statusSuccessContainer, MaterialTheme.nayara.statusOnSuccessContainer)
-                }
+                RecordStateChip(run.stale)
             }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -252,6 +345,15 @@ private fun RunCard(run: AttendanceRunDto, onClick: () -> Unit) {
                 Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.nayara.textBrand)
             }
         }
+    }
+}
+
+@Composable
+private fun RecordStateChip(stale: Boolean) {
+    if (stale) {
+        StatusChip(label = "Invalid", tone = ChipTone.Error)
+    } else {
+        StatusChip(label = "Valid", tone = ChipTone.Success)
     }
 }
 
@@ -285,23 +387,25 @@ private fun DetailContent(state: AttendanceUiState, vm: AttendanceViewModel) {
     val run = state.selectedRun
 
     when {
-        state.detailLoading && run == null -> CenteredSpinner()
-        run == null -> ErrorCard(state.detailError ?: "Attendance record not found.", Modifier.padding(16.dp))
+        run == null && state.detailLoading -> DetailSkeleton()
+        run == null && state.detailError != null ->
+            ErrorState(
+                state.detailError ?: "Attendance record not found.",
+                modifier = Modifier.padding(16.dp),
+                onRetry = { vm.retryDetail() },
+            )
+        run == null -> Box(Modifier.fillMaxSize()) {} // transient (exit animation after delete)
         else -> LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(vertical = 12.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = NayaraSpacing.ScreenMargin),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+            contentPadding = PaddingValues(top = NayaraSpacing.Md, bottom = NayaraSpacing.Xl),
         ) {
             item(key = "d-summary") {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                NayaraCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(NayaraSpacing.Lg), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                             Text(run.shiftName ?: "Shift", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                            if (run.stale) {
-                                TagLabel("Invalid", MaterialTheme.nayara.statusErrorContainer, MaterialTheme.nayara.statusOnErrorContainer)
-                            } else {
-                                TagLabel("Valid", MaterialTheme.nayara.statusSuccessContainer, MaterialTheme.nayara.statusOnSuccessContainer)
-                            }
+                            RecordStateChip(run.stale)
                         }
                         LabelValue("Window", "${fmtDateTime(run.startsAt)} to ${fmtTime(run.endsAt)}")
                         LabelValue("Recorded By", run.recordedBy?.displayName ?: "—")
@@ -309,8 +413,6 @@ private fun DetailContent(state: AttendanceUiState, vm: AttendanceViewModel) {
                     }
                 }
             }
-
-            state.detailError?.let { item(key = "d-error") { ErrorCard(it) } }
 
             item(key = "d-actions") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -355,7 +457,9 @@ private fun DetailContent(state: AttendanceUiState, vm: AttendanceViewModel) {
             if (run.entries.isEmpty()) {
                 item(key = "d-entries-empty") { EmptyNote("No staff rows on this record.") }
             } else {
-                items(run.entries, key = { "entry-${it.id ?: it.scheduledUser?.id ?: 0}" }) { entry -> DetailEntryCard(entry) }
+                items(run.entries, key = { "entry-${it.id ?: it.scheduledUser?.id ?: 0}" }) { entry ->
+                    DetailEntryCard(entry, modifier = Modifier.animateItem())
+                }
             }
         }
     }
@@ -363,7 +467,7 @@ private fun DetailContent(state: AttendanceUiState, vm: AttendanceViewModel) {
     if (confirmInvalidate) {
         ConfirmDialog(
             title = "Invalidate attendance?",
-            message = "Mark this attendance record invalid? It stays on record but is not counted as valid.",
+            text = "Mark this attendance record invalid? It stays on record but is not counted as valid.",
             confirmLabel = "Invalidate",
             onConfirm = { confirmInvalidate = false; vm.invalidateSelected() },
             onDismiss = { confirmInvalidate = false },
@@ -372,18 +476,29 @@ private fun DetailContent(state: AttendanceUiState, vm: AttendanceViewModel) {
     if (confirmDelete) {
         ConfirmDialog(
             title = "Delete record?",
-            message = "Delete this invalid attendance record? This cannot be undone.",
+            text = "Delete this invalid attendance record? This cannot be undone.",
             confirmLabel = "Delete",
             onConfirm = { confirmDelete = false; vm.deleteSelected() },
             onDismiss = { confirmDelete = false },
+            destructive = true,
         )
     }
 }
 
 @Composable
-private fun DetailEntryCard(entry: AttendanceEntryDto) {
-    val (container, content) = statusColors(entry.status)
-    Card(Modifier.fillMaxWidth()) {
+private fun DetailSkeleton() {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        SkeletonCard(lines = 3)
+        SkeletonList(count = 4, showAvatar = false)
+    }
+}
+
+@Composable
+private fun DetailEntryCard(entry: AttendanceEntryDto, modifier: Modifier = Modifier) {
+    NayaraCard(modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -391,7 +506,7 @@ private fun DetailEntryCard(entry: AttendanceEntryDto) {
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
-                TagLabel(statusLabel(entry.status), container, content)
+                StatusChip(label = statusLabel(entry.status), tone = statusTone(entry.status))
             }
             LabelValue("Actual staff", entry.workerName ?: "—")
             LabelValue("Check in", fmtTime(entry.checkInAt))
@@ -405,21 +520,14 @@ private fun DetailEntryCard(entry: AttendanceEntryDto) {
 // PLANNER
 // ============================================================================
 
-private sealed interface TimeEdit {
-    data object StartTime : TimeEdit
-    data class CheckIn(val index: Int) : TimeEdit
-    data class CheckOut(val index: Int) : TimeEdit
-}
-
 @Composable
 private fun PlannerContent(state: AttendanceUiState, vm: AttendanceViewModel) {
-    var showDatePicker by remember { mutableStateOf(false) }
-    var timeEdit by remember { mutableStateOf<TimeEdit?>(null) }
+    var confirmMarkAll by remember { mutableStateOf(false) }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(vertical = 12.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = NayaraSpacing.ScreenMargin),
+        verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+        contentPadding = PaddingValues(top = NayaraSpacing.Md, bottom = NayaraSpacing.Xl),
     ) {
         item(key = "p-intro") {
             Text(
@@ -430,14 +538,12 @@ private fun PlannerContent(state: AttendanceUiState, vm: AttendanceViewModel) {
         }
 
         item(key = "p-form") {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (state.templatesLoading) {
-                        CenteredSpinner()
-                    } else if (state.templatesError != null) {
-                        ErrorCard(state.templatesError)
-                        NayaraOutlinedButton(onClick = { vm.loadShiftTemplates() }) { Text("Retry") }
-                    } else {
+            when {
+                state.templatesLoading -> SkeletonCard(lines = 3)
+                state.templatesError != null ->
+                    InlineErrorCard(state.templatesError ?: "Something went wrong.", onRetry = { vm.loadShiftTemplates() })
+                else -> NayaraCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(NayaraSpacing.Lg), verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
                         LabeledDropdown(
                             label = "Shift",
                             selectedLabel = state.selectedShift?.let { shiftOptionLabel(it) } ?: "Select a shift",
@@ -445,17 +551,18 @@ private fun PlannerContent(state: AttendanceUiState, vm: AttendanceViewModel) {
                             onSelect = { vm.selectShift(it) },
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            PickerField(
+                            DateField(
                                 label = "Start Date",
-                                value = fmtMillisDate(state.startMillis),
+                                value = state.plannerDate,
+                                onChange = { vm.setPlannerDate(it) },
                                 modifier = Modifier.weight(1f),
-                                onClick = { showDatePicker = true },
+                                placeholder = "Select date",
                             )
-                            PickerField(
+                            TimeField(
                                 label = "Start Time",
-                                value = fmtHourMinute(state.startHour, state.startMinute),
+                                value = LocalTime.of(state.startHour, state.startMinute),
+                                onChange = { vm.setStartTime(it.hour, it.minute) },
                                 modifier = Modifier.weight(1f),
-                                onClick = { timeEdit = TimeEdit.StartTime },
                             )
                         }
                         NayaraButton(
@@ -469,17 +576,19 @@ private fun PlannerContent(state: AttendanceUiState, vm: AttendanceViewModel) {
             }
         }
 
-        state.plannerError?.let { item(key = "p-error") { ErrorCard(it) } }
+        state.plannerError?.let {
+            item(key = "p-error") { InlineErrorCard(it, onRetry = { vm.loadStaff() }) }
+        }
 
         if (state.plannerBaseErrors.isNotEmpty()) {
-            item(key = "p-base-errors") { ErrorCard(state.plannerBaseErrors.joinToString(" ")) }
+            item(key = "p-base-errors") { InlineErrorCard(state.plannerBaseErrors.joinToString(" ")) }
         }
 
         when {
             state.staffLoaded && state.draftEntries.isNotEmpty() -> {
                 item(key = "p-window") {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    NayaraCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(NayaraSpacing.Lg), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(state.plannerShiftName ?: "Shift", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             LabelValue("Window", "${fmtDateTime(state.windowStart)} to ${fmtTime(state.windowEnd)}")
                             LabelValue("Loaded Staff", "${state.draftEntries.size}")
@@ -489,24 +598,25 @@ private fun PlannerContent(state: AttendanceUiState, vm: AttendanceViewModel) {
                 item(key = "p-entries-header") {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         SectionHeader("Attendance Entries")
-                        NayaraOutlinedButton(onClick = { vm.markAllPresent() }, enabled = !state.saving) { Text("Mark All Present") }
+                        NayaraOutlinedButton(onClick = { confirmMarkAll = true }, enabled = !state.saving) { Text("Mark All Present") }
                     }
                 }
                 itemsIndexedDraft(state.draftEntries) { index, entry ->
                     DraftEntryCard(
                         entry = entry,
+                        modifier = Modifier.animateItem(),
                         onStatus = { vm.updateEntryStatus(index, it) },
                         onNotes = { vm.updateEntryNotes(index, it) },
                         onExternal = { vm.updateEntryExternalReplacement(index, it) },
-                        onEditCheckIn = { timeEdit = TimeEdit.CheckIn(index) },
-                        onEditCheckOut = { timeEdit = TimeEdit.CheckOut(index) },
+                        onCheckIn = { vm.setEntryCheckTime(index, true, it.hour, it.minute) },
+                        onCheckOut = { vm.setEntryCheckTime(index, false, it.hour, it.minute) },
                         onClearCheckIn = { vm.clearEntryCheckTime(index, true) },
                         onClearCheckOut = { vm.clearEntryCheckTime(index, false) },
                     )
                 }
                 item(key = "p-run-notes") {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    NayaraCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(NayaraSpacing.Lg), verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column(Modifier.weight(1f).padding(end = 8.dp)) {
                                     Text("Mark as invalid record", style = MaterialTheme.typography.bodyMedium)
@@ -528,66 +638,32 @@ private fun PlannerContent(state: AttendanceUiState, vm: AttendanceViewModel) {
                         }
                     }
                 }
-                state.saveError?.let { item(key = "p-save-error") { ErrorCard(it) } }
-                item(key = "p-save") {
-                    NayaraButton(
-                        onClick = { vm.save() },
-                        enabled = !state.saving,
-                        loading = state.saving,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Save Attendance") }
-                }
+                state.saveError?.let { item(key = "p-save-error") { InlineErrorCard(it) } }
             }
             state.selectedShiftId != null && state.plannerBaseErrors.isEmpty() && state.windowStart != null && state.draftEntries.isEmpty() && !state.plannerLoading ->
                 item(key = "p-no-staff") {
-                    EmptyCard(
+                    EmptyState(
                         title = "No staff assigned yet",
-                        body = "This shift does not have any active staff assignments for the selected date. Assign staff first, then come back to attendance.",
+                        message = "This shift does not have any active staff assignments for the selected date. Assign staff first, then come back to attendance.",
                     )
                 }
-            state.selectedShiftId == null ->
+            state.selectedShiftId == null && !state.templatesLoading ->
                 item(key = "p-start") {
-                    EmptyCard(
+                    EmptyState(
                         title = "Start by selecting a shift",
-                        body = "Choose the shift and start time above, and the staff roster for that window will load here.",
+                        message = "Choose the shift and start time above, and the staff roster for that window will load here.",
                     )
                 }
         }
     }
 
-    if (showDatePicker) {
-        DatePickerModal(
-            initialMillis = state.startMillis,
-            onConfirm = { millis -> millis?.let { vm.setStartDate(it) }; showDatePicker = false },
-            onDismiss = { showDatePicker = false },
-        )
-    }
-
-    timeEdit?.let { target ->
-        val (initialHour, initialMinute, dialogTitle) = when (target) {
-            is TimeEdit.StartTime -> Triple(state.startHour, state.startMinute, "Start Time")
-            is TimeEdit.CheckIn -> {
-                val hm = isoToHourMinute(state.draftEntries.getOrNull(target.index)?.checkInAt)
-                Triple(hm?.first ?: state.startHour, hm?.second ?: state.startMinute, "Check In")
-            }
-            is TimeEdit.CheckOut -> {
-                val hm = isoToHourMinute(state.draftEntries.getOrNull(target.index)?.checkOutAt)
-                Triple(hm?.first ?: state.startHour, hm?.second ?: state.startMinute, "Check Out")
-            }
-        }
-        TimePickerModal(
-            title = dialogTitle,
-            initialHour = initialHour,
-            initialMinute = initialMinute,
-            onConfirm = { hour, minute ->
-                when (target) {
-                    is TimeEdit.StartTime -> vm.setStartTime(hour, minute)
-                    is TimeEdit.CheckIn -> vm.setEntryCheckTime(target.index, true, hour, minute)
-                    is TimeEdit.CheckOut -> vm.setEntryCheckTime(target.index, false, hour, minute)
-                }
-                timeEdit = null
-            },
-            onDismiss = { timeEdit = null },
+    if (confirmMarkAll) {
+        ConfirmDialog(
+            title = "Mark all present?",
+            text = "Set every staff row's status to Present? Statuses you've already changed will be overwritten.",
+            confirmLabel = "Mark All",
+            onConfirm = { confirmMarkAll = false; vm.markAllPresent() },
+            onDismiss = { confirmMarkAll = false },
         )
     }
 }
@@ -595,16 +671,17 @@ private fun PlannerContent(state: AttendanceUiState, vm: AttendanceViewModel) {
 @Composable
 private fun DraftEntryCard(
     entry: DraftEntry,
+    modifier: Modifier = Modifier,
     onStatus: (String) -> Unit,
     onNotes: (String) -> Unit,
     onExternal: (String) -> Unit,
-    onEditCheckIn: () -> Unit,
-    onEditCheckOut: () -> Unit,
+    onCheckIn: (LocalTime) -> Unit,
+    onCheckOut: (LocalTime) -> Unit,
     onClearCheckIn: () -> Unit,
     onClearCheckOut: () -> Unit,
 ) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    NayaraCard(modifier = modifier.fillMaxWidth()) {
+        Column(Modifier.padding(NayaraSpacing.Lg), verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
             Column {
                 Text(entry.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text(entry.phone ?: "Mobile not set", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.nayara.textSecondary)
@@ -616,8 +693,8 @@ private fun DraftEntryCard(
                 onSelect = onStatus,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CheckTimeField("Check In", entry.checkInAt, Modifier.weight(1f), onEditCheckIn, onClearCheckIn)
-                CheckTimeField("Check Out", entry.checkOutAt, Modifier.weight(1f), onEditCheckOut, onClearCheckOut)
+                CheckTimeField("Check In", entry.checkInAt, Modifier.weight(1f), onCheckIn, onClearCheckIn)
+                CheckTimeField("Check Out", entry.checkOutAt, Modifier.weight(1f), onCheckOut, onClearCheckOut)
             }
             if (entry.status == "absent") {
                 OutlinedTextField(
@@ -646,11 +723,16 @@ private fun CheckTimeField(
     label: String,
     iso: String?,
     modifier: Modifier = Modifier,
-    onEdit: () -> Unit,
+    onChange: (LocalTime) -> Unit,
     onClear: () -> Unit,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        PickerField(label = label, value = fmtTime(iso), onClick = onEdit)
+        TimeField(
+            label = label,
+            value = parseDateTime(iso)?.toLocalTime(),
+            onChange = onChange,
+            placeholder = "Not recorded",
+        )
         if (iso != null) {
             TextButton(onClick = onClear, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
                 Text("Clear", style = MaterialTheme.typography.labelSmall)
@@ -668,8 +750,8 @@ private fun shiftOptionLabel(t: ShiftTemplateDto): String =
 
 /**
  * A tap-to-open dropdown built on the stable [DropdownMenu] (no experimental
- * ExposedDropdown APIs). The field is a read-only picker; the menu anchors to
- * the wrapping [Box].
+ * ExposedDropdown APIs). The field is a designsystem [PickerField]; the menu
+ * anchors to the wrapping [Box].
  */
 @Composable
 private fun <T> LabeledDropdown(
@@ -679,85 +761,39 @@ private fun <T> LabeledDropdown(
     modifier: Modifier = Modifier,
     onSelect: (T) -> Unit,
 ) {
+    val haptics = rememberHaptics()
     var expanded by remember { mutableStateOf(false) }
     Box(modifier) {
-        PickerField(label = label, value = selectedLabel, modifier = Modifier.fillMaxWidth()) { expanded = true }
+        PickerField(
+            label = label,
+            value = selectedLabel,
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+        )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { (value, text) ->
-                DropdownMenuItem(text = { Text(text) }, onClick = { onSelect(value); expanded = false })
+                DropdownMenuItem(
+                    text = { Text(text) },
+                    onClick = {
+                        haptics.tick()
+                        onSelect(value)
+                        expanded = false
+                    },
+                )
             }
         }
     }
 }
 
-/** Read-only text field that behaves as a button (a transparent overlay captures taps). */
-@Composable
-private fun PickerField(label: String, value: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(modifier) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            label = { Text(label) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Box(Modifier.matchParentSize().clickable(onClick = onClick))
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DatePickerModal(initialMillis: Long?, onConfirm: (Long?) -> Unit, onDismiss: () -> Unit) {
-    val pickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { onConfirm(pickerState.selectedDateMillis) }) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    ) {
-        DatePicker(state = pickerState)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TimePickerModal(
-    title: String,
-    initialHour: Int,
-    initialMinute: Int,
-    onConfirm: (Int, Int) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val pickerState = rememberTimePickerState(initialHour = initialHour, initialMinute = initialMinute, is24Hour = false)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { onConfirm(pickerState.hour, pickerState.minute) }) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text(title) },
-        text = { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { TimePicker(state = pickerState) } },
-    )
-}
-
-@Composable
-private fun ConfirmDialog(
-    title: String,
-    message: String,
-    confirmLabel: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text(title) },
-        text = { Text(message) },
-    )
-}
-
 @Composable
 private fun SectionHeader(text: String) {
-    Text(text, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+    Text(
+        text,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.nayara.textSecondary,
+        modifier = Modifier.padding(top = 4.dp),
+    )
 }
 
 @Composable
@@ -773,46 +809,7 @@ private fun LabelValue(label: String, value: String) {
     }
 }
 
-@Composable
-private fun TagLabel(text: String, container: Color, content: Color) {
-    Surface(color = container, contentColor = content, shape = MaterialTheme.shapes.small) {
-        Text(
-            text,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-        )
-    }
-}
-
-@Composable
-private fun CenteredSpinner() {
-    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-}
-
-@Composable
-private fun ErrorCard(message: String?, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        ),
-    ) {
-        Text(message ?: "Something went wrong.", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-@Composable
-private fun EmptyCard(title: String, body: String) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.nayara.textSecondary)
-        }
-    }
-}
-
+/** Container/content colors for the detail screen's status-count tiles. */
 @Composable
 private fun statusColors(status: String): Pair<Color, Color> {
     val n = MaterialTheme.nayara
@@ -826,9 +823,9 @@ private fun statusColors(status: String): Pair<Color, Color> {
 }
 
 // ---- LazyColumn helper: indexed items for the draft list (stable per-user keys) ----
-private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedDraft(
+private fun LazyListScope.itemsIndexedDraft(
     entries: List<DraftEntry>,
-    content: @Composable (Int, DraftEntry) -> Unit,
+    content: @Composable LazyItemScope.(Int, DraftEntry) -> Unit,
 ) {
     entries.forEachIndexed { index, entry ->
         item(key = "draft-${entry.scheduledUserId}") { content(index, entry) }
@@ -841,7 +838,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedDraft(
 
 private val DATE_TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM · hh:mm a")
 private val TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
-private val DATE_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
 
 private fun parseDateTime(iso: String?): java.time.LocalDateTime? = iso?.let { raw ->
     runCatching { java.time.OffsetDateTime.parse(raw).toLocalDateTime() }
@@ -853,21 +849,6 @@ private fun fmtDateTime(iso: String?): String = parseDateTime(iso)?.format(DATE_
 
 private fun fmtTime(iso: String?): String = parseDateTime(iso)?.toLocalTime()?.format(TIME_FMT) ?: "Not recorded"
 
-private fun fmtHourMinute(hour: Int, minute: Int): String = LocalTime.of(hour, minute).format(TIME_FMT)
-
-private fun fmtMillisDate(millis: Long?): String = millis?.let {
-    Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().format(DATE_FMT)
-} ?: "Select date"
-
-private fun isoToHourMinute(iso: String?): Pair<Int, Int>? =
-    parseDateTime(iso)?.toLocalTime()?.let { it.hour to it.minute }
-
-private fun millisToIsoDate(millis: Long?): String? = millis?.let {
-    Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().toString()
-}
-
-private fun isoDateToMillis(iso: String?): Long? = iso?.let {
-    runCatching {
-        java.time.LocalDate.parse(it).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-    }.getOrNull()
+private fun parseIsoDate(iso: String?): LocalDate? = iso?.let {
+    runCatching { LocalDate.parse(it) }.getOrNull()
 }
