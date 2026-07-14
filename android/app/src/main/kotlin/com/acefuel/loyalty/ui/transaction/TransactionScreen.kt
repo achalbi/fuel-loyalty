@@ -46,6 +46,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -95,6 +97,15 @@ fun TransactionScreen(
     val haptics = rememberHaptics()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    // Look Up / OK / Save all drop the cursor and close the keyboard so results
+    // and the rest of the form aren't left hidden behind it. clearFocus() is what
+    // removes the caret from the field; hide() closes the IME on its own too.
+    val dismissKeyboard = {
+        keyboard?.hide()
+        focusManager.clearFocus()
+    }
     // Plain remember (not saveable): the confirm summary reads ViewModel state,
     // which resets on process death — a restored dialog would show empty fields.
     var showConfirm by remember { mutableStateOf(false) }
@@ -175,7 +186,7 @@ fun TransactionScreen(
                             onValueChange = viewModel::onVehicleNumberChange,
                             label = "Vehicle number",
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { if (canLookup) viewModel.lookup() }),
+                            keyboardActions = KeyboardActions(onSearch = { if (canLookup) { dismissKeyboard(); viewModel.lookup() } }),
                             trailingIcon = {
                                 IconButton(onClick = onScanPlate) {
                                     Icon(Icons.Filled.CameraAlt, contentDescription = "Scan plate")
@@ -193,13 +204,13 @@ fun TransactionScreen(
                                 keyboardType = KeyboardType.Phone,
                                 imeAction = ImeAction.Search,
                             ),
-                            keyboardActions = KeyboardActions(onSearch = { if (canLookup) viewModel.lookup() }),
+                            keyboardActions = KeyboardActions(onSearch = { if (canLookup) { dismissKeyboard(); viewModel.lookup() } }),
                             modifier = Modifier.weight(1f),
                         )
                     }
                     Spacer(Modifier.width(NayaraSpacing.Md))
                     NayaraButton(
-                        onClick = { viewModel.lookup() },
+                        onClick = { dismissKeyboard(); viewModel.lookup() },
                         enabled = canLookup,
                         loading = state.lookupLoading,
                     ) {
@@ -336,7 +347,12 @@ fun TransactionScreen(
                                 keyboardType = KeyboardType.Decimal,
                                 imeAction = ImeAction.Done,
                             ),
-                            keyboardActions = KeyboardActions(onDone = { if (state.canSave) showConfirm = true }),
+                            // OK/Done always closes the keyboard and drops the caret; if the
+                            // rest of the form is already complete it also opens the confirm.
+                            keyboardActions = KeyboardActions(onDone = {
+                                dismissKeyboard()
+                                if (state.canSave) showConfirm = true
+                            }),
                         )
                         Spacer(Modifier.height(NayaraSpacing.Md))
                         Text("Payment", style = MaterialTheme.typography.labelLarge)
@@ -364,7 +380,7 @@ fun TransactionScreen(
 
                         Spacer(Modifier.height(NayaraSpacing.Lg))
                         NayaraButton(
-                            onClick = { showConfirm = true },
+                            onClick = { dismissKeyboard(); showConfirm = true },
                             enabled = state.canSave,
                             loading = state.creating,
                             modifier = Modifier.fillMaxWidth(),
@@ -435,7 +451,19 @@ private fun NozzleSection(
         else -> {
             val options = state.nozzleOptions()
             if (options.isEmpty()) {
-                Blocker("No nozzle is assigned to your pump for this vehicle's fuel type.")
+                val fuel = state.selectedFuelTypeLabel
+                Blocker(
+                    if (fuel != null) {
+                        "Your pump has no active $fuel nozzle assigned. Update My Pump to add one " +
+                            "(or pick a pump that has a $fuel nozzle)."
+                    } else {
+                        "No nozzle is assigned to your pump for this vehicle's fuel type."
+                    },
+                )
+                Spacer(Modifier.height(NayaraSpacing.Md))
+                NayaraButton(onClick = onSetupPump, modifier = Modifier.fillMaxWidth()) {
+                    Text("Change My Pump")
+                }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
                     options.forEach { nozzle: NozzleDto ->

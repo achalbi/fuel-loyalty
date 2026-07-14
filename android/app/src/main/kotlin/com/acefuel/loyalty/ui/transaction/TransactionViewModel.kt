@@ -113,13 +113,18 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
     }
 
     /**
-     * Re-fetch the pump on return from the My Pump setup screen, but only when
-     * still unconfigured — so a staff member who just set it up sees the nozzle
-     * options without a needless skeleton flash on every resume.
+     * Re-fetch the pump on return from the My Pump setup screen, but only while
+     * the nozzle section is actually blocked — either no pump is set up, or the
+     * assigned nozzles don't cover the selected vehicle's fuel type. This picks
+     * up a just-changed assignment without a needless skeleton flash on every
+     * resume once nozzle options are already showing.
      */
     fun refreshPumpIfNeeded() {
         val s = _state.value
-        if (!s.pumpReady && !s.myPumpLoading) loadMyPump()
+        if (s.myPumpLoading) return
+        val blockedOnPump = !s.pumpReady
+        val blockedOnFuelType = s.selectedVehicle != null && s.nozzleOptions().isEmpty()
+        if (blockedOnPump || blockedOnFuelType) loadMyPump()
     }
 
     fun setMode(mode: String) {
