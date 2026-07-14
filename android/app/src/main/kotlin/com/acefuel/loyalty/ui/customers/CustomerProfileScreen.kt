@@ -1,6 +1,8 @@
 package com.acefuel.loyalty.ui.customers
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -15,10 +17,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Agriculture
+import androidx.compose.material.icons.filled.DirectionsBus
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -32,6 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +59,7 @@ import com.acefuel.loyalty.ui.designsystem.AnimatedCounter
 import com.acefuel.loyalty.ui.designsystem.Avatar
 import com.acefuel.loyalty.ui.designsystem.ConfirmDialog
 import com.acefuel.loyalty.ui.designsystem.ErrorState
+import com.acefuel.loyalty.ui.designsystem.FuelDot
 import com.acefuel.loyalty.ui.designsystem.NayaraCard
 import com.acefuel.loyalty.ui.designsystem.NayaraPullToRefresh
 import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
@@ -245,13 +258,19 @@ private fun HeroCard(p: CustomerProfileDto) {
             color = NayaraPalette.White,
         )
         Spacer(Modifier.height(12.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             InfoChip("${p.visitsCount} visits")
             InfoChip("${p.vehicles.size} vehicles")
             InfoChip("Joined ${formatMonthYear(p.joinedAt)}")
             if (p.rewardsPaused) InfoChip("Rewards Paused")
             p.maxRedeemableCashReward?.let { InfoChip("Cash ₹%.2f".format(it)) }
         }
+        // Extra room below the pills so they don't hug the card's bottom edge
+        // (the hero card's own content padding alone reads as too tight here).
+        Spacer(Modifier.height(8.dp))
     }
 }
 
@@ -312,16 +331,60 @@ private fun EmptyNote(text: String) {
 @Composable
 private fun VehicleCard(v: StaffVehicleDto, modifier: Modifier = Modifier) {
     NayaraCard(modifier = modifier.fillMaxWidth()) {
-        Column(
+        Row(
             modifier = Modifier.padding(NayaraSpacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xs),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            PlateChip(v.vehicleNumber)
-            Text("${v.fuelType ?: "—"} · ${v.vehicleKind ?: "—"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.nayara.textSecondary)
-            if (v.commercial && !v.commercialContactName.isNullOrBlank()) {
-                Text("Contact: ${v.commercialContactName}", style = MaterialTheme.typography.bodySmall)
+            // Leading kind icon anchors the row so the plate + fuel line no longer
+            // float alone in an empty full-width card.
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.nayara.bgSurfaceSunken),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    vehicleKindIcon(v),
+                    contentDescription = null,
+                    tint = MaterialTheme.nayara.textSecondary,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            Spacer(Modifier.width(NayaraSpacing.Md))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xs),
+            ) {
+                PlateChip(v.vehicleNumber)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Xs),
+                ) {
+                    FuelDot(v.fuelTypeCode ?: v.fuelType ?: "")
+                    Text(
+                        "${v.fuelType ?: "—"} · ${v.vehicleKind ?: "—"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.nayara.textSecondary,
+                    )
+                }
+                if (v.commercial && !v.commercialContactName.isNullOrBlank()) {
+                    Text("Contact: ${v.commercialContactName}", style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
+    }
+}
+
+/** Maps a vehicle's kind (code or label) to a representative glyph. */
+private fun vehicleKindIcon(v: StaffVehicleDto): ImageVector {
+    val key = (v.vehicleKindCode ?: v.vehicleKind ?: "").lowercase()
+    return when {
+        "two" in key || "2w" in key || "bike" in key || "motor" in key || "scooter" in key -> Icons.Filled.TwoWheeler
+        "truck" in key || "lorry" in key || "hcv" in key || "hgv" in key || "lcv" in key -> Icons.Filled.LocalShipping
+        "bus" in key -> Icons.Filled.DirectionsBus
+        "tractor" in key || "agri" in key -> Icons.Filled.Agriculture
+        else -> Icons.Filled.DirectionsCar
     }
 }
 

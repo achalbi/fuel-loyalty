@@ -7,6 +7,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,14 +18,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -48,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -334,39 +340,66 @@ fun TransactionScreen(
                         Spacer(Modifier.height(NayaraSpacing.Sm))
                         val amountInvalid = state.fuelAmount.isNotBlank() &&
                             (state.fuelAmount.toDoubleOrNull() ?: 0.0) <= 0.0
-                        FormField(
-                            value = state.fuelAmount,
-                            onValueChange = viewModel::onFuelAmountChange,
-                            label = "Fuel amount",
-                            prefix = { Text("₹ ") },
-                            errors = if (amountInvalid) listOf("Enter a valid amount.") else null,
-                            // Reward rates aren't exposed by the lookup APIs, so the
-                            // earned points come from the server on save.
-                            helper = "Points are calculated when the transaction is saved.",
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Decimal,
-                                imeAction = ImeAction.Done,
-                            ),
-                            // OK/Done always closes the keyboard and drops the caret; if the
-                            // rest of the form is already complete it also opens the confirm.
-                            keyboardActions = KeyboardActions(onDone = {
-                                dismissKeyboard()
-                                if (state.canSave) showConfirm = true
-                            }),
-                        )
+                        // Field + OK share a row like the lookup step. Top-aligned so the
+                        // button sits against the input box while the helper/error line
+                        // flows below it (that supporting text lives inside the field).
+                        Row(verticalAlignment = Alignment.Top) {
+                            FormField(
+                                value = state.fuelAmount,
+                                onValueChange = viewModel::onFuelAmountChange,
+                                label = "Fuel amount",
+                                prefix = { Text("₹ ") },
+                                errors = if (amountInvalid) listOf("Enter a valid amount.") else null,
+                                // Reward rates aren't exposed by the lookup APIs, so the
+                                // earned points come from the server on save.
+                                helper = "Points are calculated when the transaction is saved.",
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Decimal,
+                                    imeAction = ImeAction.Done,
+                                ),
+                                // OK/Done always closes the keyboard and drops the caret; if
+                                // the rest of the form is already complete it opens the confirm.
+                                keyboardActions = KeyboardActions(onDone = {
+                                    dismissKeyboard()
+                                    if (state.canSave) showConfirm = true
+                                }),
+                                modifier = Modifier.weight(1f),
+                            )
+                            Spacer(Modifier.width(NayaraSpacing.Md))
+                            // Explicit dismiss affordance: the decimal keyboard covers the
+                            // payment / nozzle / save controls below, so give the attendant a
+                            // visible way to close it once the amount is typed.
+                            // Top padding offsets the field's floating-label overhang so the
+                            // button seats against the input box instead of riding above it.
+                            NayaraButton(
+                                onClick = { dismissKeyboard() },
+                                enabled = state.fuelAmount.isNotBlank(),
+                                modifier = Modifier.padding(top = NayaraSpacing.Sm),
+                            ) {
+                                Text("OK")
+                            }
+                        }
                         Spacer(Modifier.height(NayaraSpacing.Md))
                         Text("Payment", style = MaterialTheme.typography.labelLarge)
                         Spacer(Modifier.height(NayaraSpacing.Sm))
-                        Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
-                            FilterChip(
+                        // Compact chip-sized buttons (same footprint as the old chips) but
+                        // the selected mode fills with the brand color so the choice still
+                        // reads at a glance. selectableGroup() ties them into one a11y radio group.
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm),
+                            modifier = Modifier.selectableGroup(),
+                        ) {
+                            PaymentOption(
                                 selected = state.paymentMode == "cash",
-                                onClick = { haptics.tick(); viewModel.setPayment("cash") },
-                                label = { Text("Cash") },
+                                onSelect = { haptics.tick(); viewModel.setPayment("cash") },
+                                icon = Icons.Filled.AccountBalanceWallet,
+                                label = "Cash",
                             )
-                            FilterChip(
+                            PaymentOption(
                                 selected = state.paymentMode == "credit",
-                                onClick = { haptics.tick(); viewModel.setPayment("credit") },
-                                label = { Text("Credit") },
+                                onSelect = { haptics.tick(); viewModel.setPayment("credit") },
+                                icon = Icons.Filled.CreditCard,
+                                label = "Credit",
                             )
                         }
 
@@ -515,6 +548,45 @@ private fun SelectableRow(selected: Boolean, onSelect: () -> Unit, title: String
                 Text(title, fontWeight = FontWeight.SemiBold)
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.nayara.textSecondary)
             }
+        }
+    }
+}
+
+@Composable
+private fun PaymentOption(
+    selected: Boolean,
+    onSelect: () -> Unit,
+    icon: ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    // Compact payment button, chip-sized. Selected = filled primary card with
+    // white content; unselected = outlined white card (DESIGN_BRIEF §5.5: selector
+    // state reads as filled vs outlined). Selected fill uses colorScheme.primary
+    // — the same token the screen's NayaraButtons use — so it stays in step with
+    // an admin brand override instead of a hardcoded navy. Card's contentColor
+    // drives both the icon tint and the label, so they flip together. Same
+    // RadioButton semantics as SelectableRow — the button is the a11y target.
+    val nayara = MaterialTheme.nayara
+    val scheme = MaterialTheme.colorScheme
+    Card(
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) scheme.primary else nayara.bgSurface,
+            contentColor = if (selected) scheme.onPrimary else nayara.textPrimary,
+        ),
+        border = if (selected) null else BorderStroke(1.dp, nayara.borderDefault),
+        // NayaraCard's 2dp resting lift in both states; the fill carries selection.
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = modifier.selectable(selected = selected, role = Role.RadioButton, onClick = onSelect),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = NayaraSpacing.Lg, vertical = NayaraSpacing.Sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Xs),
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         }
     }
 }
