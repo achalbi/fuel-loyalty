@@ -130,15 +130,15 @@ class NotificationScheduleRunnerTest < ActiveSupport::TestCase
       scheduled_time: "09:00",
       active: true
     )
-    SchedulerLease.create!(
-      key: NotificationScheduleRunner::LEASE_KEY,
-      running: true,
-      lease_token: "stale-token",
-      started_at: 20.minutes.ago,
-      last_heartbeat_at: 20.minutes.ago
-    )
-
     travel_to Time.zone.local(2026, 3, 26, 10, 0, 0) do
+      SchedulerLease.create!(
+        key: NotificationScheduleRunner::LEASE_KEY,
+        running: true,
+        lease_token: "stale-token",
+        started_at: 20.minutes.ago,
+        last_heartbeat_at: 20.minutes.ago
+      )
+
       result = NotificationScheduleRunner.new(push_service: push_service).run(current_time: Time.current)
 
       assert result.acquired

@@ -232,7 +232,7 @@ class UserTest < ActiveSupport::TestCase
 
   test "transaction pump nozzles only includes active assigned nozzles from the active pump" do
     user = users(:two)
-    inactive_nozzle = fuel_pumps(:one).nozzles.create!(fuel_type_code: "petrol", active: false)
+    inactive_nozzle = fuel_pumps(:one).nozzles.create!(sequence_number: 3, fuel_type_code: "petrol", active: false)
 
     user.update!(fuel_pump_id: fuel_pumps(:one).id, assigned_fuel_pump_nozzle_ids: [fuel_pump_nozzles(:one).id])
     user.pump_nozzle_assignments.create!(fuel_pump_nozzle: inactive_nozzle)

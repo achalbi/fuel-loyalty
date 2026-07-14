@@ -96,7 +96,8 @@ class PointsRedeemerTest < ActiveSupport::TestCase
   test "rejects redemption below the configured vehicle type minimum" do
     vehicle_types(:lcv).update!(minimum_redeemable_points: 300)
     customer = Customer.create!(name: "Redeem Threshold User", phone_number: "9666666677")
-    customer.vehicles.create!(vehicle_number: "TN10AB1234", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code)
+    customer.vehicles.create!(vehicle_number: "TN10AB1234", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code,
+      commercial_company_name: "Acme Freight", commercial_contact_name: "Ravi Kumar", commercial_address: "12 Transport Nagar, Chennai")
     customer.points_ledgers.create!(points: 450, entry_type: :earn)
 
     error = assert_raises(ActiveRecord::RecordInvalid) do
@@ -109,7 +110,8 @@ class PointsRedeemerTest < ActiveSupport::TestCase
   test "rejects redemption when the configured vehicle type minimum has not been reached yet" do
     vehicle_types(:lcv).update!(minimum_redeemable_points: 300)
     customer = Customer.create!(name: "Redeem Locked User", phone_number: "9666666688")
-    customer.vehicles.create!(vehicle_number: "TN10AB4321", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code)
+    customer.vehicles.create!(vehicle_number: "TN10AB4321", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code,
+      commercial_company_name: "Acme Freight", commercial_contact_name: "Ravi Kumar", commercial_address: "12 Transport Nagar, Chennai")
     customer.points_ledgers.create!(points: 250, entry_type: :earn)
 
     error = assert_raises(ActiveRecord::RecordInvalid) do

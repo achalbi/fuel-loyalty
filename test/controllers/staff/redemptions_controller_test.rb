@@ -82,7 +82,8 @@ module Staff
       sign_in users(:two)
       vehicle_types(:lcv).update!(minimum_redeemable_points: 300)
       customer = Customer.create!(name: "Redeem Controller Threshold User", phone_number: "9999999997")
-      customer.vehicles.create!(vehicle_number: "TN20AB1234", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code)
+      customer.vehicles.create!(vehicle_number: "TN20AB1234", fuel_type: :diesel, vehicle_kind: vehicle_types(:lcv).code,
+        commercial_company_name: "Acme Freight", commercial_contact_name: "Ravi Kumar", commercial_address: "12 Transport Nagar, Chennai")
       customer.points_ledgers.create!(points: 450, entry_type: :earn)
 
       post staff_redemptions_path, params: { redemption: { phone_number: customer.phone_number, points: 200 } }

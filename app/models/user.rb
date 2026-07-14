@@ -231,7 +231,7 @@ class User < ApplicationRecord
   end
 
   def normalize_name
-    self[:name] = name.to_s.squish.titleize.presence
+    self[:name] = name.to_s.squish.split.map(&:capitalize).join(" ").presence
   end
 
   def normalize_username

@@ -15,7 +15,7 @@ module Admin
 
       assert_redirected_to admin_staff_members_path
 
-      latest_assignment = users(:two).shift_assignments.order(:created_at).last
+      latest_assignment = users(:two).shift_assignments.find_by!(effective_to: nil)
       previous_assignment = shift_assignments(:staff_day_shift).reload
 
       assert_equal shift_templates(:night_shift), latest_assignment.shift_template
