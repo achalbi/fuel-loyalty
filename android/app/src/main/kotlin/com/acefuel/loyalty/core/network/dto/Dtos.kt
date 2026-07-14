@@ -272,6 +272,23 @@ data class MyPumpDto(
     }
 }
 
+/**
+ * PATCH /api/v1/my_pump body — canonical nested `user{}` envelope
+ * (base_controller has `wrap_parameters false`, so it must be explicit).
+ *
+ * [assignedNozzleIds] are strings so the leading `""` sentinel is representable:
+ * Rails' `collection_ids=` compacts blanks, but the key must be *present* as an
+ * array for the assignment to register — matching the web form's hidden field.
+ */
+@Serializable
+data class MyPumpUpdateEnvelope(val user: MyPumpUpdateRequest)
+
+@Serializable
+data class MyPumpUpdateRequest(
+    @SerialName("fuel_pump_id") val fuelPumpId: Long,
+    @SerialName("assigned_fuel_pump_nozzle_ids") val assignedNozzleIds: List<String>,
+)
+
 @Serializable
 data class PumpDto(
     val id: Long,

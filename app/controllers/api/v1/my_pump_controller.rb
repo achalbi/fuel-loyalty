@@ -9,8 +9,7 @@ module Api
 
       def update
         authorize current_user, :manage_pump?
-        current_user.assign_attributes(my_pump_params)
-        if current_user.save_pump_assignment
+        if current_user.update_pump_assignment(my_pump_params)
           render json: MyPumpSerializer.call(current_user.reload)
             .merge(message: "My pump updated successfully."), status: :ok
         else

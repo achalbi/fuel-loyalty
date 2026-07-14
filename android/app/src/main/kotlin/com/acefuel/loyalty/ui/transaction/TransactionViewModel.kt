@@ -112,6 +112,16 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
         }
     }
 
+    /**
+     * Re-fetch the pump on return from the My Pump setup screen, but only when
+     * still unconfigured — so a staff member who just set it up sees the nozzle
+     * options without a needless skeleton flash on every resume.
+     */
+    fun refreshPumpIfNeeded() {
+        val s = _state.value
+        if (!s.pumpReady && !s.myPumpLoading) loadMyPump()
+    }
+
     fun setMode(mode: String) {
         _state.update {
             it.copy(

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.DocumentScanner
+import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,19 +47,17 @@ import kotlinx.coroutines.launch
 // Account — the fourth bottom-nav destination (DESIGN_BRIEF §4a).
 //
 // Exists so the tab bar has a home for the things that were previously stranded
-// at the bottom of HomeScreen: identity, admin entry, log out. Everything here
-// comes from the already-loaded session (`GET /api/v1/auth/me`) — no new calls.
-//
-// TODO (needs backend): "My Pump" belongs on this screen. `GET/PATCH
-// /api/v1/my_pump` exists server-side but has no Retrofit binding yet, and
-// staff currently cannot see or change their own nozzle assignment from the
-// app — which is the exact thing that blocks them recording a transaction.
+// at the bottom of HomeScreen: identity, admin entry, log out. The identity
+// block comes from the already-loaded session (`GET /api/v1/auth/me`); "My
+// Pump" opens its own screen (GET/PATCH /api/v1/my_pump) where staff assign the
+// pump + nozzles that unblock recording transactions.
 // ============================================================================
 
 @Composable
 fun AccountScreen(
     user: UserDto,
     onAdmin: () -> Unit,
+    onMyPump: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -120,6 +119,15 @@ fun AccountScreen(
                 }
             }
         }
+
+        SectionHeader("Pump")
+        NayaraListRow(
+            title = "My Pump",
+            subtitle = "Choose your pump and its active nozzles",
+            leadingIcon = Icons.Filled.LocalGasStation,
+            leadingTint = nayara.actionPrimary,
+            onClick = { haptics.tick(); onMyPump() },
+        )
 
         if (isAdmin) {
             SectionHeader("Administration")

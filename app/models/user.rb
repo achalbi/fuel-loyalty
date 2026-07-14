@@ -189,6 +189,25 @@ class User < ApplicationRecord
     transaction_fuel_pump.present? && transaction_fuel_pump_nozzles.exists?
   end
 
+  # Atomically apply a self-service pump/nozzle assignment from request params.
+  #
+  # Assigning `assigned_fuel_pump_nozzle_ids` on a persisted user writes the
+  # join rows (UserPumpNozzleAssignment) to the DB *immediately* — that's how
+  # has_many :through collection assignment works. So assign + validate + save
+  # must all run inside one transaction: otherwise a rejected update leaves the
+  # join rows already mutated while `fuel_pump_id` stays put, silently
+  # corrupting a previously-ready assignment. On failure we roll the DB back and
+  # keep `errors` so the caller can render them.
+  def update_pump_assignment(attrs)
+    saved = false
+    transaction do
+      assign_attributes(attrs)
+      saved = save_pump_assignment
+      raise ActiveRecord::Rollback unless saved
+    end
+    saved
+  end
+
   def save_pump_assignment
     clear_assigned_nozzles_without_pump
     errors.clear

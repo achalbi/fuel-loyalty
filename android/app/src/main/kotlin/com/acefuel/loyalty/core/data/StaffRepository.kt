@@ -7,6 +7,8 @@ import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
 import com.acefuel.loyalty.core.network.dto.CustomerSummaryDto
 import com.acefuel.loyalty.core.network.dto.LedgerPageDto
 import com.acefuel.loyalty.core.network.dto.MyPumpDto
+import com.acefuel.loyalty.core.network.dto.MyPumpUpdateEnvelope
+import com.acefuel.loyalty.core.network.dto.MyPumpUpdateRequest
 import com.acefuel.loyalty.core.network.dto.PointsAdjustmentEnvelope
 import com.acefuel.loyalty.core.network.dto.PointsAdjustmentRequest
 import com.acefuel.loyalty.core.network.dto.PointsAdjustmentResponse
@@ -54,6 +56,23 @@ class StaffRepository(
 
     suspend fun myPump(): ApiResult<MyPumpDto> =
         apiCall(json) { api.myPump() }
+
+    /**
+     * Assign the current staff member's pump + active nozzles. The `""` sentinel
+     * is prepended so the server sees the ids array as present (see
+     * [MyPumpUpdateRequest]); returns the refreshed assignment incl. `ready`.
+     */
+    suspend fun updateMyPump(fuelPumpId: Long, nozzleIds: List<Long>): ApiResult<MyPumpDto> =
+        apiCall(json) {
+            api.updateMyPump(
+                MyPumpUpdateEnvelope(
+                    MyPumpUpdateRequest(
+                        fuelPumpId = fuelPumpId,
+                        assignedNozzleIds = listOf("") + nozzleIds.map(Long::toString),
+                    ),
+                ),
+            )
+        }
 
     suspend fun createTransaction(request: TransactionCreateRequest): ApiResult<TransactionCreateResponse> =
         apiCall(json) { api.createTransaction(TransactionCreateEnvelope(request)) }

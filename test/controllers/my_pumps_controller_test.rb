@@ -63,6 +63,28 @@ class MyPumpsControllerTest < ActionDispatch::IntegrationTest
     refute_match(/Phone number can't be blank/i, response.body)
   end
 
+  test "a rejected update leaves the existing pump and nozzle assignment untouched" do
+    sign_in users(:two)
+    before_pump = users(:two).fuel_pump_id
+    before_nozzles = users(:two).assigned_fuel_pump_nozzle_ids.sort
+    assert before_pump.present?
+    assert before_nozzles.any?, "fixture must start with an existing assignment"
+
+    # Clearing all nozzles on a selected pump is rejected — the previous
+    # assignment must survive, not be half-written before the validation gate.
+    patch my_pump_path, params: {
+      user: {
+        fuel_pump_id: fuel_pumps(:one).id,
+        assigned_fuel_pump_nozzle_ids: [""]
+      }
+    }
+
+    assert_response :unprocessable_entity
+    users(:two).reload
+    assert_equal before_pump, users(:two).fuel_pump_id
+    assert_equal before_nozzles, users(:two).assigned_fuel_pump_nozzle_ids.sort
+  end
+
   test "my pump validation does not surface unrelated profile errors for legacy staff records" do
     staff = users(:two)
     staff.update_columns(phone_number: nil)

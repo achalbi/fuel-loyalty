@@ -51,6 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -82,6 +84,7 @@ fun TransactionScreen(
     onBack: () -> Unit,
     onViewCustomer: (Long) -> Unit,
     onScanPlate: () -> Unit = {},
+    onSetupPump: () -> Unit = {},
     scannedPlate: String? = null,
 ) {
     val container = LocalContainer.current
@@ -95,6 +98,10 @@ fun TransactionScreen(
     // Plain remember (not saveable): the confirm summary reads ViewModel state,
     // which resets on process death — a restored dialog would show empty fields.
     var showConfirm by remember { mutableStateOf(false) }
+
+    // Returning from the My Pump setup screen: re-check readiness so the nozzle
+    // section unblocks without the user having to leave and re-open the form.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshPumpIfNeeded() }
 
     // A plate returned from the scanner flows in here: switch to vehicle mode,
     // fill the number, and run the lookup.
@@ -351,6 +358,7 @@ fun TransactionScreen(
                         NozzleSection(
                             state = state,
                             onRetryPump = viewModel::loadMyPump,
+                            onSetupPump = onSetupPump,
                             onSelect = { haptics.tick(); viewModel.selectNozzle(it) },
                         )
 
@@ -406,13 +414,24 @@ private fun stepExit() = fadeOut(tween(NayaraMotion.Fast)) +
     shrinkVertically(tween(NayaraMotion.Fast, easing = NayaraMotion.Exit))
 
 @Composable
-private fun NozzleSection(state: TxnUiState, onRetryPump: () -> Unit, onSelect: (Long) -> Unit) {
+private fun NozzleSection(
+    state: TxnUiState,
+    onRetryPump: () -> Unit,
+    onSetupPump: () -> Unit,
+    onSelect: (Long) -> Unit,
+) {
     Text("Nozzle", style = MaterialTheme.typography.labelLarge)
     Spacer(Modifier.height(NayaraSpacing.Sm))
     when {
         state.myPumpLoading -> SkeletonListItem(showAvatar = false)
         state.myPumpError != null -> InlineErrorCard(state.myPumpError, onRetry = onRetryPump)
-        !state.pumpReady -> Blocker("Set up My Pump with at least one active nozzle before recording transactions.")
+        !state.pumpReady -> {
+            Blocker("Set up My Pump with at least one active nozzle before recording transactions.")
+            Spacer(Modifier.height(NayaraSpacing.Md))
+            NayaraButton(onClick = onSetupPump, modifier = Modifier.fillMaxWidth()) {
+                Text("Set up My Pump")
+            }
+        }
         else -> {
             val options = state.nozzleOptions()
             if (options.isEmpty()) {

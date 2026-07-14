@@ -9,9 +9,8 @@ class MyPumpsController < ApplicationController
 
   def update
     authorize current_user, :manage_pump?
-    current_user.assign_attributes(my_pump_params)
 
-    if current_user.save_pump_assignment
+    if current_user.update_pump_assignment(my_pump_params)
       redirect_to my_pump_path, notice: "My pump updated successfully."
     else
       load_form_state

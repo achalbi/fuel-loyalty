@@ -9,6 +9,7 @@ import com.acefuel.loyalty.core.network.dto.LoyaltyLookupEnvelope
 import com.acefuel.loyalty.core.network.dto.LoyaltyResponse
 import com.acefuel.loyalty.core.network.dto.MeResponse
 import com.acefuel.loyalty.core.network.dto.MyPumpDto
+import com.acefuel.loyalty.core.network.dto.MyPumpUpdateEnvelope
 import com.acefuel.loyalty.core.network.dto.PointsAdjustmentEnvelope
 import com.acefuel.loyalty.core.network.dto.PointsAdjustmentResponse
 import com.acefuel.loyalty.core.network.dto.RedemptionEnvelope
@@ -85,6 +86,9 @@ interface AceFuelApi {
 
     @GET("api/v1/my_pump")
     suspend fun myPump(): MyPumpDto
+
+    @PATCH("api/v1/my_pump")
+    suspend fun updateMyPump(@Body body: MyPumpUpdateEnvelope): MyPumpDto
 
     // ---- Admin ----
 

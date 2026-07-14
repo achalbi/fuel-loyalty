@@ -54,6 +54,7 @@ import com.acefuel.loyalty.ui.customers.CustomersScreen
 import com.acefuel.loyalty.ui.home.HomeScreen
 import com.acefuel.loyalty.ui.login.LoginScreen
 import com.acefuel.loyalty.ui.loyalty.LoyaltyLookupScreen
+import com.acefuel.loyalty.ui.mypump.MyPumpScreen
 import com.acefuel.loyalty.ui.redeem.RedeemScreen
 import com.acefuel.loyalty.ui.transaction.TransactionScreen
 import com.acefuel.loyalty.ui.scanner.PlateScannerScreen
@@ -94,6 +95,7 @@ private object Routes {
     const val ADMIN = AdminRoutes.SHELL
     const val ACCOUNT = "account"
     const val PLATE_SCANNER = "plate_scanner"
+    const val MY_PUMP = "my_pump"
 }
 
 /**
@@ -297,6 +299,7 @@ fun AppRoot(container: ServiceContainer) {
                         AccountScreen(
                             user = user,
                             onAdmin = { navController.navigate(Routes.ADMIN) },
+                            onMyPump = { navController.navigate(Routes.MY_PUMP) },
                             onLogout = { scope.launch { container.authRepository.logout() } },
                         )
                     }
@@ -313,6 +316,7 @@ fun AppRoot(container: ServiceContainer) {
                             }
                         },
                         onScanPlate = { navController.navigate("plate_scanner") },
+                        onSetupPump = { navController.navigate(Routes.MY_PUMP) },
                         scannedPlate = scannedPlate,
                     )
                 }
@@ -333,6 +337,9 @@ fun AppRoot(container: ServiceContainer) {
                 }
                 composable(Routes.ADJUST) {
                     AdjustPointsScreen(onBack = { navController.popBackStack() })
+                }
+                composable(Routes.MY_PUMP) {
+                    MyPumpScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.CUSTOMERS) {
                     // Reached only as a bottom-nav tab — no back arrow (system
