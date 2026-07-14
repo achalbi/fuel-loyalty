@@ -6,6 +6,7 @@ import com.acefuel.loyalty.BuildConfig
 import com.acefuel.loyalty.core.auth.TokenStore
 import com.acefuel.loyalty.core.data.AuthRepository
 import com.acefuel.loyalty.core.data.LoyaltyRepository
+import com.acefuel.loyalty.core.data.SettingsStore
 import com.acefuel.loyalty.core.data.StaffRepository
 import com.acefuel.loyalty.core.data.ThemeRepository
 import com.acefuel.loyalty.core.network.AceFuelApi
@@ -33,6 +34,9 @@ class ServiceContainer(context: Context) {
     }
 
     val tokenStore = TokenStore(appContext).apply { hydrateBlocking() }
+
+    // Per-device app settings (e.g. the plate scanner's on-device-first preference).
+    val settingsStore = SettingsStore(appContext).apply { hydrateBlocking() }
 
     private val baseUrl = BuildConfig.API_BASE_URL
 

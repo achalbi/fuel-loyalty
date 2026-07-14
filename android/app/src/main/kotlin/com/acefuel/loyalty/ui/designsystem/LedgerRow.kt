@@ -3,6 +3,7 @@ package com.acefuel.loyalty.ui.designsystem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,6 +27,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -257,5 +260,56 @@ fun NayaraListRow(
         if (onClick != null) {
             Text("›", fontSize = 20.sp, color = nayara.textTertiary)
         }
+    }
+}
+
+/**
+ * Settings row with a trailing Material3 [Switch]. Same 56dp anatomy as
+ * [NayaraListRow]; the whole row is one toggle target (tap anywhere flips it).
+ */
+@Composable
+fun NayaraSwitchRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    leadingIcon: ImageVector? = null,
+    leadingTint: Color? = null,
+) {
+    val nayara = MaterialTheme.nayara
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+            .heightIn(min = 56.dp)
+            .padding(vertical = NayaraSpacing.Sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+    ) {
+        if (leadingIcon != null) {
+            Icon(
+                imageVector = leadingIcon,
+                contentDescription = null,
+                tint = leadingTint ?: nayara.textSecondary,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = nayara.textPrimary,
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = nayara.textSecondary,
+                )
+            }
+        }
+        // The row owns the toggle semantics; the Switch is decorative (onCheckedChange = null).
+        Switch(checked = checked, onCheckedChange = null)
     }
 }

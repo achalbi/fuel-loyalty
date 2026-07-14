@@ -134,6 +134,8 @@ fun PlateScannerScreen(onBack: () -> Unit, onResult: (String) -> Unit) {
         factory = viewModelFactory { initializer { PlateScannerViewModel(repo) } },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // Operator preference: on-device (ML Kit) first vs Plate Recognizer server first.
+    val onDeviceScanFirst by container.settingsStore.onDeviceScanFirst.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -176,7 +178,7 @@ fun PlateScannerScreen(onBack: () -> Unit, onResult: (String) -> Unit) {
                 val frame = captureFrame(imageCapture, context)
                 val (dataUrl, bitmap) = encodeForUpload(frame)
                 val ocr = recognizeOnDevice(bitmap)
-                viewModel.recognize(dataUrl, ocr, bitmap)
+                viewModel.recognize(dataUrl, ocr, bitmap, onDeviceScanFirst)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

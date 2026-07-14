@@ -32,15 +32,40 @@ class PlateScannerViewModel(private val repository: PlateScanRepository) : ViewM
     private var lastImage: String? = null
     private var lastOnDevicePlate: String? = null
     private var lastFrame: Bitmap? = null
+    private var lastOnDeviceFirst: Boolean = true
 
     /**
-     * Try the server recognizer first; fall back to the on-device ML Kit result
-     * ([onDevicePlate]) when the server is unavailable or finds nothing.
+     * Recognize the captured plate. Ordering follows the operator's Settings switch:
+     *
+     * - [onDeviceFirst] = true (default): if ML Kit already produced a valid Indian
+     *   plate, use it immediately — no network round-trip, works offline. The Plate
+     *   Recognizer backend is only consulted when the local read isn't a valid plate.
+     * - [onDeviceFirst] = false: the server is primary and the on-device read
+     *   ([onDevicePlate]) is the fallback when the server is unavailable or finds nothing.
      */
-    fun recognize(imageDataUrl: String, onDevicePlate: String?, frame: Bitmap? = null) {
+    fun recognize(
+        imageDataUrl: String,
+        onDevicePlate: String?,
+        frame: Bitmap? = null,
+        onDeviceFirst: Boolean = true,
+    ) {
         lastImage = imageDataUrl
         lastOnDevicePlate = onDevicePlate
         lastFrame = frame
+        lastOnDeviceFirst = onDeviceFirst
+
+        // On-device-first fast path: a confident local read wins outright, so the
+        // scanner stays instant and fully offline at the pump.
+        if (onDeviceFirst && !onDevicePlate.isNullOrBlank() && PlateText.isValid(onDevicePlate)) {
+            _state.value = PlateScanUiState(
+                plate = onDevicePlate,
+                valid = true,
+                provider = "on_device",
+                capturedFrame = frame,
+            )
+            return
+        }
+
         _state.update { PlateScanUiState(recognizing = true, capturedFrame = frame) }
         viewModelScope.launch {
             when (val result = repository.recognize(imageDataUrl)) {
@@ -51,6 +76,9 @@ class PlateScannerViewModel(private val repository: PlateScanRepository) : ViewM
                             plate = d.plate, confidence = d.confidence, valid = d.valid,
                             provider = d.provider ?: "plate_recognizer",
                             capturedFrame = frame,
+                            // In on-device-first mode the server is only reached when the
+                            // local read was low-confidence — surface that it was verified.
+                            infoMessage = if (onDeviceFirst) "Verified with Plate Recognizer" else null,
                         )
                     } else {
                         fallback(
@@ -72,10 +100,10 @@ class PlateScannerViewModel(private val repository: PlateScanRepository) : ViewM
         }
     }
 
-    /** Re-run server recognition on the last captured frame (no retake needed). */
+    /** Re-run recognition on the last captured frame (no retake needed). */
     fun retry() {
         val image = lastImage ?: return
-        recognize(image, lastOnDevicePlate, lastFrame)
+        recognize(image, lastOnDevicePlate, lastFrame, lastOnDeviceFirst)
     }
 
     private fun fallback(onDevicePlate: String?, frame: Bitmap?, serverMessage: String, offline: Boolean) {
