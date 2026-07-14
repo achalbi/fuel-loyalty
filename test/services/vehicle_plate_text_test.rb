@@ -1,4 +1,4 @@
-require "test_helper"
+require "unit_test_helper"
 
 class VehiclePlateTextTest < ActiveSupport::TestCase
   test "normalizes a manual vehicle number" do
@@ -12,6 +12,12 @@ class VehiclePlateTextTest < ActiveSupport::TestCase
 
   test "cleans common OCR mistakes for a standard indian registration" do
     assert_equal "TN01AA1234", VehiclePlateText.normalize_detected("tn 0l aa i234")
+  end
+
+  test "prefers the canonical district and number split over a lower-correction one" do
+    # "O1" reads as district 01 and the trailing "I" belongs to the 4-digit number,
+    # not a 3-letter "ABI" series that a fewest-corrections split would otherwise pick.
+    assert_equal "KA01AB1234", VehiclePlateText.normalize_detected("KA O1 AB I234")
   end
 
   test "cleans common OCR mistakes for a BH registration" do

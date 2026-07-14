@@ -66,14 +66,22 @@ class VehiclePlateText
           next unless normalized_candidate.match?(STANDARD_REGEX)
 
           replacements = replacement_count(candidate, normalized_candidate)
-          best_candidate = [replacements, normalized_candidate] if best_candidate.blank? || replacements < best_candidate.first
+          next if replacements > MAX_SAFE_OCR_REPLACEMENTS
+
+          # Prefer the canonical `SS DD SSS NNNN` reading — a 2-digit district code plus a full
+          # 4-digit number — over a lopsided split (1-digit district, or an extra trailing series
+          # letter that shrinks the number) that happens to need one fewer OCR fix. The canonical
+          # shape is what a human reads off the plate, so it's worth up to one extra correction;
+          # shape_penalty folds that "+1 tolerance" into the ranking and breaks ties toward it.
+          shape_penalty = district_length == 2 && number_length == 4 ? 0 : 1
+          score = [replacements + shape_penalty, shape_penalty]
+          if best_candidate.nil? || (score <=> best_candidate.first) < 0
+            best_candidate = [score, normalized_candidate]
+          end
         end
       end
 
-      return unless best_candidate.present?
-      return if best_candidate.first > MAX_SAFE_OCR_REPLACEMENTS
-
-      best_candidate.last
+      best_candidate&.last
     end
 
     def bh_candidate(candidate)
