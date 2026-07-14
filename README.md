@@ -65,6 +65,18 @@ docker compose exec -T app bundle exec brakeman -q
 docker compose exec -T app bundle exec rails assets:precompile
 ```
 
+> **Running the suite directly on a macOS host (outside Docker):** set `PARALLEL_WORKERS=1`.
+> Rails parallelizes tests by forking one worker per core, and the `pg` gem segfaults
+> across `fork()` on macOS (`[BUG] Segmentation fault … pg/connection.rb … connect_start`).
+> Running single-process avoids the fork:
+>
+> ```bash
+> PARALLEL_WORKERS=1 bin/rails test
+> ```
+>
+> Inside the Docker `app` container (Linux), parallel testing works fine, so the
+> `docker compose exec` commands above need no override.
+
 ## Cloud Run deploy behavior
 
 `cloudbuild.yaml` now runs `rails db:migrate` automatically on every deploy before
