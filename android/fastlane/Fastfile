@@ -28,6 +28,7 @@ platform :android do
       track: "internal",
       release_status: "draft", # review in the Console, then roll out
       aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
+      skip_upload_apk: true, # AAB-only lane; ignore any stale APKs in build outputs
       skip_upload_metadata: true,
       skip_upload_images: true,
       skip_upload_screenshots: true,
