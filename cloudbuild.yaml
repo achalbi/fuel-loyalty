@@ -51,7 +51,7 @@ steps:
           --image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA \
           --region=$_DEPLOY_REGION \
           --service-account=${_RUNTIME_SERVICE_ACCOUNT} \
-          --command=bundle \
+          --command=/app/bin/deploy-migrate \
           --args=exec,rails,db:migrate \
           --max-retries=0 \
           --parallelism=1 \

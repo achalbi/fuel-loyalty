@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+#
+# Run pending database migrations, tolerating a concurrent deploy's migration.
+#
+# When two Cloud Build deploys fire close together (e.g. a code push immediately
+# followed by a version-bump push), each runs this migrate job against the same
+# database. Rails serializes migrations with a Postgres advisory lock, so the
+# job that loses the race raises ActiveRecord::ConcurrentMigrationError and exits
+# non-zero. That is not a real failure — the other deploy is applying the pending
+# migrations — so we retry on that specific error until the lock frees. Any other
+# migration error still fails fast, unchanged.
+#
+# Invoked by cloudbuild.yaml's Migrate step as: bin/deploy-migrate exec rails db:migrate
+# so "$@" is the bundle sub-command to run (bundle exec rails db:migrate).
+set -uo pipefail
+
+max_attempts="${MIGRATE_MAX_ATTEMPTS:-10}"
+retry_delay="${MIGRATE_RETRY_DELAY:-15}"
+attempt=1
+
+while true; do
+  log="$(mktemp)"
+  bundle "$@" 2>&1 | tee "$log"
+  status="${PIPESTATUS[0]}"
+
+  if [ "$status" -eq 0 ]; then
+    rm -f "$log"
+    exit 0
+  fi
+
+  if ! grep -q "ConcurrentMigrationError" "$log"; then
+    # A genuine migration failure — surface it unchanged.
+    rm -f "$log"
+    exit "$status"
+  fi
+  rm -f "$log"
+
+  if [ "$attempt" -ge "$max_attempts" ]; then
+    echo "deploy-migrate: migration lock still held after ${max_attempts} attempts; checking for pending migrations..."
+    if bundle exec rails db:abort_if_pending_migrations; then
+      echo "deploy-migrate: no pending migrations — the concurrent deploy already applied them. Treating as success."
+      exit 0
+    fi
+    echo "deploy-migrate: pending migrations remain after ${max_attempts} attempts; failing." >&2
+    exit 1
+  fi
+
+  echo "deploy-migrate: a concurrent deploy is migrating (attempt ${attempt}/${max_attempts}); retrying in ${retry_delay}s..."
+  sleep "$retry_delay"
+  attempt=$((attempt + 1))
+done
