@@ -20,6 +20,16 @@ import kotlinx.coroutines.launch
 const val MODE_VEHICLE = "vehicle"
 const val MODE_PHONE = "phone"
 
+/**
+ * Mirror the server's fuel-type comparison. TransactionCreator matches a nozzle
+ * to a vehicle by `parameterize(separator: "_")` of both fuel codes, so the
+ * client must normalize the same way — some vehicles carry an un-normalized
+ * code (e.g. "Petrol" vs the nozzle's "petrol") that the server accepts but a
+ * raw `==` would reject, wrongly hiding a valid nozzle.
+ */
+internal fun normalizeFuelCode(value: String?): String =
+    value.orEmpty().lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+
 data class TxnUiState(
     val lookupMode: String = MODE_VEHICLE,
     val vehicleNumber: String = "",
@@ -74,8 +84,10 @@ data class TxnUiState(
 
     /** Assigned+active nozzles filtered to the selected vehicle's fuel type. */
     fun nozzleOptions(): List<NozzleDto> {
-        val fuel = selectedVehicle?.second ?: return emptyList()
-        return (myPump?.assignedNozzles() ?: emptyList()).filter { it.fuelTypeCode == fuel }
+        val fuel = normalizeFuelCode(selectedVehicle?.second)
+        if (fuel.isEmpty()) return emptyList()
+        return (myPump?.assignedNozzles() ?: emptyList())
+            .filter { normalizeFuelCode(it.fuelTypeCode) == fuel }
     }
 
     val pumpReady: Boolean get() = myPump?.ready == true
