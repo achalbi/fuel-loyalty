@@ -43,6 +43,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -171,17 +174,21 @@ fun TransactionScreen(
                 // Step 1 — Find (mode tabs + lookup)
                 StepHeader("1. Find customer")
                 Spacer(Modifier.height(NayaraSpacing.Sm))
-                Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
-                    FilterChip(
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
                         selected = state.lookupMode == MODE_VEHICLE,
                         onClick = { haptics.tick(); viewModel.setMode(MODE_VEHICLE) },
-                        label = { Text("Vehicle Number") },
-                    )
-                    FilterChip(
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    ) {
+                        Text("Vehicle Number")
+                    }
+                    SegmentedButton(
                         selected = state.lookupMode == MODE_PHONE,
                         onClick = { haptics.tick(); viewModel.setMode(MODE_PHONE) },
-                        label = { Text("Phone Number") },
-                    )
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    ) {
+                        Text("Phone Number")
+                    }
                 }
                 Spacer(Modifier.height(NayaraSpacing.Md))
 
@@ -220,10 +227,14 @@ fun TransactionScreen(
                         )
                     }
                     Spacer(Modifier.width(NayaraSpacing.Md))
+                    // OutlinedTextField reserves 8dp above its 56dp box for the floating
+                    // label, so the row is 64dp: bottom-align and match the box height to
+                    // line both edges up. Centering instead would sit the button 4dp high.
                     NayaraButton(
                         onClick = { dismissKeyboard(); viewModel.lookup() },
                         enabled = canLookup,
                         loading = state.lookupLoading,
+                        modifier = Modifier.height(56.dp),
                     ) {
                         Text("Look Up")
                     }
