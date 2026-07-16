@@ -597,6 +597,20 @@
           : `Recognition completed with ${provider}. Please verify the detected number before saving.`,
         valid && confidence >= 70 ? "success" : "warning"
       );
+
+      if (valid) {
+        // A usable plate was captured: close the live camera so the lookup outcome
+        // (the matched customer, or the new-customer registration path) is not hidden
+        // behind the scanner. The inline result summary stays visible for verification.
+        setPanelOpen(false);
+        // Signal the vehicle lookup that this is a committed scan so it can look the
+        // plate up right away and, when unregistered, open the new-customer flow.
+        input.dispatchEvent(new CustomEvent("vehicle-plate:scanned", {
+          bubbles: true,
+          detail: { plate: cleaned }
+        }));
+      }
+
       return true;
     };
 

@@ -39,7 +39,7 @@ Params: `lookup_mode, phone_number, vehicle_number, vehicle_id, fuel_amount, fue
 
 Modal "Add Customer" → `POST /staff/transactions/register_customer`. Renders the shared customer form **with vehicle fields**, carrying hidden `transaction_lookup[...]` state (lookup mode, phone, vehicle number, fuel amount, pump/nozzle, payment mode) so the wizard resumes afterward.
 
-- Auto-opens ~2 s after a "not found" lookup; also opened manually.
+- Auto-opens after a "not found" lookup; also opened manually. A **scanned** plate is treated as a committed lookup and opens the modal immediately (the scanner also closes its camera on a successful read so the modal isn't hidden behind the live preview); a **typed** plate still waits ~2 s so the number can be finished first.
 - **Live existing-customer detection:** typing a phone that matches an existing customer locks the name field and shows "Existing customer found: {name} (+91 …). This vehicle will be added to that customer."
 - **Vehicle-detail locking:** when opened from a vehicle-mode match with known fuel type/kind, those pickers are hidden and mirrored as hidden inputs.
 - Server: find-or-build customer by phone; requires name, phone, vehicle_number, fuel_type, vehicle_kind; saves customer + vehicle atomically. Success → back to the transaction screen, prefilled, with notice "Customer created successfully. Continue recording the transaction." (variants: "Vehicle added to the existing customer…", "Existing customer details loaded…"). Failure → 422, modal reopens with errors.

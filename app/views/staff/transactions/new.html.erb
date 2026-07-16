@@ -1888,7 +1888,7 @@
           }
         };
 
-        const loadMatches = async ({ force = false } = {}) => {
+        const loadMatches = async ({ force = false, viaScanner = false } = {}) => {
           vehicleNumberInput.value = normalizeVehicleNumberInput(vehicleNumberInput.value);
           const vehicleNumber = vehicleNumberInput.value;
 
@@ -1934,7 +1934,14 @@
               });
 
               if (vehicleNumberPattern.test(vehicleNumber)) {
-                registrationModal.scheduleOpen(registrationPayload);
+                // A scanned plate is a deliberate "look up", so follow the new-customer
+                // path immediately; a typed plate still waits ~2s so the number can be
+                // finished before the registration modal takes over.
+                if (viaScanner) {
+                  registrationModal.openNow(registrationPayload);
+                } else {
+                  registrationModal.scheduleOpen(registrationPayload);
+                }
               } else {
                 registrationModal.cancelPendingOpen();
               }
@@ -2010,6 +2017,17 @@
         });
 
         vehicleNumberInput.addEventListener("invalid", syncVehicleNumberValidity);
+
+        // The plate scanner commits a recognized number by dispatching this event after it
+        // fills the field. Treat it as an explicit lookup: skip the typing debounce and, when
+        // the plate is unregistered, jump straight into the new-customer registration flow.
+        vehicleNumberInput.addEventListener("vehicle-plate:scanned", () => {
+          clearServerErrors();
+          syncVehicleNumberValidity();
+          syncRegisterCustomerButton();
+          clearTimeout(lookupTimer);
+          loadMatches({ force: true, viaScanner: true });
+        });
 
         matchSelect.addEventListener("pointerdown", () => {
           if (document.activeElement === vehicleNumberInput) {
