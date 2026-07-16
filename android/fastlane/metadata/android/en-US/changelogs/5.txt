@@ -1,0 +1,3 @@
+Commercial vehicle details are now optional.
+
+Registering an LCV, MCV, or HCV no longer requires the company name, owner / manager name, or address before you can record the sale. The fields are still there when you have the details — just fill in what you know and carry on.
