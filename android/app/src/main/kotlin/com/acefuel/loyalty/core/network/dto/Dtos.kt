@@ -241,6 +241,53 @@ data class PointsAdjustmentResponse(
     val customer: StaffCustomerDto,
 )
 
+// ---- Staff: catalog (form reference data) + inline customer registration ----
+
+/**
+ * Active fuel types and vehicle kinds an attendant can choose when registering a
+ * customer for an unregistered plate — the same option sources the web form uses
+ * (FuelType.active_options / VehicleType.active_options).
+ */
+@Serializable
+data class CatalogResponse(
+    @SerialName("fuel_types") val fuelTypes: List<FuelTypeOptionDto> = emptyList(),
+    @SerialName("vehicle_kinds") val vehicleKinds: List<VehicleKindOptionDto> = emptyList(),
+)
+
+@Serializable
+data class FuelTypeOptionDto(val code: String, val label: String)
+
+@Serializable
+data class VehicleKindOptionDto(
+    val code: String,
+    val label: String,
+    // lcv/mcv/hcv: the client shows the commercial fields (company/contact/address).
+    val commercial: Boolean = false,
+)
+
+@Serializable
+data class RegisterCustomerRequest(
+    val name: String,
+    @SerialName("phone_number") val phoneNumber: String,
+    @SerialName("vehicle_number") val vehicleNumber: String,
+    @SerialName("fuel_type") val fuelType: String,
+    @SerialName("vehicle_kind") val vehicleKind: String,
+    @SerialName("commercial_company_name") val commercialCompanyName: String? = null,
+    @SerialName("commercial_contact_name") val commercialContactName: String? = null,
+    @SerialName("commercial_contact_phone_number") val commercialContactPhoneNumber: String? = null,
+    @SerialName("commercial_address") val commercialAddress: String? = null,
+    @SerialName("commercial_notes") val commercialNotes: String? = null,
+)
+
+@Serializable
+data class RegisterCustomerEnvelope(val customer: RegisterCustomerRequest)
+
+@Serializable
+data class RegisterCustomerResponse(
+    val registration: String? = null,
+    val customer: StaffCustomerDto,
+)
+
 // ---- Staff: new transaction (vehicle lookup, My Pump, create) ----
 
 @Serializable

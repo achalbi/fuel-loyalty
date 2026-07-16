@@ -3,6 +3,7 @@ package com.acefuel.loyalty.core.data
 import com.acefuel.loyalty.core.network.AceFuelApi
 import com.acefuel.loyalty.core.network.ApiResult
 import com.acefuel.loyalty.core.network.apiCall
+import com.acefuel.loyalty.core.network.dto.CatalogResponse
 import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
 import com.acefuel.loyalty.core.network.dto.CustomerSummaryDto
 import com.acefuel.loyalty.core.network.dto.LedgerPageDto
@@ -15,6 +16,9 @@ import com.acefuel.loyalty.core.network.dto.PointsAdjustmentResponse
 import com.acefuel.loyalty.core.network.dto.RedemptionEnvelope
 import com.acefuel.loyalty.core.network.dto.RedemptionRequest
 import com.acefuel.loyalty.core.network.dto.RedemptionResponse
+import com.acefuel.loyalty.core.network.dto.RegisterCustomerEnvelope
+import com.acefuel.loyalty.core.network.dto.RegisterCustomerRequest
+import com.acefuel.loyalty.core.network.dto.RegisterCustomerResponse
 import com.acefuel.loyalty.core.network.dto.StaffCustomerDto
 import com.acefuel.loyalty.core.network.dto.TransactionCreateEnvelope
 import com.acefuel.loyalty.core.network.dto.TransactionCreateRequest
@@ -53,6 +57,18 @@ class StaffRepository(
 
     suspend fun vehicleLookup(vehicleNumber: String): ApiResult<List<VehicleMatchDto>> =
         apiCall(json) { api.vehicleLookup(vehicleNumber).matches }
+
+    /** Active fuel-type / vehicle-kind options for the inline registration form. */
+    suspend fun catalog(): ApiResult<CatalogResponse> =
+        apiCall(json) { api.catalog() }
+
+    /**
+     * Register a customer (find-or-build by phone) and attach the vehicle, so an
+     * unregistered plate can become a recordable transaction without leaving the
+     * screen. Mirrors the web Staff registration modal.
+     */
+    suspend fun registerCustomer(request: RegisterCustomerRequest): ApiResult<RegisterCustomerResponse> =
+        apiCall(json) { api.registerCustomer(RegisterCustomerEnvelope(request)) }
 
     suspend fun myPump(): ApiResult<MyPumpDto> =
         apiCall(json) { api.myPump() }

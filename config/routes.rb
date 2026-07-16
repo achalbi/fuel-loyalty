@@ -27,6 +27,7 @@ Rails.application.routes.draw do
       resource :password, only: :update, controller: "password"
 
       namespace :staff do
+        get "catalog", to: "catalog#show"
         resources :customers, only: %i[index show create update] do
           collection do
             get :lookup

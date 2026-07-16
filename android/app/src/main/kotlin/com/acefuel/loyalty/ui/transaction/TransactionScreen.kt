@@ -12,6 +12,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,6 +59,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -66,11 +69,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
+import com.acefuel.loyalty.core.network.dto.CatalogResponse
 import com.acefuel.loyalty.core.network.dto.NozzleDto
 import com.acefuel.loyalty.ui.designsystem.ConfirmDialog
 import com.acefuel.loyalty.ui.designsystem.EmptyState
 import com.acefuel.loyalty.ui.designsystem.FormField
 import com.acefuel.loyalty.ui.designsystem.InlineErrorCard
+import com.acefuel.loyalty.ui.designsystem.NayaraBottomSheet
 import com.acefuel.loyalty.ui.designsystem.NayaraCard
 import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
 import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
@@ -238,17 +243,19 @@ fun TransactionScreen(
                     }
                 }
 
-                // Lookup succeeded but matched nobody — say so instead of staying blank.
+                // Lookup matched nobody: offer the new-customer path instead of dead-ending.
                 AnimatedVisibility(
-                    visible = state.lookupMode == MODE_VEHICLE && state.lookupCompleted &&
-                        state.matches.isEmpty() && state.lookupError == null,
+                    visible = state.vehicleUnmatched,
                     enter = stepEnter(),
                     exit = stepExit(),
                 ) {
                     EmptyState(
                         title = "No customer found",
-                        message = "No customer is registered for this vehicle number.",
+                        message = "No customer is registered for this vehicle number. " +
+                            "Add the customer to record this sale.",
                         icon = Icons.Filled.SearchOff,
+                        actionLabel = "Add Customer",
+                        onAction = { viewModel.startRegistration() },
                     )
                 }
 
@@ -443,6 +450,26 @@ fun TransactionScreen(
             )
         }
 
+        state.registerForm?.let { form ->
+            RegisterCustomerSheet(
+                form = form,
+                catalog = state.catalog,
+                isCommercial = state.registrationIsCommercial,
+                onName = viewModel::onRegisterName,
+                onPhone = viewModel::onRegisterPhone,
+                onVehicleNumber = viewModel::onRegisterVehicleNumber,
+                onFuelType = { haptics.tick(); viewModel.onRegisterFuelType(it) },
+                onVehicleKind = { haptics.tick(); viewModel.onRegisterVehicleKind(it) },
+                onCompanyName = viewModel::onRegisterCompanyName,
+                onContactName = viewModel::onRegisterContactName,
+                onContactPhone = viewModel::onRegisterContactPhone,
+                onAddress = viewModel::onRegisterAddress,
+                onNotes = viewModel::onRegisterNotes,
+                onSubmit = { dismissKeyboard(); viewModel.submitRegistration() },
+                onDismiss = viewModel::cancelRegistration,
+            )
+        }
+
         // The earn ceremony — overlays everything, then reveals the summary card.
         val ceremonyResult = state.result
         SuccessOverlay(
@@ -613,4 +640,169 @@ private fun SuccessCard(message: String, onViewCustomer: () -> Unit, onAnother: 
     NayaraButton(onClick = onViewCustomer, modifier = Modifier.fillMaxWidth()) { Text("View Customer") }
     Spacer(Modifier.height(8.dp))
     NayaraOutlinedButton(onClick = onAnother, modifier = Modifier.fillMaxWidth()) { Text("New Transaction") }
+}
+
+/**
+ * Inline "add customer" sheet for an unregistered plate. Collects the same fields
+ * as the web registration modal — customer name/phone, the vehicle, its fuel type
+ * and kind, plus commercial details when the kind needs them — then hands back to
+ * the transaction flow via the ViewModel (the new customer becomes the match).
+ */
+@Composable
+private fun RegisterCustomerSheet(
+    form: RegisterFormState,
+    catalog: CatalogResponse?,
+    isCommercial: Boolean,
+    onName: (String) -> Unit,
+    onPhone: (String) -> Unit,
+    onVehicleNumber: (String) -> Unit,
+    onFuelType: (String) -> Unit,
+    onVehicleKind: (String) -> Unit,
+    onCompanyName: (String) -> Unit,
+    onContactName: (String) -> Unit,
+    onContactPhone: (String) -> Unit,
+    onAddress: (String) -> Unit,
+    onNotes: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    NayaraBottomSheet(
+        onDismissRequest = onDismiss,
+        title = "Add customer",
+        subtitle = "No customer is registered for this plate. Add them to record this sale.",
+    ) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+        ) {
+            FormField(
+                value = form.name,
+                onValueChange = onName,
+                label = "Full name",
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next,
+                ),
+            )
+            FormField(
+                value = form.phoneNumber,
+                onValueChange = onPhone,
+                label = "Phone number",
+                prefix = { Text("+91 ") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
+            )
+            FormField(
+                value = form.vehicleNumber,
+                onValueChange = onVehicleNumber,
+                label = "Vehicle number",
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Characters,
+                    imeAction = ImeAction.Next,
+                ),
+            )
+
+            Text("Fuel type", style = MaterialTheme.typography.labelLarge)
+            OptionChips(
+                options = catalog?.fuelTypes?.map { it.code to it.label } ?: emptyList(),
+                selected = form.fuelTypeCode,
+                loading = catalog == null,
+                onSelect = onFuelType,
+            )
+
+            Text("Vehicle type", style = MaterialTheme.typography.labelLarge)
+            OptionChips(
+                options = catalog?.vehicleKinds?.map { it.code to it.label } ?: emptyList(),
+                selected = form.vehicleKindCode,
+                loading = catalog == null,
+                onSelect = onVehicleKind,
+            )
+
+            if (isCommercial) {
+                FormField(
+                    value = form.companyName,
+                    onValueChange = onCompanyName,
+                    label = "Company name",
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next,
+                    ),
+                )
+                FormField(
+                    value = form.contactName,
+                    onValueChange = onContactName,
+                    label = "Owner / manager name",
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next,
+                    ),
+                )
+                FormField(
+                    value = form.contactPhone,
+                    onValueChange = onContactPhone,
+                    label = "Owner / manager phone",
+                    prefix = { Text("+91 ") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
+                )
+                FormField(
+                    value = form.address,
+                    onValueChange = onAddress,
+                    label = "Address",
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Next,
+                    ),
+                )
+                FormField(
+                    value = form.notes,
+                    onValueChange = onNotes,
+                    label = "Notes (optional)",
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Done,
+                    ),
+                )
+            }
+
+            form.error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+
+            Spacer(Modifier.height(NayaraSpacing.Xs))
+            NayaraButton(
+                onClick = onSubmit,
+                enabled = !form.submitting,
+                loading = form.submitting,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Register & Continue")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun OptionChips(
+    options: List<Pair<String, String>>,
+    selected: String?,
+    loading: Boolean,
+    onSelect: (String) -> Unit,
+) {
+    if (options.isEmpty()) {
+        Text(
+            if (loading) "Loading options…" else "No options available.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.nayara.textSecondary,
+        )
+        return
+    }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+        options.forEach { (code, label) ->
+            FilterChip(
+                selected = selected == code,
+                onClick = { onSelect(code) },
+                label = { Text(label) },
+            )
+        }
+    }
 }

@@ -1,0 +1,3 @@
+Add a customer without leaving the sale.
+
+When a scanned or typed vehicle number isn't registered, the New Transaction screen now offers "Add Customer" — enter the customer, pick the fuel and vehicle type (with commercial-vehicle details when needed), and the sale continues right where you left off. Also includes 16 KB page-size compliance for newer devices.

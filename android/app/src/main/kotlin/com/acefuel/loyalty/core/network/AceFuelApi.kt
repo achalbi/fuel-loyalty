@@ -1,6 +1,7 @@
 package com.acefuel.loyalty.core.network
 
 import com.acefuel.loyalty.core.network.dto.AuthResponse
+import com.acefuel.loyalty.core.network.dto.CatalogResponse
 import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
 import com.acefuel.loyalty.core.network.dto.CustomersListResponse
 import com.acefuel.loyalty.core.network.dto.LedgerPageDto
@@ -15,6 +16,8 @@ import com.acefuel.loyalty.core.network.dto.PointsAdjustmentResponse
 import com.acefuel.loyalty.core.network.dto.RedemptionEnvelope
 import com.acefuel.loyalty.core.network.dto.RedemptionResponse
 import com.acefuel.loyalty.core.network.dto.RefreshRequest
+import com.acefuel.loyalty.core.network.dto.RegisterCustomerEnvelope
+import com.acefuel.loyalty.core.network.dto.RegisterCustomerResponse
 import com.acefuel.loyalty.core.network.dto.StaffCustomerDto
 import com.acefuel.loyalty.core.network.dto.ThemeDto
 import com.acefuel.loyalty.core.network.dto.TransactionCreateEnvelope
@@ -51,6 +54,9 @@ interface AceFuelApi {
 
     // ---- Staff ----
 
+    @GET("api/v1/staff/catalog")
+    suspend fun catalog(): CatalogResponse
+
     @GET("api/v1/staff/customers/lookup")
     suspend fun staffCustomerLookup(@Query("phone_number") phoneNumber: String): StaffCustomerDto
 
@@ -80,6 +86,9 @@ interface AceFuelApi {
 
     @GET("api/v1/staff/transactions/lookup")
     suspend fun vehicleLookup(@Query("vehicle_number") vehicleNumber: String): VehicleLookupResponse
+
+    @POST("api/v1/staff/transactions/register_customer")
+    suspend fun registerCustomer(@Body body: RegisterCustomerEnvelope): RegisterCustomerResponse
 
     @POST("api/v1/staff/transactions")
     suspend fun createTransaction(@Body body: TransactionCreateEnvelope): TransactionCreateResponse
