@@ -135,10 +135,10 @@ module Staff
       assert_equal "Deliver before noon", vehicle.commercial_notes
     end
 
-    test "staff commercial customer vehicle requires company details" do
+    test "staff commercial customer vehicle accepts blank company details" do
       sign_in users(:two)
 
-      assert_no_difference -> { Customer.count } do
+      assert_difference -> { Customer.count }, 1 do
         post staff_customers_path, params: {
           customer: {
             name: "Fleet Owner",
@@ -153,11 +153,11 @@ module Staff
         }
       end
 
-      assert_response :unprocessable_entity
-      assert_select "#addCustomerModal[data-auto-open-modal='true']"
-      assert_select "#addCustomerModal .alert.alert-danger", text: /Commercial company name can't be blank/
-      assert_select "#addCustomerModal .alert.alert-danger", text: /Commercial contact name can't be blank/
-      assert_select "#addCustomerModal .alert.alert-danger", text: /Commercial address can't be blank/
+      vehicle = Customer.find_by(phone_number: "9777766666").vehicles.sole
+      assert_equal "TN45AB6789", vehicle.vehicle_number
+      assert_nil vehicle.commercial_company_name
+      assert_nil vehicle.commercial_contact_name
+      assert_nil vehicle.commercial_address
     end
 
     test "staff add customer does not update an existing customer with the same phone number" do

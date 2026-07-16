@@ -733,7 +733,7 @@ private fun RegisterCustomerSheet(
                 FormField(
                     value = form.companyName,
                     onValueChange = onCompanyName,
-                    label = "Company name",
+                    label = "Company name (optional)",
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
                         imeAction = ImeAction.Next,
@@ -742,7 +742,7 @@ private fun RegisterCustomerSheet(
                 FormField(
                     value = form.contactName,
                     onValueChange = onContactName,
-                    label = "Owner / manager name",
+                    label = "Owner / manager name (optional)",
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
                         imeAction = ImeAction.Next,
@@ -751,14 +751,14 @@ private fun RegisterCustomerSheet(
                 FormField(
                     value = form.contactPhone,
                     onValueChange = onContactPhone,
-                    label = "Owner / manager phone",
+                    label = "Owner / manager phone (optional)",
                     prefix = { Text("+91 ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
                 )
                 FormField(
                     value = form.address,
                     onValueChange = onAddress,
-                    label = "Address",
+                    label = "Address (optional)",
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences,
                         imeAction = ImeAction.Next,

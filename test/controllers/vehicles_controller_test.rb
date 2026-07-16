@@ -86,10 +86,10 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_select "textarea[name='vehicle[commercial_address]']", text: /Coimbatore/
   end
 
-  test "commercial vehicle create requires company and owner details" do
+  test "commercial vehicle create accepts blank company and owner details" do
     sign_in users(:two)
 
-    assert_no_difference -> { customers(:one).vehicles.count } do
+    assert_difference -> { customers(:one).vehicles.count }, 1 do
       post customer_vehicles_path(customers(:one)), params: {
         vehicle: {
           vehicle_number: "TN 77 ZZ 1234",
@@ -102,10 +102,11 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    assert_response :unprocessable_entity
-    assert_match "Commercial company name can&#39;t be blank", response.body
-    assert_match "Commercial contact name can&#39;t be blank", response.body
-    assert_match "Commercial address can&#39;t be blank", response.body
+    vehicle = customers(:one).vehicles.order(:created_at).last
+    assert_equal "TN77ZZ1234", vehicle.vehicle_number
+    assert_nil vehicle.commercial_company_name
+    assert_nil vehicle.commercial_contact_name
+    assert_nil vehicle.commercial_address
   end
 
   test "edit vehicle keeps its inactive fuel type visible as a radio option" do

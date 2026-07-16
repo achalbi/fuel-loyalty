@@ -349,7 +349,7 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
         if (form.submitting) return
 
         val commercial = s.registrationIsCommercial
-        registrationValidationError(form, commercial)?.let { message ->
+        registrationValidationError(form)?.let { message ->
             patchRegister { it.copy(error = message) }
             return
         }
@@ -376,15 +376,13 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
         }
     }
 
-    private fun registrationValidationError(form: RegisterFormState, commercial: Boolean): String? = when {
+    /** Commercial details are all optional — staff often record the sale before they have them. */
+    private fun registrationValidationError(form: RegisterFormState): String? = when {
         form.name.isBlank() -> "Enter the customer's name."
         form.phoneNumber.length != 10 -> "Enter a 10-digit phone number."
         form.vehicleNumber.isBlank() -> "Enter the vehicle number."
         form.fuelTypeCode.isNullOrBlank() -> "Select a fuel type."
         form.vehicleKindCode.isNullOrBlank() -> "Select a vehicle type."
-        commercial && form.companyName.isBlank() -> "Enter the company name."
-        commercial && form.contactName.isBlank() -> "Enter the owner / manager name."
-        commercial && form.address.isBlank() -> "Enter the company address."
         else -> null
     }
 

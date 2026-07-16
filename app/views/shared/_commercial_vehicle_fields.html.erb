@@ -13,7 +13,7 @@
 <div class="<%= "d-none" unless visible %> commercial-vehicle-fields" data-commercial-vehicle-fields>
   <div class="commercial-vehicle-fields__header">
     <h3 class="commercial-vehicle-fields__title">Company / Transport Details</h3>
-    <p class="commercial-vehicle-fields__hint mb-0">Shown only for commercial vehicles such as LCV, MCV, and HCV.</p>
+    <p class="commercial-vehicle-fields__hint mb-0">Shown only for commercial vehicles such as LCV, MCV, and HCV. All of these details are optional.</p>
   </div>
 
   <div>
@@ -22,8 +22,7 @@
       values[:commercial_company_name],
       id: "#{field_id_prefix}_commercial_company_name",
       class: "form-control#{' is-invalid' if company_errors.any?}",
-      autocomplete: "organization",
-      data: { commercial_required_field: true } %>
+      autocomplete: "organization" %>
     <% if company_errors.any? %>
       <div class="invalid-feedback d-block"><%= company_errors.to_sentence %></div>
     <% end %>
@@ -35,8 +34,7 @@
       values[:commercial_contact_name],
       id: "#{field_id_prefix}_commercial_contact_name",
       class: "form-control#{' is-invalid' if contact_errors.any?}",
-      autocomplete: "name",
-      data: { commercial_required_field: true } %>
+      autocomplete: "name" %>
     <% if contact_errors.any? %>
       <div class="invalid-feedback d-block"><%= contact_errors.to_sentence %></div>
     <% end %>
@@ -71,8 +69,7 @@
       values[:commercial_address],
       id: "#{field_id_prefix}_commercial_address",
       class: "form-control#{' is-invalid' if address_errors.any?}",
-      rows: 2,
-      data: { commercial_required_field: true } %>
+      rows: 2 %>
     <% if address_errors.any? %>
       <div class="invalid-feedback d-block"><%= address_errors.to_sentence %></div>
     <% end %>

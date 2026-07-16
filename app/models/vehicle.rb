@@ -22,9 +22,6 @@ class Vehicle < ApplicationRecord
   validates :fuel_type, presence: true
   validates :vehicle_kind, presence: true
   validates :vehicle_number, presence: true, uniqueness: { scope: :customer_id, case_sensitive: false }
-  validates :commercial_company_name, presence: true, if: :commercial_vehicle?
-  validates :commercial_contact_name, presence: true, if: :commercial_vehicle?
-  validates :commercial_address, presence: true, if: :commercial_vehicle?
   validate :fuel_type_must_exist_for_new_selection
   validate :fuel_type_must_be_active_for_new_selection
   validate :vehicle_kind_must_exist_for_new_selection

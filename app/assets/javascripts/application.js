@@ -1183,7 +1183,6 @@
           .filter(Boolean)
       );
 
-      const requiredInputs = Array.from(root.querySelectorAll("[data-commercial-required-field]"));
       const selectedVehicleKind = () => {
         const selectedRadio = vehicleKindInputs.find((input) => input.type === "radio" && input.checked);
         if (selectedRadio) return normalizeVehicleKindSelection(selectedRadio.value);
@@ -1197,14 +1196,6 @@
 
         commercialFieldSections.forEach((section) => {
           section.classList.toggle("d-none", !commercialSelected);
-        });
-
-        requiredInputs.forEach((input) => {
-          input.required = commercialSelected;
-
-          if (!commercialSelected) {
-            input.setCustomValidity("");
-          }
         });
       };
 

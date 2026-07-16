@@ -133,7 +133,7 @@ class VehicleTest < ActiveSupport::TestCase
     assert_equal "Mini-Van", vehicle.display_vehicle_kind
   end
 
-  test "requires company and owner details for commercial vehicle kinds" do
+  test "company and owner details stay optional for commercial vehicle kinds" do
     vehicle = Vehicle.new(
       customer: customers(:one),
       vehicle_number: "TN11LC1234",
@@ -141,10 +141,20 @@ class VehicleTest < ActiveSupport::TestCase
       vehicle_kind: :lcv
     )
 
+    assert vehicle.valid?
+  end
+
+  test "rejects a malformed owner phone number even though it is optional" do
+    vehicle = Vehicle.new(
+      customer: customers(:one),
+      vehicle_number: "TN11LC1234",
+      fuel_type: :diesel,
+      vehicle_kind: :lcv,
+      commercial_contact_phone_number: "12345"
+    )
+
     assert_not vehicle.valid?
-    assert_includes vehicle.errors[:commercial_company_name], "can't be blank"
-    assert_includes vehicle.errors[:commercial_contact_name], "can't be blank"
-    assert_includes vehicle.errors[:commercial_address], "can't be blank"
+    assert_includes vehicle.errors[:commercial_contact_phone_number], Customer::PHONE_NUMBER_ERROR_MESSAGE
   end
 
   test "accepts and normalizes commercial registration details" do
