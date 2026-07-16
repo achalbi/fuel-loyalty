@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.acefuel.loyalty.core.data.StaffRepository
 import com.acefuel.loyalty.core.network.ApiResult
+import com.acefuel.loyalty.core.network.dto.CatalogResponse
 import com.acefuel.loyalty.core.network.dto.MyPumpDto
 import com.acefuel.loyalty.core.network.dto.NozzleDto
+import com.acefuel.loyalty.core.network.dto.RegisterCustomerRequest
 import com.acefuel.loyalty.core.network.dto.StaffCustomerDto
 import com.acefuel.loyalty.core.network.dto.StaffVehicleDto
 import com.acefuel.loyalty.core.network.dto.TransactionCreateRequest
@@ -30,6 +32,26 @@ const val MODE_PHONE = "phone"
 internal fun normalizeFuelCode(value: String?): String =
     value.orEmpty().lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
 
+/**
+ * Inline "add customer" form, shown when a vehicle lookup matches nobody. Non-null
+ * only while the registration sheet is open. Mirrors the web Staff registration
+ * modal's fields.
+ */
+data class RegisterFormState(
+    val name: String = "",
+    val phoneNumber: String = "",
+    val vehicleNumber: String = "",
+    val fuelTypeCode: String? = null,
+    val vehicleKindCode: String? = null,
+    val companyName: String = "",
+    val contactName: String = "",
+    val contactPhone: String = "",
+    val address: String = "",
+    val notes: String = "",
+    val submitting: Boolean = false,
+    val error: String? = null,
+)
+
 data class TxnUiState(
     val lookupMode: String = MODE_VEHICLE,
     val vehicleNumber: String = "",
@@ -53,7 +75,19 @@ data class TxnUiState(
     val createError: String? = null,
     val result: TransactionCreateResponse? = null,
     val showCeremony: Boolean = false,
+    // Reference options for the registration form; fetched lazily on first use.
+    val catalog: CatalogResponse? = null,
+    // Non-null while the inline "add customer" sheet is open.
+    val registerForm: RegisterFormState? = null,
 ) {
+    /** True once a vehicle lookup has completed and matched no customer. */
+    val vehicleUnmatched: Boolean
+        get() = lookupMode == MODE_VEHICLE && lookupCompleted && matches.isEmpty() && lookupError == null
+
+    /** Whether the currently chosen registration vehicle kind needs commercial fields. */
+    val registrationIsCommercial: Boolean
+        get() = catalog?.vehicleKinds?.firstOrNull { it.code == registerForm?.vehicleKindCode }?.commercial == true
+
     val selectedCustomer: StaffCustomerDto?
         get() = when (lookupMode) {
             MODE_VEHICLE -> selectedMatchIndex?.let { matches.getOrNull(it)?.customer }
@@ -145,6 +179,7 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
                 lookupMode = mode, matches = emptyList(), phoneCustomer = null,
                 selectedMatchIndex = null, selectedVehicleId = null, lookupCompleted = false,
                 selectedNozzleId = null, lookupError = null, result = null, createError = null,
+                registerForm = null,
             )
         }
     }
@@ -188,7 +223,18 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
                         it.copy(lookupLoading = false, matches = r.data, lookupCompleted = true,
                             selectedMatchIndex = if (r.data.size == 1) 0 else null)
                     }.also { if (r.data.size == 1) autoSelectNozzle() }
-                    is ApiResult.Error -> _state.update { it.copy(lookupLoading = false, lookupError = r.message) }
+                    // A not-found plate is not a failure — it's the entry point to the
+                    // "add customer" flow, so surface it as a completed-but-empty lookup
+                    // (the invalid-format 422 still reads as a real error).
+                    is ApiResult.Error ->
+                        if (r.httpCode == 404 || r.code == "vehicle_not_found") {
+                            _state.update {
+                                it.copy(lookupLoading = false, matches = emptyList(),
+                                    lookupCompleted = true, lookupError = null)
+                            }
+                        } else {
+                            _state.update { it.copy(lookupLoading = false, lookupError = r.message) }
+                        }
                     is ApiResult.NetworkError -> _state.update { it.copy(lookupLoading = false, lookupError = "Couldn't reach the server. Try again.") }
                 }
             } else {
@@ -255,7 +301,128 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
 
     fun startAnother() {
         _state.update {
-            TxnUiState(myPump = it.myPump, myPumpLoading = it.myPumpLoading, myPumpError = it.myPumpError)
+            TxnUiState(
+                myPump = it.myPump, myPumpLoading = it.myPumpLoading, myPumpError = it.myPumpError,
+                catalog = it.catalog,
+            )
         }
+    }
+
+    // --- Inline customer registration (unregistered plate) --------------------
+
+    /** Lazily fetch the fuel-type / vehicle-kind options; failures leave it null. */
+    fun loadCatalog() {
+        if (_state.value.catalog != null) return
+        viewModelScope.launch {
+            when (val r = repository.catalog()) {
+                is ApiResult.Success -> _state.update { it.copy(catalog = r.data) }
+                is ApiResult.Error, is ApiResult.NetworkError -> Unit // pickers stay empty
+            }
+        }
+    }
+
+    /** Open the "add customer" sheet, prefilled with the looked-up plate. */
+    fun startRegistration() {
+        loadCatalog()
+        _state.update { it.copy(registerForm = RegisterFormState(vehicleNumber = it.vehicleNumber)) }
+    }
+
+    fun cancelRegistration() = _state.update { it.copy(registerForm = null) }
+
+    private fun patchRegister(transform: (RegisterFormState) -> RegisterFormState) =
+        _state.update { s -> s.registerForm?.let { s.copy(registerForm = transform(it)) } ?: s }
+
+    fun onRegisterName(value: String) = patchRegister { it.copy(name = value) }
+    fun onRegisterPhone(value: String) = patchRegister { it.copy(phoneNumber = value.filter(Char::isDigit).take(10)) }
+    fun onRegisterVehicleNumber(value: String) = patchRegister { it.copy(vehicleNumber = value.uppercase()) }
+    fun onRegisterFuelType(code: String) = patchRegister { it.copy(fuelTypeCode = code) }
+    fun onRegisterVehicleKind(code: String) = patchRegister { it.copy(vehicleKindCode = code) }
+    fun onRegisterCompanyName(value: String) = patchRegister { it.copy(companyName = value) }
+    fun onRegisterContactName(value: String) = patchRegister { it.copy(contactName = value) }
+    fun onRegisterContactPhone(value: String) = patchRegister { it.copy(contactPhone = value.filter(Char::isDigit).take(10)) }
+    fun onRegisterAddress(value: String) = patchRegister { it.copy(address = value) }
+    fun onRegisterNotes(value: String) = patchRegister { it.copy(notes = value) }
+
+    fun submitRegistration() {
+        val s = _state.value
+        val form = s.registerForm ?: return
+        if (form.submitting) return
+
+        val commercial = s.registrationIsCommercial
+        registrationValidationError(form, commercial)?.let { message ->
+            patchRegister { it.copy(error = message) }
+            return
+        }
+
+        patchRegister { it.copy(submitting = true, error = null) }
+        viewModelScope.launch {
+            val request = RegisterCustomerRequest(
+                name = form.name.trim(),
+                phoneNumber = form.phoneNumber,
+                vehicleNumber = form.vehicleNumber.trim(),
+                fuelType = form.fuelTypeCode.orEmpty(),
+                vehicleKind = form.vehicleKindCode.orEmpty(),
+                commercialCompanyName = form.companyName.trim().ifBlank { null }.takeIf { commercial },
+                commercialContactName = form.contactName.trim().ifBlank { null }.takeIf { commercial },
+                commercialContactPhoneNumber = form.contactPhone.ifBlank { null }.takeIf { commercial },
+                commercialAddress = form.address.trim().ifBlank { null }.takeIf { commercial },
+                commercialNotes = form.notes.trim().ifBlank { null }.takeIf { commercial },
+            )
+            when (val r = repository.registerCustomer(request)) {
+                is ApiResult.Success -> applyRegisteredCustomer(r.data.customer, request.vehicleNumber)
+                is ApiResult.Error -> patchRegister { it.copy(submitting = false, error = r.message) }
+                is ApiResult.NetworkError -> patchRegister { it.copy(submitting = false, error = "Couldn't reach the server. Try again.") }
+            }
+        }
+    }
+
+    private fun registrationValidationError(form: RegisterFormState, commercial: Boolean): String? = when {
+        form.name.isBlank() -> "Enter the customer's name."
+        form.phoneNumber.length != 10 -> "Enter a 10-digit phone number."
+        form.vehicleNumber.isBlank() -> "Enter the vehicle number."
+        form.fuelTypeCode.isNullOrBlank() -> "Select a fuel type."
+        form.vehicleKindCode.isNullOrBlank() -> "Select a vehicle type."
+        commercial && form.companyName.isBlank() -> "Enter the company name."
+        commercial && form.contactName.isBlank() -> "Enter the owner / manager name."
+        commercial && form.address.isBlank() -> "Enter the company address."
+        else -> null
+    }
+
+    /**
+     * The just-registered customer becomes the sole vehicle match, so the existing
+     * review → fuel → save path takes over exactly as if the plate had been found.
+     */
+    private fun applyRegisteredCustomer(customer: StaffCustomerDto, requestedVehicleNumber: String) {
+        val wanted = requestedVehicleNumber.uppercase().filter(Char::isLetterOrDigit)
+        val vehicle = customer.vehicles.firstOrNull {
+            it.vehicleNumber.uppercase().filter(Char::isLetterOrDigit) == wanted
+        } ?: customer.vehicles.lastOrNull()
+
+        if (vehicle == null) {
+            _state.update { it.copy(registerForm = null) }
+            return
+        }
+
+        val match = VehicleMatchDto(
+            vehicleId = vehicle.id,
+            vehicleNumber = vehicle.vehicleNumber,
+            fuelTypeCode = vehicle.fuelTypeCode,
+            fuelType = vehicle.fuelType,
+            vehicleKindCode = vehicle.vehicleKindCode,
+            vehicleKind = vehicle.vehicleKind,
+            customer = customer,
+        )
+        _state.update {
+            it.copy(
+                registerForm = null,
+                vehicleNumber = vehicle.vehicleNumber,
+                matches = listOf(match),
+                selectedMatchIndex = 0,
+                lookupCompleted = true,
+                lookupError = null,
+                selectedNozzleId = null,
+            )
+        }
+        autoSelectNozzle()
     }
 }

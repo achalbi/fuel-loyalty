@@ -54,6 +54,7 @@ Legend: 🌐 public · 👤 staff_access (admin or staff) · 🔑 admin · 🤖 
 | **GET `/staff/transactions/lookup`** | 👤 | `vehicle_number` → JSON below |
 | **POST `/staff/transactions/recognize_plate`** | 👤 | `{plate_scan: {image_data: "data:image/jpeg;base64,…"}}` → JSON below |
 | POST `/staff/transactions/register_customer` | 👤 | customer+vehicle params + `transaction_lookup[...]` carry-through |
+| **GET `/api/v1/staff/catalog`** | 👤 | active fuel types + vehicle kinds for the native inline "add customer" form → JSON below |
 | GET `/staff/redemptions/new`, POST `/staff/redemptions` | 👤 | `redemption[phone_number, points]` |
 | GET `/staff/notifications` | 👤 | static page |
 
@@ -87,6 +88,12 @@ Cash fields are null when `cash_value_per_point` isn't configured.
 ### Vehicle lookup JSON (`GET /staff/transactions/lookup?vehicle_number=`)
 
 200: array of **all** matching vehicles (plate may exist under several customers), each `{vehicle fields + nested customer payload as above}`, sorted by customer name/phone. 422 `{"message": "Vehicle number is invalid."}` · 404 `{"message": "No customer was found for that vehicle number.", "register_customer_path": "…"}`
+
+The native `/api/v1/staff/transactions/lookup` returns the same 404 with an error envelope `{"error": {"code": "vehicle_not_found", …}}`. The app treats that as the entry point to the inline "add customer" flow (see the catalog + register_customer endpoints), not a hard error.
+
+### Staff catalog JSON (`GET /api/v1/staff/catalog`)
+
+`{"fuel_types": [{"code", "label"}], "vehicle_kinds": [{"code", "label", "commercial"}]}` — active options mirroring `FuelType.active_options` / `VehicleType.active_options`. `commercial` is `true` for lcv/mcv/hcv so the client shows the commercial fields (company/contact/address). Feeds the native inline registration form for an unregistered plate; `POST /api/v1/staff/transactions/register_customer` (customer + vehicle, atomic) then returns the customer so the transaction can be recorded.
 
 ### Plate recognition JSON
 

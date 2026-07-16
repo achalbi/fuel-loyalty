@@ -43,6 +43,7 @@ Modal "Add Customer" → `POST /staff/transactions/register_customer`. Renders t
 - **Live existing-customer detection:** typing a phone that matches an existing customer locks the name field and shows "Existing customer found: {name} (+91 …). This vehicle will be added to that customer."
 - **Vehicle-detail locking:** when opened from a vehicle-mode match with known fuel type/kind, those pickers are hidden and mirrored as hidden inputs.
 - Server: find-or-build customer by phone; requires name, phone, vehicle_number, fuel_type, vehicle_kind; saves customer + vehicle atomically. Success → back to the transaction screen, prefilled, with notice "Customer created successfully. Continue recording the transaction." (variants: "Vehicle added to the existing customer…", "Existing customer details loaded…"). Failure → 422, modal reopens with errors.
+- **Native app parity:** the Android transaction screen mirrors this. An unregistered plate (`/api/v1/staff/transactions/lookup` → 404 `vehicle_not_found`) shows an "Add Customer" action that opens a bottom-sheet form; fuel-type/vehicle-kind options come from `GET /api/v1/staff/catalog` (commercial kinds reveal the commercial fields), and `POST /api/v1/staff/transactions/register_customer` returns the customer, which becomes the selected match so the sale is recorded without leaving the screen.
 
 ### Prefill entry points
 
