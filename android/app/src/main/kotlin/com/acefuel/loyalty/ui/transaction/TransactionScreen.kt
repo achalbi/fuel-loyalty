@@ -648,6 +648,7 @@ private fun SuccessCard(message: String, onViewCustomer: () -> Unit, onAnother: 
  * and kind, plus commercial details when the kind needs them — then hands back to
  * the transaction flow via the ViewModel (the new customer becomes the match).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RegisterCustomerSheet(
     form: RegisterFormState,
