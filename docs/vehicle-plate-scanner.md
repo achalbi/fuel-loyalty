@@ -55,6 +55,7 @@ The feature is spread across a small set of files:
 5. The user taps `Use Photo`.
 6. The app tries server-side plate recognition first and falls back to browser OCR if needed.
 7. The vehicle number field is filled and remains editable.
+8. On a successful, valid read the scanner closes its camera panel (the inline result summary stays visible) and dispatches a `vehicle-plate:scanned` event so the vehicle lookup runs immediately — a matched customer loads for review, or an unregistered plate opens the new-customer registration modal right away (typed plates keep the ~2 s debounced auto-open).
 
 ### 3. Camera-app fallback flow
 

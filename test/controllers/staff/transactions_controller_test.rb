@@ -308,6 +308,33 @@ module Staff
       assert_equal new_staff_customer_path(vehicle_number: "TN99AB9999"), payload["register_customer_path"]
     end
 
+    test "vehicle lookup follows the new-customer path immediately for a scanned plate" do
+      sign_in users(:two)
+
+      get new_staff_transaction_path
+
+      assert_response :success
+      # The plate scanner signals a committed capture via this event...
+      assert_includes response.body, "vehicleNumberInput.addEventListener(\"vehicle-plate:scanned\", () => {"
+      # ...which triggers a forced lookup flagged as scanner-originated...
+      assert_includes response.body, "loadMatches({ force: true, viaScanner: true })"
+      # ...so an unregistered scanned plate opens the registration modal right away,
+      # while a typed plate still waits for the debounced auto-open.
+      assert_includes response.body, "if (viaScanner) {"
+      assert_includes response.body, "registrationModal.openNow(registrationPayload)"
+      assert_includes response.body, "registrationModal.scheduleOpen(registrationPayload)"
+    end
+
+    test "plate scanner closes the camera and commits the plate once a number is recognized" do
+      scanner_js = Rails.root.join("app/assets/javascripts/vehicle_plate_scanner.js").read
+
+      # A recognized, valid plate closes the live camera so the lookup outcome is not
+      # hidden behind the scanner...
+      assert_includes scanner_js, "setPanelOpen(false);"
+      # ...and dispatches the commit event the vehicle lookup listens for.
+      assert_includes scanner_js, "input.dispatchEvent(new CustomEvent(\"vehicle-plate:scanned\", {"
+    end
+
     test "staff can record a transaction and see earned plus current points below the customer balance" do
       sign_in users(:two)
 
