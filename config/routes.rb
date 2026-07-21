@@ -121,6 +121,7 @@ Rails.application.routes.draw do
       post :register_customer, on: :collection
     end
     resources :visit_entries, only: %i[index new create]
+    resources :settlements, only: %i[index new create show edit update]
   end
 
   namespace :admin do

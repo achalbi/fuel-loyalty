@@ -1,0 +1,15 @@
+<% content_for :title, "Edit Settlement" %>
+<% content_for :head do %>
+  <%= javascript_include_tag "settlement_form", "data-turbo-track": "reload", defer: true %>
+<% end %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Edit settlement <span class="badge text-bg-secondary align-middle"><%= @settlement.status.humanize %></span></h1>
+  <%= link_to "My settlements", staff_settlements_path, class: "btn btn-outline-secondary btn-sm" %>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <%= render "form" %>
+  </div>
+</div>

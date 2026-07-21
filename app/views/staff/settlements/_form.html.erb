@@ -1,0 +1,264 @@
+<%# D1–D10 shift-end settlement form. Live totals are JS feedback only; the
+    server recomputes every derived ₹ on submit (settlement_form.js). %>
+<%= form_with model: @settlement,
+      url: (@settlement.persisted? ? staff_settlement_path(@settlement) : staff_settlements_path),
+      method: (@settlement.persisted? ? :patch : :post),
+      data: { settlement_form: true },
+      class: "vstack gap-4" do |form| %>
+
+  <% if @settlement.errors.any? %>
+    <div class="alert alert-danger"><%= @settlement.errors.full_messages.to_sentence %></div>
+  <% end %>
+
+  <%= form.hidden_field :fuel_pump_id, value: @fuel_pump&.id %>
+  <%= form.hidden_field :business_date, value: @settlement.business_date %>
+  <%= form.hidden_field :shift_template_id %>
+
+  <%# 1 — Header ------------------------------------------------------------ %>
+  <div class="row g-3">
+    <div class="col-sm-4">
+      <label class="form-label">Pump</label>
+      <div class="form-control-plaintext fw-semibold"><%= @fuel_pump&.display_name || "—" %></div>
+    </div>
+    <div class="col-sm-4">
+      <label class="form-label">Business date</label>
+      <div class="form-control-plaintext"><%= @settlement.business_date %></div>
+    </div>
+    <div class="col-sm-4">
+      <label class="form-label">FSM</label>
+      <div class="form-control-plaintext"><%= @settlement.fsm_name_snapshot || current_user.display_name %></div>
+    </div>
+  </div>
+
+  <%# 2 — Nozzle readings (D1) --------------------------------------------- %>
+  <section>
+    <h2 class="h5">Nozzle readings</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Nozzle</th><th>Fuel</th><th class="text-end">Yesterday</th><th class="text-end">Today</th>
+            <th class="text-end">Testing</th><th class="text-center">Rollover</th>
+            <th class="text-end">Net L</th><th class="text-end">₹/L</th><th class="text-end">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <%= form.fields_for :nozzle_readings do |nr| %>
+            <tr data-nozzle-row>
+              <td>
+                <%= nr.hidden_field :fuel_pump_nozzle_id %>
+                <%= nr.hidden_field :opening_source %>
+                <%= nr.object.fuel_pump_nozzle&.display_name %>
+              </td>
+              <td><%= (nr.object.fuel_type_code_snapshot || nr.object.fuel_pump_nozzle&.fuel_type_code).to_s.upcase %></td>
+              <td style="min-width:8rem">
+                <%= nr.number_field :opening_reading, step: "0.001", class: "form-control form-control-sm text-end",
+                      data: { opening: true }, readonly: (nr.object.opening_source == "prior_settlement") %>
+              </td>
+              <td style="min-width:8rem">
+                <%= nr.number_field :closing_reading, step: "0.001", class: "form-control form-control-sm text-end", data: { closing: true } %>
+              </td>
+              <td style="min-width:6rem">
+                <%= nr.number_field :testing_litres, step: "0.001", class: "form-control form-control-sm text-end", data: { testing: true } %>
+              </td>
+              <td class="text-center"><%= nr.check_box :rollover, data: { rollover: true } %></td>
+              <td class="text-end" data-net>—</td>
+              <td class="text-end">
+                <%= nr.object.unit_price ? number_to_currency(nr.object.unit_price, unit: "₹") : content_tag(:span, "no price", class: "text-danger") %>
+                <span class="d-none" data-unit-price><%= nr.object.unit_price.to_f %></span>
+              </td>
+              <td class="text-end" data-amount>—</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <%# 3 — Lubes (D2) ------------------------------------------------------- %>
+  <section>
+    <h2 class="h5">Lubricants &amp; oils</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr><th>Product</th><th class="text-end">Qty</th><th class="text-end">₹ each</th>
+              <th class="text-end">Amount</th><th class="text-end">Open stock</th><th class="text-end">Close stock</th></tr>
+        </thead>
+        <tbody>
+          <%= form.fields_for :lube_lines do |ll| %>
+            <tr data-lube-row>
+              <td>
+                <%= ll.hidden_field :product_id %>
+                <%= ll.object.product_name_snapshot || ll.object.product&.display_name %>
+              </td>
+              <td style="min-width:5rem"><%= ll.number_field :quantity, min: 0, class: "form-control form-control-sm text-end", data: { qty: true } %></td>
+              <td class="text-end">
+                <%= number_to_currency(ll.object.unit_price, unit: "₹") %>
+                <span class="d-none" data-unit-price><%= ll.object.unit_price.to_f %></span>
+              </td>
+              <td class="text-end" data-amount>—</td>
+              <td style="min-width:5rem"><%= ll.number_field :opening_stock, min: 0, class: "form-control form-control-sm text-end" %></td>
+              <td style="min-width:5rem"><%= ll.number_field :closing_stock, min: 0, class: "form-control form-control-sm text-end" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <%# 4 — Discounts pulled (D3) -------------------------------------------- %>
+  <section>
+    <h2 class="h5">Discounts <span class="text-muted small">(pulled from today's visits)</span></h2>
+    <% if @settlement.discount_lines.reject(&:marked_for_destruction?).any? %>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Transport</th><th>Driver</th><th class="text-end">Litres</th><th class="text-end">Discount ₹</th></tr></thead>
+          <tbody>
+            <%= form.fields_for :discount_lines do |dl| %>
+              <tr>
+                <td>
+                  <%= dl.hidden_field :visit_entry_id %>
+                  <%= dl.hidden_field :litres %>
+                  <%= dl.hidden_field :driver_name %>
+                  <%= dl.hidden_field :driver_phone_number %>
+                  <%= dl.hidden_field :manager_name %>
+                  <%= dl.hidden_field :manager_phone_number %>
+                  <%= dl.hidden_field :owner_name %>
+                  <%= dl.hidden_field :owner_phone_number %>
+                  <%= dl.text_field :transport_name, class: "form-control form-control-sm border-0 bg-transparent px-0" %>
+                </td>
+                <td><%= dl.object.driver_name %></td>
+                <td class="text-end"><%= number_with_precision(dl.object.litres, precision: 3, strip_insignificant_zeros: true) %></td>
+                <td class="text-end" style="min-width:7rem">
+                  <%= dl.number_field :discount_amount, step: "0.01", min: 0, class: "form-control form-control-sm text-end", data: { discount: true } %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="text-muted mb-0">No same-day discounts captured for this pump.</p>
+    <% end %>
+  </section>
+
+  <%# 5 — Digital receipts (D4) + 6 Credit lines (D5) --------------------- %>
+  <div class="row g-4">
+    <div class="col-md-5">
+      <h2 class="h5">Digital receipts</h2>
+      <div class="mb-2">
+        <%= form.label :phonepe_pos_amount, "PhonePe POS (₹)", class: "form-label" %>
+        <%= form.number_field :phonepe_pos_amount, step: "0.01", min: 0, class: "form-control", data: { phonepe_pos: true } %>
+      </div>
+      <div>
+        <%= form.label :phonepe_scanner_amount, "PhonePe Scanner (₹)", class: "form-label" %>
+        <%= form.number_field :phonepe_scanner_amount, step: "0.01", min: 0, class: "form-control", data: { phonepe_scanner: true } %>
+      </div>
+    </div>
+    <div class="col-md-7">
+      <h2 class="h5">Credit lines <span class="text-muted small">(Fleet/OTP &amp; TT)</span></h2>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Type</th><th class="text-end">Litres</th><th class="text-end">Amount ₹</th><th>Reference</th></tr></thead>
+          <tbody>
+            <%= form.fields_for :credit_lines do |cl| %>
+              <tr>
+                <td><%= cl.select :credit_type, SettlementCreditLine.credit_types.keys.map { |k| [k.humanize, k] }, {}, class: "form-select form-select-sm" %></td>
+                <td style="min-width:5rem"><%= cl.number_field :litres, step: "0.001", min: 0, class: "form-control form-control-sm text-end" %></td>
+                <td style="min-width:6rem"><%= cl.number_field :amount, step: "0.01", min: 0, class: "form-control form-control-sm text-end", data: { credit: true } %></td>
+                <td><%= cl.text_field :reference, class: "form-control form-control-sm", placeholder: "NL-01/AE-2471" %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <%# 7 — Final amount banner (D6) ---------------------------------------- %>
+  <div class="card bg-body-tertiary">
+    <div class="card-body row text-center g-2">
+      <div class="col"><div class="small text-muted">Fuel</div><div class="fw-semibold" data-total-fuel>—</div></div>
+      <div class="col"><div class="small text-muted">Lubes</div><div class="fw-semibold" data-total-lube>—</div></div>
+      <div class="col"><div class="small text-muted">− Discounts</div><div class="fw-semibold" data-total-discount>—</div></div>
+      <div class="col"><div class="small text-muted">− Credit</div><div class="fw-semibold" data-total-credit>—</div></div>
+      <div class="col"><div class="small text-muted">− PhonePe</div><div class="fw-semibold" data-total-phonepe>—</div></div>
+      <div class="col border-start"><div class="small text-muted">Final to settle</div><div class="fw-bold fs-5" data-final>—</div></div>
+    </div>
+  </div>
+
+  <%# 8 — Cash denomination + shortage (D7) ------------------------------- %>
+  <section>
+    <h2 class="h5">Cash count</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle" style="max-width:34rem">
+        <thead><tr><th>Denomination</th><th class="text-end">Qty</th><th class="text-end">Amount</th></tr></thead>
+        <tbody>
+          <%= form.fields_for :cash_denominations do |cd| %>
+            <tr data-denom-row>
+              <td>
+                <%= cd.hidden_field :denomination %>
+                ₹<%= cd.object.denomination %>
+                <span class="d-none" data-denom><%= cd.object.denomination %></span>
+              </td>
+              <td style="min-width:5rem"><%= cd.number_field :quantity, min: 0, class: "form-control form-control-sm text-end", data: { denom_qty: true } %></td>
+              <td class="text-end" data-denom-amount>—</td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <tr><th colspan="2" class="text-end">Counted cash</th><th class="text-end" data-counted-cash>—</th></tr>
+          <tr><th colspan="2" class="text-end">Shortage (final − counted)</th><th class="text-end" data-shortage>—</th></tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <%# 9 — Stock received / Decantation / Rate comparison (D8/D10) --------- %>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <h2 class="h5">Stock received</h2>
+      <%= form.fields_for :stock_receipts do |sr| %>
+        <div class="input-group input-group-sm mb-2">
+          <%= sr.hidden_field :fuel_type_code %>
+          <span class="input-group-text"><%= sr.object.fuel_type_code.to_s.upcase %></span>
+          <%= sr.number_field :litres_received, step: "0.001", min: 0, class: "form-control", placeholder: "Litres" %>
+        </div>
+      <% end %>
+    </div>
+    <div class="col-md-4">
+      <h2 class="h5">Decantation</h2>
+      <%= form.fields_for :decantations do |dc| %>
+        <div class="row g-1 mb-2">
+          <div class="col-4"><%= dc.select :fuel_type_code, @fuel_products.map { |p| [p.fuel_type_code.to_s.upcase, p.fuel_type_code] }, { include_blank: "—" }, class: "form-select form-select-sm" %></div>
+          <div class="col-3"><%= dc.text_field :tank_label, class: "form-control form-control-sm", placeholder: "Tank" %></div>
+          <div class="col"><%= dc.number_field :opening_kl, step: "0.001", class: "form-control form-control-sm", placeholder: "Open KL" %></div>
+          <div class="col"><%= dc.number_field :closing_kl, step: "0.001", class: "form-control form-control-sm", placeholder: "Close KL" %></div>
+        </div>
+      <% end %>
+    </div>
+    <div class="col-md-4">
+      <h2 class="h5">Rate comparison</h2>
+      <%= form.fields_for :rate_comparisons do |rc| %>
+        <div class="input-group input-group-sm mb-2">
+          <%= rc.hidden_field :fuel_type_code %>
+          <%= rc.hidden_field :own_price %>
+          <span class="input-group-text"><%= rc.object.fuel_type_code.to_s.upcase %></span>
+          <span class="input-group-text">Ours <%= number_with_precision(rc.object.own_price, precision: 2) %></span>
+          <%= rc.number_field :competitor_price, step: "0.01", min: 0, class: "form-control", placeholder: "JIO-BP ₹" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div>
+    <%= form.label :notes, "Notes", class: "form-label" %>
+    <%= form.text_area :notes, rows: 2, class: "form-control" %>
+  </div>
+
+  <div class="d-flex gap-2 sticky-bottom bg-body py-2 border-top">
+    <%= form.button "Save draft", type: :submit, name: "settlement[status]", value: "draft", class: "btn btn-outline-secondary" %>
+    <%= form.button "Submit settlement", type: :submit, name: "settlement[status]", value: "submitted", class: "btn btn-primary" %>
+    <%= link_to "Cancel", staff_settlements_path, class: "btn btn-link ms-auto" %>
+  </div>
+<% end %>

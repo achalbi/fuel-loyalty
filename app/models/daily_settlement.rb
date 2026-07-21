@@ -80,7 +80,7 @@ class DailySettlement < ApplicationRecord
   end
 
   def reject_lube_line?(attrs)
-    attrs["id"].blank? && attrs["product_id"].blank?
+    attrs["id"].blank? && (attrs["product_id"].blank? || attrs["quantity"].to_i.zero?)
   end
 
   def reject_credit_line?(attrs)
@@ -100,7 +100,7 @@ class DailySettlement < ApplicationRecord
   end
 
   def reject_rate_comparison?(attrs)
-    attrs["id"].blank? && attrs["fuel_type_code"].blank?
+    attrs["id"].blank? && (attrs["fuel_type_code"].blank? || attrs["competitor_price"].blank?)
   end
 
   def shift_window_must_be_unique
