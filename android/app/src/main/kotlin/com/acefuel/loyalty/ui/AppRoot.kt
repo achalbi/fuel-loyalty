@@ -59,6 +59,7 @@ import com.acefuel.loyalty.ui.redeem.RedeemScreen
 import com.acefuel.loyalty.ui.transaction.TransactionScreen
 import com.acefuel.loyalty.ui.scanner.PlateScannerScreen
 import com.acefuel.loyalty.ui.visitentry.VisitEntryScreen
+import com.acefuel.loyalty.ui.settlement.SettlementScreen
 import com.acefuel.loyalty.ui.theme.AceFuelLoyaltyTheme
 import com.acefuel.loyalty.ui.theme.NayaraMotion
 import com.acefuel.loyalty.ui.admin.AdminRoutes
@@ -99,6 +100,7 @@ private object Routes {
     const val PLATE_SCANNER = "plate_scanner"
     const val MY_PUMP = "my_pump"
     const val CAPTURE_VISIT = "capture_visit"
+    const val SETTLEMENT = "settlement"
 }
 
 /**
@@ -289,6 +291,7 @@ fun AppRoot(container: ServiceContainer) {
                             onRedeem = { navController.switchTab(Routes.REDEEM) },
                             onAdjustPoints = { navController.navigate(Routes.ADJUST) },
                             onCaptureVisit = { navController.navigate(Routes.CAPTURE_VISIT) },
+                            onDailySettlement = { navController.navigate(Routes.SETTLEMENT) },
                             onAdmin = { navController.navigate(Routes.ADMIN) },
                         )
                     }
@@ -347,6 +350,9 @@ fun AppRoot(container: ServiceContainer) {
                 }
                 composable(Routes.CAPTURE_VISIT) {
                     VisitEntryScreen(onBack = { navController.popBackStack() })
+                }
+                composable(Routes.SETTLEMENT) {
+                    SettlementScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.CUSTOMERS) {
                     // Reached only as a bottom-nav tab — no back arrow (system

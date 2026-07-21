@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Tune
@@ -76,6 +77,7 @@ fun HomeScreen(
     onRedeem: () -> Unit,
     onAdjustPoints: () -> Unit,
     onCaptureVisit: () -> Unit,
+    onDailySettlement: () -> Unit,
     onAdmin: () -> Unit,
 ) {
     val haptics = rememberHaptics()
@@ -85,6 +87,7 @@ fun HomeScreen(
     val actions = buildList {
         add(QuickAction(Icons.Filled.PointOfSale, "New Transaction", nayara.actionPrimaryContainer, nayara.actionPrimary) { haptics.tick(); onNewTransaction() })
         add(QuickAction(Icons.AutoMirrored.Filled.ListAlt, "Capture Visit", nayara.accentContainer, nayara.accentDefault) { haptics.tick(); onCaptureVisit() })
+        add(QuickAction(Icons.AutoMirrored.Filled.ReceiptLong, "Daily Settlement", nayara.statusInfoContainer, nayara.statusInfo) { haptics.tick(); onDailySettlement() })
         add(QuickAction(Icons.Filled.People, "Customers", nayara.accentContainer, nayara.accentDefault) { haptics.tick(); onCustomers() })
         add(QuickAction(Icons.Filled.Redeem, "Redeem", nayara.rewardPointsContainer, nayara.rewardPointsText) { haptics.tick(); onRedeem() })
         if (isAdmin) {
