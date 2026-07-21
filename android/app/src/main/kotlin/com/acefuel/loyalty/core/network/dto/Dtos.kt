@@ -142,6 +142,8 @@ data class CustomerSummaryDto(
     val id: Long,
     val name: String?,
     @SerialName("phone_number") val phoneNumber: String?,
+    @SerialName("customer_type") val customerType: String? = null,
+    @SerialName("transport_name") val transportName: String? = null,
     val active: Boolean,
     @SerialName("rewards_paused") val rewardsPaused: Boolean,
     @SerialName("total_points") val totalPoints: Int,

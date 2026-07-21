@@ -184,6 +184,18 @@ private fun CustomerRow(
                     ActiveChip(customer.active)
                 }
                 customer.phoneNumber?.let { Text("+91 $it", style = MaterialTheme.typography.bodySmall) }
+                customer.customerType?.takeIf { it != "drive_in" }?.let { type ->
+                    val label = when (type) {
+                        "otp" -> "OTP / Fleet"
+                        "credit" -> "Credit"
+                        else -> type
+                    }
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.nayara.accentDefault,
+                    )
+                }
                 val vehicles = if (customer.vehicleNumbers.isEmpty()) {
                     "No vehicles on file"
                 } else {
