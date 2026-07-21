@@ -76,6 +76,13 @@
               <i class="ti ti-gas-station" aria-hidden="true"></i>
             <% end %>
 
+            <%= link_to new_staff_visit_entry_path,
+              class: "btn btn-light btn-icon btn-sm",
+              aria: { label: "Capture Visit" },
+              title: "Capture Visit" do %>
+              <i class="ti ti-clipboard-list" aria-hidden="true"></i>
+            <% end %>
+
             <%= link_to new_loyalty_path,
               class: "btn btn-light btn-icon btn-sm",
               aria: { label: "Loyalty Lookup" },

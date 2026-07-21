@@ -46,6 +46,7 @@ Rails.application.routes.draw do
         post "transactions", to: "transactions#create"
         post "transactions/recognize_plate", to: "transactions#recognize_plate"
         post "transactions/register_customer", to: "transactions#register_customer"
+        resources :visit_entries, only: %i[index create]
       end
 
       namespace :admin do
@@ -115,6 +116,7 @@ Rails.application.routes.draw do
       post :recognize_plate, on: :collection
       post :register_customer, on: :collection
     end
+    resources :visit_entries, only: %i[index new create]
   end
 
   namespace :admin do

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -428,6 +428,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_120000) do
     t.index ["customer_id"], name: "index_vehicles_on_customer_id"
   end
 
+  create_table "visit_entries", force: :cascade do |t|
+    t.integer "approx_vehicle_count"
+    t.datetime "created_at", null: false
+    t.bigint "customer_id"
+    t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "driver_name"
+    t.string "driver_phone_number"
+    t.date "entry_date", null: false
+    t.boolean "fleet_otp", default: false, null: false
+    t.bigint "fuel_pump_id", null: false
+    t.string "fuel_type_code"
+    t.decimal "litres", precision: 10, scale: 3, null: false
+    t.string "manager_name"
+    t.string "manager_phone_number"
+    t.string "owner_name"
+    t.string "owner_phone_number"
+    t.bigint "transaction_id"
+    t.string "transport_name"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.bigint "vehicle_id"
+    t.string "vehicle_number", null: false
+    t.index ["customer_id"], name: "index_visit_entries_on_customer_id"
+    t.index ["entry_date"], name: "index_visit_entries_on_entry_date"
+    t.index ["fuel_pump_id", "entry_date"], name: "index_visit_entries_on_fuel_pump_id_and_entry_date"
+    t.index ["fuel_pump_id"], name: "index_visit_entries_on_fuel_pump_id"
+    t.index ["transaction_id"], name: "index_visit_entries_on_transaction_id"
+    t.index ["user_id"], name: "index_visit_entries_on_user_id"
+    t.index ["vehicle_id"], name: "index_visit_entries_on_vehicle_id"
+  end
+
   add_foreign_key "analytics_events", "users"
   add_foreign_key "attendance_entries", "attendance_runs"
   add_foreign_key "attendance_entries", "users", column: "actual_user_id"
@@ -465,4 +496,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_120000) do
   add_foreign_key "user_pump_nozzle_assignments", "users"
   add_foreign_key "users", "fuel_pumps"
   add_foreign_key "vehicles", "customers"
+  add_foreign_key "visit_entries", "customers", on_delete: :nullify
+  add_foreign_key "visit_entries", "fuel_pumps", on_delete: :restrict
+  add_foreign_key "visit_entries", "transactions", on_delete: :nullify
+  add_foreign_key "visit_entries", "users", on_delete: :restrict
+  add_foreign_key "visit_entries", "vehicles", on_delete: :nullify
 end

@@ -12,6 +12,7 @@ class Vehicle < ApplicationRecord
 
   belongs_to :customer
   has_many :transactions, dependent: :restrict_with_exception
+  has_many :visit_entries, dependent: :nullify
 
   before_validation :normalize_fuel_type
   before_validation :normalize_vehicle_kind
