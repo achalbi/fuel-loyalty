@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceFuels — Target Data Model (03) — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">03-target-data-model.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="acefuels-target-data-model-03">AceFuels — Target Data Model (03)</h1>
+<p>The schema <strong>after every gap in the requirement is built</strong>, honoring the three
+LOCKED DECISIONS (2026-07-21):</p>
+<ul>
+<li><strong>Q1 — Litres are the source of truth.</strong> Capture meter readings / litres, and
+  <strong>derive ₹</strong> from the product-catalog selling price. <code>transactions</code> today store
+  only <code>fuel_amount</code> (₹); that becomes a <em>derived</em> value, not the input.</li>
+<li><strong>Q2 — Both surfaces.</strong> Every table below backs the Rails PWA <strong>and</strong> the native
+  Android app through the JSON API. No table is web-only or Android-only.</li>
+<li><strong>Q3 — Operator KYC = profile fields only.</strong> Add Photo, Address, Aadhaar #,
+  ID-card photo. Keep username/mobile + password login. <strong>No OTP / SMS.</strong></li>
+</ul>
+<p>Baseline is <code>db/schema.rb</code> (<code>ActiveRecord::Schema[8.1]</code>, version
+<code>2026_07_13_010000</code>). Feature IDs (A1–G1, S-*) are the shared IDs from the gap
+analysis. Money = <code>decimal(10,2)</code> ₹. Litres = <code>decimal(10,3)</code>. Meter readings =
+<code>decimal(12,3)</code> (they run to lakhs of litres over a nozzle's life).</p>
+<p>Legend: <strong>NEW</strong> table = does not exist today · <strong>CHANGE</strong> = altered existing
+table · autopop = value pre-filled in the UI, still stored as a snapshot.</p>
+<hr />
+<h2 id="0-design-decisions-that-shape-the-model">0. Design decisions that shape the model</h2>
+<h3 id="01-litres-extend-transactions-and-add-a-separate-nozzle-reading-concept-do-both">0.1 Litres: extend <code>transactions</code>, and add a <em>separate</em> nozzle-reading concept — do BOTH</h3>
+<p>There are <strong>two different "litres"</strong> in the requirement, and conflating them is the
+main modelling trap:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Grain</th>
+<th>Purpose</th>
+<th>Home</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Per-customer litres filled</strong> (CustomerDetailsEntry, B2)</td>
+<td>one customer visit</td>
+<td>loyalty accrual, CRM, discounts</td>
+<td><strong>extend <code>transactions</code></strong></td>
+</tr>
+<tr>
+<td><strong>Per-nozzle shift meter litres</strong> (DailySettlement D1)</td>
+<td>one nozzle per shift</td>
+<td>cash reconciliation, stock, shortage</td>
+<td><strong>new <code>settlement_nozzle_readings</code></strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>They are not the same number and must not share a row.</strong> A nozzle's net litres for
+a shift ≈ the <em>sum of all dispenses through it</em>, but only a fraction of those are
+captured as named-customer transactions (walk-in cash is often anonymous). Meter
+readings reconcile the shift's cash; customer transactions drive loyalty. So:</p>
+<ul>
+<li><strong><code>transactions</code></strong> gains <code>litres</code>, <code>price_per_litre</code>, <code>gross_amount</code>,
+  <code>discount_amount</code>, <code>net_amount</code>, <code>product_id</code>. <strong>No meter reading on
+  <code>transactions</code></strong> — a per-visit fill has no "opening reading". (This answers the
+  <code>opening_reading?</code> question: opening/closing readings live <strong>only</strong> on
+  <code>settlement_nozzle_readings</code>.)</li>
+<li><strong><code>settlement_nozzle_readings</code></strong> owns <code>opening_reading</code> / <code>closing_reading</code> /
+  <code>testing_litres</code> / <code>net_litres</code> / <code>price_per_litre</code> / <code>amount</code>.</li>
+</ul>
+<p><code>transactions.fuel_amount</code> (existing, <code>null: false</code>) is <strong>retained but redefined as
+<code>net_amount</code></strong> for backward-compat with the loyalty engine and existing rows; new
+writes set <code>fuel_amount = net_amount</code>. Eventually deprecate it (see §11).</p>
+<h3 id="02-price-derivation-must-be-date-accurate-product_price_history">0.2 Price derivation must be date-accurate → <code>product_price_history</code></h3>
+<p>Because ₹ is <em>derived</em> and admins can <strong>edit past days</strong> (G1) and view historical
+settlements (D9), we cannot read "today's" <code>selling_price</code> when re-deriving an old
+row. Every priced row therefore <strong>snapshots</strong> its <code>price_per_litre</code> / <code>price_per_unit</code>
+at write time, <strong>and</strong> we keep <code>product_price_history</code> so a correct price can be
+re-derived for any business date. Snapshot = fast + immutable; history = auditable +
+re-derivable. We keep both.</p>
+<hr />
+<h2 id="1-product-catalog-a5-keystone-dependency">1. Product Catalog  (A5 — keystone dependency)</h2>
+<h3 id="products-new"><code>products</code>  — <strong>NEW</strong></h3>
+<p>The single priced catalog of everything sold: fuels (HSD/MS) <em>and</em> lubes/oils/AdBlue.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>sku</code></td>
+<td>string, null:false</td>
+<td>unique business code, e.g. <code>HSD</code>, <code>MS</code>, <code>2T-20ML</code>, <code>ADBLUE-5L</code></td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string, null:false</td>
+<td>"High Speed Diesel", "2T Oil 20ml", "AdBlue 5L"</td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td>integer, null:false</td>
+<td>enum <code>fuel:0</code>, <code>lube:1</code></td>
+</tr>
+<tr>
+<td><code>fuel_type_code</code></td>
+<td>string, null:true</td>
+<td>FK → <code>fuel_types.code</code>; <strong>set iff <code>category=fuel</code></strong> (links a fuel product to its nozzle fuel type)</td>
+</tr>
+<tr>
+<td><code>pack_size</code></td>
+<td>string, null:true</td>
+<td>display pack, e.g. <code>20ml</code>, <code>800ml</code>, <code>5L</code>; null for bulk fuel</td>
+</tr>
+<tr>
+<td><code>unit</code></td>
+<td>integer, null:false</td>
+<td>enum <code>litre:0</code>, <code>millilitre:1</code>, <code>piece:2</code> (billing/stock unit)</td>
+</tr>
+<tr>
+<td><code>batch</code></td>
+<td>string, null:true</td>
+<td>current batch/lot for lubes</td>
+</tr>
+<tr>
+<td><code>mrp</code></td>
+<td>decimal(10,2), null:false</td>
+<td>printed MRP</td>
+</tr>
+<tr>
+<td><code>selling_price</code></td>
+<td>decimal(10,2), null:false</td>
+<td>actual selling price (<strong>the ₹-derivation source</strong>)</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>boolean, default:true, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: unique <code>sku</code>; <code>category</code>; <code>active</code>; <code>fuel_type_code</code>.
+FK: <code>fuel_type_code</code> → <code>fuel_types(code)</code>.</p>
+<blockquote>
+<p>Seed the 14 catalog rows from the requirement (HSD, MS, 2T-20/40/60ml, 10W30-800ml,
+2T-500ml, Milex Petrol 5/40ml, Milex Diesel 10/50ml, AdBlue 5/10/20L).</p>
+</blockquote>
+<h3 id="product_price_history-new"><code>product_price_history</code>  — <strong>NEW</strong></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>product_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>products</code></td>
+</tr>
+<tr>
+<td><code>mrp</code></td>
+<td>decimal(10,2), null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>selling_price</code></td>
+<td>decimal(10,2), null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>effective_from</code></td>
+<td>datetime, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>effective_to</code></td>
+<td>datetime, null:true</td>
+<td>null = current price</td>
+</tr>
+<tr>
+<td><code>recorded_by_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>users</code></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>(product_id, effective_from)</code>; partial/<code>effective_to</code>.
+FK: <code>product_id</code> → <code>products</code>; <code>recorded_by_id</code> → <code>users</code>.</p>
+<hr />
+<h2 id="2-inventory-stock-d2-stock-d8-stock-received-decantation">2. Inventory / Stock  (D2 stock, D8 stock-received + decantation)</h2>
+<h3 id="product_stocks-new-running-snapshot"><code>product_stocks</code>  — <strong>NEW</strong> (running snapshot)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>product_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>products</code></td>
+</tr>
+<tr>
+<td><code>quantity_on_hand</code></td>
+<td>decimal(12,3), null:false, default:0</td>
+<td>in the product's <code>unit</code></td>
+</tr>
+<tr>
+<td><code>last_counted_at</code></td>
+<td>datetime, null:true</td>
+<td>from the latest settlement closing stock</td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: unique <code>product_id</code>. FK → <code>products</code>.</p>
+<h3 id="stock_receipts-new-d8-stock-received-mshsd-and-lubes"><code>stock_receipts</code>  — <strong>NEW</strong> (D8: "Stock Received", MS/HSD and lubes)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>product_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>products</code> (MS/HSD are products too)</td>
+</tr>
+<tr>
+<td><code>quantity</code></td>
+<td>decimal(12,3), null:false</td>
+<td>received qty in product <code>unit</code></td>
+</tr>
+<tr>
+<td><code>unit_cost</code></td>
+<td>decimal(10,2), null:true</td>
+<td>purchase cost if tracked</td>
+</tr>
+<tr>
+<td><code>received_on</code></td>
+<td>date, null:false</td>
+<td>business date</td>
+</tr>
+<tr>
+<td><code>settlement_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>settlements</code> when logged at shift end</td>
+</tr>
+<tr>
+<td><code>recorded_by_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>users</code></td>
+</tr>
+<tr>
+<td><code>notes</code></td>
+<td>text, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>(product_id, received_on)</code>; <code>settlement_id</code>.
+FKs: <code>product_id</code> → <code>products</code>; <code>settlement_id</code> → <code>settlements</code>; <code>recorded_by_id</code> → <code>users</code>.</p>
+<h3 id="tank_decantations-new-d8-tank-kl-readings-when-a-tanker-unloads"><code>tank_decantations</code>  — <strong>NEW</strong> (D8: tank KL readings when a tanker unloads)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>fuel_type_code</code></td>
+<td>string, null:false</td>
+<td>FK → <code>fuel_types.code</code> (which underground tank)</td>
+</tr>
+<tr>
+<td><code>settlement_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>settlements</code></td>
+</tr>
+<tr>
+<td><code>opening_reading_kl</code></td>
+<td>decimal(10,3), null:false</td>
+<td>tank dip before decantation (KL)</td>
+</tr>
+<tr>
+<td><code>closing_reading_kl</code></td>
+<td>decimal(10,3), null:false</td>
+<td>tank dip after</td>
+</tr>
+<tr>
+<td><code>decanted_litres</code></td>
+<td>decimal(12,3), null:true</td>
+<td>derived = (closing−opening)×1000</td>
+</tr>
+<tr>
+<td><code>reading_on</code></td>
+<td>date, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>recorded_by_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>users</code></td>
+</tr>
+<tr>
+<td><code>notes</code></td>
+<td>text, null:true</td>
+<td>tanker no. etc.</td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>(fuel_type_code, reading_on)</code>; <code>settlement_id</code>.
+FKs: <code>fuel_type_code</code> → <code>fuel_types(code)</code>; <code>settlement_id</code> → <code>settlements</code>; <code>recorded_by_id</code> → <code>users</code>.</p>
+<blockquote>
+<p>Per-<strong>lube</strong> opening/closing stock lives on <code>settlement_lube_lines</code> (§4) because it
+is captured <em>inline</em> on the settlement; <code>product_stocks</code> is updated from those
+closing values. Bulk fuel stock arrives via <code>stock_receipts</code> + <code>tank_decantations</code>.</p>
+</blockquote>
+<hr />
+<h2 id="3-litres-model-transactions-change-b2-c5-litres-source-of-truth">3. Litres model — <code>transactions</code>  <strong>CHANGE</strong>  (B2 / C5 / litres-source-of-truth)</h2>
+<p>Repurpose <code>transactions</code> as the <strong>CustomerDetailsEntry</strong> per-visit record.</p>
+<p>New / changed columns:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>litres</code></td>
+<td>decimal(10,3), null:true</td>
+<td><strong>source of truth</strong>; null only for legacy ₹-only rows</td>
+</tr>
+<tr>
+<td><code>product_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>products</code> (the fuel dispensed; usually resolved from nozzle)</td>
+</tr>
+<tr>
+<td><code>price_per_litre</code></td>
+<td>decimal(8,3), null:true</td>
+<td>snapshot of <code>products.selling_price</code> at write time</td>
+</tr>
+<tr>
+<td><code>gross_amount</code></td>
+<td>decimal(10,2), null:true</td>
+<td>derived = <code>litres × price_per_litre</code></td>
+</tr>
+<tr>
+<td><code>discount_amount</code></td>
+<td>decimal(10,2), null:false, default:0</td>
+<td>per-visit discount</td>
+</tr>
+<tr>
+<td><code>net_amount</code></td>
+<td>decimal(10,2), null:true</td>
+<td>derived = <code>gross_amount − discount_amount</code></td>
+</tr>
+<tr>
+<td><code>fuel_amount</code></td>
+<td>decimal(10,2), null:false</td>
+<td><strong>retained</strong>; now mirrors <code>net_amount</code> (backward-compat)</td>
+</tr>
+<tr>
+<td><code>fleet_otp</code></td>
+<td>boolean, null:false, default:false</td>
+<td>Fleet/OTP flag (Yes/No)</td>
+</tr>
+<tr>
+<td><code>driver_name</code></td>
+<td>string, null:true</td>
+<td>per-visit snapshot (also upserts customer contact, §6)</td>
+</tr>
+<tr>
+<td><code>driver_mobile</code></td>
+<td>string, null:true</td>
+<td>per-visit snapshot</td>
+</tr>
+<tr>
+<td><code>business_date</code></td>
+<td>date, null:true</td>
+<td>autopop; enables per-day grouping without TZ math on <code>created_at</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Unchanged FKs remain: <code>customer_id</code>, <code>user_id</code>, <code>vehicle_id</code>, <code>fuel_pump_id</code>,
+<code>fuel_pump_nozzle_id</code>, <code>payment_mode</code>. New FK: <code>product_id</code> → <code>products</code>.
+New indexes: <code>product_id</code>; <code>business_date</code>; <code>fleet_otp</code>.</p>
+<blockquote>
+<p>Transport / manager / owner details from the CustomerDetailsEntry form are <strong>not</strong>
+duplicated onto every transaction — they upsert into <code>customers</code> +
+<code>customer_contacts</code> (§6). Only the two most volatile per-visit fields
+(<code>driver_name</code>/<code>driver_mobile</code>) are snapshotted here.</p>
+</blockquote>
+<hr />
+<h2 id="4-daily-settlement-d1-d2-d5-d6-d7-d9-g1">4. Daily Settlement  (D1, D2, D5, D6, D7, D9, G1)</h2>
+<p>One <code>settlements</code> header per <strong>pump × business_date × shift</strong>, with child lines.</p>
+<h3 id="settlements-new"><code>settlements</code>  — <strong>NEW</strong></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>fuel_pump_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>fuel_pumps</code></td>
+</tr>
+<tr>
+<td><code>shift_template_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>shift_templates</code></td>
+</tr>
+<tr>
+<td><code>fsm_user_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>users</code> — "Name of FSM"</td>
+</tr>
+<tr>
+<td><code>business_date</code></td>
+<td>date, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>integer, null:false, default:0</td>
+<td>enum <code>draft:0</code>, <code>submitted:1</code>, <code>approved:2</code>, <code>reopened:3</code></td>
+</tr>
+<tr>
+<td><code>phonepe_pos_amount</code></td>
+<td>decimal(10,2), null:false, default:0</td>
+<td>D4 machine</td>
+</tr>
+<tr>
+<td><code>phonepe_scanner_amount</code></td>
+<td>decimal(10,2), null:false, default:0</td>
+<td>D4 scanner</td>
+</tr>
+<tr>
+<td><code>fuel_sold_amount</code></td>
+<td>decimal(12,2), null:true</td>
+<td>derived Σ nozzle amounts</td>
+</tr>
+<tr>
+<td><code>lube_sold_amount</code></td>
+<td>decimal(12,2), null:true</td>
+<td>derived Σ lube amounts</td>
+</tr>
+<tr>
+<td><code>discounts_amount</code></td>
+<td>decimal(12,2), null:true</td>
+<td>derived Σ credit/discount lines</td>
+</tr>
+<tr>
+<td><code>final_settle_amount</code></td>
+<td>decimal(12,2), null:true</td>
+<td><strong>D6</strong> = (fuel+lube) − (discounts + pos + scanner)</td>
+</tr>
+<tr>
+<td><code>expected_cash_amount</code></td>
+<td>decimal(12,2), null:true</td>
+<td>cash the pump <em>should</em> hold</td>
+</tr>
+<tr>
+<td><code>counted_cash_amount</code></td>
+<td>decimal(12,2), null:true</td>
+<td>Σ <code>settlement_cash_counts</code></td>
+</tr>
+<tr>
+<td><code>shortage_amount</code></td>
+<td>decimal(12,2), null:true</td>
+<td><strong>D7</strong> = expected − counted, per pump</td>
+</tr>
+<tr>
+<td><code>submitted_at</code></td>
+<td>datetime, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>approved_by_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>users</code> (admin)</td>
+</tr>
+<tr>
+<td><code>notes</code></td>
+<td>text, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>recorded_by_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>users</code></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <strong>unique</strong> <code>(fuel_pump_id, business_date, shift_template_id)</code>;
+<code>status</code>; <code>business_date</code>; <code>fsm_user_id</code>.
+FKs: <code>fuel_pump_id</code>→<code>fuel_pumps</code>; <code>shift_template_id</code>→<code>shift_templates</code>;
+<code>fsm_user_id</code>/<code>approved_by_id</code>/<code>recorded_by_id</code>→<code>users</code>.</p>
+<h3 id="settlement_nozzle_readings-new-d1-the-reconciliation-litres"><code>settlement_nozzle_readings</code>  — <strong>NEW</strong> (D1 — the reconciliation litres)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>settlement_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>settlements</code></td>
+</tr>
+<tr>
+<td><code>fuel_pump_nozzle_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>fuel_pump_nozzles</code></td>
+</tr>
+<tr>
+<td><code>fuel_type_code</code></td>
+<td>string, null:false</td>
+<td>snapshot of the nozzle's fuel</td>
+</tr>
+<tr>
+<td><code>opening_reading</code></td>
+<td>decimal(12,3), null:false</td>
+<td><strong>autopop = prior shift's closing</strong></td>
+</tr>
+<tr>
+<td><code>closing_reading</code></td>
+<td>decimal(12,3), null:false</td>
+<td>today's reading</td>
+</tr>
+<tr>
+<td><code>testing_litres</code></td>
+<td>decimal(10,3), null:false, default:0</td>
+<td>subtracted</td>
+</tr>
+<tr>
+<td><code>net_litres</code></td>
+<td>decimal(12,3), null:true</td>
+<td>derived = closing − opening − testing</td>
+</tr>
+<tr>
+<td><code>price_per_litre</code></td>
+<td>decimal(8,3), null:false</td>
+<td>autopop from catalog</td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td>decimal(12,2), null:true</td>
+<td>derived = net_litres × price_per_litre</td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: unique <code>(settlement_id, fuel_pump_nozzle_id)</code>; <code>fuel_pump_nozzle_id</code>.
+FKs: <code>settlement_id</code>→<code>settlements</code>; <code>fuel_pump_nozzle_id</code>→<code>fuel_pump_nozzles</code>;
+<code>fuel_type_code</code>→<code>fuel_types(code)</code>.</p>
+<h3 id="settlement_lube_lines-new-d2"><code>settlement_lube_lines</code>  — <strong>NEW</strong> (D2)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>settlement_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>settlements</code></td>
+</tr>
+<tr>
+<td><code>product_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>products</code> (category=lube)</td>
+</tr>
+<tr>
+<td><code>quantity</code></td>
+<td>decimal(12,3), null:false</td>
+<td>units sold</td>
+</tr>
+<tr>
+<td><code>price_per_unit</code></td>
+<td>decimal(10,2), null:false</td>
+<td>autopop from catalog</td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td>decimal(12,2), null:true</td>
+<td>derived = quantity × price_per_unit</td>
+</tr>
+<tr>
+<td><code>opening_stock</code></td>
+<td>decimal(12,3), null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>closing_stock</code></td>
+<td>decimal(12,3), null:true</td>
+<td>feeds <code>product_stocks</code></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: unique <code>(settlement_id, product_id)</code>.
+FKs: <code>settlement_id</code>→<code>settlements</code>; <code>product_id</code>→<code>products</code>.</p>
+<h3 id="settlement_credit_lines-new-d5-fleetotp-tt-credit-pulled-discounts"><code>settlement_credit_lines</code>  — <strong>NEW</strong> (D5: Fleet/OTP + TT credit + pulled discounts)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>settlement_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>settlements</code></td>
+</tr>
+<tr>
+<td><code>credit_type</code></td>
+<td>integer, null:false</td>
+<td>enum <code>fleet_otp:0</code>, <code>tt:1</code>, <code>discount:2</code> (discount pulled from same-day CustomerDetailsEntry, D3)</td>
+</tr>
+<tr>
+<td><code>vehicle_number</code></td>
+<td>string, null:true</td>
+<td>e.g. <code>NL-01/AE-2471</code></td>
+</tr>
+<tr>
+<td><code>litres</code></td>
+<td>decimal(10,3), null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>discount_amount</code></td>
+<td>decimal(10,2), null:false, default:0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td>decimal(12,2), null:true</td>
+<td>credit value</td>
+</tr>
+<tr>
+<td><code>customer_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>customers</code> when matched</td>
+</tr>
+<tr>
+<td><code>transport_name</code></td>
+<td>string, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>driver_name</code></td>
+<td>string, null:true</td>
+<td>denormalized from source visit</td>
+</tr>
+<tr>
+<td><code>driver_mobile</code></td>
+<td>string, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>note</code></td>
+<td>text, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>settlement_id</code>; <code>credit_type</code>; <code>customer_id</code>.
+FKs: <code>settlement_id</code>→<code>settlements</code>; <code>customer_id</code>→<code>customers</code>.</p>
+<h3 id="settlement_payments-new-d4-extensible-non-cash-tenders"><code>settlement_payments</code>  — <strong>NEW</strong> (D4 — extensible non-cash tenders)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>settlement_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>settlements</code></td>
+</tr>
+<tr>
+<td><code>method</code></td>
+<td>integer, null:false</td>
+<td>enum <code>phonepe_pos:0</code>, <code>phonepe_scanner:1</code>, <code>card:2</code>, <code>other:3</code></td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td>decimal(12,2), null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>reference</code></td>
+<td>string, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>(settlement_id, method)</code>.
+FK: <code>settlement_id</code>→<code>settlements</code>.</p>
+<blockquote>
+<p><code>settlements.phonepe_pos_amount</code> / <code>phonepe_scanner_amount</code> are kept as convenience
+columns for the D6 final-amount formula and simple UIs; <code>settlement_payments</code> is the
+authoritative, extensible ledger. Keep the two in sync in the service layer, or treat
+the columns as caches. (Alternative: drop the two columns and always aggregate —
+chosen to keep them for formula readability.)</p>
+</blockquote>
+<h3 id="settlement_cash_counts-new-d7-denomination-breakdown"><code>settlement_cash_counts</code>  — <strong>NEW</strong> (D7 denomination breakdown)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>settlement_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>settlements</code></td>
+</tr>
+<tr>
+<td><code>denomination</code></td>
+<td>integer, null:false</td>
+<td>500/200/100/50/20/10/5</td>
+</tr>
+<tr>
+<td><code>quantity</code></td>
+<td>integer, null:false, default:0</td>
+<td>notes counted</td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td>integer, null:true</td>
+<td>derived = denomination × quantity</td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: unique <code>(settlement_id, denomination)</code>.
+FK: <code>settlement_id</code>→<code>settlements</code>.</p>
+<blockquote>
+<p><strong>Rate comparison (D10, JIO-BP vs own price)</strong> needs no core table — it reads
+<code>products.selling_price</code> against an admin-entered competitor figure. Store the
+competitor number on <code>settlements.notes</code> for now, or add a tiny
+<code>competitor_rate_snapshots</code> table later (out of MVP scope; flagged, not built).</p>
+</blockquote>
+<hr />
+<h2 id="5-rewards-reward_settings-change-c4-global-pause">5. Rewards — <code>reward_settings</code>  <strong>CHANGE</strong>  (C4 global pause)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rewards_paused</code></td>
+<td>boolean, null:false, default:false</td>
+<td><strong>global</strong> pause switch</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>customers.rewards_paused</code> (already present) stays as the <strong>per-customer</strong> pause.
+Accrual is blocked when <em>either</em> is true. Distinct switches, distinct grains.</p>
+<hr />
+<h2 id="6-customer-expansion-b1-e4-e5-e6">6. Customer expansion  (B1, E4, E5, E6)</h2>
+<h3 id="customers-change"><code>customers</code>  <strong>CHANGE</strong></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>customer_type</code></td>
+<td>integer, null:false, default:0</td>
+<td>enum <code>drivein:0</code>, <code>credit:1</code>, <code>fleet_otp:2</code> — <em>taxonomy to confirm</em> (OTP=fleet/credit billed by litres; Drive-in=walk-in cash; Credit=credit account)</td>
+</tr>
+<tr>
+<td><code>transport_name</code></td>
+<td>string, null:true</td>
+<td>transporter/fleet name</td>
+</tr>
+<tr>
+<td><code>approx_vehicle_count</code></td>
+<td>integer, null:true</td>
+<td>"Approx Number of Vehicles"</td>
+</tr>
+<tr>
+<td><code>contacted_by</code></td>
+<td>integer, null:true</td>
+<td>enum <code>owner:0</code>, <code>supervisor:1</code>, <code>driver:2</code> (E5 contacted-by checkbox)</td>
+</tr>
+<tr>
+<td><code>last_contacted_at</code></td>
+<td>datetime, null:true</td>
+<td>E5 last-contact / conversion tracking</td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>customer_type</code>; <code>last_contacted_at</code>.</p>
+<h3 id="customer_contacts-new-b1-driversupervisorownermanager-triple-info-button"><code>customer_contacts</code>  — <strong>NEW</strong> (B1 driver/supervisor/owner/manager triple, "info button")</h3>
+<p>Chosen over six flat columns: extensible, supports the "info button" that lists all
+contacts, and lets a contact carry the <code>contacted_by</code> semantics cleanly.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>customer_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>customers</code></td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>integer, null:false</td>
+<td>enum <code>driver:0</code>, <code>supervisor:1</code>, <code>owner:2</code>, <code>manager:3</code></td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>mobile</code></td>
+<td>string, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>is_primary</code></td>
+<td>boolean, null:false, default:false</td>
+<td>primary contact per role</td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>(customer_id, role)</code>. FK: <code>customer_id</code>→<code>customers</code>.</p>
+<blockquote>
+<p><strong>Reconcile with <code>vehicles.commercial_*</code>:</strong> the existing single
+<code>commercial_contact_name</code> / <code>commercial_contact_phone_number</code> /
+<code>commercial_company_name</code> / <code>commercial_address</code> on <code>vehicles</code> overlap this. Migrate
+those into <code>customers.transport_name</code> + <code>customer_contacts</code> (role=manager/owner), then
+deprecate the per-vehicle contact columns (keep <code>commercial_notes</code> if still useful).
+See §11.</p>
+<p><strong>Lost-customer / cadence (E6, E2, E3)</strong> are <strong>computed</strong> from
+<code>transactions.business_date</code> per customer (last visit, weekly/biweekly gap). No table;
+a SQL/materialized view or service query. Flagged as derived, not stored.</p>
+</blockquote>
+<hr />
+<h2 id="7-campaigns-f1-f2">7. Campaigns  (F1, F2)</h2>
+<h3 id="campaigns-new"><code>campaigns</code>  — <strong>NEW</strong></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>text, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>period</code></td>
+<td>integer, null:false</td>
+<td>enum <code>day:0</code>, <code>week:1</code>, <code>month:2</code>, <code>year:3</code> (min-purchase window)</td>
+</tr>
+<tr>
+<td><code>min_purchase_amount</code></td>
+<td>decimal(10,2), null:true</td>
+<td>₹ threshold</td>
+</tr>
+<tr>
+<td><code>min_purchase_litres</code></td>
+<td>decimal(10,3), null:true</td>
+<td>litres threshold</td>
+</tr>
+<tr>
+<td><code>reward_type</code></td>
+<td>integer, null:false</td>
+<td>enum <code>discount:0</code>, <code>gift:1</code>, <code>points:2</code></td>
+</tr>
+<tr>
+<td><code>reward_value</code></td>
+<td>decimal(10,2), null:true</td>
+<td>₹ / points</td>
+</tr>
+<tr>
+<td><code>gift_description</code></td>
+<td>string, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>starts_on</code></td>
+<td>date, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ends_on</code></td>
+<td>date, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>boolean, null:false, default:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_by_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>users</code></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>active</code>; <code>(starts_on, ends_on)</code>. FK: <code>created_by_id</code>→<code>users</code>.</p>
+<h3 id="campaign_targets-new-f2-individual-customer-type-selected"><code>campaign_targets</code>  — <strong>NEW</strong> (F2: individual / customer-type / selected)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>campaign_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>campaigns</code></td>
+</tr>
+<tr>
+<td><code>target_type</code></td>
+<td>integer, null:false</td>
+<td>enum <code>all:0</code>, <code>customer_type:1</code>, <code>customer:2</code></td>
+</tr>
+<tr>
+<td><code>customer_type</code></td>
+<td>integer, null:true</td>
+<td>set when target_type=customer_type</td>
+</tr>
+<tr>
+<td><code>customer_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>customers</code>; set when target_type=customer</td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>(campaign_id, target_type)</code>; <code>customer_id</code>.
+FKs: <code>campaign_id</code>→<code>campaigns</code>; <code>customer_id</code>→<code>customers</code>.</p>
+<h3 id="campaign_redemptions-new-fulfilment-tracking"><code>campaign_redemptions</code>  — <strong>NEW</strong> (fulfilment tracking)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>campaign_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>campaigns</code></td>
+</tr>
+<tr>
+<td><code>customer_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>customers</code></td>
+</tr>
+<tr>
+<td><code>transaction_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>transactions</code> that triggered it</td>
+</tr>
+<tr>
+<td><code>reward_type</code></td>
+<td>integer, null:false</td>
+<td>mirrors campaign at redemption time</td>
+</tr>
+<tr>
+<td><code>reward_value</code></td>
+<td>decimal(10,2), null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>redeemed_at</code></td>
+<td>datetime, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>recorded_by_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>users</code></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>(campaign_id, customer_id)</code>; <code>transaction_id</code>.
+FKs: <code>campaign_id</code>→<code>campaigns</code>; <code>customer_id</code>→<code>customers</code>;
+<code>transaction_id</code>→<code>transactions</code>; <code>recorded_by_id</code>→<code>users</code>.</p>
+<hr />
+<h2 id="8-push-linkage-f3-f4">8. Push linkage  (F3, F4)</h2>
+<h3 id="push_subscriptions-change"><code>push_subscriptions</code>  <strong>CHANGE</strong></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>customer_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>customers</code> — enables <strong>targeted</strong> push</td>
+</tr>
+<tr>
+<td><code>user_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>users</code> — staff-device tokens</td>
+</tr>
+</tbody>
+</table></div>
+<p>Both nullable (anonymous tokens still allowed). Indexes: <code>customer_id</code>; <code>user_id</code>.</p>
+<h3 id="notification_schedules-change"><code>notification_schedules</code>  <strong>CHANGE</strong></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>campaign_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>campaigns</code> — a scheduled push that promotes an offer (F3 offer object + auto loyalty push)</td>
+</tr>
+<tr>
+<td><code>audience_type</code></td>
+<td>integer, null:false, default:0</td>
+<td>enum <code>all:0</code>, <code>customer_type:1</code>, <code>customer:2</code> (targeted sends)</td>
+</tr>
+<tr>
+<td><code>audience_customer_type</code></td>
+<td>integer, null:true</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Index: <code>campaign_id</code>. FK: <code>campaign_id</code>→<code>campaigns</code>.</p>
+<blockquote>
+<p>WhatsApp/SMS (F4) is a <strong>delivery channel</strong>, not schema — it reuses these tables with
+an added <code>channel</code> enum on the send record. No new table required for the data model;
+provider wiring is an ops concern (and out of the Q3 no-SMS-for-auth scope, but
+allowed for marketing).</p>
+</blockquote>
+<hr />
+<h2 id="9-operator-kyc-a7-q3">9. Operator KYC  (A7 / Q3)</h2>
+<h3 id="users-change"><code>users</code>  <strong>CHANGE</strong></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>address</code></td>
+<td>text, null:true</td>
+<td>operator address</td>
+</tr>
+<tr>
+<td><code>aadhaar_number</code></td>
+<td>string, null:true</td>
+<td><strong>PII — encrypt at rest</strong> (<code>encrypts</code> / Active Record Encryption); store deterministic-hash column if lookup needed, else non-deterministic</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>ActiveStorage attachments</strong> (no columns on <code>users</code>; standard AS tables):
+<code>has_one_attached :photo</code> and <code>has_one_attached :id_card_photo</code>. Login stays
+username/mobile + password (Devise); <strong>no OTP</strong>.</p>
+<h3 id="activestorage-tables-new-not-yet-in-schema">ActiveStorage tables  — <strong>NEW</strong> (not yet in schema)</h3>
+<p><code>active_storage_blobs</code>, <code>active_storage_attachments</code>, <code>active_storage_variant_records</code>
+must be added (<code>bin/rails active_storage:install</code>). Needed for operator Photo + ID-card
+(A7) and any future product/lube images.</p>
+<hr />
+<h2 id="10-feedback-e7">10. Feedback  (E7)</h2>
+<h3 id="customer_feedbacks-new"><code>customer_feedbacks</code>  — <strong>NEW</strong></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>customer_id</code></td>
+<td>bigint, null:false</td>
+<td>FK → <code>customers</code></td>
+</tr>
+<tr>
+<td><code>transaction_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>transactions</code> (visit that prompted it)</td>
+</tr>
+<tr>
+<td><code>rating</code></td>
+<td>integer, null:false</td>
+<td>1–5</td>
+</tr>
+<tr>
+<td><code>comment</code></td>
+<td>text, null:true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>integer, null:false, default:0</td>
+<td>enum <code>staff:0</code>, <code>push:1</code>, <code>web:2</code></td>
+</tr>
+<tr>
+<td><code>recorded_by_id</code></td>
+<td>bigint, null:true</td>
+<td>FK → <code>users</code></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>datetime</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexes: <code>customer_id</code>; <code>rating</code>. FKs: <code>customer_id</code>→<code>customers</code>;
+<code>transaction_id</code>→<code>transactions</code>; <code>recorded_by_id</code>→<code>users</code>.</p>
+<hr />
+<h2 id="11-migration-pii-concerns">11. Migration &amp; PII concerns</h2>
+<p><strong>Migration order (dependency-safe):</strong>
+1. <code>active_storage:install</code> (independent).
+2. <code>products</code> → <code>product_price_history</code> → <code>product_stocks</code> (catalog is the keystone; seed 14 rows).
+3. <code>settlements</code> → its child tables (<code>*_nozzle_readings</code>, <code>*_lube_lines</code>,
+   <code>*_credit_lines</code>, <code>*_payments</code>, <code>*_cash_counts</code>); then <code>stock_receipts</code>,
+   <code>tank_decantations</code> (they FK <code>settlements</code>).
+4. <code>transactions</code> ALTER (add litres columns) — <strong>backfill</strong> <code>litres</code> where derivable
+   (<code>fuel_amount ÷ price_at_date</code>); leave null otherwise; keep <code>fuel_amount</code>.
+5. <code>customers</code> ALTER + <code>customer_contacts</code>; <strong>backfill</strong> from <code>vehicles.commercial_*</code>,
+   then a later migration deprecates those vehicle columns.
+6. <code>reward_settings.rewards_paused</code>, <code>users</code> KYC columns, <code>push_subscriptions</code> FKs,
+   <code>notification_schedules</code> extras.
+7. <code>campaigns</code> → <code>campaign_targets</code> → <code>campaign_redemptions</code>; <code>customer_feedbacks</code>.</p>
+<p><strong>Backward-compat:</strong> <code>transactions.fuel_amount</code> stays <code>null: false</code>; the loyalty
+engine keeps reading it (now = <code>net_amount</code>). New writes set both. Don't drop it until
+Android + PWA read <code>net_amount</code> everywhere.</p>
+<p><strong>Nullable-then-tighten:</strong> add <code>transactions.litres</code>, <code>products.selling_price</code>
+consumers, and settlement derived columns as nullable; tighten to <code>null: false</code> in a
+follow-up once backfilled and all writers updated.</p>
+<p><strong>PII (elevated handling required):</strong>
+- <code>users.aadhaar_number</code> and the <strong>ID-card photo</strong> are government-ID PII. Encrypt the
+  number with Active Record Encryption; store the image in a <strong>private</strong> ActiveStorage
+  service (no public URLs; signed, expiring URLs only). Restrict read to admins;
+  exclude from API serializers by default; log access.
+- <code>customer_contacts.mobile</code>, <code>driver_mobile</code>, owner/manager mobiles are personal
+  contact data — keep out of URL params, redact in analytics events, and honor the
+  existing privacy posture (<code>push_subscriptions</code> already avoids customer FKs for
+  anonymity; the new nullable FK must not leak identity into anonymous tokens).
+- Aadhaar must <strong>never</strong> appear in <code>analytics_events.properties</code>, logs, or Android
+  crash reports. Add it to Rails <code>filter_parameters</code>.</p>
+<p><strong>Uniqueness / integrity guards:</strong>
+- <code>settlements</code> unique <code>(fuel_pump_id, business_date, shift_template_id)</code> prevents
+  double settlement of a shift.
+- <code>settlement_nozzle_readings.opening_reading</code> should be validated ≥ prior closing
+  (app-level) to catch meter rollovers/typos before ₹ derivation.</p>
+<hr />
+<h2 id="12-consolidated-er-diagram-new-changed-entities">12. Consolidated ER diagram (new / changed entities)</h2>
+<figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">erDiagram
+    fuel_types ||--o{ products : &quot;fuel_type_code&quot;
+    products ||--o{ product_price_history : &quot;prices over time&quot;
+    products ||--|| product_stocks : &quot;running stock&quot;
+    products ||--o{ stock_receipts : &quot;received&quot;
+    products ||--o{ settlement_lube_lines : &quot;lube sold&quot;
+    products ||--o{ transactions : &quot;fuel dispensed&quot;
+
+    fuel_pumps ||--o{ settlements : &quot;per pump/date/shift&quot;
+    shift_templates ||--o{ settlements : &quot;&quot;
+    users ||--o{ settlements : &quot;fsm / approver / recorder&quot;
+
+    settlements ||--o{ settlement_nozzle_readings : &quot;D1 readings&quot;
+    settlements ||--o{ settlement_lube_lines : &quot;D2 lubes&quot;
+    settlements ||--o{ settlement_credit_lines : &quot;D5 OTP/TT/discount&quot;
+    settlements ||--o{ settlement_payments : &quot;D4 phonepe&quot;
+    settlements ||--o{ settlement_cash_counts : &quot;D7 denominations&quot;
+    settlements ||--o{ stock_receipts : &quot;D8 received&quot;
+    settlements ||--o{ tank_decantations : &quot;D8 tank KL&quot;
+    fuel_pump_nozzles ||--o{ settlement_nozzle_readings : &quot;&quot;
+    fuel_types ||--o{ tank_decantations : &quot;per tank&quot;
+
+    customers ||--o{ customer_contacts : &quot;driver/supervisor/owner/manager&quot;
+    customers ||--o{ transactions : &quot;visits&quot;
+    customers ||--o{ settlement_credit_lines : &quot;matched credit&quot;
+    customers ||--o{ customer_feedbacks : &quot;E7 rating&quot;
+    customers ||--o{ campaign_targets : &quot;targeted&quot;
+    customers ||--o{ campaign_redemptions : &quot;fulfilled&quot;
+    customers ||--o{ push_subscriptions : &quot;F3 targeted push&quot;
+
+    transactions ||--o{ customer_feedbacks : &quot;&quot;
+    transactions ||--o{ campaign_redemptions : &quot;trigger&quot;
+
+    campaigns ||--o{ campaign_targets : &quot;F2&quot;
+    campaigns ||--o{ campaign_redemptions : &quot;F1&quot;
+    campaigns ||--o{ notification_schedules : &quot;offer push&quot;
+
+    users ||--o{ push_subscriptions : &quot;staff device&quot;
+    users ||--o{ customer_feedbacks : &quot;recorded_by&quot;
+
+    users {
+        text address &quot;NEW&quot;
+        string aadhaar_number &quot;NEW · PII encrypted&quot;
+        attachment photo &quot;NEW · ActiveStorage&quot;
+        attachment id_card_photo &quot;NEW · ActiveStorage private&quot;
+    }
+    customers {
+        int customer_type &quot;NEW enum&quot;
+        string transport_name &quot;NEW&quot;
+        int approx_vehicle_count &quot;NEW&quot;
+        int contacted_by &quot;NEW enum&quot;
+        datetime last_contacted_at &quot;NEW&quot;
+    }
+    transactions {
+        decimal litres &quot;NEW · source of truth&quot;
+        decimal price_per_litre &quot;NEW snapshot&quot;
+        decimal gross_amount &quot;NEW derived&quot;
+        decimal discount_amount &quot;NEW&quot;
+        decimal net_amount &quot;NEW derived&quot;
+        decimal fuel_amount &quot;CHANGED = net_amount&quot;
+        boolean fleet_otp &quot;NEW&quot;
+    }
+    reward_settings {
+        boolean rewards_paused &quot;NEW global&quot;
+    }
+    products {
+        string sku
+        int category &quot;fuel|lube&quot;
+        decimal mrp
+        decimal selling_price &quot;₹ derivation source&quot;
+        string batch
+    }
+    settlements {
+        date business_date
+        int status &quot;draft|submitted|approved|reopened&quot;
+        decimal final_settle_amount &quot;D6 derived&quot;
+        decimal shortage_amount &quot;D7 derived&quot;
+    }
+</pre></figure>
+<hr />
+<h2 id="13-coverage-map-requirement-tables">13. Coverage map (requirement → tables)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Delivered by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A5 product catalog + MRP/selling + batch + lubes</td>
+<td><code>products</code>, <code>product_price_history</code></td>
+</tr>
+<tr>
+<td>A7 operator KYC (photo/address/aadhaar/ID)</td>
+<td><code>users</code> (+cols), ActiveStorage tables</td>
+</tr>
+<tr>
+<td>B1 customer master (driver/supervisor/owner + contacted-by)</td>
+<td><code>customers</code> (+cols), <code>customer_contacts</code></td>
+</tr>
+<tr>
+<td>B2 per-visit capture (litres/discount/fleet-otp/transport…)</td>
+<td><code>transactions</code> (+cols), upsert <code>customer_contacts</code></td>
+</tr>
+<tr>
+<td>C4 global pause</td>
+<td><code>reward_settings.rewards_paused</code></td>
+</tr>
+<tr>
+<td>D1 per-nozzle readings</td>
+<td><code>settlement_nozzle_readings</code></td>
+</tr>
+<tr>
+<td>D2 lubes + opening/closing stock</td>
+<td><code>settlement_lube_lines</code>, <code>product_stocks</code></td>
+</tr>
+<tr>
+<td>D3 discount pull</td>
+<td><code>settlement_credit_lines(credit_type=discount)</code></td>
+</tr>
+<tr>
+<td>D4 PhonePe POS/Scanner</td>
+<td><code>settlement_payments</code>, <code>settlements.phonepe_*</code></td>
+</tr>
+<tr>
+<td>D5 Fleet-OTP / TT credit</td>
+<td><code>settlement_credit_lines</code></td>
+</tr>
+<tr>
+<td>D6 final-settle calc</td>
+<td><code>settlements.final_settle_amount</code></td>
+</tr>
+<tr>
+<td>D7 denomination + shortage</td>
+<td><code>settlement_cash_counts</code>, <code>settlements.shortage_amount</code></td>
+</tr>
+<tr>
+<td>D8 stock received + decantation</td>
+<td><code>stock_receipts</code>, <code>tank_decantations</code></td>
+</tr>
+<tr>
+<td>D9 admin settlement view/edit</td>
+<td><code>settlements.status</code> + admin scope</td>
+</tr>
+<tr>
+<td>D10 rate comparison</td>
+<td><code>settlements.notes</code> (MVP) / future table</td>
+</tr>
+<tr>
+<td>E4 customer-type view</td>
+<td><code>customers.customer_type</code></td>
+</tr>
+<tr>
+<td>E5 contact tracking + conversion</td>
+<td><code>customers.contacted_by/last_contacted_at</code>, <code>customer_contacts</code></td>
+</tr>
+<tr>
+<td>E6 churn / lost-customer</td>
+<td>derived from <code>transactions.business_date</code> (view)</td>
+</tr>
+<tr>
+<td>E7 feedback / rating</td>
+<td><code>customer_feedbacks</code></td>
+</tr>
+<tr>
+<td>F1 campaigns</td>
+<td><code>campaigns</code>, <code>campaign_redemptions</code></td>
+</tr>
+<tr>
+<td>F2 targeting</td>
+<td><code>campaign_targets</code></td>
+</tr>
+<tr>
+<td>F3 targeted/offer push + auto loyalty push</td>
+<td><code>push_subscriptions</code> (+FKs), <code>notification_schedules</code> (+cols)</td>
+</tr>
+<tr>
+<td>F4 WhatsApp/SMS</td>
+<td>channel flag on send record (no new table)</td>
+</tr>
+<tr>
+<td>G1 per-pump visualize + edit past days</td>
+<td><code>settlements</code> + <code>transactions.business_date</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 03-target-data-model.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
+</script>
+
+</body>
+</html>

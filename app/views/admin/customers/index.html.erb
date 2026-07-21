@@ -19,8 +19,12 @@
 
 <div class="card shadow-sm admin-transactions-filter admin-customers-filter mb-4">
   <div class="card-body">
+    <% period_params = { preset: @current_preset, start_date: @current_start_date, end_date: @current_end_date }.compact_blank %>
     <%= form_with url: admin_customers_path, method: :get, local: true, class: "admin-customers-filter__form" do |form| %>
       <%= hidden_field_tag :status, @current_status %>
+      <% period_params.each do |key, value| %>
+        <%= hidden_field_tag key, value %>
+      <% end %>
 
       <div class="admin-transactions-filter__group admin-customers-filter__search">
         <%= form.label :q, "Search", class: "admin-transactions-filter__label" %>
@@ -34,22 +38,29 @@
         <span class="admin-transactions-filter__label">Quick Filter</span>
         <div class="dashboard-filter-chips">
           <%= link_to "All",
-            admin_customers_path(q: @query.presence, status: "all"),
+            admin_customers_path({ q: @query.presence, status: "all" }.merge(period_params)),
             class: "dashboard-filter-chip #{'is-active' if @current_status == 'all'}" %>
           <%= link_to "Active",
-            admin_customers_path(q: @query.presence, status: "active"),
+            admin_customers_path({ q: @query.presence, status: "active" }.merge(period_params)),
             class: "dashboard-filter-chip #{'is-active' if @current_status == 'active'}" %>
           <%= link_to "Inactive",
-            admin_customers_path(q: @query.presence, status: "inactive"),
+            admin_customers_path({ q: @query.presence, status: "inactive" }.merge(period_params)),
             class: "dashboard-filter-chip #{'is-active' if @current_status == 'inactive'}" %>
         </div>
       </div>
 
       <div class="admin-customers-filter__actions">
         <%= form.submit "Search", class: "btn btn-primary" %>
-        <% if @query.present? || @current_status != "all" %>
+        <% if @query.present? || @current_status != "all" || @period_range.present? %>
           <%= link_to "Clear", admin_customers_path, class: "btn btn-outline-secondary" %>
         <% end %>
+      </div>
+    <% end %>
+
+    <% if @period_range.present? %>
+      <div class="alert alert-info d-flex justify-content-between align-items-center mt-3 mb-0" data-customers-period-banner>
+        <span>Showing customers active between <strong><%= @period_range.begin.to_date.strftime("%d %b %Y") %></strong> and <strong><%= @period_range.end.to_date.strftime("%d %b %Y") %></strong>.</span>
+        <%= link_to "Clear period", admin_customers_path(q: @query.presence, status: (@current_status unless @current_status == "all")), class: "alert-link" %>
       </div>
     <% end %>
   </div>
@@ -87,7 +98,7 @@
       </div>
     <% else %>
       <p class="admin-customers-empty mb-0">
-        <%= (@query.present? || @current_status != "all") ? "No customers matched the current filters." : "No customers available yet." %>
+        <%= (@query.present? || @current_status != "all" || @period_range.present?) ? "No customers matched the current filters." : "No customers available yet." %>
       </p>
     <% end %>
   </div>

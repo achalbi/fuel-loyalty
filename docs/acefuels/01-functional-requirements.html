@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceFuels — Functional Requirements Catalog — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">01-functional-requirements.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="acefuels-functional-requirements-catalog">AceFuels — Functional Requirements Catalog</h1>
+<p>Authoritative, source-derived catalog of <strong>what</strong> the AceFuels system must do,
+extracted from <code>AceFuels_Requirement.xlsx</code> (7 sheets). This document captures
+requirements only — it does <strong>not</strong> propose designs, schemas, or implementation.</p>
+<ul>
+<li><strong>Feature IDs</strong> are shared across all AceFuels docs: A1–A10 (setup/users/shifts),
+  B1–B2 (customer capture), C1–C5 (rewards), D1–D10 (daily settlement),
+  E1–E7 (dashboard/CRM/reports), F1–F4 (campaigns/notifications), G1 (per-pump
+  visualize + edit), S-MYPUMP / S-PAUSE (staff-login constraints).</li>
+<li><strong>Status</strong> column reflects the VERIFIED AUDIT STATUS of the current app
+  (Rails PWA + JSON API + native Android): <strong>Present</strong> / <strong>Partial</strong> / <strong>Absent</strong>.
+  See <code>40-gap-analysis.md</code> for the evidence behind each verdict.</li>
+</ul>
+<h3 id="locked-decisions-that-scope-acceptance-2026-07-21">Locked decisions that scope acceptance (2026-07-21)</h3>
+<ul>
+<li><strong>Q1 Units</strong> — Litres / meter readings are the <strong>source of truth</strong>; ₹ is <strong>derived</strong>
+  from the product-catalog selling price. Acceptance criteria referencing amounts assume
+  this direction of derivation.</li>
+<li><strong>Q2 Surfaces</strong> — Every feature must exist on <strong>both</strong> the Rails PWA and the native
+  Android app, plus the JSON API that backs Android. "The system provides X" below means
+  X on all three surfaces unless a requirement is admin-only (PWA/API) or FSM-mobile-first.</li>
+<li><strong>Q3 Operator KYC</strong> — Operator identity captures <strong>profile fields only</strong> (photo, address,
+  Aadhaar number, ID-card photo); <strong>username/mobile + password</strong> login is retained; <strong>no OTP/SMS</strong>.</li>
+</ul>
+<h3 id="terminology-inferred-from-the-sheets-to-confirm">Terminology (inferred from the sheets — <em>to confirm</em>)</h3>
+<ul>
+<li><strong>OTP</strong> = fleet/credit account billed by litres (a customer <em>type</em>, <strong>not</strong> one-time-password).</li>
+<li><strong>TT</strong> = tank-truck credit line.</li>
+<li><strong>Drive-in</strong> = walk-in cash customer.</li>
+<li><strong>Credit</strong> = credit-account customer.</li>
+<li><strong>FSM</strong> = Forecourt Sales Man / pump operator (the non-admin role).</li>
+</ul>
+<hr />
+<h2 id="roles">Roles</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Source sheet</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Admin User</td>
+<td>Users</td>
+<td>Full back-office access: setup, rewards, settlement view/edit, reports, CRM, campaigns, notifications.</td>
+</tr>
+<tr>
+<td>Pump Operator / FSM</td>
+<td>Users</td>
+<td>Forecourt operator. Captures customer details per visit and files the shift-end Daily Settlement. Excluded from "My Pump" self-assignment and "Pause Rewards" (see Staff constraints).</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="a-setup-pumps-nozzles-products-vehicle-types">A. Setup (pumps, nozzles, products, vehicle types)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Source sheet</th>
+<th>Description</th>
+<th>Acceptance criteria</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td>Set up number of pumps</td>
+<td>Admin / PumpsNozzlesProductsSetup</td>
+<td>Admin defines the outlet's dispensing pumps.</td>
+<td>• Admin can create, list, rename, and deactivate a pump.<br>• Each pump has a stable identifier/sequence (e.g. P1, P2, P3).<br>• Deactivating a pump hides it from FSM capture and settlement selectors without deleting history.</td>
+<td>Present</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>Set up nozzles</td>
+<td>Admin / PumpsNozzlesProductsSetup</td>
+<td>Admin defines nozzles that belong to pumps.</td>
+<td>• Admin can add one or more nozzles under a given pump.<br>• Each nozzle has a stable identifier/sequence (e.g. N1–N8).<br>• A nozzle cannot exist without a parent pump.<br>• Seed layout is reproducible: P1[N1 HSD, N2 HSD] P2[N3 HSD, N4 MS] P3[N5 HSD, N6 HSD, N7 MS, N8 MS].</td>
+<td>Present</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>Assign nozzles to pumps</td>
+<td>Admin / PumpsNozzlesProductsSetup</td>
+<td>Every nozzle is bound to exactly one pump.</td>
+<td>• Each nozzle resolves to exactly one pump.<br>• Listing a pump shows its nozzles.<br>• The pump→nozzle map matches the seed layout in A2.</td>
+<td>Present</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>Assign product (MS/HSD) per nozzle</td>
+<td>Admin / PumpsNozzlesProductsSetup</td>
+<td>Each nozzle dispenses a defined fuel product.</td>
+<td>• Admin can set a nozzle's fuel product to MS or HSD.<br>• The nozzle's fuel product is displayed wherever the nozzle is selected (capture, settlement).<br>• Fuel-type list is at minimum {MS, HSD} and is admin-editable.</td>
+<td>Present</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>Product catalog (fuel + lubes + AdBlue)</td>
+<td>PumpsNozzlesProductsSetup</td>
+<td>Master list of every sellable product with pricing and batch, spanning fuels, lubricants/oils, and AdBlue.</td>
+<td>• Admin can create/edit a product with: name, batch, MRP, and selling price.<br>• Catalog covers fuels (HSD, MS) and lube/oil/AdBlue lines: 2T (20/40/60 ml, 500 ml), 10W30 800 ml, Milex Petrol (5/40 ml), Milex Diesel (10/50 ml), AdBlue (5L/10L/20L).<br>• Selling price for a product is retrievable by other features (settlement pricing, ₹ derivation).<br>• A product can be listed/searched and deactivated without losing historical references.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>Vehicle types</td>
+<td>Admin</td>
+<td>Admin maintains the vehicle-type taxonomy used for rewards and reporting.</td>
+<td>• The six defaults exist: 2W, 3W, LMV (Car), LCV, MCV, HCV.<br>• Admin can create/edit/deactivate a vehicle type.<br>• A vehicle type carries its own reward configuration (see C2).</td>
+<td>Present</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="b-customer-capture">B. Customer capture</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Source sheet</th>
+<th>Description</th>
+<th>Acceptance criteria</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B1</td>
+<td>Customer master</td>
+<td>Admin</td>
+<td>Admin maintains a customer master keyed by vehicle registration, with driver / supervisor / owner contacts and a contacted-by record.</td>
+<td>• A customer record holds vehicle registration number and, separately, <strong>driver name+mobile</strong>, <strong>supervisor name+mobile</strong>, and <strong>owner name+mobile</strong>.<br>• A "contacted-by" selector records whether contact is via owner, supervisor, or driver, with an info affordance showing that contact's details.<br>• Admin can create, search, edit, and deactivate a customer.<br>• The record supports a customer <strong>type</strong> (OTP/Fleet, Drive-in, Credit) used by dashboard and campaigns.</td>
+<td>Partial</td>
+</tr>
+<tr>
+<td>B2</td>
+<td>FSM per-visit customer details entry</td>
+<td>Staff_FSM / CustomerDetailsEntry</td>
+<td>FSM captures a visit record many times per day at the forecourt.</td>
+<td>• Form fields: Date (auto-populated, editable), Vehicle#, Driver Name, Driver Mobile, Number of Litres filled, Pump# (defaults to the FSM's pump, overridable), Discount Amount, Fleet/OTP (Yes/No, default No), Transport Name, Manager Name, Manager Mobile, Owner Name, Owner Mobile, Approx Number of Vehicles.<br>• Litres is captured directly; ₹ is derived from catalog selling price (Q1).<br>• A single FSM can submit multiple entries within one shift/day.<br>• Same-day entries are retrievable by pump/date so Daily Settlement can pull discounts (see D3).</td>
+<td>Partial</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="c-rewards">C. Rewards</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Source sheet</th>
+<th>Description</th>
+<th>Acceptance criteria</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1</td>
+<td>Cash reward per ₹100 / per x ₹</td>
+<td>Admin</td>
+<td>Admin configures a base loyalty accrual as cash reward per spend increment.</td>
+<td>• Admin can set the spend increment (default ₹100) and the reward value per increment.<br>• Accrual applies to qualifying transactions using the configured increment.<br>• Changing the setting affects future accrual only, not settled history.</td>
+<td>Present</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>Reward by vehicle type</td>
+<td>Admin</td>
+<td>Reward rates can vary by vehicle type.</td>
+<td>• Admin can set a distinct reward rate per vehicle type (points/₹ or points/₹100).<br>• A transaction's accrual uses its vehicle type's rate.<br>• Time-boxed offers (start/end) per vehicle type are supported.</td>
+<td>Present</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>Reward by fuel type</td>
+<td>Admin</td>
+<td>Reward rates can vary by fuel type.</td>
+<td>• Admin can set a distinct reward rate per fuel type.<br>• A transaction's accrual reflects the fuel type dispensed.<br>• Fuel-type and vehicle-type rules resolve to a defined, non-ambiguous accrual.</td>
+<td>Present</td>
+</tr>
+<tr>
+<td>C4</td>
+<td>Pause rewards</td>
+<td>Admin</td>
+<td>Rewards can be paused — both per customer and <strong>globally</strong> for all customers.</td>
+<td>• Admin can pause/resume rewards for an individual customer.<br>• Admin can pause/resume rewards <strong>globally</strong> with a single switch.<br>• While paused (either scope), qualifying transactions accrue <strong>no</strong> reward.<br>• Resuming does not retroactively grant rewards for the paused window.</td>
+<td>✅ Present</td>
+</tr>
+<tr>
+<td>C5</td>
+<td>Accumulated loyalty bonus</td>
+<td>Admin</td>
+<td>The system tracks each customer's accumulated loyalty balance and its cash value.</td>
+<td>• Each qualifying transaction posts a ledger entry (points and/or cash value).<br>• A customer's current balance and cash value are retrievable.<br>• Redemptions decrement the balance and are recorded.<br>• Balance is consistent with the configured accrual rules (C1–C3) and pauses (C4).</td>
+<td>Present</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="d-daily-settlement-fsm-shift-end-admin-viewedit">D. Daily Settlement (FSM shift-end + Admin view/edit)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Source sheet</th>
+<th>Description</th>
+<th>Acceptance criteria</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>Per-nozzle settlement entry</td>
+<td>Staff_FSM / DailySettlement</td>
+<td>At shift end the FSM picks a pump; its nozzles and fuels are shown, and per-nozzle meter figures are entered/derived.</td>
+<td>• Selecting a pump lists its nozzles with their fuel and price (from catalog).<br>• Per nozzle: Today's Reading entered, Yesterday's Reading auto-populated from the prior settlement.<br>• System computes Total Litres, subtracts Testing Litres to give Net Litres Sold, and computes Amount = Net Litres × Price.<br>• FSM name is recorded on the settlement.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>Lubes in settlement (qty + stock)</td>
+<td>Staff_FSM / DailySettlement</td>
+<td>Lube/oil/AdBlue sales and stock are captured in settlement.</td>
+<td>• Each catalog lube product is selectable via checkbox.<br>• For a selected lube, FSM enters Qty; Amount is computed from catalog price.<br>• Opening Stock and Closing Stock are captured per lube product.<br>• Lube amounts roll into the settlement fuel+lubes subtotal.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>Discounts pulled from customer entries</td>
+<td>Staff_FSM / DailySettlement</td>
+<td>Same-day discount lines flow from CustomerDetailsEntry into the settlement.</td>
+<td>• Settlement's discount section is populated from same-day CustomerDetailsEntry records for that pump.<br>• Each discount line shows Transport, Litres, Discount Amount, and driver/manager/owner name+mobile.<br>• Total discounts feed the final-settlement calculation (D6).</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>PhonePe POS + Scanner amounts</td>
+<td>Staff_FSM / DailySettlement</td>
+<td>Digital collections are recorded in settlement.</td>
+<td>• FSM can enter PhonePe POS (machine) Amount.<br>• FSM can enter PhonePe Scanner Amount.<br>• Both reduce the cash to be settled in the final calculation (D6).</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>Fleet/OTP + TT credit lines</td>
+<td>Staff_FSM / DailySettlement</td>
+<td>Credit dispensed to fleet/OTP accounts and tank-trucks is recorded as credit lines.</td>
+<td>• FSM can add Fleet/OTP credit lines (litres + discount + vehicle reference, e.g. "OTP 136 Lts NL-01/AE-2471").<br>• FSM can add TT (tank-truck) credit lines with litres and discount.<br>• Credit-line totals feed the final-settlement calculation (D6).</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>D6</td>
+<td>Final amount to settle</td>
+<td>Staff_FSM / DailySettlement</td>
+<td>The settlement computes the net cash the FSM must hand over.</td>
+<td>• Final Amount = {Fuel Sold + Lubes} − {Discounts + PhonePe POS + PhonePe Scanner + credit lines}.<br>• The computation is shown with its component subtotals.<br>• Recalculates when any contributing input changes.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>D7</td>
+<td>Cash denomination + shortage</td>
+<td>Staff_FSM / DailySettlement</td>
+<td>Remaining cash is counted by denomination and reconciled against expected.</td>
+<td>• FSM enters counts for denominations 500/100/50/20/10/5; each row shows qty × value = amount.<br>• Counted cash total is computed.<br>• Shortage per pump = expected (D6) − counted, and is displayed.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>D8</td>
+<td>Stock received + decantation</td>
+<td>DailySettlement / DailySettlementSample</td>
+<td>Fuel stock received and tank decantation readings are recorded.</td>
+<td>• FSM can record Stock Received per fuel (MS / HSD).<br>• FSM can record Decantation as tank KL readings.<br>• These entries are attached to the day's settlement for the pump/outlet.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>D9</td>
+<td>Admin view/edit settlement</td>
+<td>Admin / DailySettlement</td>
+<td>Admin can review and correct settlements per pump and across pumps, including past days.</td>
+<td>• Admin can view any settlement by pump and date, and an across-pumps consolidated view.<br>• Admin can edit a submitted settlement, including prior days.<br>• Edits are persisted and reflected in dependent totals/reports.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>D10</td>
+<td>Rate comparison</td>
+<td>DailySettlementSample</td>
+<td>Own selling price is compared against a competitor benchmark.</td>
+<td>• The system displays own price vs a competitor benchmark (e.g. JIO-BP) per fuel.<br>• The comparison is visible in the settlement/admin context.<br>• Values derive from the product catalog (A5) and a competitor input.</td>
+<td>Absent</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="e-dashboard-crm-reports">E. Dashboard / CRM / Reports</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Source sheet</th>
+<th>Description</th>
+<th>Acceptance criteria</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E1</td>
+<td>Reports (periodic, by dimension)</td>
+<td>Admin</td>
+<td>Daily/weekly/monthly/yearly reports per vehicle, transporter, and driver.</td>
+<td>• Reports can be generated for daily, weekly, monthly, and yearly periods.<br>• Reports can be grouped by vehicle, transporter, and driver.<br>• Metrics include litres, discount, and gifts/rewards.<br>• Report output is exportable.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>E2</td>
+<td>Customers by period (dashboard)</td>
+<td>Admin</td>
+<td>Dashboard buckets customers by today / this week / last 30 days / last month, with drill-through.</td>
+<td>• Dashboard shows customer counts for today, this week, last 30 days, and last month.<br>• Each tile/leaderboard entry drills through to the underlying period-filtered customer list.<br>• Counts are consistent with the selected period.</td>
+<td>✅ Present</td>
+</tr>
+<tr>
+<td>E3</td>
+<td>Visit cadence per customer</td>
+<td>Admin</td>
+<td>Per-customer/transporter last-visit and cadence classification (daily/weekly/biweekly).</td>
+<td>• Each customer/transporter shows a last-visit date.<br>• The system classifies visit cadence as daily, weekly, or biweekly.<br>• Cadence is derived from actual visit history.</td>
+<td>Partial</td>
+</tr>
+<tr>
+<td>E4</td>
+<td>Customer-type view</td>
+<td>Admin</td>
+<td>Dashboard segments customers by type: OTP (Fleet) / Drive-in / Credit.</td>
+<td>• Dashboard can filter/segment customers by type OTP/Fleet, Drive-in, and Credit.<br>• Counts per type are shown.<br>• Type is sourced from the customer master (B1).</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>E5</td>
+<td>Contact tracking + conversion probability</td>
+<td>Admin</td>
+<td>Track how many customers were contacted, when last contacted, and a conversion likelihood.</td>
+<td>• Dashboard shows contacted count and last-contact date per customer/segment.<br>• A conversion-probability indicator is presented.<br>• Contact data derives from the contacted-by record (B1).</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>E6</td>
+<td>Lost-customer / churn detection</td>
+<td>Admin</td>
+<td>Intelligent detection of customers who have lapsed (e.g. visited last week, not this week).</td>
+<td>• The system flags customers who visited in a prior period but not the current one.<br>• Flagged (lost) customers are surfaced as a "reach out" list.<br>• Detection uses visit-cadence history (E3).</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>E7</td>
+<td>Customer feedback / rating</td>
+<td>Admin</td>
+<td>Capture and view customer feedback and ratings.</td>
+<td>• A customer feedback/rating can be recorded.<br>• Aggregated or per-customer feedback is viewable in the dashboard.<br>• Feedback is associated with the correct customer.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>G1</td>
+<td>Per-pump visualize + edit past days</td>
+<td>Admin</td>
+<td>Admin can visualize per-pump data any time and edit current or past days.</td>
+<td>• Admin can view transaction/settlement data filtered per pump.<br>• Admin can edit current-day and past-day records.<br>• Edits persist and propagate to dependent totals.</td>
+<td>Partial</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="f-campaigns-notifications">F. Campaigns / Notifications</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Source sheet</th>
+<th>Description</th>
+<th>Acceptance criteria</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F1</td>
+<td>Campaign creation</td>
+<td>Admin</td>
+<td>Admin defines campaigns: a minimum purchase over a period earns discounts/gifts.</td>
+<td>• Admin can create a campaign with a minimum-purchase threshold and a qualifying period.<br>• The reward is expressible as a discount or a gift.<br>• Campaigns can be listed, edited, and deactivated.<br>• Qualification can be evaluated against customer purchase history.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>F2</td>
+<td>Campaign targeting</td>
+<td>Admin</td>
+<td>Campaigns can target an individual customer, a customer-type, or a hand-picked set.</td>
+<td>• A campaign can target one specific customer.<br>• A campaign can target a customer-type (OTP / Credit / Drive-in).<br>• A campaign can target a manually selected set of customers.<br>• The resolved audience is reviewable before send.</td>
+<td>Absent</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>Push for offers + loyalty bonus</td>
+<td>Admin</td>
+<td>Push notifications for offers and for accumulated loyalty-bonus milestones.</td>
+<td>• The system can push an offer/campaign to a resolved, <strong>targeted</strong> audience.<br>• A loyalty-bonus notification can be sent when a customer's accumulated bonus reaches a milestone.<br>• A push references a concrete offer/campaign object where applicable.</td>
+<td>Partial</td>
+</tr>
+<tr>
+<td>F4</td>
+<td>WhatsApp / SMS notifications</td>
+<td>Admin</td>
+<td>Offer and loyalty notifications can also be delivered via WhatsApp and SMS.</td>
+<td>• The system can send a notification via WhatsApp.<br>• The system can send a notification via SMS.<br>• Channel selection works alongside the same targeting as push (F2).</td>
+<td>Absent</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="users-auth">Users / Auth</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Source sheet</th>
+<th>Description</th>
+<th>Acceptance criteria</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A7</td>
+<td>Operator user record + auth</td>
+<td>Admin</td>
+<td>Admin sets up operator users with identity profile fields; login remains username/mobile + password.</td>
+<td>• Operator record captures Name, <strong>Photo</strong>, <strong>Address</strong>, <strong>Aadhaar number</strong>, and <strong>ID-card photo</strong>.<br>• Login is by username or mobile + password (no OTP — Q3).<br>• Admin can create, edit, deactivate operator users.<br>• Aadhaar/ID images are stored with PII-appropriate handling.</td>
+<td>Partial</td>
+</tr>
+<tr>
+<td>A10</td>
+<td>Assign operator to a pump</td>
+<td>Admin</td>
+<td>Admin assigns an operator to a pump/nozzle (an admin-driven path, not operator self-service).</td>
+<td>• Admin can assign a given operator to a specific pump (and nozzle where applicable).<br>• The assignment drives the FSM's default pump in capture/settlement.<br>• Assignment is performed by admin, not by the operator (couples with S-MYPUMP).</td>
+<td>✅ Present</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="shifts">Shifts</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Source sheet</th>
+<th>Description</th>
+<th>Acceptance criteria</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A8</td>
+<td>Create shifts (24 / 12 / 8 hr)</td>
+<td>Admin</td>
+<td>Admin defines shift patterns.</td>
+<td>• 24-hr shift (6–6) is definable.<br>• 12-hr shifts (6AM–6PM, 6PM–6AM) are definable.<br>• 8-hr shifts (6–2, 2–10, 10–6) are definable.<br>• Shifts are reusable across assignments.</td>
+<td>Present</td>
+</tr>
+<tr>
+<td>A9</td>
+<td>Assign operator to a shift</td>
+<td>Admin</td>
+<td>Admin assigns operators to shifts.</td>
+<td>• Admin can assign a given operator to a defined shift.<br>• Assignments are viewable per operator and per shift.<br>• Assignment history is retained.</td>
+<td>Present</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="staff-constraints-fsm-login">Staff constraints (FSM login)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Source sheet</th>
+<th>Description</th>
+<th>Acceptance criteria</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S-MYPUMP</td>
+<td>Hide "My Pump" from staff login</td>
+<td>Staff_FSM</td>
+<td>Operators must not self-assign their pump; the "My Pump" feature is absent from staff login.</td>
+<td>• The "My Pump" self-assignment feature is not accessible to FSM users on any surface.<br>• The FSM's pump comes from the admin assignment (A10).<br>• Current app ships the <strong>opposite</strong> (My Pump is a staff feature) → requires correction.</td>
+<td>✅ Present</td>
+</tr>
+<tr>
+<td>S-PAUSE</td>
+<td>Remove "Pause Rewards" from staff login</td>
+<td>Staff_FSM</td>
+<td>Pausing rewards is an admin-only capability; it must not appear in staff login.</td>
+<td>• FSM users cannot pause rewards (per customer or globally) on any surface.<br>• Reward pause controls are admin-only (see C4).<br>• Current app ships the <strong>opposite</strong> (staff can pause) → requires correction.</td>
+<td>✅ Present</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="status-roll-up">Status roll-up</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Count</th>
+<th>IDs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Present</td>
+<td>16</td>
+<td>A1, A2, A3, A4, A6, A8, A9, A10, C1, C2, C3, C4, C5, E2, S-PAUSE, S-MYPUMP</td>
+</tr>
+<tr>
+<td>Partial</td>
+<td>6</td>
+<td>A7, B1, B2, E3, F3, G1</td>
+</tr>
+<tr>
+<td>Absent</td>
+<td>19</td>
+<td>A5, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, E1, E4, E5, E6, E7, F1, F2, F4</td>
+</tr>
+</tbody>
+</table></div>
+<p>Total: <strong>41 features</strong> — 16 Present, 6 Partial, 19 Absent. <em>(</em><em>Phase 0 complete</em><em>: C4, S-PAUSE, MS/HSD rename, S-MYPUMP, A10, E2 all shipped on every surface.)</em></p>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 01-functional-requirements.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+</body>
+</html>

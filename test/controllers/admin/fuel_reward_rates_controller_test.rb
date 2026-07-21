@@ -49,6 +49,31 @@ module Admin
       assert_equal BigDecimal("0.5"), RewardSetting.current.cash_value_per_point
     end
 
+    test "admin sees the global pause-all-rewards switch" do
+      sign_in users(:one)
+
+      get admin_fuel_reward_rates_path
+
+      assert_response :success
+      assert_select "input[type=checkbox][name='reward_setting[rewards_paused]']", 1
+    end
+
+    test "admin can pause and resume all rewards" do
+      sign_in users(:one)
+
+      patch admin_fuel_reward_rates_path, params: {
+        reward_setting: { rupees_per_reward_unit: 100, minimum_redeemable_points: "", cash_value_per_point: "", rewards_paused: "1" }
+      }
+      assert_redirected_to admin_fuel_reward_rates_path
+      assert RewardSetting.current.rewards_paused?
+
+      patch admin_fuel_reward_rates_path, params: {
+        reward_setting: { rupees_per_reward_unit: 100, minimum_redeemable_points: "", cash_value_per_point: "", rewards_paused: "0" }
+      }
+      assert_redirected_to admin_fuel_reward_rates_path
+      assert_not RewardSetting.current.rewards_paused?
+    end
+
     test "admin can update vehicle type reward overrides" do
       sign_in users(:one)
 

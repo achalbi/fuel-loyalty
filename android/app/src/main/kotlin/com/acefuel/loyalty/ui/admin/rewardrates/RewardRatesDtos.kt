@@ -31,6 +31,7 @@ data class RewardSettingDto(
     @SerialName("rupees_per_reward_unit") val rupeesPerRewardUnit: Int? = null,
     @SerialName("cash_value_per_point") val cashValuePerPoint: Double? = null,
     @SerialName("minimum_redeemable_points") val minimumRedeemablePoints: Int? = null,
+    @SerialName("rewards_paused") val rewardsPaused: Boolean = false,
     @SerialName("cash_reward_configured") val cashRewardConfigured: Boolean = false,
     @SerialName("redemption_increment") val redemptionIncrement: Int? = null,
 )
@@ -72,6 +73,7 @@ data class RewardSettingUpdate(
     @SerialName("rupees_per_reward_unit") val rupeesPerRewardUnit: String,
     @SerialName("minimum_redeemable_points") val minimumRedeemablePoints: String,
     @SerialName("cash_value_per_point") val cashValuePerPoint: String,
+    @SerialName("rewards_paused") val rewardsPaused: Boolean,
 )
 
 @Serializable

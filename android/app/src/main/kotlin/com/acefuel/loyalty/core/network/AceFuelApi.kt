@@ -61,7 +61,13 @@ interface AceFuelApi {
     suspend fun staffCustomerLookup(@Query("phone_number") phoneNumber: String): StaffCustomerDto
 
     @GET("api/v1/staff/customers")
-    suspend fun staffCustomers(@Query("q") query: String?): CustomersListResponse
+    suspend fun staffCustomers(
+        @Query("q") query: String?,
+        // E2: optional dashboard period (ISO dates) to scope the list to
+        // customers who transacted in that window.
+        @Query("start_date") startDate: String? = null,
+        @Query("end_date") endDate: String? = null,
+    ): CustomersListResponse
 
     @GET("api/v1/staff/customers/{id}")
     suspend fun staffCustomerProfile(@Path("id") id: Long): CustomerProfileDto
@@ -98,6 +104,13 @@ interface AceFuelApi {
 
     @PATCH("api/v1/my_pump")
     suspend fun updateMyPump(@Body body: MyPumpUpdateEnvelope): MyPumpDto
+
+    // Admin assigns a staff member's pump (A10). Same DTO shape as /my_pump.
+    @GET("api/v1/admin/staff_members/{id}/pump")
+    suspend fun staffMemberPump(@Path("id") id: Long): MyPumpDto
+
+    @PATCH("api/v1/admin/staff_members/{id}/pump")
+    suspend fun updateStaffMemberPump(@Path("id") id: Long, @Body body: MyPumpUpdateEnvelope): MyPumpDto
 
     // ---- Admin ----
 

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Litres / Readings Transaction Model — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">11-spec-litres-readings.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="litres-readings-transaction-model">Litres / Readings Transaction Model</h1>
+<p><strong>Feature IDs:</strong> B2 (litres), D1 (nozzle readings) — implements LOCKED DECISION Q1.</p>
+<h2 id="purpose">Purpose</h2>
+<p>Today a transaction stores only a rupee amount (<code>transactions.fuel_amount</code>), which the FSM types in by hand and from which loyalty points are derived. This is backwards. Per LOCKED DECISION Q1, <strong>litres (and meter readings) are the source of truth</strong>; the rupee value is <em>derived</em> as <code>litres × catalog selling_price − discount</code>. This spec redefines the transaction record and the loyalty pipeline so litres is the captured quantity, ₹ becomes a stored-derived column, existing ₹-only rows are migrated forward, and per-transaction litres reconcile against the per-nozzle meter deltas captured at shift-end settlement (D1/D6). Rewards remain expressible per ₹ <em>or</em> per litre, but the ₹ they consume is now a computed number, not FSM free-text.</p>
+<h2 id="requirements-covered">Requirements covered</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>One-line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B2</td>
+<td>Capture "Number of Litres filled" per customer visit; ₹ is derived, not typed.</td>
+</tr>
+<tr>
+<td>D1</td>
+<td>Per-nozzle Today's/Yesterday's meter readings; net litres sold reconcile against the sum of per-transaction litres for that nozzle/day.</td>
+</tr>
+<tr>
+<td>C5 (touched)</td>
+<td>Loyalty accrual now runs off derived ₹ (and optionally litres) instead of FSM-entered ₹.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="current-state">Current state</h2>
+<p>The transaction is a pure-₹ record with no quantity, no price, and no discount.</p>
+<ul>
+<li><strong>Schema</strong> — <code>db/schema.rb</code> <code>create_table "transactions"</code>: columns are <code>customer_id, fuel_amount decimal(10,2) NOT NULL, fuel_pump_id, fuel_pump_nozzle_id, payment_mode, user_id, vehicle_id</code>. <strong>No <code>litres</code>, no <code>reading</code>, no <code>discount</code>, no <code>selling_price</code>.</strong> <code>fuel_amount</code> is validated <code>&gt; 0</code> (<code>app/models/transaction.rb:13</code>).</li>
+<li><strong>Fuel type / nozzle carry no price</strong> — <code>create_table "fuel_types"</code> has <code>code, name, active</code> only; <code>create_table "fuel_pump_nozzles"</code> has <code>fuel_pump_id, fuel_type_code, sequence_number, active</code> only. There is <strong>no product catalog and no selling price anywhere</strong> (audit A5 = ABSENT). This is the single biggest missing dependency: litres cannot be converted to ₹ until a per-fuel selling price exists.</li>
+<li><strong>Creation service</strong> — <code>app/services/transaction_creator.rb</code>: <code>initialize(...)</code> takes <code>fuel_amount:</code> (line 8), and writes it straight through: <code>customer.transactions.create!(..., fuel_amount: fuel_amount, ...)</code> (lines 26-33). No litres/price/discount anywhere.</li>
+<li><strong>Points pipeline</strong> — <code>transaction_creator.rb:37</code> calls <code>PointsCalculator.call(fuel_amount, fuel_type:, vehicle_kind:)</code>; <code>app/services/points_calculator.rb:13</code> computes <code>((fuel_amount / rupees_per_reward_unit).floor * points_per_100)</code>. <code>rupees_per_reward_unit</code> defaults to 100 (<code>reward_settings</code>). Points are integer; ledger row also stores <code>cash_reward_amount decimal(12,2)</code> (<code>points_ledgers</code>), currently left <code>nil</code> on earn.</li>
+<li><strong>API</strong> — <code>app/controllers/api/v1/staff/transactions_controller.rb#create</code> (lines 34-61) reads <code>transaction_params</code> permitting <code>:fuel_amount</code> (line 127) and echoes <code>fuel_amount: result.transaction.fuel_amount.to_f</code> back (line 54). Web equivalent: <code>app/controllers/staff/transactions_controller.rb:111</code>.</li>
+<li><strong>Android</strong> — <code>TransactionCreateRequest</code> sends <code>@SerialName("fuel_amount") fuelAmount: Double</code> (<code>core/network/dto/Dtos.kt:362</code>); <code>TransactionViewModel.onFuelAmountChange</code> (line 193) is a free-text ₹ field; <code>TxnUiState.canSave</code> gates on <code>fuelAmount.toDoubleOrNull() &gt; 0</code> (line 135). <code>TransactionResultDto.fuelAmount</code> (Dtos.kt:384) is displayed in the summary. <strong>No litres field, no price display, no reading capture.</strong></li>
+<li><strong>Readings</strong> — there is <strong>no meter-reading capture anywhere</strong>. <code>fuel_pump_nozzles</code> has no reading column; there is no settlement table. D1 = ABSENT.</li>
+</ul>
+<p><strong>Missing, plainly:</strong> litres column, selling-price source (product catalog A5), discount column, derived-₹ semantics, per-nozzle meter readings + a place to store them, and any reconciliation between per-transaction litres and shift totals.</p>
+<h2 id="target-design">Target design</h2>
+<h3 id="guiding-principle">Guiding principle</h3>
+<p><code>fuel_amount</code> stops being an <em>input</em> and becomes a <em>stored-derived</em> column:</p>
+<pre><code>gross_amount = round(litres × selling_price_snapshot, 2)
+fuel_amount  = gross_amount − discount_amount        # net ₹ actually owed
+</code></pre>
+<p>Litres and the price snapshot are captured/frozen at transaction time; <code>fuel_amount</code> is written from them (never typed). Points still derive from <code>fuel_amount</code> (net ₹), so rewards keep working unchanged in the ₹ path, and a new per-litre path is added.</p>
+<h3 id="data-model-changes">Data model changes</h3>
+<p><strong><code>transactions</code></strong> — add quantity + pricing columns:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Null</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>litres</code></td>
+<td><code>decimal(9,3)</code></td>
+<td>YES (see migration)</td>
+<td>Source-of-truth quantity. 3 dp = ml precision; max ~999,999.999 L.</td>
+</tr>
+<tr>
+<td><code>selling_price_snapshot</code></td>
+<td><code>decimal(8,2)</code></td>
+<td>YES</td>
+<td>₹/L frozen from the catalog at sale time, so later price edits never retro-change historical ₹.</td>
+</tr>
+<tr>
+<td><code>discount_amount</code></td>
+<td><code>decimal(10,2)</code> NOT NULL default <code>0</code></td>
+<td>NO</td>
+<td>Per-visit discount (B2 "Discount Amount"); subtracted to get net <code>fuel_amount</code>.</td>
+</tr>
+<tr>
+<td><code>gross_amount</code></td>
+<td><code>decimal(10,2)</code></td>
+<td>YES</td>
+<td><code>litres × selling_price_snapshot</code> before discount. Stored (not computed on read) so reports don't re-multiply.</td>
+</tr>
+<tr>
+<td><code>amount_source</code></td>
+<td><code>integer</code> NOT NULL default <code>0</code></td>
+<td>NO</td>
+<td>enum <code>derived: 0</code> (litres×price), <code>legacy_amount: 1</code> (migrated ₹-only), <code>manual_amount: 2</code> (admin override). Lets the UI and reports distinguish trustworthy litres from back-filled rows.</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>fuel_amount</code> stays <code>decimal(10,2) NOT NULL</code> and now means <strong>net ₹</strong> (<code>gross_amount − discount_amount</code>). Keep the <code>fuel_amount &gt; 0</code> validation.</p>
+<p><strong><code>fuel_pump_nozzles</code></strong> — add reading columns for D1 (readings are a <em>nozzle</em> attribute, since the meter lives on the nozzle):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Null</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>last_reading</code></td>
+<td><code>decimal(12,3)</code></td>
+<td>YES</td>
+<td>Latest confirmed cumulative meter reading (litres) from the most recent settlement. Auto-populates "Yesterday Reading" next shift.</td>
+</tr>
+<tr>
+<td><code>last_reading_at</code></td>
+<td><code>datetime</code></td>
+<td>YES</td>
+<td>When <code>last_reading</code> was captured.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Per-shift reading history belongs to the Daily Settlement subsystem (D1/D6, separate spec); this spec only defines the <em>nozzle current-reading cache</em> and the reconciliation contract against it.</p>
+<p><strong>Selling price source (hard dependency — A5):</strong> <code>fuel_amount</code> derivation needs ₹/L per fuel. Until the full product catalog (A5) lands, introduce the minimal price surface this spec depends on:</p>
+<p><code>fuel_types</code> — add <code>selling_price decimal(8,2)</code> (NULL until set) and <code>price_effective_at datetime</code>. This is the interim price used by <code>selling_price_snapshot</code>. When A5 ships, the catalog becomes the authority and this column becomes a mirror/fallback. Fuel-price resolution is centralised in a <code>FuelPricing.current_price(fuel_type_code)</code> service so the catalog swap is one-file.</p>
+<p><strong><code>reward_settings</code></strong> — add reward-basis controls so rewards can key off litres:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Default</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reward_basis</code></td>
+<td><code>integer</code> NOT NULL</td>
+<td><code>0</code></td>
+<td>enum <code>by_rupees: 0</code> (existing behaviour), <code>by_litres: 1</code>.</td>
+</tr>
+<tr>
+<td><code>litres_per_reward_unit</code></td>
+<td><code>decimal(6,2)</code></td>
+<td><code>10.00</code></td>
+<td>When <code>by_litres</code>, points = <code>floor(litres / this) × points_per_unit</code>.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="business-rules">Business rules</h3>
+<ol>
+<li><strong>Litres is required and positive</strong> for new transactions (<code>amount_source = derived</code>). ₹ is never accepted from the client on the derived path.</li>
+<li><strong>Price snapshot</strong> is resolved server-side at create time via <code>FuelPricing.current_price(vehicle.fuel_type)</code>. If no price is configured for that fuel, reject with a clear error (<code>fuel_price_unset</code>) — do not silently store ₹0.</li>
+<li><strong>Discount</strong> ≥ 0 and ≤ <code>gross_amount</code> (cannot make net negative). Default 0.</li>
+<li><code>gross_amount = round(litres × snapshot, 2)</code>; <code>fuel_amount = gross_amount − discount_amount</code>; require <code>fuel_amount &gt; 0</code>.</li>
+<li><strong>Points</strong> derive from the <em>net</em> <code>fuel_amount</code> in <code>by_rupees</code> mode (unchanged formula), or from <code>litres</code> in <code>by_litres</code> mode. <code>cash_reward_amount = points × reward_settings.cash_value_per_point</code> is now populated on every earn row (it is currently left nil).</li>
+<li><strong>Reconciliation:</strong> for a nozzle on a given day, <code>Σ transactions.litres</code> (that nozzle, that shift window) is the <em>expected</em> dispensed volume. The settlement's <code>net_litres_sold = today_reading − yesterday_reading − testing_litres</code> (D6) is the <em>metered</em> volume. Their difference is the <strong>variance</strong>, surfaced to admin (D9). Transactions are never auto-mutated to force a match; variance is reported, not hidden.</li>
+</ol>
+<h3 id="reward-reconciliation-explicit">Reward reconciliation (explicit)</h3>
+<p>Because ₹ is now derived, points must be <strong>idempotently recomputable</strong> from stored inputs:</p>
+<ul>
+<li>The earn ledger row stores <code>points</code>, <code>cash_reward_amount</code>, and (new) a denormalised <code>points_basis_amount</code> is <em>not</em> added — instead the transaction's own <code>litres</code> / <code>fuel_amount</code> / <code>selling_price_snapshot</code> are the audit trail. Given those three, <code>PointsCalculator</code> reproduces the exact points.</li>
+<li><strong>If an admin edits litres/discount/price on a past transaction (G1):</strong> run a <code>TransactionReconciler</code> that (a) recomputes <code>gross_amount</code>/<code>fuel_amount</code>, (b) recomputes points, (c) writes an <strong>adjustment ledger row</strong> (<code>entry_type: :adjust</code>) for the delta rather than editing the original earn row — preserving history and keeping <code>customer.total_points</code> a pure sum. Never edit a posted earn row in place.</li>
+<li><strong>If a price snapshot was wrong</strong> (catalog corrected after the fact): same reconciler path; the snapshot on the row is the source, so correcting the catalog does <em>not</em> move historical points unless an explicit reconcile is triggered.</li>
+<li>The redemption side is untouched: it still consumes integer points from <code>points_ledgers</code>.</li>
+</ul>
+<figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">flowchart TD
+  A[FSM enters litres + optional discount] --&gt; B{Fuel price configured?}
+  B -- no --&gt; E[422 fuel_price_unset]
+  B -- yes --&gt; C[snapshot = FuelPricing.current_price]
+  C --&gt; D[gross = round litres × snapshot]
+  D --&gt; F[fuel_amount = gross − discount]
+  F --&gt; G{fuel_amount &gt; 0?}
+  G -- no --&gt; H[422 amount_not_positive]
+  G -- yes --&gt; I[create transaction&lt;br/&gt;litres, snapshot, gross, discount, fuel_amount, amount_source=derived]
+  I --&gt; J{rewards paused?}
+  J -- yes --&gt; K[points = 0, no ledger]
+  J -- no --&gt; L[PointsCalculator by_rupees fuel_amount OR by_litres litres]
+  L --&gt; M[earn ledger: points + cash_reward_amount]
+  M --&gt; N[Return points_earned, new_total, derived amounts]
+</pre></figure>
+<h3 id="migration-of-existing-only-transactions">Migration of existing ₹-only transactions</h3>
+<p>One-way data migration, run once:</p>
+<ol>
+<li>Add all columns nullable / with defaults (above). No backfill of <code>litres</code> is guessed.</li>
+<li>For every existing row: set <code>gross_amount = fuel_amount</code>, <code>discount_amount = 0</code>, <code>litres = NULL</code>, <code>selling_price_snapshot = NULL</code>, <code>amount_source = legacy_amount</code>.</li>
+<li><code>litres</code> stays <strong>NULL</strong> for legacy rows — we do <strong>not</strong> back-compute litres from ₹ (the historical price is unknown and inventing it would corrupt reconciliation). Reports treat <code>amount_source = legacy_amount</code> rows as "₹ known, litres unknown" and exclude them from litre-based aggregates.</li>
+<li><code>fuel_amount</code> remains valid and unchanged, so all historical points, balances, and dashboards are byte-for-byte identical after migration.</li>
+<li>Backfill <code>points_ledgers.cash_reward_amount</code> for historical earn rows where nil, using <code>points × cash_value_per_point</code> at current setting (flagged as best-effort in a follow-up task; not required for this spec's correctness).</li>
+</ol>
+<h2 id="api-changes">API changes</h2>
+<p>All under <code>/api/v1/staff/*</code>, token-auth (existing <code>Api::V1::Staff::BaseController</code>).</p>
+<h3 id="changed-post-apiv1stafftransactions">Changed: <code>POST /api/v1/staff/transactions</code></h3>
+<p>Request (envelope unchanged, field swap — <code>fuel_amount</code> removed from input, <code>litres</code> + <code>discount_amount</code> added):</p>
+<pre><code class="language-json">{ &quot;transaction&quot;: {
+    &quot;lookup_mode&quot;: &quot;vehicle&quot;,
+    &quot;vehicle_number&quot;: &quot;KA01AB1234&quot;,
+    &quot;vehicle_id&quot;: 42,
+    &quot;litres&quot;: 12.500,
+    &quot;discount_amount&quot;: 15.00,
+    &quot;fuel_pump_nozzle_id&quot;: 7,
+    &quot;payment_mode&quot;: &quot;cash&quot;
+} }
+</code></pre>
+<p>Response <code>201</code> (adds derived fields; keeps <code>fuel_amount</code> as the net value):</p>
+<pre><code class="language-json">{ &quot;points_earned&quot;: 12, &quot;rewards_paused&quot;: false, &quot;new_total&quot;: 148,
+  &quot;message&quot;: &quot;+12 reward points added. Balance updated to 148.&quot;,
+  &quot;customer&quot;: { &quot;...&quot;: &quot;CustomerLookupSerializer&quot; },
+  &quot;transaction&quot;: {
+    &quot;id&quot;: 991, &quot;litres&quot;: 12.5, &quot;selling_price&quot;: 98.95,
+    &quot;gross_amount&quot;: 1236.88, &quot;discount_amount&quot;: 15.0, &quot;fuel_amount&quot;: 1221.88,
+    &quot;amount_source&quot;: &quot;derived&quot;, &quot;payment_mode&quot;: &quot;cash&quot;,
+    &quot;pump&quot;: &quot;Pump 3&quot;, &quot;nozzle&quot;: &quot;N5 (HSD)&quot;, &quot;created_at&quot;: &quot;2026-07-21T09:00:00Z&quot;
+} }
+</code></pre>
+<p>Errors (422, existing <code>render_error</code> envelope): <code>fuel_price_unset</code>, <code>litres_not_positive</code>, <code>discount_exceeds_gross</code>, <code>amount_not_positive</code>.</p>
+<h3 id="new-get-apiv1staffnozzlesidprice">New: <code>GET /api/v1/staff/nozzles/:id/price</code></h3>
+<p>Lets the app show a live ₹ preview as litres are typed. Returns the price the server <em>would</em> snapshot.</p>
+<pre><code class="language-json">{ &quot;fuel_type_code&quot;: &quot;hsd&quot;, &quot;fuel_type&quot;: &quot;Diesel&quot;, &quot;selling_price&quot;: 98.95, &quot;price_effective_at&quot;: &quot;2026-07-01T00:00:00Z&quot; }
+</code></pre>
+<p><code>404 price_unset</code> if no price configured.</p>
+<h3 id="new-get-apiv1staffnozzlesidlast_reading-d1-support">New: <code>GET /api/v1/staff/nozzles/:id/last_reading</code> (D1 support)</h3>
+<p>Returns the cached <code>last_reading</code> / <code>last_reading_at</code> for pre-populating "Yesterday Reading" at settlement. <code>{ "last_reading": 456123.500, "last_reading_at": "2026-07-20T18:00:00Z" }</code>.</p>
+<h3 id="admin-g1-patch-apiv1admintransactionsid">Admin (G1): <code>PATCH /api/v1/admin/transactions/:id</code></h3>
+<p>Accepts <code>litres</code>, <code>discount_amount</code>, <code>selling_price_snapshot</code>, triggers <code>TransactionReconciler</code>, returns the recomputed transaction plus the adjustment-ledger delta.</p>
+<h2 id="ui">UI</h2>
+<h3 id="rails-pwa">Rails PWA</h3>
+<p>Extend <code>app/views/staff/transactions/new</code> (backed by <code>staff/transactions_controller.rb</code>):</p>
+<ul>
+<li>Replace the "Amount (₹)" input with a <strong>"Litres filled"</strong> numeric field (3-dp) and a separate optional <strong>"Discount (₹)"</strong> field.</li>
+<li>Add a <strong>live derived total</strong> row: <code>12.500 L × ₹98.95 = ₹1,236.88  − ₹15.00 discount = ₹1,221.88</code>, recomputed client-side from the nozzle price (fetched via the new price endpoint on nozzle select) and re-validated server-side.</li>
+<li>The success/summary flash (<code>flash[:transaction_summary]</code>) shows litres, net ₹, and points.</li>
+<li>Permit <code>:litres, :discount_amount</code> and <strong>drop <code>:fuel_amount</code></strong> from <code>transaction_params</code> (line 111). <code>TransactionCreator</code> derives ₹.</li>
+<li>Admin transactions view (<code>admin/transactions</code>, currently index-only, G1): add litres/discount/source columns and an edit form invoking the reconciler.</li>
+</ul>
+<h3 id="android-compose">Android (Compose)</h3>
+<p>Extend <code>ui/transaction/TransactionScreen.kt</code> + <code>TransactionViewModel.kt</code>:</p>
+<ul>
+<li><code>TxnUiState</code>: replace <code>fuelAmount: String</code> with <code>litres: String</code> + <code>discountAmount: String</code>; add <code>nozzlePrice: Double?</code> (fetched when a nozzle is selected) and a computed <code>derivedNet: Double?</code>.</li>
+<li>Rename <code>onFuelAmountChange</code> → <code>onLitresChange</code> (same digit/one-dot cleaner, <code>TransactionViewModel.kt:193</code>); add <code>onDiscountChange</code>.</li>
+<li><code>canSave</code> (line 130): gate on <code>litres.toDoubleOrNull() &gt; 0 &amp;&amp; nozzlePrice != null</code> instead of <code>fuelAmount &gt; 0</code>.</li>
+<li>Show a live <strong>"₹ derived"</strong> readout card under the litres field (<code>litres × nozzlePrice − discount</code>), styled with the existing design system, so the FSM sees the amount before saving.</li>
+<li><code>TransactionCreateRequest</code> (Dtos.kt:357): drop <code>fuelAmount</code>, add <code>@SerialName("litres") litres: Double</code> and <code>@SerialName("discount_amount") discountAmount: Double = 0.0</code>.</li>
+<li><code>TransactionResultDto</code> (Dtos.kt:382): add <code>litres</code>, <code>sellingPrice</code>, <code>grossAmount</code>, <code>discountAmount</code>, <code>amountSource</code>; the ceremony/summary card shows litres + net ₹ + points.</li>
+<li>Add <code>StaffRepository.nozzlePrice(id)</code> calling <code>GET /nozzles/:id/price</code>; call it from <code>selectNozzle</code> / <code>autoSelectNozzle</code>.</li>
+</ul>
+<h2 id="validation-edge-cases">Validation &amp; edge cases</h2>
+<ul>
+<li><strong>No price configured</strong> for the vehicle's fuel type → <code>fuel_price_unset</code> 422; block save on both surfaces (don't store ₹0).</li>
+<li><strong>Litres = 0 or negative / non-numeric</strong> → rejected client + server.</li>
+<li><strong>Discount &gt; gross</strong> → <code>discount_exceeds_gross</code>; the derived-net readout warns before submit.</li>
+<li><strong>Price changes mid-day:</strong> each transaction snapshots its own price; two sales of the same fuel on the same day may legitimately have different <code>selling_price_snapshot</code>. Reconciliation uses litres (price-independent) so this is fine.</li>
+<li><strong>Rounding:</strong> round <code>gross</code> to 2 dp once, then subtract discount; never accumulate rounding across litres. Points floor exactly as today.</li>
+<li><strong>Legacy rows (<code>amount_source = legacy_amount</code>)</strong> have NULL litres — every litre aggregate and reconciliation must <code>WHERE litres IS NOT NULL</code> (or filter by source) to avoid treating them as 0 L.</li>
+<li><strong>Reconciliation variance</strong> is informational: a mismatch between <code>Σ litres</code> and metered <code>net_litres_sold</code> (unrecorded cash sales, testing litres, meter drift) is reported to admin, never used to mutate transactions.</li>
+<li><strong>Reward-basis switch</strong> (<code>by_rupees</code> ↔ <code>by_litres</code>) affects only <em>future</em> transactions; posted ledger rows are immutable.</li>
+<li><strong>Idempotency / double-post:</strong> unchanged; the create path is atomic (<code>ActiveRecord::Base.transaction</code>) and the client guards re-entry (<code>creating</code> flag, VM line 274).</li>
+<li><strong>Admin edit reconcile:</strong> never edits a posted earn row; always writes an <code>adjust</code> delta so <code>total_points</code> stays a pure sum.</li>
+</ul>
+<h2 id="dependencies-sequencing">Dependencies &amp; sequencing</h2>
+<p><strong>Must exist first:</strong>
+- <strong>A5 (product catalog + selling price)</strong> — the ₹ derivation is impossible without a price per fuel. This spec ships the interim <code>fuel_types.selling_price</code> + <code>FuelPricing</code> service as the minimum; full A5 supersedes it.
+- <strong>A1/A2/A4</strong> (pumps, nozzles, fuel-type-per-nozzle) — already PRESENT; needed so a nozzle resolves to a priced fuel.
+- <strong>C1/C2/C3 reward config</strong> — already PRESENT; <code>PointsCalculator</code> consumes it unchanged, plus the new <code>reward_basis</code>.</p>
+<p><strong>This unblocks:</strong>
+- <strong>D1/D6/D9 Daily Settlement</strong> — consumes <code>transactions.litres</code> (Σ per nozzle/day) and <code>fuel_pump_nozzles.last_reading</code> for the readings↔sales reconciliation and final-settle calc.
+- <strong>B2 full customer-details-entry</strong> — litres is the first captured field of that form; this establishes the column and pipeline the rest of B2 (transport, fleet/OTP, etc.) attaches to.
+- <strong>E1/E4 reports</strong> — litres-based daily/weekly reporting (requirement #14 "litres, discount, gifts").
+- <strong>G1 admin edit</strong> — the reconciler defined here is the edit mechanism.</p>
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+<ul>
+<li>[ ] <code>transactions</code> has <code>litres</code>, <code>selling_price_snapshot</code>, <code>gross_amount</code>, <code>discount_amount</code>, <code>amount_source</code>; <code>fuel_amount</code> is written from them, never accepted from the staff client.</li>
+<li>[ ] Creating a transaction with <code>litres</code> and no price configured returns <code>422 fuel_price_unset</code> and persists nothing.</li>
+<li>[ ] Given <code>litres=12.5</code>, price <code>98.95</code>, discount <code>15</code> → <code>gross_amount=1236.88</code>, <code>fuel_amount=1221.88</code>, and points equal <code>PointsCalculator.call(1221.88, …)</code>.</li>
+<li>[ ] In <code>by_litres</code> mode, points = <code>floor(litres / litres_per_reward_unit) × points_per_unit</code>.</li>
+<li>[ ] Every non-paused earn writes a <code>points_ledgers</code> row with both <code>points</code> and non-nil <code>cash_reward_amount</code>.</li>
+<li>[ ] After the data migration, every pre-existing transaction has <code>amount_source=legacy_amount</code>, unchanged <code>fuel_amount</code>, NULL <code>litres</code>, and identical <code>customer.total_points</code>.</li>
+<li>[ ] Litre-based aggregates exclude <code>legacy_amount</code> rows (no phantom 0 L).</li>
+<li>[ ] <code>selling_price_snapshot</code> is frozen on the row; editing the fuel price afterward does not change any historical <code>fuel_amount</code> or points until an explicit reconcile.</li>
+<li>[ ] Admin edit of a past transaction's litres/discount recomputes ₹ and writes an <code>adjust</code> ledger delta (original earn row untouched); <code>total_points</code> reflects the delta.</li>
+<li>[ ] <code>GET /nozzles/:id/price</code> returns the price the create endpoint would snapshot; <code>404 price_unset</code> when none.</li>
+<li>[ ] Android and PWA both show a live derived-₹ readout (<code>litres × price − discount</code>) before save and block save when <code>&gt; 0</code> fails or price is missing.</li>
+<li>[ ] <code>TransactionCreateRequest</code> sends <code>litres</code>+<code>discount_amount</code> (no <code>fuel_amount</code>); <code>TransactionResultDto</code>/response echo litres, price, gross, discount, net, source.</li>
+<li>[ ] <code>fuel_pump_nozzles.last_reading</code>/<code>last_reading_at</code> exist and are exposed via <code>GET /nozzles/:id/last_reading</code> for settlement pre-fill.</li>
+<li>[ ] <code>discount_amount &gt; gross_amount</code> is rejected on both surfaces.</li>
+</ul>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 11-spec-litres-readings.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
+</script>
+
+</body>
+</html>

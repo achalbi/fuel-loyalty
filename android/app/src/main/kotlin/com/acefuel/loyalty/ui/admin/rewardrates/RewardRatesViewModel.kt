@@ -23,9 +23,11 @@ data class RewardRatesUiState(
     val rupeesPerRewardUnit: String = "",
     val minimumRedeemablePoints: String = "",
     val cashValuePerPoint: String = "",
+    val rewardsPaused: Boolean = false,
     val savedRupeesPerRewardUnit: String = "",
     val savedMinimumRedeemablePoints: String = "",
     val savedCashValuePerPoint: String = "",
+    val savedRewardsPaused: Boolean = false,
     val savingSettings: Boolean = false,
     val settingsError: String? = null,
     val settingsMessage: String? = null,
@@ -50,7 +52,8 @@ data class RewardRatesUiState(
     val settingsDirty: Boolean
         get() = rupeesPerRewardUnit != savedRupeesPerRewardUnit ||
             minimumRedeemablePoints != savedMinimumRedeemablePoints ||
-            cashValuePerPoint != savedCashValuePerPoint
+            cashValuePerPoint != savedCashValuePerPoint ||
+            rewardsPaused != savedRewardsPaused
     val vehicleDirty: Boolean get() = vehicleInputs != savedVehicleInputs
     val fuelDirty: Boolean get() = fuelInputs != savedFuelInputs
 }
@@ -112,6 +115,10 @@ class RewardRatesViewModel(private val repository: RewardRatesRepository) : View
         it.copy(cashValuePerPoint = sanitizeDecimal(v), settingsMessage = null, settingsError = null)
     }
 
+    fun onRewardsPausedChange(paused: Boolean) = _state.update {
+        it.copy(rewardsPaused = paused, settingsMessage = null, settingsError = null)
+    }
+
     fun onVehicleInputChange(code: String, v: String) = _state.update {
         it.copy(
             vehicleInputs = it.vehicleInputs + (code to v.filter(Char::isDigit).take(9)),
@@ -138,6 +145,7 @@ class RewardRatesViewModel(private val repository: RewardRatesRepository) : View
                 rupeesPerRewardUnit = s.rupeesPerRewardUnit.trim(),
                 minimumRedeemablePoints = s.minimumRedeemablePoints.trim(),
                 cashValuePerPoint = s.cashValuePerPoint.trim(),
+                rewardsPaused = s.rewardsPaused,
             )
             when (val result = repository.saveRewardSetting(update)) {
                 is ApiResult.Success -> _state.update {
@@ -216,13 +224,16 @@ class RewardRatesViewModel(private val repository: RewardRatesRepository) : View
         val rupees = rs.rupeesPerRewardUnit?.toString().orEmpty()
         val minimum = rs.minimumRedeemablePoints?.toString().orEmpty()
         val cash = rs.cashValuePerPoint?.let(::formatDecimal).orEmpty()
+        val paused = rs.rewardsPaused
         return seedShared(s, data).copy(
             rupeesPerRewardUnit = rupees,
             minimumRedeemablePoints = minimum,
             cashValuePerPoint = cash,
+            rewardsPaused = paused,
             savedRupeesPerRewardUnit = rupees,
             savedMinimumRedeemablePoints = minimum,
             savedCashValuePerPoint = cash,
+            savedRewardsPaused = paused,
         )
     }
 

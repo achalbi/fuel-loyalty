@@ -31,7 +31,8 @@ class TransactionCreator
         fuel_pump: fuel_pump,
         fuel_pump_nozzle: fuel_pump_nozzle
       )
-      if customer.rewards_paused?
+      rewards_paused = customer.rewards_paused? || RewardSetting.current.rewards_paused?
+      if rewards_paused
         points = 0
       else
         points = PointsCalculator.call(fuel_amount, fuel_type: vehicle.fuel_type, vehicle_kind: vehicle.vehicle_kind)
@@ -43,7 +44,7 @@ class TransactionCreator
         )
       end
 
-      Result.new(customer: customer, transaction: transaction, points_earned: points, rewards_paused: customer.rewards_paused?)
+      Result.new(customer: customer, transaction: transaction, points_earned: points, rewards_paused: rewards_paused)
     end
   end
 

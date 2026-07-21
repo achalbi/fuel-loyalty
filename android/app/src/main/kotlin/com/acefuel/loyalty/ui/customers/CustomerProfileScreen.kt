@@ -79,7 +79,7 @@ import com.acefuel.loyalty.ui.theme.nayara
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomerProfileScreen(customerId: Long, onBack: () -> Unit) {
+fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit) {
     val container = LocalContainer.current
     val viewModel: CustomerProfileViewModel = viewModel(
         key = "profile-$customerId",
@@ -147,6 +147,7 @@ fun CustomerProfileScreen(customerId: Long, onBack: () -> Unit) {
                             ActionRow(
                                 p = profile,
                                 inFlight = state.actionInFlight,
+                                canPauseRewards = isAdmin,
                                 onTogglePaused = {
                                     // Pausing is disruptive -> confirm; resuming acts directly.
                                     if (profile.rewardsPaused) viewModel.togglePaused()
@@ -285,15 +286,20 @@ private fun InfoChip(text: String) {
 private fun ActionRow(
     p: CustomerProfileDto,
     inFlight: ProfileAction?,
+    canPauseRewards: Boolean,
     onTogglePaused: () -> Unit,
     onToggleActive: () -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        NayaraOutlinedButton(onClick = onTogglePaused, enabled = inFlight == null, modifier = Modifier.weight(1f)) {
-            ButtonLabel(
-                if (p.rewardsPaused) "Resume Rewards" else "Pause Rewards",
-                loading = inFlight == ProfileAction.Pause,
-            )
+        // Pausing/resuming rewards is an admin-only capability (S-PAUSE); staff
+        // never see this control.
+        if (canPauseRewards) {
+            NayaraOutlinedButton(onClick = onTogglePaused, enabled = inFlight == null, modifier = Modifier.weight(1f)) {
+                ButtonLabel(
+                    if (p.rewardsPaused) "Resume Rewards" else "Pause Rewards",
+                    loading = inFlight == ProfileAction.Pause,
+                )
+            }
         }
         NayaraOutlinedButton(onClick = onToggleActive, enabled = inFlight == null, modifier = Modifier.weight(1f)) {
             ButtonLabel(

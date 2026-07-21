@@ -18,6 +18,7 @@ module Api
             rupees_per_reward_unit: reward_setting.rupees_per_reward_unit,
             cash_value_per_point: reward_setting.cash_value_per_point&.to_f,
             minimum_redeemable_points: reward_setting.minimum_redeemable_points,
+            rewards_paused: reward_setting.rewards_paused?,
             cash_reward_configured: reward_setting.cash_reward_configured?,
             redemption_increment: reward_setting.redemption_increment,
           }

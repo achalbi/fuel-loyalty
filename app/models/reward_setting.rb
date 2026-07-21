@@ -7,9 +7,11 @@ class RewardSetting < ApplicationRecord
   before_validation :normalize_rupees_per_reward_unit
   before_validation :assign_default_cash_value_per_point
   before_validation :assign_default_nozzle_feature_enabled
+  before_validation :assign_default_rewards_paused
   before_validation :assign_default_rupees_per_reward_unit
 
   validates :nozzle_feature_enabled, inclusion: { in: [true, false] }
+  validates :rewards_paused, inclusion: { in: [true, false] }
   validates :cash_value_per_point,
     numericality: {
       greater_than_or_equal_to: 0
@@ -30,12 +32,13 @@ class RewardSetting < ApplicationRecord
   def self.current
     first_or_initialize.tap do |reward_setting|
       reward_setting.nozzle_feature_enabled = true if reward_setting.nozzle_feature_enabled.nil?
+      reward_setting.rewards_paused = false if reward_setting.rewards_paused.nil?
       reward_setting.cash_value_per_point = nil if reward_setting.cash_value_per_point.blank?
       reward_setting.minimum_redeemable_points = nil if reward_setting.minimum_redeemable_points.blank?
       reward_setting.rupees_per_reward_unit ||= DEFAULT_RUPEES_PER_REWARD_UNIT
     end
   rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
-    new(cash_value_per_point: nil, minimum_redeemable_points: nil, rupees_per_reward_unit: DEFAULT_RUPEES_PER_REWARD_UNIT, nozzle_feature_enabled: true)
+    new(cash_value_per_point: nil, minimum_redeemable_points: nil, rupees_per_reward_unit: DEFAULT_RUPEES_PER_REWARD_UNIT, nozzle_feature_enabled: true, rewards_paused: false)
   end
 
   def cash_reward_configured?
@@ -44,6 +47,10 @@ class RewardSetting < ApplicationRecord
 
   def nozzle_feature_enabled?
     self[:nozzle_feature_enabled] != false
+  end
+
+  def rewards_paused?
+    self[:rewards_paused] == true
   end
 
   def minimum_redeemable_points_configured?
@@ -93,6 +100,10 @@ class RewardSetting < ApplicationRecord
 
   def assign_default_nozzle_feature_enabled
     self.nozzle_feature_enabled = true if nozzle_feature_enabled.nil?
+  end
+
+  def assign_default_rewards_paused
+    self.rewards_paused = false if rewards_paused.nil?
   end
 
   def assign_default_rupees_per_reward_unit

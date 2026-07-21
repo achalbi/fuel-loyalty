@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaigns and Multi-Channel Notifications (F1–F4, Req 15/16) — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">16-spec-campaigns-notifications.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="campaigns-and-multi-channel-notifications-f1f4-req-1516">Campaigns and Multi-Channel Notifications (F1–F4, Req 15/16)</h1>
+<p>Give the admin a campaign engine that rewards customers who cross a minimum-purchase threshold within a period window (with a discount or a gift), targets those rewards at an individual customer, a customer <em>type</em> (OTP/Credit/Drive-in), or a hand-picked set of customers, and delivers the resulting offer — plus automatic loyalty-bonus milestones — over <strong>push, WhatsApp, and SMS</strong>. This turns today's single, untargeted, push-only broadcast into a targeted, multi-channel, offer-aware notification system. The load-bearing prerequisite is a <strong>push-token → customer linkage</strong>: today <code>push_subscriptions</code> are anonymous, so no push can be aimed at one person.</p>
+<h2 id="requirements-covered">Requirements covered</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement (one line)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F1</td>
+<td>Campaigns: minimum purchase per period → discount or gift.</td>
+</tr>
+<tr>
+<td>F2</td>
+<td>Targeting: individual customer, customer-type (OTP/Credit/Drive-in), or selected customers.</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>Auto loyalty-bonus notification on accumulated points milestones; offers wired into notifications.</td>
+</tr>
+<tr>
+<td>F4</td>
+<td>Push <strong>and</strong> WhatsApp/SMS notification channels via a provider abstraction.</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Campaigns with min-purchase-per-period → discounts/gifts, targeted at individual / customer-type / selected customers.</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Push + WhatsApp/SMS notifications for offers and accumulated loyalty bonus.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Depends on and extends: <strong>C5</strong> (loyalty accrual, for milestone triggers) and <strong>E4</strong> (customer-type taxonomy, for type targeting).</p>
+<h2 id="current-state">Current state</h2>
+<p>What exists today is a single anonymous push broadcast plus a scheduler. There is <strong>no campaign concept, no targeting, no offer object, no delivery log, and no channel besides FCM push.</strong></p>
+<p><strong>Push is anonymous — the core gap.</strong> <code>push_subscriptions</code> stores only <code>token, platform, last_used_at, active</code> (<code>db/schema.rb:162-173</code>) with <strong>no <code>customer_id</code></strong> and no user FK. Registration is a public, unauthenticated endpoint that takes only a token and platform — <code>PushSubscriptionsController#create</code> (<code>app/controllers/push_subscriptions_controller.rb:8-30</code>) — and <code>PushSubscription.register!</code> (<code>app/models/push_subscription.rb:13-22</code>) never links a person. Consequently a push can only ever go to <em>everyone</em>.</p>
+<p><strong>Broadcast is all-or-nothing.</strong> <code>FirebasePushService#initialize</code> defaults its audience to <code>PushSubscription.active</code> (<code>app/services/firebase_push_service.rb:31</code>) and <code>#broadcast</code> iterates every active token (<code>:44</code>). Its payload (<code>build_payload</code>, <code>:124-164</code>) carries only <code>title</code>, <code>message</code>, and a static <code>link</code> — <strong>no offer, campaign, or customer context</strong>. Callers pass just <code>title:</code>/<code>message:</code>: <code>Admin::NotificationDeliveriesController#create</code> (<code>app/controllers/admin/notification_deliveries_controller.rb:6</code>, params limited to <code>:title, :message</code> at <code>:24-27</code>), <code>Api::V1::Admin::NotificationsController#deliver</code> (<code>app/controllers/api/v1/admin/notifications_controller.rb:13-22</code>), and both schedule controllers' <code>send_now</code> (<code>app/controllers/admin/schedules_controller.rb:64</code>, <code>app/controllers/api/v1/admin/schedules_controller.rb:53</code>).</p>
+<p><strong>Scheduler is untargeted and single-channel.</strong> <code>NotificationSchedule</code> has <code>title, message, frequency, scheduled_time, scheduled_date, day_of_week, day_of_month, last_sent_at, active</code> (<code>app/models/notification_schedule.rb</code>, schema <code>db/schema.rb:134-148</code>) — <strong>no channel, no target, no campaign/offer FK.</strong> <code>NotificationScheduleRunner#run</code> (<code>app/services/notification_schedule_runner.rb:86-109</code>) calls <code>@push_service.broadcast(title:, message:)</code> for every due schedule — push only, everyone.</p>
+<p><strong>No delivery log.</strong> Delivery results are the ephemeral <code>FirebasePushService::Result</code> struct (<code>app/services/firebase_push_service.rb:18-29</code>) — counts only, discarded after the response. There is no per-recipient record, so history, per-customer suppression, and conversion tracking are impossible.</p>
+<p><strong>No campaigns, no channels, no milestones.</strong> There is no <code>Campaign</code> model, no WhatsApp/SMS provider, no <code>NotificationChannel</code> abstraction, and no milestone hook. <code>TransactionCreator#call</code> (<code>app/services/transaction_creator.rb</code>) writes the <code>earn</code> ledger row (<code>:39-44</code>) but fires no notification. Customers have <strong>no <code>customer_type</code></strong> column (<code>db/schema.rb:83-92</code>) and no opt-in flags.</p>
+<p><strong>Android</strong> mirrors the same limits: <code>AdminSchedulesScreen</code>/<code>Dtos</code>/<code>ViewModel</code> cover only title/message/frequency (<code>android/.../ui/admin/schedules/</code>), and <code>AdminOpsScreen</code> exposes a single "broadcast a notice" quick action (<code>android/.../ui/admin/ops/AdminOpsScreen.kt</code>). Push token registration (<code>android/.../core/push/Push.kt:20-34</code>) sends only <code>{token, platform}</code>.</p>
+<h2 id="target-design">Target design</h2>
+<h3 id="data-model-changes">Data model changes</h3>
+<p><strong>1. Link tokens to customers (foundation).</strong></p>
+<p><code>push_subscriptions</code> — new columns:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>customer_id</code></td>
+<td><code>bigint</code> FK → customers, nullable, indexed</td>
+<td>Aim a push at one person. Nullable: web PWA tokens start anonymous until the visitor identifies via <code>/loyalty</code>.</td>
+</tr>
+<tr>
+<td><code>consent_at</code></td>
+<td><code>datetime</code>, nullable</td>
+<td>Timestamp of the customer's explicit push opt-in; null = anonymous/unconsented.</td>
+</tr>
+</tbody>
+</table></div>
+<p>A customer may have many active tokens (phone + tablet); a token belongs to at most one customer. Linking happens when a visitor completes the <code>/loyalty</code> lookup (phone verified against <code>customers.phone_number</code>) and taps "Notify me about offers", or when staff registers/looks up a customer on a device the customer controls. Re-registration keeps the existing <code>customer_id</code> unless a different customer claims the token.</p>
+<p><strong>2. Customer taxonomy + channel opt-ins.</strong></p>
+<p><code>customers</code> — new columns:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>customer_type</code></td>
+<td><code>string</code>, default <code>"drivein"</code>, indexed</td>
+<td>Targeting axis for F2/req 15. Values <code>drivein</code>/<code>credit</code>/<code>otp</code>/<code>fleet</code> — <strong>taxonomy to confirm</strong> (per locked assumption: OTP = fleet/credit billed by litres; Drive-in = walk-in cash; Credit = credit account).</td>
+</tr>
+<tr>
+<td><code>whatsapp_opt_in</code></td>
+<td><code>boolean</code>, default <code>false</code>, null: false</td>
+<td>Consent gate for WhatsApp (req 16, provider policy).</td>
+</tr>
+<tr>
+<td><code>sms_opt_in</code></td>
+<td><code>boolean</code>, default <code>false</code>, null: false</td>
+<td>Consent gate for SMS (DLT/TRAI).</td>
+</tr>
+<tr>
+<td><code>last_milestone_points</code></td>
+<td><code>integer</code>, default <code>0</code>, null: false</td>
+<td>Highest loyalty-points milestone already notified, so F3 auto-bonus fires once per crossing.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>3. Campaigns.</strong></p>
+<p><code>campaigns</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string, null: false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td><code>reward_kind</code></td>
+<td>integer enum <code>discount</code>(0)/<code>gift</code>(1)/<code>bonus_points</code>(2), null: false</td>
+<td>F1 discount <strong>or</strong> gift; bonus_points reuses loyalty ledger.</td>
+</tr>
+<tr>
+<td><code>discount_amount</code></td>
+<td>decimal(10,2), nullable</td>
+<td>₹ off, when <code>reward_kind = discount</code>.</td>
+</tr>
+<tr>
+<td><code>discount_percent</code></td>
+<td>decimal(5,2), nullable</td>
+<td>Alternative to flat amount.</td>
+</tr>
+<tr>
+<td><code>gift_description</code></td>
+<td>string, nullable</td>
+<td>Free-text gift, when <code>reward_kind = gift</code>.</td>
+</tr>
+<tr>
+<td><code>bonus_points</code></td>
+<td>integer, nullable</td>
+<td>When <code>reward_kind = bonus_points</code>.</td>
+</tr>
+<tr>
+<td><code>min_purchase_amount</code></td>
+<td>decimal(10,2), nullable</td>
+<td>₹ threshold over the period. Available today.</td>
+</tr>
+<tr>
+<td><code>min_purchase_litres</code></td>
+<td>decimal(10,3), nullable</td>
+<td>Litres threshold. <strong>Depends on D1</strong> (litres not yet captured; per LOCKED Q1 litres are source of truth). Nullable until D1 lands.</td>
+</tr>
+<tr>
+<td><code>period</code></td>
+<td>integer enum <code>rolling_days</code>(0)/<code>weekly</code>(1)/<code>monthly</code>(2)/<code>fixed_window</code>(3), null: false</td>
+<td>Window over which purchases aggregate.</td>
+</tr>
+<tr>
+<td><code>period_days</code></td>
+<td>integer, nullable</td>
+<td>For <code>rolling_days</code> (e.g. last 30).</td>
+</tr>
+<tr>
+<td><code>window_start</code> / <code>window_end</code></td>
+<td>date, nullable</td>
+<td>For <code>fixed_window</code>.</td>
+</tr>
+<tr>
+<td><code>target_type</code></td>
+<td>integer enum <code>all</code>(0)/<code>customer_type</code>(1)/<code>individual</code>(2)/<code>selected</code>(3), null: false</td>
+<td>F2/req 15.</td>
+</tr>
+<tr>
+<td><code>target_customer_type</code></td>
+<td>string, nullable</td>
+<td>When <code>target_type = customer_type</code>.</td>
+</tr>
+<tr>
+<td><code>channels</code></td>
+<td>string, default <code>"push"</code></td>
+<td>Comma set of <code>push,whatsapp,sms</code> for the offer send.</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>integer enum <code>draft</code>(0)/<code>scheduled</code>(1)/<code>active</code>(2)/<code>paused</code>(3)/<code>completed</code>(4), null: false, default <code>draft</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>starts_at</code> / <code>ends_at</code></td>
+<td>datetime, nullable</td>
+<td>Campaign lifetime.</td>
+</tr>
+<tr>
+<td><code>created_by_id</code></td>
+<td>bigint FK → users</td>
+<td>Admin audit.</td>
+</tr>
+<tr>
+<td><code>timestamps</code></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>campaign_targets</code> (individual/selected): <code>campaign_id</code> FK, <code>customer_id</code> FK, unique <code>[campaign_id, customer_id]</code>.</p>
+<p><code>campaign_qualifications</code> (the period-window aggregation output, one per customer per evaluation):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>campaign_id</code>, <code>customer_id</code></td>
+<td>FKs</td>
+<td>unique <code>[campaign_id, customer_id, period_start]</code></td>
+</tr>
+<tr>
+<td><code>period_start</code> / <code>period_end</code></td>
+<td>date</td>
+<td>Window evaluated.</td>
+</tr>
+<tr>
+<td><code>aggregated_amount</code></td>
+<td>decimal(12,2)</td>
+<td>Σ <code>transactions.fuel_amount</code> in window.</td>
+</tr>
+<tr>
+<td><code>aggregated_litres</code></td>
+<td>decimal(12,3), nullable</td>
+<td>Σ litres (post-D1).</td>
+</tr>
+<tr>
+<td><code>qualified_at</code></td>
+<td>datetime</td>
+<td>When threshold was met.</td>
+</tr>
+<tr>
+<td><code>reward_granted_at</code></td>
+<td>datetime, nullable</td>
+<td>Idempotency: non-null = reward already given.</td>
+</tr>
+<tr>
+<td><code>reward_points_ledger_id</code></td>
+<td>bigint FK → points_ledgers, nullable</td>
+<td>Set when <code>bonus_points</code>.</td>
+</tr>
+<tr>
+<td><code>notified_at</code></td>
+<td>datetime, nullable</td>
+<td>Offer delivered.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>4. Notification log + offers (replaces the ephemeral broadcast result).</strong></p>
+<p><code>notification_messages</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>campaign_id</code></td>
+<td>bigint FK, nullable</td>
+<td>Offer source (F3 wiring).</td>
+</tr>
+<tr>
+<td><code>notification_schedule_id</code></td>
+<td>bigint FK, nullable</td>
+<td>Scheduled source.</td>
+</tr>
+<tr>
+<td><code>title</code>, <code>body</code></td>
+<td>string/text</td>
+<td></td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td>integer enum <code>broadcast</code>/<code>offer</code>/<code>loyalty_milestone</code>/<code>scheduled</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>offer_payload</code></td>
+<td>jsonb, default <code>{}</code></td>
+<td>Structured offer (kind, amount/percent/gift, expiry) rendered in the push <code>data</code> block and message body.</td>
+</tr>
+<tr>
+<td><code>target_type</code>, <code>target_customer_type</code></td>
+<td></td>
+<td>Snapshot of audience.</td>
+</tr>
+<tr>
+<td><code>channels</code></td>
+<td>string</td>
+<td><code>push,whatsapp,sms</code>.</td>
+</tr>
+<tr>
+<td><code>created_by_id</code></td>
+<td>bigint FK, nullable</td>
+<td></td>
+</tr>
+<tr>
+<td>timestamps</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>notification_recipients</code> (per-person, per-channel delivery record):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>notification_message_id</code></td>
+<td>FK, null: false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>customer_id</code></td>
+<td>FK, nullable</td>
+<td>Null for anonymous push.</td>
+</tr>
+<tr>
+<td><code>push_subscription_id</code></td>
+<td>FK, nullable</td>
+<td>For push.</td>
+</tr>
+<tr>
+<td><code>channel</code></td>
+<td>integer enum <code>push</code>/<code>whatsapp</code>/<code>sms</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>to_address</code></td>
+<td>string</td>
+<td>token id / phone number (never logged in URL).</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>integer enum <code>pending</code>/<code>sent</code>/<code>failed</code>/<code>invalidated</code>/<code>skipped</code></td>
+<td><code>skipped</code> = no opt-in / no token.</td>
+</tr>
+<tr>
+<td><code>provider_message_id</code></td>
+<td>string, nullable</td>
+<td>Vendor id for delivery-receipt reconciliation.</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>string, nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>sent_at</code></td>
+<td>datetime, nullable</td>
+<td></td>
+</tr>
+<tr>
+<td>timestamps</td>
+<td></td>
+<td>index <code>[customer_id, created_at]</code> for conversion/E5.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>5. Extend <code>notification_schedules</code></strong> with <code>channels</code> (string, default <code>"push"</code>), <code>target_type</code>/<code>target_customer_type</code> (mirror campaign), and <code>campaign_id</code> (FK, nullable) — a schedule can now target a segment and carry a campaign offer, not just a global push.</p>
+<figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">erDiagram
+    customers ||--o{ push_subscriptions : &quot;owns (nullable link)&quot;
+    customers ||--o{ campaign_targets : &quot;hand-picked&quot;
+    customers ||--o{ campaign_qualifications : &quot;qualifies&quot;
+    customers ||--o{ notification_recipients : &quot;receives&quot;
+    campaigns ||--o{ campaign_targets : &quot;targets&quot;
+    campaigns ||--o{ campaign_qualifications : &quot;produces&quot;
+    campaigns ||--o{ notification_messages : &quot;sources offers&quot;
+    notification_schedules ||--o{ notification_messages : &quot;sources&quot;
+    notification_messages ||--o{ notification_recipients : &quot;fans out&quot;
+    push_subscriptions ||--o{ notification_recipients : &quot;delivers via&quot;
+    transactions }o--|| customers : &quot;aggregated for window&quot;
+</pre></figure>
+<h3 id="business-rules">Business rules</h3>
+<ul>
+<li><strong>Audience resolution</strong> (shared by campaigns, schedules, ad-hoc sends): <code>all</code> → every consenting recipient per channel; <code>customer_type</code> → customers with matching <code>customer_type</code>; <code>individual</code>/<code>selected</code> → <code>campaign_targets</code>. Push additionally requires a linked, active <code>push_subscription</code>; WhatsApp requires <code>whatsapp_opt_in</code> + a phone; SMS requires <code>sms_opt_in</code> + a phone. A customer with no viable channel is logged <code>skipped</code>.</li>
+<li><strong>Period aggregation</strong> (<code>CampaignEvaluator</code>): for each candidate customer, sum <code>transactions.fuel_amount</code> (and litres post-D1) where <code>created_at</code> is inside the resolved window (<code>rolling_days</code> → <code>now - period_days .. now</code>; <code>weekly</code>/<code>monthly</code> → calendar bucket; <code>fixed_window</code> → <code>window_start..window_end</code>). Qualify when the sum ≥ the set threshold(s). Upsert a <code>campaign_qualification</code> keyed on <code>[campaign_id, customer_id, period_start]</code> (idempotent re-runs).</li>
+<li><strong>Reward grant</strong>: only for qualifications with <code>reward_granted_at IS NULL</code>. <code>bonus_points</code> writes a <code>points_ledgers</code> row (<code>entry_type: :adjust</code>, positive) and stamps <code>reward_points_ledger_id</code>; <code>discount</code>/<code>gift</code> record the offer in the qualification + notification (redemption is out of scope here — the settlement discount pull is D3). Respect <code>customer.rewards_paused?</code> for <code>bonus_points</code> (skip, like <code>TransactionCreator</code> at <code>app/services/transaction_creator.rb:37-45</code>).</li>
+<li><strong>Notify</strong>: build one <code>notification_message</code> (<code>category: offer</code>, <code>offer_payload</code> from the campaign), fan out to <code>notification_recipients</code> over the campaign <code>channels</code>, dispatch, stamp <code>notified_at</code>.</li>
+<li><strong>Auto loyalty milestone (F3)</strong>: after <code>TransactionCreator</code> writes the <code>earn</code> ledger row, <code>LoyaltyMilestoneNotifier</code> compares the customer's new <code>total_points</code> against a configurable ladder (<code>RewardSetting.milestone_step</code>, e.g. every 500 pts). If a new rung is crossed above <code>customers.last_milestone_points</code>, enqueue a <code>loyalty_milestone</code> notification ("You've earned N points…") over the customer's opted-in channels and advance <code>last_milestone_points</code>. Idempotent: one notification per rung.</li>
+</ul>
+<h3 id="provider-abstraction-f4">Provider abstraction (F4)</h3>
+<p>A <code>NotificationChannel</code> interface decouples audience/offer logic from vendors:</p>
+<pre><code>NotificationChannel (interface): #deliver(recipient:) -&gt; DeliveryOutcome
+  ├─ PushChannel     — wraps FirebasePushService per-token; requires push_subscription
+  ├─ WhatsappChannel — vendor API; requires whatsapp_opt_in + approved template
+  └─ SmsChannel      — vendor API; requires sms_opt_in + DLT-registered template
+NotificationDispatcher — resolves channels per recipient, calls each channel,
+                         writes notification_recipients rows, handles retry/backoff.
+</code></pre>
+<ul>
+<li><strong><code>PushChannel</code></strong> reuses <code>FirebasePushService</code> but is refactored so a single-token send is callable (extract <code>deliver_to_subscription</code> at <code>app/services/firebase_push_service.rb:88</code> into a public <code>deliver_one(subscription:, message:)</code>), and <code>build_payload</code> gains the <code>offer_payload</code> in its <code>data</code> block.</li>
+<li><strong>Provider choice</strong>: <strong>MSG91</strong> (single India-focused vendor covering both WhatsApp Business API and DLT-compliant transactional SMS) as the recommended default; Twilio as the documented alternative. Config via <code>WHATSAPP_PROVIDER</code>, <code>SMS_PROVIDER</code>, and <code>*_API_KEY</code> in Secret Manager (same pattern as Firebase creds).</li>
+<li><strong>Opt-in &amp; templates</strong>: WhatsApp requires pre-approved message templates and prior opt-in (<code>whatsapp_opt_in</code>); SMS requires DLT template + entity registration and <code>sms_opt_in</code>. Offers/loyalty messages map to a small set of parameterized templates (<code>offer_generic</code>, <code>loyalty_milestone</code>). Unconsented recipients are <code>skipped</code>, never sent.</li>
+</ul>
+<figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">flowchart TD
+    A[Admin activates campaign / schedule due / txn milestone] --&gt; B[CampaignEvaluator: aggregate transactions in window]
+    B --&gt; C{Threshold met?}
+    C -- no --&gt; Z[No qualification]
+    C -- yes --&gt; D[Upsert campaign_qualification]
+    D --&gt; E{reward_granted?}
+    E -- yes --&gt; N[Build notification_message + recipients]
+    E -- no --&gt; F[Grant reward: points ledger / discount / gift]
+    F --&gt; N
+    N --&gt; G[NotificationDispatcher]
+    G --&gt; H[PushChannel]
+    G --&gt; I[WhatsappChannel]
+    G --&gt; J[SmsChannel]
+    H &amp; I &amp; J --&gt; K[Write notification_recipients status]
+</pre></figure>
+<h2 id="api-changes">API changes</h2>
+<p>All under the existing admin JSON namespace (<code>config/routes.rb:78-86</code>), authorized by <code>Api::V1::Admin::BaseController</code>. Requests accept the nested-or-flat envelope via <code>resource_params</code> like <code>Api::V1::Admin::SchedulesController</code> (<code>app/controllers/api/v1/admin/schedules_controller.rb:67-71</code>).</p>
+<p><strong>Campaigns</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Request</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/admin/campaigns</code></td>
+<td><code>?status=</code></td>
+<td><code>{ campaigns: [CampaignDto] }</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/admin/campaigns</code></td>
+<td><code>campaign[name, description, reward_kind, discount_amount|discount_percent|gift_description|bonus_points, min_purchase_amount, min_purchase_litres, period, period_days, window_start, window_end, target_type, target_customer_type, channels, starts_at, ends_at]</code> (+ <code>target_customer_ids[]</code> for individual/selected)</td>
+<td><code>201 CampaignDto</code></td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/api/v1/admin/campaigns/:id</code></td>
+<td>subset</td>
+<td><code>200 CampaignDto</code></td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/v1/admin/campaigns/:id</code></td>
+<td>—</td>
+<td><code>204</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/admin/campaigns/:id/preview</code></td>
+<td>—</td>
+<td><code>{ qualifying_count, sample: [{customer_id, name, aggregated_amount}], reachable: {push, whatsapp, sms} }</code> — dry run, no grant/send.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/admin/campaigns/:id/run</code></td>
+<td><code>{ notify: true }</code></td>
+<td><code>{ qualified, rewarded, notification_message_id, delivery: {push, whatsapp, sms: {sent, failed, skipped}} }</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/admin/campaigns/:id/activate</code> | <code>/pause</code></td>
+<td>—</td>
+<td><code>200 CampaignDto</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Notifications (targeted + multi-channel) — extends today's send</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Request</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/admin/notifications/send</code></td>
+<td><code>notification[title, message, channels[], target_type, target_customer_type, customer_ids[], campaign_id]</code> (superset of today's <code>title, message</code> at <code>app/controllers/api/v1/admin/notifications_controller.rb:14</code>)</td>
+<td><code>{ notification_message_id, delivery: {per-channel counts} }</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/admin/notifications</code></td>
+<td><code>?category=&amp;page=</code></td>
+<td><code>{ notifications: [NotificationMessageDto with per-channel counts] }</code> — history from <code>notification_recipients</code>.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/admin/notifications/:id/recipients</code></td>
+<td>—</td>
+<td><code>{ recipients: [{customer_id, channel, status, error, sent_at}] }</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Schedules</strong> — <code>schedule_params</code> (<code>app/controllers/api/v1/admin/schedules_controller.rb:67-71</code>) gains <code>channels[], target_type, target_customer_type, campaign_id</code>; <code>ScheduleDto</code> (<code>android/.../AdminSchedulesDtos.kt:22-33</code>) gains the same.</p>
+<p><strong>Customer type + opt-ins</strong> — the admin customer endpoints and <code>staff/customers</code> gain <code>customer_type</code> in params/serializers; add:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Request</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PATCH</td>
+<td><code>/api/v1/admin/customers/:id</code></td>
+<td><code>customer[customer_type, whatsapp_opt_in, sms_opt_in]</code></td>
+<td><code>200 CustomerDto</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Token → customer linkage (foundation)</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Request</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/loyalty/push_subscriptions/claim</code></td>
+<td><code>{ token, phone_number }</code> (public; phone matched against <code>customers</code>)</td>
+<td><code>{ linked: true, customer_id }</code> — sets <code>customer_id</code> + <code>consent_at</code> on the subscription.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/push/subscriptions</code> (existing, <code>app/controllers/push_subscriptions_controller.rb:8</code>)</td>
+<td>add optional <code>customer_id</code>/<code>phone_number</code></td>
+<td>unchanged shape + <code>customer_id</code>.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Never place phone numbers in query strings (privacy rule) — claim is POST body only.</p>
+<h2 id="ui">UI</h2>
+<h3 id="rails-pwa">Rails PWA</h3>
+<ul>
+<li><strong><code>admin/notifications</code> page</strong> (rendered by <code>Admin::NotificationsController#show</code>, the redirect target throughout <code>admin/schedules_controller.rb</code>): add a <strong>Channel</strong> selector (Push / WhatsApp / SMS checkboxes) and a <strong>Target</strong> control (All / Customer type dropdown / Pick customers) to the ad-hoc send form and to the schedule create/edit form. Add a <strong>Delivery history</strong> table below (from <code>GET /admin/notifications</code>) showing category, audience, and per-channel sent/failed/skipped — the first persistent record of what went out.</li>
+<li><strong>New <code>admin/campaigns</code></strong> (new controller + route under the <code>admin</code> namespace at <code>config/routes.rb:112</code>): index (name, reward, target, status, qualifying count), a create/edit form (reward kind → conditional discount/gift/points fields; period + threshold; target type → type dropdown or customer multi-select; channels), a <strong>Preview</strong> button (calls <code>/preview</code>, shows qualifying count + reachability), and <strong>Activate / Pause / Run now</strong> actions. Reuse the existing admin form styling used by schedules.</li>
+<li><strong>Public <code>/loyalty/result</code></strong> (<code>loyalty#show</code>): after showing points, add an opt-in card "Get offers and bonus alerts" that (a) requests the browser push token and (b) calls <code>/api/v1/loyalty/push_subscriptions/claim</code> with the looked-up phone, plus WhatsApp/SMS opt-in checkboxes writing <code>whatsapp_opt_in</code>/<code>sms_opt_in</code>.</li>
+</ul>
+<h3 id="android-compose">Android (Compose)</h3>
+<ul>
+<li><strong><code>AdminOpsScreen</code></strong> (<code>android/.../ui/admin/ops/AdminOpsScreen.kt</code>): the existing "broadcast a notice" quick action expands into a <strong>Campaigns</strong> entry (new <code>admin/campaigns</code> screen set: <code>Api/Dtos/Repository/Screen/ViewModel</code>, following the schedules module layout) and a <strong>Notifications history</strong> entry.</li>
+<li><strong><code>AdminSchedulesScreen</code>/<code>ViewModel</code>/<code>Dtos</code></strong> (<code>android/.../ui/admin/schedules/</code>): extend the schedule editor with a channel multi-select and a target selector; add <code>channels</code>, <code>targetType</code>, <code>targetCustomerType</code>, <code>campaignId</code> to <code>ScheduleDto</code> and the request envelope (matching the API change). The ad-hoc send sheet gains the same channel/target controls.</li>
+<li><strong>New <code>admin/campaigns</code> screen</strong>: list + editor mirroring the web (reward kind, period + threshold, target, channels, Preview/Activate/Pause/Run). <code>DeliveryResultDto</code> (<code>android/.../AdminSchedulesDtos.kt:42-49</code>) is extended to per-channel counts (<code>push</code>, <code>whatsapp</code>, <code>sms</code> sub-objects).</li>
+<li><strong>Customer detail screen</strong> (<code>android/.../ui/customers</code>): add a <strong>Customer type</strong> dropdown and WhatsApp/SMS opt-in toggles bound to the customer PATCH.</li>
+<li><strong>Push registration</strong> (<code>android/.../core/push/Push.kt:20-38</code>): <code>PushSubscriptionRequest</code> unchanged for anonymous registration; when a staff member has just identified a customer on a customer-facing flow, call the claim endpoint. (Staff/admin app tokens remain staff-linked, not customer-linked.)</li>
+</ul>
+<h2 id="validation-edge-cases">Validation &amp; edge cases</h2>
+<ul>
+<li>Exactly one reward field must match <code>reward_kind</code> (discount ⇒ amount <strong>xor</strong> percent present; gift ⇒ <code>gift_description</code>; bonus_points ⇒ <code>bonus_points &gt; 0</code>). Reject otherwise.</li>
+<li>At least one threshold (<code>min_purchase_amount</code> or <code>min_purchase_litres</code>) required. <code>min_purchase_litres</code> rejected with a clear message until <strong>D1</strong> ships (litres not captured yet — LOCKED Q1).</li>
+<li><code>target_type = customer_type</code> requires a known <code>target_customer_type</code>; <code>individual</code> requires exactly one target; <code>selected</code> requires ≥1. Empty selection ⇒ 422.</li>
+<li><code>fixed_window</code> requires <code>window_start ≤ window_end</code>; <code>rolling_days</code> requires <code>period_days &gt; 0</code>.</li>
+<li>Channel gating: sending a channel with no opted-in recipients yields <code>skipped</code> rows, not errors; a message with <strong>zero</strong> reachable recipients returns <code>200</code> with all-zero counts and a warning (mirrors <code>schedule_send_now_flash_for</code> at <code>app/controllers/admin/schedules_controller.rb:148-151</code>).</li>
+<li><strong>Idempotency</strong>: re-running a campaign in the same window never double-grants (<code>reward_granted_at</code> guard) and never double-notifies (<code>notified_at</code>); the loyalty milestone fires once per rung via <code>last_milestone_points</code>.</li>
+<li>Invalid/expired push tokens are deactivated exactly as today (<code>INVALID_TOKEN_CODES</code>, <code>app/services/firebase_push_service.rb:105-108</code>) and recorded <code>invalidated</code>.</li>
+<li>Concurrency: campaign <code>run</code> and the scheduler must share the lease pattern (<code>SchedulerLease</code>, <code>app/services/notification_schedule_runner.rb:118-138</code>) so a cron sweep and a manual run don't double-send.</li>
+<li>A paused customer (<code>rewards_paused?</code>) is skipped for <code>bonus_points</code> grants but may still receive informational offers.</li>
+<li>WhatsApp/SMS provider outage: mark recipients <code>failed</code> with the vendor error, don't roll back the reward grant; support a <code>resend</code> of <code>failed</code> recipients only.</li>
+<li>Deleting a customer with <code>campaign_targets</code>/<code>qualifications</code>: <code>dependent: :destroy</code> on the join rows; keep <code>notification_recipients</code> (nullify <code>customer_id</code>) for audit.</li>
+</ul>
+<h2 id="dependencies-sequencing">Dependencies &amp; sequencing</h2>
+<p><strong>Must exist first</strong>
+- <strong>Token→customer linkage</strong> (<code>push_subscriptions.customer_id</code> + claim endpoint) — hard prerequisite for any targeted push (F2/F3). Build this first.
+- <strong>E4 customer taxonomy</strong> (<code>customers.customer_type</code>) — prerequisite for type targeting.
+- <strong>C5 loyalty accrual</strong> (already present) — feeds the F3 milestone trigger.</p>
+<p><strong>Softens / partially blocked by</strong>
+- <strong>D1 per-nozzle readings / litres</strong> — required only for litre-based <code>min_purchase_amount</code>; ₹-based campaigns ship immediately (LOCKED Q1: derive ₹ today, add litres when D1 lands).
+- <strong>D3 discount pull</strong> — campaign <em>discount</em> offers are recorded here; their redemption at settlement is D3's job.</p>
+<p><strong>This unblocks</strong>
+- <strong>E5</strong> contact-tracking &amp; conversion (uses <code>notification_recipients</code> history).
+- <strong>E6</strong> churn/lost-customer re-engagement campaigns (a <code>rolling_days</code> non-purchase segment).
+- <strong>G1</strong>-adjacent per-pump promo targeting once pump-scoped segments exist.</p>
+<p><strong>Internal order</strong>: (1) token linkage + customer_type migrations → (2) <code>notification_messages</code>/<code>recipients</code> log + <code>NotificationChannel</code>/<code>Dispatcher</code> refactor of <code>FirebasePushService</code> → (3) targeted ad-hoc + scheduled sends → (4) <code>Campaign</code> model + <code>CampaignEvaluator</code> + grant/notify → (5) WhatsApp/SMS channel adapters → (6) F3 milestone hook.</p>
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+<ul>
+<li>[ ] <code>push_subscriptions.customer_id</code> and <code>consent_at</code> exist; the claim endpoint links an anonymous token to a customer matched by phone and sets <code>consent_at</code>.</li>
+<li>[ ] <code>customers.customer_type</code>, <code>whatsapp_opt_in</code>, <code>sms_opt_in</code>, <code>last_milestone_points</code> exist and are editable from both surfaces.</li>
+<li>[ ] A campaign with a ₹ min-purchase over a period can be created, previewed (qualifying count + per-channel reachability), and run; qualifiers are computed by aggregating <code>transactions.fuel_amount</code> in the window.</li>
+<li>[ ] Targeting works for <code>all</code>, <code>customer_type</code> (OTP/Credit/Drive-in), <code>individual</code>, and <code>selected</code>; only intended recipients get the message.</li>
+<li>[ ] Running a campaign grants the reward (points ledger row for <code>bonus_points</code>; recorded offer for discount/gift) and re-running the same window neither double-grants nor double-notifies.</li>
+<li>[ ] A send fans out over push, WhatsApp, and SMS per the campaign/schedule <code>channels</code>, respecting each recipient's opt-in; unreachable recipients are recorded <code>skipped</code>.</li>
+<li>[ ] Every send writes one <code>notification_message</code> and per-recipient <code>notification_recipients</code> rows with <code>status</code> and <code>provider_message_id</code>; the admin history and recipient endpoints return them.</li>
+<li>[ ] Crossing a loyalty-points milestone on a transaction triggers exactly one <code>loyalty_milestone</code> notification over the customer's opted-in channels; no duplicate on the next transaction below the next rung.</li>
+<li>[ ] Push payload carries the structured <code>offer_payload</code> so the client can render the offer.</li>
+<li>[ ] WhatsApp/SMS use approved/DLT-registered templates and are never sent without the matching opt-in; a provider failure marks recipients <code>failed</code> without rolling back the reward, and <code>failed</code> recipients can be resent.</li>
+<li>[ ] <code>notification_schedules</code> supports channel + target + <code>campaign_id</code>; the runner sends targeted, multi-channel messages, still lease-guarded and idempotent.</li>
+<li>[ ] Android admin exposes campaign CRUD + preview/activate/pause/run, channel/target controls on schedules and ad-hoc sends, and customer type/opt-in editing; DTOs carry per-channel delivery counts.</li>
+<li>[ ] Litre-based thresholds are rejected with a clear "requires D1" message until per-nozzle readings ship; ₹-based campaigns work today.</li>
+</ul>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 16-spec-campaigns-notifications.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
+</script>
+
+</body>
+</html>

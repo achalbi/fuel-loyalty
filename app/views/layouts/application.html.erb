@@ -177,7 +177,9 @@
 
           <li class="px-4 pt-4 pb-2"><small class="nav-section-label">Access</small></li>
           <li><%= link_to new_loyalty_path, class: "nav-link #{'active' if current_page?(new_loyalty_path)}" do %><i class="ti ti-search"></i><span class="nav-text">Loyalty Lookup</span><% end %></li>
-          <li><%= link_to my_pump_path, class: "nav-link #{'active' if current_page?(my_pump_path)}" do %><i class="ti ti-gas-station"></i><span class="nav-text">My Pump</span><% end %></li>
+          <% if policy(current_user).manage_pump? %>
+            <li><%= link_to my_pump_path, class: "nav-link #{'active' if current_page?(my_pump_path)}" do %><i class="ti ti-gas-station"></i><span class="nav-text">My Pump</span><% end %></li>
+          <% end %>
         </ul>
       </aside>
 

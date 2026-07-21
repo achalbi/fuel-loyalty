@@ -19,7 +19,15 @@ class UserPolicy < ApplicationPolicy
     user&.admin? && record.is_a?(User) && record.staff?
   end
 
+  # Self-service pump assignment ("My Pump"). Staff must NOT set their own pump
+  # (Staff_FSM requirement S-MYPUMP) — an admin assigns it via the staff form
+  # (A10). Kept as admin-only self so the route/page isn't reachable by staff.
   def manage_pump?
-    user.present? && record == user && (user.admin? || user.staff?)
+    user&.admin? && record == user
+  end
+
+  # Admin assigning a pump/nozzles to another user (A10).
+  def assign_pump?
+    user&.admin?
   end
 end

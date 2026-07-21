@@ -7,6 +7,10 @@ class Customer < ApplicationRecord
   has_many :points_ledgers, dependent: :destroy
   has_many :vehicles, -> { order(:vehicle_number) }, dependent: :destroy
 
+  # Customers who recorded a transaction within the given time range (E2 dashboard
+  # drill-through). Uses a subquery so it composes with joins + distinct scopes.
+  scope :transacted_between, ->(range) { where(id: Transaction.where(created_at: range).select(:customer_id)) }
+
   before_validation :normalize_phone_number
 
   validates :name, presence: true

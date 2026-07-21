@@ -1,7 +1,7 @@
 class FuelType < ApplicationRecord
   DEFAULT_OPTIONS = [
-    ["Petrol", "petrol"],
-    ["Diesel", "diesel"],
+    ["MS (Petrol)", "petrol"],
+    ["HSD (Diesel)", "diesel"],
     ["CNG / LPG", "cng_lpg"]
   ].freeze
   DEFAULT_CODES = DEFAULT_OPTIONS.map(&:last).freeze

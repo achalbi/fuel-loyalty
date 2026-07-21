@@ -11,7 +11,8 @@
 <div
   class="dashboard-root"
   data-dashboard-root
-  data-dashboard-endpoint="<%= data_admin_dashboard_path %>">
+  data-dashboard-endpoint="<%= data_admin_dashboard_path %>"
+  data-dashboard-customers-endpoint="<%= admin_customers_path %>">
   <script type="application/json" data-dashboard-payload><%= raw(json_escape(@dashboard_payload.to_json)) %></script>
 
   <div class="dashboard-toolbar">
@@ -32,6 +33,7 @@
               <i class="ti ti-file-type-pdf me-1" aria-hidden="true"></i>
               Download PDF
             </button>
+            <%= link_to "View customers", admin_customers_path(start_date: @dashboard_filters[:start_date], end_date: @dashboard_filters[:end_date], preset: @dashboard_filters[:preset]), class: "btn btn-outline-primary", data: { dashboard_customers_link: true } %>
             <%= link_to "Reset", admin_dashboard_path, class: "btn btn-outline-secondary" %>
           </div>
         </div>

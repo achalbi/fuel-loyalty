@@ -17,6 +17,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -183,6 +184,29 @@ private fun RewardSettingsForm(state: RewardRatesUiState, vm: RewardRatesViewMod
             helper = "Optional. Cash value of a single point.",
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
         )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Pause All Rewards",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    if (state.rewardsPaused) {
+                        "No points are awarded to anyone while this is on."
+                    } else {
+                        "Rewards are active for all customers."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = state.rewardsPaused, onCheckedChange = vm::onRewardsPausedChange)
+        }
 
         state.settingsError?.let { InlineErrorCard(it) }
 

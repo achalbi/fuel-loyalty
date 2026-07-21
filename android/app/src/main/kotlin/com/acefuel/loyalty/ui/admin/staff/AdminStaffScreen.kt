@@ -73,7 +73,7 @@ import com.acefuel.loyalty.ui.theme.nayara
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminStaffScreen(onBack: () -> Unit) {
+fun AdminStaffScreen(onBack: () -> Unit, onAssignPump: (Long) -> Unit) {
     val container = LocalContainer.current
     val repo = remember {
         AdminStaffRepository(container.retrofit.create(AdminStaffApi::class.java), container.json)
@@ -153,6 +153,7 @@ fun AdminStaffScreen(onBack: () -> Unit) {
                                 busy = state.deletingStaffId == staff.id,
                                 onEdit = { vm.openEditProfile(staff) },
                                 onAssign = { vm.openAssignShift(staff) },
+                                onAssignPump = { onAssignPump(staff.id) },
                                 onDelete = { pendingDelete = staff },
                                 modifier = Modifier.animateItem(),
                             )
@@ -313,6 +314,7 @@ private fun StaffCard(
     busy: Boolean,
     onEdit: () -> Unit,
     onAssign: () -> Unit,
+    onAssignPump: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -357,6 +359,7 @@ private fun StaffCard(
             ) {
                 TextButton(onClick = onEdit, enabled = !busy) { Text("Edit profile") }
                 TextButton(onClick = onAssign, enabled = !busy) { Text("Assign Shift") }
+                TextButton(onClick = onAssignPump, enabled = !busy) { Text("Pump") }
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = onDelete, enabled = !busy) {
                     Text(

@@ -34,7 +34,12 @@ data class MyPumpUiState(
         get() = selectedPumpId != null && selectedNozzleIds.isNotEmpty() && !saving
 }
 
-class MyPumpViewModel(private val repository: StaffRepository) : ViewModel() {
+class MyPumpViewModel(
+    private val repository: StaffRepository,
+    // null = current user's self-service pump; non-null = an admin assigning
+    // this staff member's pump via the admin endpoint (A10).
+    private val staffMemberId: Long? = null,
+) : ViewModel() {
 
     private val _state = MutableStateFlow(MyPumpUiState())
     val state: StateFlow<MyPumpUiState> = _state.asStateFlow()
@@ -46,9 +51,10 @@ class MyPumpViewModel(private val repository: StaffRepository) : ViewModel() {
     fun load() {
         _state.update { it.copy(loading = true, loadError = null) }
         viewModelScope.launch {
-            when (val r = repository.myPump()) {
-                is ApiResult.Success -> _state.update { it.applyLoaded(r.data) }
-                is ApiResult.Error -> _state.update { it.copy(loading = false, loadError = r.message) }
+            val result = if (staffMemberId != null) repository.staffMemberPump(staffMemberId) else repository.myPump()
+            when (result) {
+                is ApiResult.Success -> _state.update { it.applyLoaded(result.data) }
+                is ApiResult.Error -> _state.update { it.copy(loading = false, loadError = result.message) }
                 is ApiResult.NetworkError -> _state.update {
                     it.copy(loading = false, loadError = "Couldn't load pumps. Check your connection.")
                 }
@@ -79,9 +85,15 @@ class MyPumpViewModel(private val repository: StaffRepository) : ViewModel() {
         if (s.saving || s.selectedNozzleIds.isEmpty()) return
         _state.update { it.copy(saving = true, saveError = null) }
         viewModelScope.launch {
-            when (val r = repository.updateMyPump(pumpId, s.selectedNozzleIds.toList())) {
-                is ApiResult.Success -> _state.update { it.applyLoaded(r.data).copy(saved = true) }
-                is ApiResult.Error -> _state.update { it.copy(saving = false, saveError = r.message) }
+            val nozzleIds = s.selectedNozzleIds.toList()
+            val result = if (staffMemberId != null) {
+                repository.updateStaffMemberPump(staffMemberId, pumpId, nozzleIds)
+            } else {
+                repository.updateMyPump(pumpId, nozzleIds)
+            }
+            when (result) {
+                is ApiResult.Success -> _state.update { it.applyLoaded(result.data).copy(saved = true) }
+                is ApiResult.Error -> _state.update { it.copy(saving = false, saveError = result.message) }
                 is ApiResult.NetworkError -> _state.update {
                     it.copy(saving = false, saveError = "Couldn't save. Check your connection and try again.")
                 }

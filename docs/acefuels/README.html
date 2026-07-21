@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceFuels — Product &amp; Engineering Documentation — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">README.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="acefuels-product-engineering-documentation">AceFuels — Product &amp; Engineering Documentation</h1>
+<p>Detailed documentation for the <strong>AceFuels</strong> fuel-station loyalty + operations platform:
+what the <code>AceFuels_Requirement.xlsx</code> spreadsheet asks for, what the app (Rails + PWA +
+native Android) does today, and how to build the gap — as developer-ready specs.</p>
+<p><strong>Status snapshot:</strong> 41 requirement features → <strong>11 present · 9 partial · 21 absent</strong>.</p>
+<h2 id="locked-decisions-2026-07-21">Locked decisions (2026-07-21)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decision</th>
+<th>Implication</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Q1</td>
+<td><strong>Litres = source of truth</strong></td>
+<td>Capture meter readings/litres; derive ₹ from catalog price</td>
+</tr>
+<tr>
+<td>Q2</td>
+<td><strong>Both surfaces in lockstep</strong></td>
+<td>Every feature ships on Rails PWA <strong>and</strong> native Android (+ API)</td>
+</tr>
+<tr>
+<td>Q3</td>
+<td><strong>Operator KYC = profile fields only</strong></td>
+<td>Add Photo/Address/Aadhaar#/ID-photo; keep password login, <strong>no OTP</strong></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>Open item:</strong> confirm the customer taxonomy — OTP = fleet/credit (litres-billed), TT = tank-truck credit, Drive-in = walk-in cash, Credit = credit account. Features E4/D5/F2 depend on it.</p>
+</blockquote>
+<h2 id="how-to-read-this-set">How to read this set</h2>
+<p>Start at the overview, skim requirements + current architecture for context, then dive into the
+per-area specs. The roadmap tells you what to build in what order.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Document</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00</td>
+<td><a href="00-product-overview.html">Product overview</a></td>
+<td>Vision, roles, glossary, decisions, scope</td>
+</tr>
+<tr>
+<td>01</td>
+<td><a href="01-functional-requirements.html">Functional requirements</a></td>
+<td>Every feature ID with acceptance criteria + status</td>
+</tr>
+<tr>
+<td>02</td>
+<td><a href="02-current-architecture.html">Current architecture</a></td>
+<td>As-built map (models, controllers, services, Android), cited</td>
+</tr>
+<tr>
+<td>03</td>
+<td><a href="03-target-data-model.html">Target data model</a></td>
+<td>New/changed tables &amp; columns; consolidated ER diagram</td>
+</tr>
+<tr>
+<td>—</td>
+<td><strong>Feature specs</strong></td>
+<td>current state → target design → API → UI → acceptance</td>
+</tr>
+<tr>
+<td>10</td>
+<td><a href="10-spec-product-catalog.html">Product catalog + stock</a></td>
+<td>Priced products (fuel + lubes/AdBlue), MRP, batch, inventory — <strong>keystone</strong></td>
+</tr>
+<tr>
+<td>11</td>
+<td><a href="11-spec-litres-readings.html">Litres / readings model</a></td>
+<td>Litres capture, ₹ derivation, reward reconciliation</td>
+</tr>
+<tr>
+<td>12</td>
+<td><a href="12-spec-daily-settlement.html">Daily settlement</a></td>
+<td>Shift-end reconciliation — the largest module (D1–D10)</td>
+</tr>
+<tr>
+<td>13</td>
+<td><a href="13-spec-customer-crm-capture.html">Customer master + capture</a></td>
+<td>Driver/owner/transport, contacted, customer type, FSM per-visit form</td>
+</tr>
+<tr>
+<td>14</td>
+<td><a href="14-spec-rewards-staff-constraints.html">Rewards + staff constraints</a></td>
+<td>Global pause, admin pump assignment, staff-login corrections — <strong>quick wins</strong></td>
+</tr>
+<tr>
+<td>15</td>
+<td><a href="15-spec-dashboard-reports.html">Dashboard + reports</a></td>
+<td>Drill-through, cadence, customer-type, churn, feedback, reporting</td>
+</tr>
+<tr>
+<td>16</td>
+<td><a href="16-spec-campaigns-notifications.html">Campaigns + notifications</a></td>
+<td>Campaign engine, targeting, push/WhatsApp/SMS, token linkage</td>
+</tr>
+<tr>
+<td>17</td>
+<td><a href="17-spec-operator-kyc.html">Operator KYC</a></td>
+<td>Profile fields, ActiveStorage, PII handling (no OTP)</td>
+</tr>
+<tr>
+<td>20</td>
+<td><a href="20-api-contracts.html">API contracts</a></td>
+<td>All new/changed JSON endpoints for Android</td>
+</tr>
+<tr>
+<td>30</td>
+<td><a href="30-implementation-roadmap.html">Implementation roadmap</a></td>
+<td>Phased plan, dependencies, effort, biggest changes</td>
+</tr>
+<tr>
+<td>40</td>
+<td><a href="40-gap-analysis.html">Gap analysis</a></td>
+<td>The audit companion — full present/partial/absent matrix</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="feature-id-map">Feature ID map</h2>
+<p><code>A1–A10</code> setup/users/shifts · <code>B1–B2</code> customer capture · <code>C1–C5</code> rewards ·
+<code>D1–D10</code> daily settlement · <code>E1–E7</code> dashboard/CRM/reports · <code>F1–F4</code> campaigns/notifications ·
+<code>G1</code> per-pump visualize+edit · <code>S-MYPUMP</code> / <code>S-PAUSE</code> staff-login constraints.</p>
+<hr />
+<p><em>Source: <code>AceFuels_Requirement.xlsx</code> (7 sheets). Specs cite <code>file:line</code> against the repo as of 2026-07-21.</em></p>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from README.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+</body>
+</html>

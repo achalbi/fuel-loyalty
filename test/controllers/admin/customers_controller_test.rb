@@ -336,5 +336,23 @@ module Admin
       assert_select ".customer-details-history-row__reward-cash", count: 2
       assert_match "Showing <strong>6-7</strong> of <strong>7</strong> more transactions", response.body
     end
+
+    test "admin can drill through to customers filtered by a dashboard period" do
+      sign_in users(:one)
+      recent = Customer.create!(name: "Recent Rita", phone_number: "9812300001")
+      recent_vehicle = recent.vehicles.create!(vehicle_number: "TN01ZZ0001", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+      recent.transactions.create!(user: users(:two), vehicle: recent_vehicle, fuel_amount: 500, created_at: Time.current)
+
+      stale = Customer.create!(name: "Stale Sam", phone_number: "9812300002")
+      stale_vehicle = stale.vehicles.create!(vehicle_number: "TN01ZZ0002", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+      stale.transactions.create!(user: users(:two), vehicle: stale_vehicle, fuel_amount: 500, created_at: 40.days.ago)
+
+      get admin_customers_path(preset: "today")
+
+      assert_response :success
+      assert_select "[data-customers-period-banner]"
+      assert_match "Recent Rita", response.body
+      assert_no_match(/Stale Sam/, response.body)
+    end
   end
 end

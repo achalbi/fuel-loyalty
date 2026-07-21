@@ -82,7 +82,7 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_select ".customer-details-hero__menu .customer-details-vehicle-row__menu-toggle", 1
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Edit Customer"
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Mark Inactive"
-    assert_select ".customer-details-hero__menu .dropdown-item", text: "Pause Rewards"
+    assert_select ".customer-details-hero__menu .dropdown-item", text: "Pause Rewards", count: 0
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Delete Customer", count: 0
     assert_select "#editCustomerModal"
     assert_select "a.customer-details-vehicle-row__transaction-link[aria-label=?][title=?][href=?]",
@@ -92,7 +92,7 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
       1
   end
 
-  test "staff customer page shows rewards paused state and resume action" do
+  test "staff customer page shows rewards paused state but hides the resume action" do
     sign_in users(:two)
     customers(:one).update!(rewards_paused: true)
 
@@ -100,8 +100,41 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select ".customer-details-hero__chip--warning", text: "Rewards Paused"
-    assert_select ".customer-details-hero__menu .dropdown-item", text: "Resume Rewards"
+    assert_select ".customer-details-hero__menu .dropdown-item", text: "Resume Rewards", count: 0
     assert_select ".customer-details-hero__menu .dropdown-item", text: "Pause Rewards", count: 0
+  end
+
+  test "admin customer page offers pause and resume reward actions" do
+    sign_in users(:one)
+
+    get customer_path(customers(:one))
+    assert_response :success
+    assert_select ".customer-details-hero__menu .dropdown-item", text: "Pause Rewards"
+
+    customers(:one).update!(rewards_paused: true)
+    get customer_path(customers(:one))
+    assert_response :success
+    assert_select ".customer-details-hero__menu .dropdown-item", text: "Resume Rewards"
+  end
+
+  test "staff cannot pause rewards via the action" do
+    sign_in users(:two)
+    assert_not customers(:one).rewards_paused?
+
+    patch pause_rewards_staff_customer_path(customers(:one))
+
+    assert_redirected_to root_path
+    assert_not customers(:one).reload.rewards_paused?
+  end
+
+  test "admin can pause and resume rewards via the action" do
+    sign_in users(:one)
+
+    patch pause_rewards_staff_customer_path(customers(:one))
+    assert customers(:one).reload.rewards_paused?
+
+    patch resume_rewards_staff_customer_path(customers(:one))
+    assert_not customers(:one).reload.rewards_paused?
   end
 
   test "staff customer page shows the cash equivalent when cash reward is configured" do

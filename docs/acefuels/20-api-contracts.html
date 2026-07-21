@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceFuels — Consolidated JSON API Contracts (native Android) — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">20-api-contracts.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="acefuels-consolidated-json-api-contracts-native-android">AceFuels — Consolidated JSON API Contracts (native Android)</h1>
+<p>Status: spec. Scope: every <strong>new</strong> and <strong>changed</strong> <code>/api/v1</code> endpoint required by the AceFuels feature specs (00–19). This doc is the single source of truth for the Kotlin/Compose client's networking layer and the Rails <code>Api::V1::*</code> controllers/serializers that back it. Web PWA parity is assumed (Q2); this doc describes only the JSON surface.</p>
+<p>Feature IDs referenced throughout: A1–A10, B1–B2, C1–C5, D1–D10, E1–E7, F1–F4, G1, S-MYPUMP, S-PAUSE (see <code>01-functional-requirements.md</code>).</p>
+<hr />
+<h2 id="0-conventions-all-endpoints-honor-these">0. Conventions (all endpoints honor these)</h2>
+<p>These mirror the as-built <code>Api::V1::BaseController</code> and must not be re-invented per endpoint.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base URL</td>
+<td><code>/api/v1</code></td>
+</tr>
+<tr>
+<td>Namespaces</td>
+<td><code>/api/v1/staff/*</code> = authenticated <strong>admin OR staff</strong>; <code>/api/v1/admin/*</code> = <strong>admin only</strong> (<code>ensure_admin</code>); unscoped <code>/api/v1/*</code> = any authenticated user (own record)</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td><code>Authorization: Bearer &lt;access_token&gt;</code> on every call except <code>auth/login</code>, <code>auth/refresh</code>, <code>auth/logout</code>. Tokens from <code>POST /api/v1/auth/login</code>.</td>
+</tr>
+<tr>
+<td>Request body</td>
+<td>JSON, <code>Content-Type: application/json</code>. <strong>Body is nested under the resource key</strong> (<code>resource_params</code> helper): e.g. <code>{ "settlement": { … } }</code>, <code>{ "customer": { … } }</code>. Top-level flat is tolerated as a fallback but nested is canonical. GET filters are flat query params.</td>
+</tr>
+<tr>
+<td>File upload</td>
+<td>KYC images (A7) use <code>multipart/form-data</code> with <code>user[photo]</code>, <code>user[id_card_photo]</code>. All other write bodies are JSON.</td>
+</tr>
+<tr>
+<td>Money / litres</td>
+<td>Per <strong>Q1</strong>, litres &amp; meter readings are the source of truth; ₹ amounts are <strong>derived</strong> server-side from the product-catalog selling price. Clients send litres/readings; server returns both litres and the derived <code>amount</code>. Decimals serialize as JSON numbers (<code>.to_f</code>).</td>
+</tr>
+<tr>
+<td>Timestamps</td>
+<td>ISO-8601 strings (<code>created_at</code>, <code>starts_at</code>, …). Dates as <code>YYYY-MM-DD</code>.</td>
+</tr>
+<tr>
+<td>Pagination</td>
+<td>Envelope <code>{ "&lt;items&gt;": [...], "page": Int, "per_page": Int, "total": Int, "has_more": Bool }</code>. <code>page</code> query param, 1-based.</td>
+</tr>
+<tr>
+<td>Success codes</td>
+<td><code>200</code> read/update, <code>201</code> create, <code>204</code> no-content (logout/destroy).</td>
+</tr>
+<tr>
+<td>Error envelope</td>
+<td><code>{ "error": { "code": String, "message": String, "details": { field: [msgs] } } }</code> — <code>details</code> present only on validation failures.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="standard-error-codes-from-basecontroller-reusable-everywhere">Standard error codes (from <code>BaseController</code>, reusable everywhere)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>HTTP</th>
+<th><code>code</code></th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>400</td>
+<td><code>parameter_missing</code></td>
+<td>required top-level param absent</td>
+</tr>
+<tr>
+<td>401</td>
+<td><code>unauthorized</code> / <code>invalid_credentials</code></td>
+<td>missing/invalid bearer token; bad login</td>
+</tr>
+<tr>
+<td>403</td>
+<td><code>forbidden</code> / <code>account_inactive</code></td>
+<td>Pundit denial; admin-only hit by staff; inactive account</td>
+</tr>
+<tr>
+<td>404</td>
+<td><code>not_found</code> / <code>customer_not_found</code> / <code>vehicle_not_found</code></td>
+<td>record missing</td>
+</tr>
+<tr>
+<td>409</td>
+<td><code>delete_restricted</code></td>
+<td>destroy blocked by dependent history</td>
+</tr>
+<tr>
+<td>422</td>
+<td><code>validation_failed</code> (+ <code>details</code>)</td>
+<td>model validation; also <code>invalid_phone</code>, <code>invalid_vehicle</code>, <code>invalid_points</code>, <code>configuration_error</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Endpoint sections below list <strong>only endpoint-specific</strong> error cases; the standard set above always applies.</p>
+<hr />
+<h2 id="endpoint-index">Endpoint index</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Area</th>
+<th>Feature</th>
+<th>New / Changed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Product catalog</td>
+<td>A5</td>
+<td>New (admin CRUD) + Changed (<code>staff/catalog</code>)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Litres-based transactions</td>
+<td>Q1, D1, C5</td>
+<td>Changed (<code>staff/transactions</code>)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Daily Settlement</td>
+<td>D1–D10, G1</td>
+<td>New</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Customer capture (per-visit)</td>
+<td>B2</td>
+<td>New</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Customer master (driver/supervisor/owner + type)</td>
+<td>B1, E4</td>
+<td>Changed</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Global reward pause</td>
+<td>C4</td>
+<td>Changed (<code>admin/reward_rates</code>)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Admin pump assignment</td>
+<td>A10</td>
+<td>New</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Dashboard drill-through / cadence / type / churn</td>
+<td>E2–E6</td>
+<td>Changed + New</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Campaigns</td>
+<td>F1, F2</td>
+<td>New</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Notifications + targeting</td>
+<td>F3, F4</td>
+<td>Changed + New</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Operator KYC</td>
+<td>A7</td>
+<td>Changed (<code>admin/users</code>, multipart)</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Reports</td>
+<td>E1</td>
+<td>New</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Customer feedback / rating</td>
+<td>E7</td>
+<td>New</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="1-product-catalog-a5">1. Product catalog (A5)</h2>
+<p>Adds a first-class product catalog (fuels + lubricants/oils + AdBlue) with batch, MRP, selling price, and stock. Selling price is the number <code>TransactionCreator</code>/settlement read to derive ₹ from litres/qty.</p>
+<p><strong>Model note:</strong> new <code>products</code> table — <code>sl_num</code>, <code>name</code>, <code>category</code> (<code>fuel</code>|<code>lubricant</code>|<code>adblue</code>), <code>batch</code>, <code>unit_label</code> (e.g. <code>"20ml"</code>, <code>"5L"</code>, <code>"litre"</code>), <code>mrp</code> (decimal), <code>selling_price</code> (decimal), <code>fuel_type_code</code> (nullable FK, set for fuels), <code>current_stock</code> (decimal), <code>active</code> (bool).</p>
+<h3 id="11-get-apiv1adminproducts-list-new">1.1 <code>GET /api/v1/admin/products</code> — list — <strong>New</strong></h3>
+<p>Auth: admin. Purpose: catalog management screen.</p>
+<p>Query (all optional): <code>category</code> (<code>fuel</code>|<code>lubricant</code>|<code>adblue</code>), <code>active</code> (<code>true</code>/<code>false</code>), <code>q</code>.</p>
+<p>Response <code>200</code>:</p>
+<pre><code class="language-json">{
+  &quot;products&quot;: [
+    {
+      &quot;id&quot;: 12, &quot;sl_num&quot;: 6, &quot;name&quot;: &quot;10W30 800ml&quot;, &quot;category&quot;: &quot;lubricant&quot;,
+      &quot;batch&quot;: &quot;B-2207&quot;, &quot;unit_label&quot;: &quot;800ml&quot;,
+      &quot;mrp&quot;: 380.0, &quot;selling_price&quot;: 350.0,
+      &quot;fuel_type_code&quot;: null, &quot;current_stock&quot;: 42.0, &quot;active&quot;: true,
+      &quot;created_at&quot;: &quot;2026-07-21T09:00:00Z&quot;
+    }
+  ]
+}
+</code></pre>
+<h3 id="12-post-apiv1adminproducts-new">1.2 <code>POST /api/v1/admin/products</code> — <strong>New</strong></h3>
+<p>Auth: admin. Body:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>req</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td>enum</td>
+<td>yes</td>
+<td><code>fuel</code>|<code>lubricant</code>|<code>adblue</code></td>
+</tr>
+<tr>
+<td><code>batch</code></td>
+<td>string</td>
+<td>no</td>
+<td></td>
+</tr>
+<tr>
+<td><code>unit_label</code></td>
+<td>string</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>mrp</code></td>
+<td>number</td>
+<td>yes</td>
+<td>≥ 0</td>
+</tr>
+<tr>
+<td><code>selling_price</code></td>
+<td>number</td>
+<td>yes</td>
+<td>≥ 0</td>
+</tr>
+<tr>
+<td><code>fuel_type_code</code></td>
+<td>string</td>
+<td>cond</td>
+<td>required when <code>category=fuel</code>, must match a <code>FuelType.code</code></td>
+</tr>
+<tr>
+<td><code>current_stock</code></td>
+<td>number</td>
+<td>no</td>
+<td>default 0</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>bool</td>
+<td>no</td>
+<td>default true</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-json">{ &quot;product&quot;: { &quot;name&quot;: &quot;AdBlue 10L&quot;, &quot;category&quot;: &quot;adblue&quot;, &quot;unit_label&quot;: &quot;10L&quot;, &quot;mrp&quot;: 1080.0, &quot;selling_price&quot;: 1080.0 } }
+</code></pre>
+<p>Response <code>201</code>: single <code>product</code> object (as 1.1). Errors: <code>422 validation_failed</code> (blank name, negative price, <code>fuel_type_code</code> not found / missing for fuel).</p>
+<h3 id="13-patch-apiv1adminproductsid-new">1.3 <code>PATCH /api/v1/admin/products/:id</code> — <strong>New</strong></h3>
+<p>Auth: admin. Body: any subset of 1.2 fields under <code>product</code>. Response <code>200</code> product. Errors: <code>404 not_found</code>, <code>422</code>.</p>
+<h3 id="14-delete-apiv1adminproductsid-new">1.4 <code>DELETE /api/v1/admin/products/:id</code> — <strong>New</strong></h3>
+<p>Auth: admin. Response <code>200 { "message": "… removed successfully." }</code>. Errors: <code>409 delete_restricted</code> when settlement lube lines reference it (prefer soft-deactivate via 1.3 <code>active:false</code>).</p>
+<h3 id="15-get-apiv1staffcatalog-changed">1.5 <code>GET /api/v1/staff/catalog</code> — <strong>Changed</strong></h3>
+<p>Existing response returns <code>fuel_types</code> + <code>vehicle_kinds</code>. <strong>Add</strong> <code>products</code> (selling price + stock) so the FSM settlement and transaction screens can price litres/qty and show lube checkboxes.</p>
+<p>Response <code>200</code> (added key in <strong>bold</strong>):</p>
+<pre><code class="language-json">{
+  &quot;fuel_types&quot;: [ { &quot;code&quot;: &quot;ms&quot;, &quot;label&quot;: &quot;MS (Petrol)&quot; } ],
+  &quot;vehicle_kinds&quot;: [ { &quot;code&quot;: &quot;lcv&quot;, &quot;label&quot;: &quot;LCV&quot;, &quot;commercial&quot;: true } ],
+  &quot;products&quot;: [
+    { &quot;id&quot;: 1, &quot;name&quot;: &quot;HSD&quot;, &quot;category&quot;: &quot;fuel&quot;, &quot;fuel_type_code&quot;: &quot;hsd&quot;, &quot;unit_label&quot;: &quot;litre&quot;, &quot;selling_price&quot;: 98.95, &quot;current_stock&quot;: 12000.0 },
+    { &quot;id&quot;: 6, &quot;name&quot;: &quot;10W30 800ml&quot;, &quot;category&quot;: &quot;lubricant&quot;, &quot;unit_label&quot;: &quot;800ml&quot;, &quot;selling_price&quot;: 350.0, &quot;current_stock&quot;: 42.0 }
+  ]
+}
+</code></pre>
+<p>No new error cases (still authorized as <code>Customer :create?</code>).</p>
+<hr />
+<h2 id="2-litres-based-transactions-q1-d1-c5-changed">2. Litres-based transactions (Q1 / D1 / C5) — <strong>Changed</strong></h2>
+<p><code>POST /api/v1/staff/transactions</code> today accepts <code>fuel_amount</code> (₹) only. Per Q1, the client sends <strong>litres</strong> (and optionally the nozzle meter reading); the server derives <code>fuel_amount = litres × selling_price(nozzle.fuel_type)</code> and awards points on the derived ₹ exactly as <code>TransactionCreator</code> does today.</p>
+<h3 id="21-post-apiv1stafftransactions-changed">2.1 <code>POST /api/v1/staff/transactions</code> — <strong>Changed</strong></h3>
+<p>Auth: staff/admin. Body (<code>transaction</code>), changed/added fields in <strong>bold</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>req</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lookup_mode</code></td>
+<td>enum</td>
+<td>yes</td>
+<td><code>phone</code>|<code>vehicle</code> (unchanged)</td>
+</tr>
+<tr>
+<td><code>phone_number</code> / <code>vehicle_number</code> / <code>vehicle_id</code></td>
+<td>string/int</td>
+<td>cond</td>
+<td>customer resolution (unchanged)</td>
+</tr>
+<tr>
+<td><strong><code>litres</code></strong></td>
+<td>number</td>
+<td>cond</td>
+<td><strong>new</strong> — primary quantity; required unless <code>fuel_amount</code> sent</td>
+</tr>
+<tr>
+<td><strong><code>nozzle_reading</code></strong></td>
+<td>number</td>
+<td>no</td>
+<td><strong>new</strong> — meter reading at fill; stored for reconciliation with settlement</td>
+</tr>
+<tr>
+<td><code>fuel_amount</code></td>
+<td>number</td>
+<td>cond</td>
+<td>now <strong>optional/derived</strong>; if omitted, computed from <code>litres × selling_price</code>. If both sent and inconsistent → <code>422 amount_litres_mismatch</code></td>
+</tr>
+<tr>
+<td><code>fuel_pump_id</code> / <code>fuel_pump_nozzle_id</code></td>
+<td>int</td>
+<td>cond</td>
+<td>as today; nozzle drives the price/fuel type</td>
+</tr>
+<tr>
+<td><code>payment_mode</code></td>
+<td>enum</td>
+<td>yes</td>
+<td><code>cash</code>|<code>credit</code></td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-json">{ &quot;transaction&quot;: { &quot;lookup_mode&quot;: &quot;vehicle&quot;, &quot;vehicle_id&quot;: 88, &quot;litres&quot;: 35.5, &quot;nozzle_reading&quot;: 104233.5, &quot;fuel_pump_nozzle_id&quot;: 5, &quot;payment_mode&quot;: &quot;cash&quot; } }
+</code></pre>
+<p>Response <code>201</code> (added fields in <strong>bold</strong>):</p>
+<pre><code class="language-json">{
+  &quot;points_earned&quot;: 35, &quot;rewards_paused&quot;: false, &quot;new_total&quot;: 420,
+  &quot;message&quot;: &quot;+35 reward points added. Balance updated to 420.&quot;,
+  &quot;customer&quot;: { &quot;…CustomerLookupSerializer…&quot;: true },
+  &quot;transaction&quot;: {
+    &quot;id&quot;: 9001, &quot;litres&quot;: 35.5, &quot;unit_price&quot;: 98.95, &quot;fuel_amount&quot;: 3512.73,
+    &quot;nozzle_reading&quot;: 104233.5, &quot;payment_mode&quot;: &quot;cash&quot;,
+    &quot;pump&quot;: &quot;Pump 3&quot;, &quot;nozzle&quot;: &quot;N5 (HSD)&quot;, &quot;created_at&quot;: &quot;2026-07-21T10:12:00Z&quot;
+  }
+}
+</code></pre>
+<p>Endpoint errors: <code>422 amount_litres_mismatch</code>; <code>422 no_price_for_nozzle</code> (nozzle fuel type has no active catalog product to price from); existing <code>422 validation_failed</code>, <code>404 vehicle_not_found</code>.</p>
+<blockquote>
+<p><strong>Global pause interaction (C4):</strong> when <code>reward_setting.rewards_paused_globally</code> is true (see §6), <code>rewards_paused:true</code> and <code>points_earned:0</code> regardless of per-customer state; the transaction is still recorded.</p>
+</blockquote>
+<hr />
+<h2 id="3-daily-settlement-d1d10-g1-new">3. Daily Settlement (D1–D10, G1) — <strong>New</strong></h2>
+<p>Shift-end settlement per pump. FSM creates; admin views/edits current &amp; past (G1). One settlement = one <code>(fuel_pump, business_date, shift)</code> tuple.</p>
+<p><strong>Model note:</strong> <code>daily_settlements</code> (header) + child rows: <code>settlement_nozzle_readings</code>, <code>settlement_lube_lines</code>, <code>settlement_credit_lines</code>, <code>settlement_denominations</code>, <code>settlement_stock_receipts</code>, <code>settlement_decantations</code>. Header stores <code>fuel_pump_id</code>, <code>business_date</code>, <code>shift_label</code>, <code>fsm_name</code>, <code>phonepe_pos_amount</code>, <code>phonepe_scanner_amount</code>, <code>status</code> (<code>draft</code>|<code>submitted</code>), plus derived totals.</p>
+<p>Derivations (server-side, never trusted from client):
+- per nozzle: <code>total_litres = todays_reading − yesterday_reading</code>; <code>net_litres_sold = total_litres − testing_litres</code>; <code>amount = net_litres_sold × price</code>
+- <code>fuel_total = Σ amount</code>; <code>lube_total = Σ (qty × selling_price)</code>
+- <code>discounts_total</code>, <code>phonepe_total = pos + scanner</code>, <code>credit_total</code>
+- <code>final_amount_to_settle = (fuel_total + lube_total) − (discounts_total + phonepe_total + credit_total)</code>
+- <code>expected_cash = final_amount_to_settle</code>; <code>counted_cash = Σ (denomination × qty)</code>; <code>shortage = expected_cash − counted_cash</code></p>
+<h3 id="31-get-apiv1staffsettlementsnew-prefill-new">3.1 <code>GET /api/v1/staff/settlements/new</code> — prefill — <strong>New</strong></h3>
+<p>Auth: staff/admin. Purpose: build the blank settlement form for a pump with everything auto-populated (D1 yesterday reading, D2 lube catalog, D3 same-day discounts pulled from customer entries §4, prices from catalog).</p>
+<p>Query: <code>fuel_pump_id</code> (required; defaults to caller's My Pump if omitted), <code>business_date</code> (default today), <code>shift_label</code> (optional).</p>
+<p>Response <code>200</code>:</p>
+<pre><code class="language-json">{
+  &quot;fuel_pump&quot;: { &quot;id&quot;: 3, &quot;display_name&quot;: &quot;Pump 3&quot; },
+  &quot;business_date&quot;: &quot;2026-07-21&quot;,
+  &quot;nozzles&quot;: [
+    { &quot;nozzle_id&quot;: 5, &quot;label&quot;: &quot;N5&quot;, &quot;fuel_type_code&quot;: &quot;hsd&quot;, &quot;fuel_type&quot;: &quot;HSD&quot;,
+      &quot;yesterday_reading&quot;: 104200.0, &quot;price&quot;: 98.95 }
+  ],
+  &quot;lube_products&quot;: [
+    { &quot;product_id&quot;: 6, &quot;name&quot;: &quot;10W30 800ml&quot;, &quot;selling_price&quot;: 350.0, &quot;opening_stock&quot;: 42.0 }
+  ],
+  &quot;discount_lines&quot;: [
+    { &quot;customer_entry_id&quot;: 55, &quot;transport_name&quot;: &quot;ABC Logistics&quot;, &quot;litres&quot;: 136.0,
+      &quot;discount_amount&quot;: 272.0, &quot;driver_name&quot;: &quot;Ravi&quot;, &quot;driver_mobile&quot;: &quot;9800000000&quot;,
+      &quot;manager_name&quot;: null, &quot;owner_name&quot;: null }
+  ],
+  &quot;fuel_types_for_stock&quot;: [ { &quot;code&quot;: &quot;ms&quot;, &quot;name&quot;: &quot;MS&quot; }, { &quot;code&quot;: &quot;hsd&quot;, &quot;name&quot;: &quot;HSD&quot; } ],
+  &quot;denomination_units&quot;: [500, 100, 50, 20, 10, 5]
+}
+</code></pre>
+<h3 id="32-post-apiv1staffsettlements-new">3.2 <code>POST /api/v1/staff/settlements</code> — <strong>New</strong></h3>
+<p>Auth: staff/admin. Body (<code>settlement</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>req</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fuel_pump_id</code></td>
+<td>int</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>business_date</code></td>
+<td>date</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>shift_label</code></td>
+<td>string</td>
+<td>no</td>
+<td>e.g. <code>"6-2"</code></td>
+</tr>
+<tr>
+<td><code>fsm_name</code></td>
+<td>string</td>
+<td>yes</td>
+<td>D-settlement "Name of FSM"</td>
+</tr>
+<tr>
+<td><code>nozzle_readings</code></td>
+<td>array</td>
+<td>yes</td>
+<td><code>[{ nozzle_id, todays_reading, testing_litres }]</code> (yesterday derived server-side)</td>
+</tr>
+<tr>
+<td><code>lube_lines</code></td>
+<td>array</td>
+<td>no</td>
+<td><code>[{ product_id, qty, opening_stock, closing_stock }]</code></td>
+</tr>
+<tr>
+<td><code>credit_lines</code></td>
+<td>array</td>
+<td>no</td>
+<td><code>[{ kind, litres, discount_amount, vehicle_number, label }]</code> — <code>kind</code> ∈ <code>fleet_otp</code>|<code>tt</code></td>
+</tr>
+<tr>
+<td><code>phonepe_pos_amount</code></td>
+<td>number</td>
+<td>no</td>
+<td></td>
+</tr>
+<tr>
+<td><code>phonepe_scanner_amount</code></td>
+<td>number</td>
+<td>no</td>
+<td></td>
+</tr>
+<tr>
+<td><code>denominations</code></td>
+<td>array</td>
+<td>no</td>
+<td><code>[{ denomination, qty }]</code></td>
+</tr>
+<tr>
+<td><code>stock_received</code></td>
+<td>array</td>
+<td>no</td>
+<td><code>[{ fuel_type_code, litres }]</code> (D8)</td>
+</tr>
+<tr>
+<td><code>decantations</code></td>
+<td>array</td>
+<td>no</td>
+<td><code>[{ tank_label, opening_kl, closing_kl }]</code> (D8)</td>
+</tr>
+<tr>
+<td><code>rate_comparison</code></td>
+<td>object</td>
+<td>no</td>
+<td><code>{ competitor: "JIO-BP", competitor_ms, competitor_hsd, own_ms, own_hsd }</code> (D10)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>enum</td>
+<td>no</td>
+<td><code>draft</code>|<code>submitted</code>, default <code>submitted</code></td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-json">{
+  &quot;settlement&quot;: {
+    &quot;fuel_pump_id&quot;: 3, &quot;business_date&quot;: &quot;2026-07-21&quot;, &quot;fsm_name&quot;: &quot;Suresh&quot;,
+    &quot;nozzle_readings&quot;: [ { &quot;nozzle_id&quot;: 5, &quot;todays_reading&quot;: 104460.0, &quot;testing_litres&quot;: 5.0 } ],
+    &quot;lube_lines&quot;: [ { &quot;product_id&quot;: 6, &quot;qty&quot;: 3, &quot;opening_stock&quot;: 42.0, &quot;closing_stock&quot;: 39.0 } ],
+    &quot;credit_lines&quot;: [ { &quot;kind&quot;: &quot;fleet_otp&quot;, &quot;litres&quot;: 136.0, &quot;discount_amount&quot;: 272.0, &quot;vehicle_number&quot;: &quot;NL01AE2471&quot;, &quot;label&quot;: &quot;OTP 136 Lts&quot; } ],
+    &quot;phonepe_pos_amount&quot;: 4200.0, &quot;phonepe_scanner_amount&quot;: 1500.0,
+    &quot;denominations&quot;: [ { &quot;denomination&quot;: 500, &quot;qty&quot;: 10 }, { &quot;denomination&quot;: 100, &quot;qty&quot;: 12 } ],
+    &quot;stock_received&quot;: [ { &quot;fuel_type_code&quot;: &quot;hsd&quot;, &quot;litres&quot;: 12000.0 } ],
+    &quot;decantations&quot;: [ { &quot;tank_label&quot;: &quot;T1-HSD&quot;, &quot;opening_kl&quot;: 8.2, &quot;closing_kl&quot;: 20.2 } ],
+    &quot;status&quot;: &quot;submitted&quot;
+  }
+}
+</code></pre>
+<p>Response <code>201</code> — full settlement with derived totals:</p>
+<pre><code class="language-json">{
+  &quot;settlement&quot;: {
+    &quot;id&quot;: 77, &quot;fuel_pump&quot;: { &quot;id&quot;: 3, &quot;display_name&quot;: &quot;Pump 3&quot; },
+    &quot;business_date&quot;: &quot;2026-07-21&quot;, &quot;shift_label&quot;: null, &quot;fsm_name&quot;: &quot;Suresh&quot;, &quot;status&quot;: &quot;submitted&quot;,
+    &quot;nozzle_readings&quot;: [
+      { &quot;nozzle_id&quot;: 5, &quot;label&quot;: &quot;N5&quot;, &quot;fuel_type&quot;: &quot;HSD&quot;, &quot;yesterday_reading&quot;: 104200.0,
+        &quot;todays_reading&quot;: 104460.0, &quot;total_litres&quot;: 260.0, &quot;testing_litres&quot;: 5.0,
+        &quot;net_litres_sold&quot;: 255.0, &quot;price&quot;: 98.95, &quot;amount&quot;: 25232.25 }
+    ],
+    &quot;lube_lines&quot;: [ { &quot;product_id&quot;: 6, &quot;name&quot;: &quot;10W30 800ml&quot;, &quot;qty&quot;: 3, &quot;selling_price&quot;: 350.0, &quot;amount&quot;: 1050.0, &quot;opening_stock&quot;: 42.0, &quot;closing_stock&quot;: 39.0 } ],
+    &quot;credit_lines&quot;: [ { &quot;id&quot;: 1, &quot;kind&quot;: &quot;fleet_otp&quot;, &quot;litres&quot;: 136.0, &quot;discount_amount&quot;: 272.0, &quot;vehicle_number&quot;: &quot;NL01AE2471&quot;, &quot;label&quot;: &quot;OTP 136 Lts&quot; } ],
+    &quot;totals&quot;: {
+      &quot;fuel_total&quot;: 25232.25, &quot;lube_total&quot;: 1050.0, &quot;discounts_total&quot;: 272.0,
+      &quot;phonepe_total&quot;: 5700.0, &quot;credit_total&quot;: 13460.0,
+      &quot;final_amount_to_settle&quot;: 6850.25,
+      &quot;expected_cash&quot;: 6850.25, &quot;counted_cash&quot;: 6200.0, &quot;shortage&quot;: 650.25
+    },
+    &quot;created_at&quot;: &quot;2026-07-21T18:05:00Z&quot;
+  }
+}
+</code></pre>
+<p>Errors: <code>422 validation_failed</code> (details per child collection, e.g. <code>nozzle_readings[0].todays_reading</code> &lt; yesterday → <code>reading_regression</code>); <code>409 settlement_exists</code> when a submitted settlement already exists for the <code>(pump, date, shift)</code>.</p>
+<h3 id="33-get-apiv1staffsettlementsid-new">3.3 <code>GET /api/v1/staff/settlements/:id</code> — <strong>New</strong></h3>
+<p>Auth: staff/admin (staff limited to own pump). Response <code>200</code>: settlement object (as 3.2). Errors <code>404</code>, <code>403</code>.</p>
+<h3 id="34-patch-apiv1staffsettlementsid-new">3.4 <code>PATCH /api/v1/staff/settlements/:id</code> — <strong>New</strong></h3>
+<p>Auth: staff/admin. Body: any subset of 3.2 (child arrays replace-in-full). Response <code>200</code> recomputed settlement. Errors <code>404</code>, <code>422</code>.</p>
+<h3 id="35-get-apiv1adminsettlements-list-across-pumps-g1-new">3.5 <code>GET /api/v1/admin/settlements</code> — list across pumps (G1) — <strong>New</strong></h3>
+<p>Auth: admin. Query: <code>fuel_pump_id</code>, <code>start_date</code>, <code>end_date</code>, <code>status</code>, <code>page</code>. Paginated envelope:</p>
+<pre><code class="language-json">{ &quot;settlements&quot;: [ { &quot;id&quot;: 77, &quot;fuel_pump&quot;: {&quot;id&quot;:3,&quot;display_name&quot;:&quot;Pump 3&quot;}, &quot;business_date&quot;: &quot;2026-07-21&quot;, &quot;fsm_name&quot;: &quot;Suresh&quot;, &quot;final_amount_to_settle&quot;: 6850.25, &quot;shortage&quot;: 650.25, &quot;status&quot;: &quot;submitted&quot; } ],
+  &quot;page&quot;: 1, &quot;per_page&quot;: 10, &quot;total&quot;: 1, &quot;has_more&quot;: false }
+</code></pre>
+<h3 id="36-get-apiv1adminsettlementsid-patch-apiv1adminsettlementsid-new">3.6 <code>GET /api/v1/admin/settlements/:id</code> / <code>PATCH /api/v1/admin/settlements/:id</code> — <strong>New</strong></h3>
+<p>Auth: admin. Same shapes as 3.3/3.4 but unrestricted by pump; admin may edit past dates (G1 "edit current/past days").</p>
+<hr />
+<h2 id="4-customer-capture-per-visit-entry-b2-new">4. Customer capture — per-visit entry (B2) — <strong>New</strong></h2>
+<p>The FSM <code>CustomerDetailsEntry</code> sheet: captured many times per shift, independent of the loyalty transaction. Feeds §3.1 <code>discount_lines</code>.</p>
+<p><strong>Model note:</strong> <code>customer_entries</code> — <code>business_date</code>, <code>vehicle_number</code>, <code>driver_name</code>, <code>driver_mobile</code>, <code>litres</code>, <code>fuel_pump_id</code>, <code>discount_amount</code>, <code>fleet_otp</code> (bool), <code>transport_name</code>, <code>manager_name</code>, <code>manager_mobile</code>, <code>owner_name</code>, <code>owner_mobile</code>, <code>approx_vehicles</code> (int), <code>user_id</code> (capturing FSM), optional <code>customer_id</code> link.</p>
+<h3 id="41-post-apiv1staffcustomer_entries-new">4.1 <code>POST /api/v1/staff/customer_entries</code> — <strong>New</strong></h3>
+<p>Auth: staff/admin. Body (<code>customer_entry</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>req</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>business_date</code></td>
+<td>date</td>
+<td>no</td>
+<td>default today</td>
+</tr>
+<tr>
+<td><code>vehicle_number</code></td>
+<td>string</td>
+<td>yes</td>
+<td>normalized server-side</td>
+</tr>
+<tr>
+<td><code>driver_name</code></td>
+<td>string</td>
+<td>no</td>
+<td></td>
+</tr>
+<tr>
+<td><code>driver_mobile</code></td>
+<td>string</td>
+<td>no</td>
+<td>10-digit</td>
+</tr>
+<tr>
+<td><code>litres</code></td>
+<td>number</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>fuel_pump_id</code></td>
+<td>int</td>
+<td>no</td>
+<td>defaults to FSM's My Pump; overridable</td>
+</tr>
+<tr>
+<td><code>discount_amount</code></td>
+<td>number</td>
+<td>no</td>
+<td>default 0</td>
+</tr>
+<tr>
+<td><code>fleet_otp</code></td>
+<td>bool</td>
+<td>no</td>
+<td>default false</td>
+</tr>
+<tr>
+<td><code>transport_name</code></td>
+<td>string</td>
+<td>no</td>
+<td></td>
+</tr>
+<tr>
+<td><code>manager_name</code> / <code>manager_mobile</code></td>
+<td>string</td>
+<td>no</td>
+<td></td>
+</tr>
+<tr>
+<td><code>owner_name</code> / <code>owner_mobile</code></td>
+<td>string</td>
+<td>no</td>
+<td></td>
+</tr>
+<tr>
+<td><code>approx_vehicles</code></td>
+<td>int</td>
+<td>no</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Response <code>201</code>:</p>
+<pre><code class="language-json">{ &quot;customer_entry&quot;: { &quot;id&quot;: 55, &quot;business_date&quot;: &quot;2026-07-21&quot;, &quot;vehicle_number&quot;: &quot;NL01AE2471&quot;,
+  &quot;driver_name&quot;: &quot;Ravi&quot;, &quot;driver_mobile&quot;: &quot;9800000000&quot;, &quot;litres&quot;: 136.0, &quot;fuel_pump_id&quot;: 3,
+  &quot;discount_amount&quot;: 272.0, &quot;fleet_otp&quot;: true, &quot;transport_name&quot;: &quot;ABC Logistics&quot;,
+  &quot;manager_name&quot;: null, &quot;owner_name&quot;: null, &quot;approx_vehicles&quot;: 12,
+  &quot;created_at&quot;: &quot;2026-07-21T14:00:00Z&quot; } }
+</code></pre>
+<p>Errors: <code>422 invalid_vehicle</code>, <code>422 validation_failed</code>.</p>
+<h3 id="42-get-apiv1staffcustomer_entries-new">4.2 <code>GET /api/v1/staff/customer_entries</code> — <strong>New</strong></h3>
+<p>Auth: staff/admin. Query: <code>date</code> (default today), <code>fuel_pump_id</code>, <code>vehicle_number</code>, <code>page</code>. Paginated <code>customer_entries</code> envelope (rows as 4.1). Used to review the day and to seed settlement discounts.</p>
+<h3 id="43-patch-apiv1staffcustomer_entriesid-delete-id-new">4.3 <code>PATCH /api/v1/staff/customer_entries/:id</code> / <code>DELETE …/:id</code> — <strong>New</strong></h3>
+<p>Auth: staff/admin (own captures; admin any). Standard update/<code>204</code>. Errors <code>404</code>, <code>422</code>.</p>
+<hr />
+<h2 id="5-customer-master-contacts-type-b1-e4-changed">5. Customer master — contacts + type (B1, E4) — <strong>Changed</strong></h2>
+<p>Extends the customer record from "name + single phone (+ commercial contact)" to the full driver/supervisor/owner triple, a <code>contacted_by</code> marker, and a <code>customer_type</code>.</p>
+<p><strong>Model note (added to <code>customers</code>):</strong> <code>driver_name</code>, <code>driver_mobile</code>, <code>supervisor_name</code>, <code>supervisor_mobile</code>, <code>owner_name</code>, <code>owner_mobile</code>, <code>contacted_by</code> (<code>owner</code>|<code>supervisor</code>|<code>driver</code>|null), <code>customer_type</code> (<code>otp</code>|<code>credit</code>|<code>drivein</code>|null — taxonomy <em>to confirm</em>).</p>
+<h3 id="51-post-apiv1staffcustomers-patch-apiv1staffcustomersid-changed">5.1 <code>POST /api/v1/staff/customers</code> &amp; <code>PATCH /api/v1/staff/customers/:id</code> — <strong>Changed</strong></h3>
+<p>Auth: staff/admin. Body (<code>customer</code>) — existing fields plus <strong>new</strong> (all optional):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>driver_name</code>, <code>driver_mobile</code></td>
+<td>string</td>
+<td></td>
+</tr>
+<tr>
+<td><code>supervisor_name</code>, <code>supervisor_mobile</code></td>
+<td>string</td>
+<td></td>
+</tr>
+<tr>
+<td><code>owner_name</code>, <code>owner_mobile</code></td>
+<td>string</td>
+<td></td>
+</tr>
+<tr>
+<td><code>contacted_by</code></td>
+<td>enum</td>
+<td><code>owner</code>|<code>supervisor</code>|<code>driver</code></td>
+</tr>
+<tr>
+<td><code>customer_type</code></td>
+<td>enum</td>
+<td><code>otp</code>|<code>credit</code>|<code>drivein</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Existing initial-vehicle fields (<code>vehicle_number</code>, <code>fuel_type</code>, <code>vehicle_kind</code>, <code>commercial_*</code>) unchanged. Response: <code>CustomerProfileSerializer</code> extended with the new fields. Errors: existing <code>422 validation_failed</code>; <code>422</code> for unknown enum values.</p>
+<h3 id="52-get-apiv1staffcustomersid-lookup-changed">5.2 <code>GET /api/v1/staff/customers/:id</code> &amp; <code>/lookup</code> — <strong>Changed</strong></h3>
+<p>Serializers (<code>CustomerProfileSerializer</code>, <code>CustomerLookupSerializer</code>) gain the contact triple, <code>contacted_by</code>, and <code>customer_type</code>. No request change.</p>
+<hr />
+<h2 id="6-global-reward-pause-c4-changed">6. Global reward pause (C4) — <strong>Changed</strong></h2>
+<p>Adds an outlet-wide pause switch alongside the existing per-customer pause. Belongs to the reward-settings endpoint, not a new route.</p>
+<p><strong>Model note:</strong> <code>reward_settings.rewards_paused_globally</code> (bool, default false).</p>
+<h3 id="61-get-apiv1adminreward_rates-changed">6.1 <code>GET /api/v1/admin/reward_rates</code> — <strong>Changed</strong></h3>
+<p><code>reward_setting</code> object gains <code>rewards_paused_globally</code>:</p>
+<pre><code class="language-json">{ &quot;reward_setting&quot;: { &quot;rupees_per_reward_unit&quot;: 100.0, &quot;cash_value_per_point&quot;: 1.0,
+  &quot;minimum_redeemable_points&quot;: 50, &quot;rewards_paused_globally&quot;: false }, &quot;…&quot;: &quot;…&quot; }
+</code></pre>
+<h3 id="62-patch-apiv1adminreward_rates-changed">6.2 <code>PATCH /api/v1/admin/reward_rates</code> — <strong>Changed</strong></h3>
+<p>The <code>reward_setting</code> param group accepts <code>rewards_paused_globally</code> (bool):</p>
+<pre><code class="language-json">{ &quot;reward_setting&quot;: { &quot;rewards_paused_globally&quot;: true } }
+</code></pre>
+<p>Response <code>200</code>: updated payload + <code>message</code>. Precedence unchanged (<code>reward_setting</code> group wins over rate groups). Effect: §2.1 stops awarding points while true.</p>
+<blockquote>
+<p><strong>S-PAUSE constraint:</strong> this toggle is admin-only (<code>/admin</code> namespace); the staff namespace has no route to it.</p>
+</blockquote>
+<hr />
+<h2 id="7-admin-pump-assignment-a10-new">7. Admin pump assignment (A10) — <strong>New</strong></h2>
+<p>Today assignment is staff self-service only (<code>/api/v1/my_pump</code>). Adds an admin path to assign any operator to a pump + nozzles.</p>
+<h3 id="71-get-apiv1adminstaff_membersidpump_assignment-new">7.1 <code>GET /api/v1/admin/staff_members/:id/pump_assignment</code> — <strong>New</strong></h3>
+<p>Auth: admin. Response <code>200</code>:</p>
+<pre><code class="language-json">{ &quot;user&quot;: { &quot;id&quot;: 42, &quot;name&quot;: &quot;Suresh&quot; },
+  &quot;fuel_pump_id&quot;: 3,
+  &quot;assigned_fuel_pump_nozzle_ids&quot;: [5, 6],
+  &quot;available_pumps&quot;: [ { &quot;id&quot;: 3, &quot;display_name&quot;: &quot;Pump 3&quot;, &quot;nozzles&quot;: [ { &quot;id&quot;: 5, &quot;label&quot;: &quot;N5 (HSD)&quot; } ] } ] }
+</code></pre>
+<h3 id="72-patch-apiv1adminstaff_membersidpump_assignment-new">7.2 <code>PATCH /api/v1/admin/staff_members/:id/pump_assignment</code> — <strong>New</strong></h3>
+<p>Auth: admin. Body (<code>user</code>): <code>fuel_pump_id</code> (int, nullable to clear), <code>assigned_fuel_pump_nozzle_ids</code> (int[]). Reuses <code>User#update_pump_assignment</code>. Response <code>200</code> (as 7.1) + <code>message</code>. Errors: <code>404 not_found</code>, <code>422 validation_failed</code> (nozzle not on pump).</p>
+<hr />
+<h2 id="8-dashboard-drill-through-cadence-type-churn-e2e6-changed-new">8. Dashboard — drill-through / cadence / type / churn (E2–E6) — <strong>Changed + New</strong></h2>
+<h3 id="81-get-apiv1admindashboard-changed">8.1 <code>GET /api/v1/admin/dashboard</code> — <strong>Changed</strong></h3>
+<p>Existing overview payload (<code>Admin::Dashboard::OverviewReport</code>) gains, per feature set:
+- <strong>E2</strong> tile targets: each summary tile carries a <code>segment</code> key usable with 8.2.
+- <strong>E4</strong> <code>customer_type_breakdown</code>: counts by <code>otp</code>/<code>credit</code>/<code>drivein</code>.
+- <strong>E5</strong> <code>contacted</code>: <code>{ contacted_count, last_contacted_at, conversion_probability }</code>.</p>
+<p>Added keys (existing keys unchanged):</p>
+<pre><code class="language-json">{
+  &quot;summary&quot;: [ { &quot;key&quot;: &quot;today&quot;, &quot;label&quot;: &quot;Customers today&quot;, &quot;value&quot;: 34, &quot;segment&quot;: &quot;today&quot; } ],
+  &quot;customer_type_breakdown&quot;: { &quot;otp&quot;: 12, &quot;credit&quot;: 40, &quot;drivein&quot;: 88 },
+  &quot;contacted&quot;: { &quot;contacted_count&quot;: 21, &quot;last_contacted_at&quot;: &quot;2026-07-20T17:00:00Z&quot;, &quot;conversion_probability&quot;: 0.38 },
+  &quot;…existing charts/rewards/filters/meta…&quot;: true
+}
+</code></pre>
+<p>Query filters unchanged (<code>preset</code>, <code>start_date</code>, <code>end_date</code>, <code>segment</code>, <code>fuel_type</code>).</p>
+<h3 id="82-get-apiv1admindashboardcustomers-tile-drill-through-e2-new">8.2 <code>GET /api/v1/admin/dashboard/customers</code> — tile drill-through (E2) — <strong>New</strong></h3>
+<p>Auth: admin. Query: <code>segment</code> (<code>today</code>|<code>this_week</code>|<code>last_30_days</code>|<code>last_month</code>|<code>otp</code>|<code>credit</code>|<code>drivein</code>|<code>lost</code>), plus the same date filters, <code>page</code>. Paginated:</p>
+<pre><code class="language-json">{ &quot;customers&quot;: [ { &quot;id&quot;: 7, &quot;name&quot;: &quot;ABC Logistics&quot;, &quot;phone_number&quot;: &quot;9800000000&quot;,
+  &quot;customer_type&quot;: &quot;credit&quot;, &quot;last_visit_at&quot;: &quot;2026-07-19T10:00:00Z&quot;,
+  &quot;visits_in_range&quot;: 4, &quot;total_points&quot;: 320 } ],
+  &quot;page&quot;: 1, &quot;per_page&quot;: 20, &quot;total&quot;: 1, &quot;has_more&quot;: false }
+</code></pre>
+<h3 id="83-get-apiv1admincustomersidcadence-per-customer-cadence-e3-new">8.3 <code>GET /api/v1/admin/customers/:id/cadence</code> — per-customer cadence (E3) — <strong>New</strong></h3>
+<p>Auth: admin. Response <code>200</code>:</p>
+<pre><code class="language-json">{ &quot;customer&quot;: { &quot;id&quot;: 7, &quot;name&quot;: &quot;ABC Logistics&quot;, &quot;customer_type&quot;: &quot;credit&quot;, &quot;transport_name&quot;: &quot;ABC Logistics&quot; },
+  &quot;last_visit_at&quot;: &quot;2026-07-19T10:00:00Z&quot;,
+  &quot;cadence&quot;: { &quot;avg_days_between_visits&quot;: 3.2, &quot;bucket&quot;: &quot;biweekly&quot;, &quot;visits_last_30_days&quot;: 9 },
+  &quot;recent_visits&quot;: [ { &quot;date&quot;: &quot;2026-07-19&quot;, &quot;litres&quot;: 136.0, &quot;amount&quot;: 13460.0 } ] }
+</code></pre>
+<p><code>bucket</code> ∈ <code>daily</code>|<code>weekly</code>|<code>biweekly</code>|<code>irregular</code>.</p>
+<h3 id="84-get-apiv1admindashboardlost_customers-churn-e6-new">8.4 <code>GET /api/v1/admin/dashboard/lost_customers</code> — churn (E6) — <strong>New</strong></h3>
+<p>Auth: admin. Query: <code>window</code> (<code>week</code>|<code>month</code>, default <code>week</code>), <code>page</code>. "Visited previous window, not current window." Paginated <code>customers</code> (as 8.2, plus <code>last_visit_at</code>, <code>days_since_last_visit</code>).</p>
+<hr />
+<h2 id="9-campaigns-f1-f2-new">9. Campaigns (F1, F2) — <strong>New</strong></h2>
+<p>Rule: min purchase per period → discount/gift, targeted at an individual, a customer-type, or a hand-picked list.</p>
+<p><strong>Model note:</strong> <code>campaigns</code> — <code>name</code>, <code>min_purchase_amount</code>, <code>period</code> (<code>weekly</code>|<code>monthly</code>), <code>reward_kind</code> (<code>discount</code>|<code>gift</code>), <code>reward_value</code> (decimal), <code>reward_note</code> (string), <code>target_type</code> (<code>individual</code>|<code>customer_type</code>|<code>selected</code>), <code>target_customer_type</code> (nullable enum), <code>starts_at</code>, <code>ends_at</code>, <code>active</code>; join <code>campaign_customers</code>.</p>
+<h3 id="91-get-apiv1admincampaigns-new">9.1 <code>GET /api/v1/admin/campaigns</code> — <strong>New</strong></h3>
+<p>Auth: admin. Query: <code>active</code>, <code>page</code>. Paginated <code>campaigns</code>:</p>
+<pre><code class="language-json">{ &quot;campaigns&quot;: [ { &quot;id&quot;: 3, &quot;name&quot;: &quot;Monsoon fleet&quot;, &quot;min_purchase_amount&quot;: 50000.0,
+  &quot;period&quot;: &quot;monthly&quot;, &quot;reward_kind&quot;: &quot;discount&quot;, &quot;reward_value&quot;: 2.0, &quot;reward_note&quot;: &quot;₹2/L&quot;,
+  &quot;target_type&quot;: &quot;customer_type&quot;, &quot;target_customer_type&quot;: &quot;otp&quot;, &quot;audience_size&quot;: 12,
+  &quot;starts_at&quot;: &quot;2026-07-01&quot;, &quot;ends_at&quot;: &quot;2026-07-31&quot;, &quot;active&quot;: true } ],
+  &quot;page&quot;: 1, &quot;per_page&quot;: 10, &quot;total&quot;: 1, &quot;has_more&quot;: false }
+</code></pre>
+<h3 id="92-post-apiv1admincampaigns-new">9.2 <code>POST /api/v1/admin/campaigns</code> — <strong>New</strong></h3>
+<p>Auth: admin. Body (<code>campaign</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>req</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>min_purchase_amount</code></td>
+<td>number</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>period</code></td>
+<td>enum</td>
+<td>yes</td>
+<td><code>weekly</code>|<code>monthly</code></td>
+</tr>
+<tr>
+<td><code>reward_kind</code></td>
+<td>enum</td>
+<td>yes</td>
+<td><code>discount</code>|<code>gift</code></td>
+</tr>
+<tr>
+<td><code>reward_value</code></td>
+<td>number</td>
+<td>cond</td>
+<td>required for <code>discount</code></td>
+</tr>
+<tr>
+<td><code>reward_note</code></td>
+<td>string</td>
+<td>no</td>
+<td>e.g. gift description</td>
+</tr>
+<tr>
+<td><code>target_type</code></td>
+<td>enum</td>
+<td>yes</td>
+<td><code>individual</code>|<code>customer_type</code>|<code>selected</code></td>
+</tr>
+<tr>
+<td><code>target_customer_type</code></td>
+<td>enum</td>
+<td>cond</td>
+<td>required when <code>target_type=customer_type</code></td>
+</tr>
+<tr>
+<td><code>customer_ids</code></td>
+<td>int[]</td>
+<td>cond</td>
+<td>required when <code>target_type</code> ∈ <code>individual</code>|<code>selected</code></td>
+</tr>
+<tr>
+<td><code>starts_at</code>, <code>ends_at</code></td>
+<td>date</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>bool</td>
+<td>no</td>
+<td>default true</td>
+</tr>
+</tbody>
+</table></div>
+<p>Response <code>201</code>: campaign object (as 9.1). Errors: <code>422 validation_failed</code> (bad target combo → <code>details.target_type</code>), <code>422</code> empty <code>customer_ids</code> for selected/individual.</p>
+<h3 id="93-get-apiv1admincampaignsid-patch-id-delete-id-new">9.3 <code>GET /api/v1/admin/campaigns/:id</code> · <code>PATCH …/:id</code> · <code>DELETE …/:id</code> — <strong>New</strong></h3>
+<p>Auth: admin. Standard read/update/<code>200</code>-message-delete. <code>PATCH</code> accepts any 9.2 subset.</p>
+<h3 id="94-post-apiv1admincampaignsidpreview_audience-new">9.4 <code>POST /api/v1/admin/campaigns/:id/preview_audience</code> — <strong>New</strong></h3>
+<p>Auth: admin. Purpose: resolve the targeted customer set before saving/sending (no side effects). Body: optional overrides (same target fields as 9.2) to preview an unsaved rule. Response <code>200</code>:</p>
+<pre><code class="language-json">{ &quot;audience_size&quot;: 12, &quot;sample&quot;: [ { &quot;id&quot;: 7, &quot;name&quot;: &quot;ABC Logistics&quot;, &quot;customer_type&quot;: &quot;otp&quot; } ] }
+</code></pre>
+<hr />
+<h2 id="10-notifications-targeting-f3-f4-changed-new">10. Notifications + targeting (F3, F4) — <strong>Changed + New</strong></h2>
+<p>Existing broadcast is untargeted, push-only. Adds an audience selector, channel selector (push / WhatsApp / SMS — provider <strong>out of scope</strong>, see note), an optional attached offer, and an auto loyalty-bonus trigger.</p>
+<blockquote>
+<p><strong>Provider note (per Q3):</strong> no OTP/SMS provider is wired. <code>channel</code> values other than <code>push</code> are accepted and recorded, but non-push delivery returns <code>queued</code> status; actual WhatsApp/SMS dispatch is a later integration. Clients must handle <code>channel_status</code> per channel.</p>
+</blockquote>
+<h3 id="101-post-apiv1adminnotificationssend-changed">10.1 <code>POST /api/v1/admin/notifications/send</code> — <strong>Changed</strong></h3>
+<p>Auth: admin. Body — existing <code>notification[title,message]</code> plus <strong>new</strong> targeting/channel/offer:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>req</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>notification[title]</code></td>
+<td>string</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>notification[message]</code></td>
+<td>string</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>notification[audience]</code></td>
+<td>object</td>
+<td>no</td>
+<td>default <code>{ "type": "all" }</code>. <code>type</code> ∈ <code>all</code>|<code>customer_type</code>|<code>selected</code>|<code>campaign</code>; with <code>customer_type</code> → <code>value</code>; <code>selected</code> → <code>customer_ids</code>; <code>campaign</code> → <code>campaign_id</code></td>
+</tr>
+<tr>
+<td><code>notification[channels]</code></td>
+<td>string[]</td>
+<td>no</td>
+<td>subset of <code>["push","whatsapp","sms"]</code>, default <code>["push"]</code></td>
+</tr>
+<tr>
+<td><code>notification[offer]</code></td>
+<td>object</td>
+<td>no</td>
+<td><code>{ campaign_id }</code> or <code>{ title, detail, valid_till }</code> — rendered into the message payload</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-json">{ &quot;notification&quot;: { &quot;title&quot;: &quot;Monsoon offer&quot;, &quot;message&quot;: &quot;₹2/L off for fleet cards&quot;,
+  &quot;audience&quot;: { &quot;type&quot;: &quot;customer_type&quot;, &quot;value&quot;: &quot;otp&quot; },
+  &quot;channels&quot;: [&quot;push&quot;], &quot;offer&quot;: { &quot;campaign_id&quot;: 3 } } }
+</code></pre>
+<p>Response <code>200</code>:</p>
+<pre><code class="language-json">{ &quot;sent&quot;: 12, &quot;failed&quot;: 0, &quot;audience_size&quot;: 12,
+  &quot;channel_status&quot;: { &quot;push&quot;: &quot;sent&quot;, &quot;whatsapp&quot;: &quot;queued&quot;, &quot;sms&quot;: &quot;queued&quot; } }
+</code></pre>
+<p>Errors: <code>422 configuration_error</code> (Firebase unconfigured — unchanged), <code>422 validation_failed</code> (bad audience combo).</p>
+<h3 id="102-post-apiv1adminnotificationsloyalty_bonus-auto-loyalty-push-f3-new">10.2 <code>POST /api/v1/admin/notifications/loyalty_bonus</code> — auto loyalty push (F3) — <strong>New</strong></h3>
+<p>Auth: admin. Purpose: push accumulated-loyalty-bonus notifications to customers who crossed a points threshold. Body (<code>notification</code>): <code>min_points</code> (int, default = <code>reward_setting.minimum_redeemable_points</code>), <code>template</code> (string, supports <code>{name}</code>/<code>{points}</code> tokens), <code>channels</code> (as 10.1). Response <code>200</code>: <code>{ "sent": Int, "audience_size": Int, "channel_status": {…} }</code>.</p>
+<h3 id="103-post-apiv1adminschedules-patch-id-changed">10.3 <code>POST /api/v1/admin/schedules</code> / <code>PATCH …/:id</code> — <strong>Changed</strong></h3>
+<p><code>notification_schedule</code> param group gains optional <code>audience</code> (object, as 10.1) and <code>channels</code> (string[]), so scheduled sweeps can target and multi-channel. Serializer echoes both. No new error cases.</p>
+<hr />
+<h2 id="11-operator-kyc-a7-changed">11. Operator KYC (A7) — <strong>Changed</strong></h2>
+<p>Per <strong>Q3</strong>: add profile fields only — photo, address, Aadhaar number, ID-card photo — via ActiveStorage. <strong>Keep</strong> username/mobile + password login; <strong>no OTP</strong>.</p>
+<p><strong>Model note (added to <code>users</code>):</strong> <code>address</code> (text), <code>aadhaar_number</code> (string, stored server-side; serialized <strong>masked</strong>), ActiveStorage attachments <code>photo</code>, <code>id_card_photo</code>.</p>
+<h3 id="111-post-apiv1adminusers-patch-apiv1adminusersid-changed">11.1 <code>POST /api/v1/admin/users</code> &amp; <code>PATCH /api/v1/admin/users/:id</code> — <strong>Changed</strong></h3>
+<p>Auth: admin. For image fields the request is <strong><code>multipart/form-data</code></strong> (JSON still accepted when no files):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>req</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>existing: <code>name</code>, <code>username</code>, <code>phone_number</code>, <code>email</code>, <code>role</code>, <code>employee_code</code>, <code>subtitle</code>, <code>active</code>, <code>password[_confirmation]</code></td>
+<td>—</td>
+<td>—</td>
+<td>unchanged; blank password keeps existing on update</td>
+</tr>
+<tr>
+<td><code>user[address]</code></td>
+<td>string</td>
+<td>no</td>
+<td><strong>new</strong></td>
+</tr>
+<tr>
+<td><code>user[aadhaar_number]</code></td>
+<td>string</td>
+<td>no</td>
+<td><strong>new</strong>; validated as 12 digits</td>
+</tr>
+<tr>
+<td><code>user[photo]</code></td>
+<td>file</td>
+<td>no</td>
+<td><strong>new</strong>; JPEG/PNG, ≤ 5 MB</td>
+</tr>
+<tr>
+<td><code>user[id_card_photo]</code></td>
+<td>file</td>
+<td>no</td>
+<td><strong>new</strong>; JPEG/PNG/PDF, ≤ 5 MB</td>
+</tr>
+</tbody>
+</table></div>
+<p>Response <code>201</code>/<code>200</code>: <code>UserSerializer</code> extended:</p>
+<pre><code class="language-json">{ &quot;user&quot;: { &quot;id&quot;: 42, &quot;name&quot;: &quot;Suresh&quot;, &quot;username&quot;: &quot;suresh&quot;, &quot;role&quot;: &quot;staff&quot;,
+  &quot;address&quot;: &quot;12 MG Road, …&quot;, &quot;aadhaar_number_masked&quot;: &quot;XXXX XXXX 4471&quot;,
+  &quot;photo_url&quot;: &quot;https://…/photo.jpg&quot;, &quot;id_card_photo_url&quot;: &quot;https://…/id.jpg&quot;, &quot;active&quot;: true } }
+</code></pre>
+<p>Errors: <code>422 validation_failed</code> (<code>aadhaar_number</code> not 12 digits, unsupported content type, file too large → <code>details.photo</code>/<code>details.id_card_photo</code>).</p>
+<h3 id="112-get-apiv1adminusersid-changed">11.2 <code>GET /api/v1/admin/users/:id</code> — <strong>Changed</strong></h3>
+<p>Returns the extended serializer above. Aadhaar is <strong>always masked</strong> in responses; the raw value is never serialized. PII handling (encryption at rest, access scoping) per the KYC spec.</p>
+<hr />
+<h2 id="12-reports-e1-new">12. Reports (E1) — <strong>New</strong></h2>
+<p>Aggregated litres / discount / gifts by period, grouped by vehicle / transporter / driver.</p>
+<h3 id="121-get-apiv1adminreports-new">12.1 <code>GET /api/v1/admin/reports</code> — <strong>New</strong></h3>
+<p>Auth: admin. Query:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>param</th>
+<th>type</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>period</code></td>
+<td>enum</td>
+<td><code>daily</code>|<code>weekly</code>|<code>monthly</code>|<code>yearly</code></td>
+</tr>
+<tr>
+<td><code>group_by</code></td>
+<td>enum</td>
+<td><code>vehicle</code>|<code>transporter</code>|<code>driver</code></td>
+</tr>
+<tr>
+<td><code>start_date</code>, <code>end_date</code></td>
+<td>date</td>
+<td>range; defaults to current <code>period</code> window</td>
+</tr>
+<tr>
+<td><code>fuel_type</code></td>
+<td>string</td>
+<td>optional filter</td>
+</tr>
+<tr>
+<td><code>page</code></td>
+<td>int</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Response <code>200</code>:</p>
+<pre><code class="language-json">{
+  &quot;period&quot;: &quot;monthly&quot;, &quot;group_by&quot;: &quot;transporter&quot;,
+  &quot;range&quot;: { &quot;start_date&quot;: &quot;2026-07-01&quot;, &quot;end_date&quot;: &quot;2026-07-31&quot; },
+  &quot;rows&quot;: [
+    { &quot;key&quot;: &quot;ABC Logistics&quot;, &quot;label&quot;: &quot;ABC Logistics&quot;,
+      &quot;litres&quot;: 4820.0, &quot;amount&quot;: 476000.0, &quot;discount&quot;: 9640.0, &quot;gifts&quot;: 2,
+      &quot;visits&quot;: 41 }
+  ],
+  &quot;totals&quot;: { &quot;litres&quot;: 4820.0, &quot;amount&quot;: 476000.0, &quot;discount&quot;: 9640.0, &quot;gifts&quot;: 2 },
+  &quot;page&quot;: 1, &quot;per_page&quot;: 25, &quot;total&quot;: 1, &quot;has_more&quot;: false
+}
+</code></pre>
+<p>Errors: <code>422 invalid_period</code> / <code>invalid_group_by</code> for unknown enum values.</p>
+<h3 id="122-get-apiv1adminreportsexport-new-optional">12.2 <code>GET /api/v1/admin/reports/export</code> — <strong>New (optional)</strong></h3>
+<p>Auth: admin. Same query as 12.1 plus <code>format=csv</code>. Returns <code>text/csv</code> (<code>Content-Disposition: attachment</code>). Non-JSON; client streams to a file. Errors as 12.1.</p>
+<hr />
+<h2 id="13-customer-feedback-rating-e7-new">13. Customer feedback / rating (E7) — <strong>New</strong></h2>
+<p>Lightweight rating captured against a customer (or a visit), surfaced on the dashboard.</p>
+<p><strong>Model note:</strong> <code>customer_feedbacks</code> — <code>customer_id</code>, <code>rating</code> (int 1–5), <code>comment</code>, <code>user_id</code>, <code>customer_entry_id</code> (nullable).</p>
+<h3 id="131-post-apiv1staffcustomersidfeedback-new">13.1 <code>POST /api/v1/staff/customers/:id/feedback</code> — <strong>New</strong></h3>
+<p>Auth: staff/admin. Body (<code>feedback</code>): <code>rating</code> (int 1–5, req), <code>comment</code> (string, opt), <code>customer_entry_id</code> (int, opt). Response <code>201</code>:</p>
+<pre><code class="language-json">{ &quot;feedback&quot;: { &quot;id&quot;: 9, &quot;customer_id&quot;: 7, &quot;rating&quot;: 4, &quot;comment&quot;: &quot;Prompt service&quot;, &quot;created_at&quot;: &quot;2026-07-21T14:10:00Z&quot; } }
+</code></pre>
+<p>Errors: <code>422 validation_failed</code> (rating out of 1–5), <code>404 not_found</code>.</p>
+<h3 id="132-get-apiv1admincustomersidfeedback-new">13.2 <code>GET /api/v1/admin/customers/:id/feedback</code> — <strong>New</strong></h3>
+<p>Auth: admin. Paginated <code>feedbacks</code> (rows as 13.1) plus <code>average_rating</code> (number).</p>
+<hr />
+<h2 id="appendix-a-new-vs-changed-by-route">Appendix A — New vs changed, by route</h2>
+<p><strong>New routes</strong></p>
+<pre><code>GET/POST         /api/v1/admin/products
+PATCH/DELETE     /api/v1/admin/products/:id
+GET              /api/v1/staff/settlements/new
+POST             /api/v1/staff/settlements
+GET/PATCH        /api/v1/staff/settlements/:id
+GET              /api/v1/admin/settlements
+GET/PATCH        /api/v1/admin/settlements/:id
+GET/POST         /api/v1/staff/customer_entries
+PATCH/DELETE     /api/v1/staff/customer_entries/:id
+GET/PATCH        /api/v1/admin/staff_members/:id/pump_assignment
+GET              /api/v1/admin/dashboard/customers
+GET              /api/v1/admin/dashboard/lost_customers
+GET              /api/v1/admin/customers/:id/cadence
+GET/POST         /api/v1/admin/campaigns
+GET/PATCH/DELETE /api/v1/admin/campaigns/:id
+POST             /api/v1/admin/campaigns/:id/preview_audience
+POST             /api/v1/admin/notifications/loyalty_bonus
+GET              /api/v1/admin/reports
+GET              /api/v1/admin/reports/export
+POST             /api/v1/staff/customers/:id/feedback
+GET              /api/v1/admin/customers/:id/feedback
+</code></pre>
+<p><strong>Changed routes (request/response extended, path unchanged)</strong></p>
+<pre><code>GET   /api/v1/staff/catalog                     (+ products)
+POST  /api/v1/staff/transactions                (+ litres/nozzle_reading; fuel_amount derived)
+POST/PATCH /api/v1/staff/customers[/:id]        (+ driver/supervisor/owner, contacted_by, customer_type)
+GET/PATCH  /api/v1/admin/reward_rates           (+ rewards_paused_globally)
+GET   /api/v1/admin/dashboard                   (+ customer_type_breakdown, contacted, tile segments)
+POST  /api/v1/admin/notifications/send          (+ audience, channels, offer)
+POST/PATCH /api/v1/admin/schedules[/:id]        (+ audience, channels)
+POST/PATCH /api/v1/admin/users[/:id]            (+ address, aadhaar_number, photo, id_card_photo; multipart)
+GET   /api/v1/admin/users/:id                   (+ KYC fields, masked aadhaar)
+</code></pre>
+<h2 id="appendix-b-open-items-to-confirm">Appendix B — Open items to confirm</h2>
+<ol>
+<li><strong>Customer taxonomy</strong> (<code>customer_type</code> values <code>otp</code>/<code>credit</code>/<code>drivein</code>) — assumed per locked notes; confirm labels and whether <code>tt</code> is a customer type or only a settlement credit-line kind.</li>
+<li><strong>Settlement uniqueness</strong> — one submitted settlement per <code>(pump, date, shift)</code>; confirm shift granularity vs per-day.</li>
+<li><strong>Shortage sign</strong> — <code>shortage = expected − counted</code> (positive = cash short); confirm convention with ops.</li>
+<li><strong>WhatsApp/SMS</strong> — <code>channels</code> accepted and recorded but not dispatched (no provider, Q3); confirm the queue/hand-off target.</li>
+<li><strong>Aadhaar at rest</strong> — masked in all responses; confirm encryption strategy and who may read the raw value (likely nobody via API).</li>
+</ol>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 20-api-contracts.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+</body>
+</html>

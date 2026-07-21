@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard CRM Intelligence &amp; Reporting — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">15-spec-dashboard-reports.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="dashboard-crm-intelligence-reporting">Dashboard CRM Intelligence &amp; Reporting</h1>
+<p>Turn the dashboard from a purely <em>descriptive</em> analytics surface (aggregate KPIs, trend charts, top-N leaderboards) into an <em>actionable CRM</em> over individual customers. This spec adds: clickable period tiles that drill through to a customer <strong>list</strong> (E2); a per-customer last-visit + visit-cadence profile (E3); a customer-type (OTP-Fleet / Drive-in / Credit / TT) segmentation view (E4); contact-tracking with a conversion-probability score (E5); "came last week, not this week" churn detection with a reach-out surface (E6); customer feedback/rating capture (E7); a real reporting subsystem (daily/weekly/monthly/<strong>yearly</strong> per vehicle / transporter / driver, with litres, discount and gifts, <strong>exportable</strong>) (E1); and a per-pump filter plus editable past-day transactions (G1). Every feature ships on the Rails PWA, the native Android app, and the JSON API that backs Android (Locked Decision Q2). All money figures are <strong>derived</strong> from litres × catalog selling price; litres/readings are the source of truth (Locked Decision Q1).</p>
+<blockquote>
+<p><strong>Implementation status (2026-07-21):</strong> ✅ <strong>E2 shipped</strong> — a "View customers" drill-through on the dashboard (web toolbar link kept in sync via <code>renderCustomersLink</code> on AJAX filter change; Android "View customers for this period" button on the quick-range row) opens a customer list scoped to the active period. Backed by a <code>Customer.transacted_between(range)</code> scope + a shared <code>OverviewReport.period_range(preset:, start_date:, end_date:)</code> resolver applied on both the admin web customers index and the <code>GET /api/v1/staff/customers</code> endpoint (the list Android uses). Covered by model + web + API tests. E1, E3–E7, G1 still pending (Phases 2/4).</p>
+</blockquote>
+<h2 id="requirements-covered">Requirements covered</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>One-line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E1</td>
+<td>Reports daily/weekly/monthly/yearly per vehicle/transporter/driver with litres, discount, gifts; exportable (CSV).</td>
+</tr>
+<tr>
+<td>E2</td>
+<td>Dashboard period tiles are clickable and drill through to a filtered customer list.</td>
+</tr>
+<tr>
+<td>E3</td>
+<td>Per-customer last-visit timestamp + daily/weekly/biweekly visit cadence.</td>
+</tr>
+<tr>
+<td>E4</td>
+<td>Customer-type view: OTP(Fleet) / Drive-in / Credit / TT segmentation and counts.</td>
+</tr>
+<tr>
+<td>E5</td>
+<td>Contact tracking (who/when/how/outcome) + conversion-probability score.</td>
+</tr>
+<tr>
+<td>E6</td>
+<td>Intelligent lost-customer detection ("visited previous period, not current") with a reach-out list.</td>
+</tr>
+<tr>
+<td>E7</td>
+<td>Customer feedback / rating capture and rollup.</td>
+</tr>
+<tr>
+<td>G1</td>
+<td>Per-pump filter on the transaction stream + edit current/past-day transactions (ties to daily-settlement audit).</td>
+</tr>
+<tr>
+<td>Admin-12</td>
+<td>Visualize data per pump anytime + edit current/past days.</td>
+</tr>
+<tr>
+<td>Admin-14</td>
+<td>Reports per vehicle/transporter/driver at daily/weekly/monthly/yearly grain.</td>
+</tr>
+<tr>
+<td>Admin-17</td>
+<td>Dashboard: customer counts by period, per-customer cadence, customer-type, contacted count + last-contact + conversion probability, lost-customer feedback, feedback/rating.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="current-state">Current state</h2>
+<h3 id="what-exists-descriptive-analytics-only">What exists (descriptive analytics only)</h3>
+<ul>
+<li><strong>Overview report service</strong> <code>app/services/admin/dashboard/overview_report.rb</code> produces the entire dashboard payload: filters, 8 summary KPI cards (<code>summary_cards</code>, L293-325), trend/insight charts (<code>chart_payload</code>, L362-376), and a rewards rollup. Period presets are defined in <code>QUICK_RANGES</code> (L5-10: today / this_week / this_month / last_month) and resolved in <code>dates_for_preset</code> (L108-124).</li>
+<li><strong>Repeat-vs-new mix</strong> (<code>repeat_vs_new_payload</code>, L421-435) and <strong>visits distribution</strong> (<code>visits_distribution_payload</code>, L437-448) are computed as <em>aggregate bucket counts only</em> — <code>.group(:customer_id).count.values</code> throws away the customer identities, so there is no way to drill from a bucket to the people in it.</li>
+<li><strong>Top-customer leaderboards</strong> (<code>top_customers_for</code>, L484-506) return the top 5 by visits/revenue with <code>customer_id</code>, but these are chart rows, not a navigable list, and are capped at 5.</li>
+<li><strong>Web dashboard</strong> <code>app/views/admin/dashboard/show.html.erb</code>: KPI cards (L142-147), chart panels, and a client-side "Download PDF" button (L31-34) wired to <code>admin_dashboard.js</code> — this is a <strong>screenshot of the current charts</strong>, not a data export. Nothing on this page is clickable-through to a record.</li>
+<li><strong>Dashboard JSON</strong>: web <code>Admin::DashboardController#data</code> (<code>app/controllers/admin/dashboard_controller.rb</code> L10-14) and API <code>Api::V1::Admin::DashboardController#data</code> both render <code>OverviewReport#as_json</code> verbatim with identical filters (preset, start_date, end_date, segment, fuel_type).</li>
+<li><strong>Android</strong> consumes only a subset: <code>DashboardDtos.kt</code> decodes just four <code>{labels, values}</code> bar series (<code>DashboardChartsDto</code>, L72-78) and the KPI cards; trend lines and leaderboards are dropped on decode (comment at L67-71).</li>
+<li><strong>Transactions stream</strong>: <code>Admin::TransactionsController#index</code> (<code>app/controllers/admin/transactions_controller.rb</code>) and its API twin (<code>app/controllers/api/v1/admin/transactions_controller.rb</code>) are <strong>view-only</strong>, paginated 10/page, with <code>range=all|today</code>, <code>start_date</code>/<code>end_date</code>, and <code>sort</code>. The web view <code>app/views/admin/transactions/index.html.erb</code> renders a read-only detail modal (L119-191) — no edit control, no pump filter.</li>
+</ul>
+<h3 id="what-is-missing">What is missing</h3>
+<ul>
+<li><strong>No customer-type column</strong> anywhere — <code>grep</code> for <code>customer_type</code> across <code>app/</code> returns nothing; <code>customers</code> table has only <code>name, phone_number, vehicle_number, active, rewards_paused</code> (schema). E4 has no data to segment on.</li>
+<li><strong>No last-visit / cadence</strong> — no <code>last_visited_at</code>, no inter-visit computation (<code>grep last_visit|cadence</code> → nothing). E3 absent.</li>
+<li><strong>No contact log, no conversion score</strong> — no <code>customer_contacts</code> table, no scoring service. E5 absent.</li>
+<li><strong>No churn/lost detection</strong> — no period-over-period customer-set diff. E6 absent.</li>
+<li><strong>No feedback/rating</strong> — no <code>customer_feedbacks</code> table (<code>grep feedback|rating</code> hits only CSS/ERB copy). E7 absent.</li>
+<li><strong>No reporting subsystem</strong> — no per-dimension (vehicle/transporter/driver) report, no yearly grain, no CSV/data export. "Download PDF" is a chart screenshot. Litres and discount don't exist on <code>transactions</code> yet (only <code>fuel_amount</code>), and "transporter"/"gifts" have no source columns. E1 absent.</li>
+<li><strong>No per-pump dashboard filter</strong> — <code>OverviewReport#initialize</code> accepts fuel_type/segment/dates only, never a pump. G1's "visualize per pump" absent.</li>
+<li><strong>No transaction edit</strong> — routes expose transactions as index-only (<code>config/routes.rb</code> L147, and API L54); no update action, no correction of past days.</li>
+</ul>
+<h2 id="target-design">Target design</h2>
+<h3 id="data-model-changes">Data model changes</h3>
+<h4 id="1-customer-taxonomy-lifecycle-e4-e3-e6">1. Customer taxonomy &amp; lifecycle (E4, E3, E6)</h4>
+<p><code>customers</code> table — new columns:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>customer_type</code></td>
+<td><code>string</code> (enum, default <code>"drivein"</code>)</td>
+<td>E4 segmentation: <code>drivein</code>, <code>otp_fleet</code>, <code>credit</code>, <code>tt</code>. Assumed taxonomy flagged <strong>to confirm</strong>: OTP = fleet/credit billed by litres, TT = tank-truck credit, Drive-in = walk-in cash, Credit = credit account.</td>
+</tr>
+<tr>
+<td><code>transporter_name</code></td>
+<td><code>string</code>, null</td>
+<td>E1 "per transporter" reporting dimension; distinct from the per-vehicle commercial contact. Backfilled from <code>vehicles.commercial_company_name</code> where present.</td>
+</tr>
+<tr>
+<td><code>last_visited_at</code></td>
+<td><code>datetime</code>, null, indexed</td>
+<td>E3/E6 cache of most-recent transaction time. Maintained by <code>TransactionCreator</code> and a nightly reconcile; avoids a correlated <code>MAX(created_at)</code> per row on churn/list queries.</td>
+</tr>
+<tr>
+<td><code>first_visited_at</code></td>
+<td><code>datetime</code>, null</td>
+<td>E3 "customer since"; also removes the correlated-subquery in <code>new_customer_ids_for</code> (currently L182-187).</td>
+</tr>
+<tr>
+<td><code>visit_count</code></td>
+<td><code>integer</code>, default 0</td>
+<td>Denormalized visit tally for cadence/conversion scoring without a per-request aggregate.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Add index <code>index_customers_on_customer_type</code>. Enum lives on the model:</p>
+<pre><code class="language-ruby">enum :customer_type, { drivein: &quot;drivein&quot;, otp_fleet: &quot;otp_fleet&quot;, credit: &quot;credit&quot;, tt: &quot;tt&quot; }, prefix: true
+</code></pre>
+<h4 id="2-contact-tracking-e5">2. Contact tracking (E5)</h4>
+<p>New table <code>customer_contacts</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>bigint PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>customer_id</code></td>
+<td>bigint FK → customers, null:false, indexed</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_id</code></td>
+<td>bigint FK → users, null:false</td>
+<td>Staff/admin who made contact.</td>
+</tr>
+<tr>
+<td><code>channel</code></td>
+<td>string enum</td>
+<td><code>call</code>, <code>whatsapp</code>, <code>sms</code>, <code>in_person</code>.</td>
+</tr>
+<tr>
+<td><code>contacted_role</code></td>
+<td>string enum, null</td>
+<td>Who was reached: <code>driver</code>, <code>supervisor</code>, <code>owner</code> (mirrors Admin-10 contacted-by).</td>
+</tr>
+<tr>
+<td><code>outcome</code></td>
+<td>string enum</td>
+<td><code>reached</code>, <code>no_answer</code>, <code>converted</code>, <code>declined</code>, <code>callback_requested</code>.</td>
+</tr>
+<tr>
+<td><code>notes</code></td>
+<td>text, null</td>
+<td>Free text.</td>
+</tr>
+<tr>
+<td><code>contacted_at</code></td>
+<td>datetime, null:false, indexed</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at/updated_at</code></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>customers has_many :customer_contacts</code>. Derived, not stored: <code>contacted_count</code>, <code>last_contacted_at</code>, <code>conversion_probability</code> (see business rules).</p>
+<h4 id="3-feedback-rating-e7">3. Feedback / rating (E7)</h4>
+<p>New table <code>customer_feedbacks</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>customer_id</code></td>
+<td>bigint FK, null:false, indexed</td>
+<td></td>
+</tr>
+<tr>
+<td><code>transaction_id</code></td>
+<td>bigint FK → transactions, null</td>
+<td>Optional link to the visit rated.</td>
+</tr>
+<tr>
+<td><code>rating</code></td>
+<td>integer, null:false</td>
+<td>1–5, validated inclusion 1..5.</td>
+</tr>
+<tr>
+<td><code>comment</code></td>
+<td>text, null</td>
+<td></td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>string enum, default <code>staff</code></td>
+<td><code>staff</code> (FSM captured), <code>admin</code>, <code>sms_reply</code> (future F4).</td>
+</tr>
+<tr>
+<td><code>recorded_by_user_id</code></td>
+<td>bigint FK → users, null</td>
+<td>Null when self-reported.</td>
+</tr>
+<tr>
+<td><code>created_at/updated_at</code></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="4-reporting-source-data-e1-depends-on-b2d1">4. Reporting source data (E1) — depends on B2/D1</h4>
+<p>E1 needs <strong>litres, discount, gifts, per-driver, per-transporter</strong>. Those columns do <strong>not</strong> exist on <code>transactions</code> today (only <code>fuel_amount</code>). This spec <strong>consumes</strong> fields delivered by the B2 (CustomerDetailsEntry) and D-series (settlement) specs rather than redefining them:</p>
+<ul>
+<li><code>transactions.litres</code> (decimal 10,3), <code>transactions.discount_amount</code> (decimal 10,2), <code>transactions.reading_*</code> — owned by D1/B2.</li>
+<li><code>transactions.driver_name</code>, <code>transactions.driver_phone</code>, <code>transactions.fleet_otp</code> (bool) — owned by B2.</li>
+<li><code>transporter_name</code> resolved via <code>customers.transporter_name</code>.</li>
+<li>"Gifts" = reward redemptions valued in ₹, read from <code>points_ledgers</code> (<code>cash_reward_amount</code>).</li>
+</ul>
+<p>If E1 ships before B2/D1, the report degrades gracefully: litres/discount columns render <code>—</code> and only ₹ <code>fuel_amount</code> + gift-value are populated. <strong>This dependency must be called out at build time.</strong></p>
+<p>No new table is required for reports; a <code>Admin::Reports::LedgerReport</code> service aggregates on demand and streams CSV. An optional <code>report_exports</code> table (async, emailed CSV) is out of scope for v1 — v1 is synchronous CSV download.</p>
+<h4 id="5-churn-lost-customer-e6-cadence-e3-derived">5. Churn / lost-customer (E6) &amp; cadence (E3) — derived</h4>
+<p>No table. A <code>Admin::Crm::CustomerInsight</code> service computes per customer:</p>
+<ul>
+<li><strong>cadence_class</strong> from the median gap between consecutive visits over the trailing 90 days: <code>daily</code> (≤2 days), <code>weekly</code> (3–10), <code>biweekly</code> (11–21), <code>monthly</code> (22–45), <code>occasional</code> (&gt;45 or &lt;3 visits).</li>
+<li><strong>expected_next_visit_at</strong> = <code>last_visited_at</code> + median_gap.</li>
+<li><strong>lost</strong> = <code>expected_next_visit_at &lt; today</code> AND visited in the <em>previous</em> comparable period but <strong>not</strong> the current one (the "came last week, not this week" rule, generalized to the selected period length).</li>
+<li><strong>conversion_probability</strong> (E5): heuristic 0–100 = weighted blend of recency (days since last visit vs cadence), frequency (visit_count percentile), contact outcomes (a <code>converted</code>/<code>reached</code> outcome lifts it, <code>declined</code> drops it). Documented as a transparent rule, not ML.</li>
+</ul>
+<h3 id="business-rules">Business rules</h3>
+<ol>
+<li><strong>Drill-through</strong> (E2): every period tile and distribution/repeat-vs-new bucket carries a <code>drill</code> descriptor (<code>{ metric, bucket }</code>) that the client turns into a customer-list query. The list endpoint recomputes the <em>same</em> filtered set the tile counted — single source of truth in <code>OverviewReport</code>.</li>
+<li><strong>Cadence</strong> requires ≥3 visits; below that, <code>cadence_class = "new"</code>.</li>
+<li><strong>Lost</strong> is period-relative: for a 7-day current window the comparison window is the preceding 7 days; reuses <code>OverviewReport#previous_range</code> semantics (L130-135).</li>
+<li><strong>Conversion probability</strong> is recomputed on read, never stored; contact rows are immutable audit records.</li>
+<li><strong>Report money</strong> is derived: <code>amount = litres × catalog_selling_price</code> when litres exist, else stored <code>fuel_amount</code>. Never trust a standalone ₹ if litres+price are present (Q1).</li>
+<li><strong>Transaction edit</strong> (G1) writes an <code>audit</code> trail and <strong>re-runs point accrual</strong> (reverse old ledger entry, re-award) so rewards stay consistent; edits to settled days flag the settlement as <code>needs_review</code> (D9 hook).</li>
+</ol>
+<h3 id="workflow-dashboard-tile-customer-list-contactreach-out">Workflow: dashboard tile → customer list → contact/reach-out</h3>
+<figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">flowchart TD
+  A[Admin opens Dashboard] --&gt; B[Pick period preset + optional pump/type filter]
+  B --&gt; C[KPI tiles + charts render]
+  C --&gt;|tap 'Active customers' tile| D[GET dashboard/customers?metric=active]
+  C --&gt;|tap '2-5 visits' bucket| D
+  D --&gt; E[Customer list: name, type, last visit, cadence, conv%]
+  E --&gt;|tap a customer| F[Customer insight: cadence, visits, contacts, feedback]
+  F --&gt;|Log contact| G[POST customers/:id/contacts]
+  C --&gt;|open 'Lost customers' panel| H[GET dashboard/churn]
+  H --&gt; I[Reach-out list sorted by conv%]
+  I --&gt;|Log contact / send offer| G
+  F --&gt;|Capture rating| J[POST customers/:id/feedback]
+</pre></figure>
+<h3 id="entity-changes">Entity changes</h3>
+<figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">erDiagram
+  CUSTOMER ||--o{ TRANSACTION : has
+  CUSTOMER ||--o{ CUSTOMER_CONTACT : has
+  CUSTOMER ||--o{ CUSTOMER_FEEDBACK : has
+  CUSTOMER ||--o{ VEHICLE : has
+  TRANSACTION ||--o| CUSTOMER_FEEDBACK : rated_in
+  USER ||--o{ CUSTOMER_CONTACT : logged
+  CUSTOMER {
+    string customer_type
+    string transporter_name
+    datetime last_visited_at
+    datetime first_visited_at
+    int visit_count
+  }
+  CUSTOMER_CONTACT {
+    string channel
+    string contacted_role
+    string outcome
+    datetime contacted_at
+  }
+  CUSTOMER_FEEDBACK {
+    int rating
+    text comment
+    string source
+  }
+</pre></figure>
+<h2 id="api-changes">API changes</h2>
+<p>All under <code>/api/v1/admin</code> (token auth, admin-authorized), mirrored by web HTML routes. Filters reuse the existing dashboard params (<code>preset, start_date, end_date, segment, fuel_type</code>) plus new <code>fuel_pump_id</code>.</p>
+<h3 id="e2-drill-through-customer-list">E2 — Drill-through customer list</h3>
+<p><code>GET /api/v1/admin/dashboard/customers</code></p>
+<p>Request (query): <code>metric</code> (<code>total|active|new|repeat|churn</code>), or <code>bucket</code> (<code>visits_1|visits_2_5|visits_6plus</code>), plus standard filters + <code>page</code>.</p>
+<pre><code class="language-json">{
+  &quot;metric&quot;: &quot;active&quot;,
+  &quot;page&quot;: 1, &quot;per_page&quot;: 20, &quot;total&quot;: 137, &quot;has_more&quot;: true,
+  &quot;customers&quot;: [
+    { &quot;id&quot;: 42, &quot;name&quot;: &quot;Ravi Kumar&quot;, &quot;phone_number&quot;: &quot;98XXXXXX21&quot;,
+      &quot;customer_type&quot;: &quot;otp_fleet&quot;, &quot;customer_type_label&quot;: &quot;OTP (Fleet)&quot;,
+      &quot;visit_count&quot;: 12, &quot;last_visited_at&quot;: &quot;2026-07-19T08:14:00+05:30&quot;,
+      &quot;cadence_class&quot;: &quot;weekly&quot;, &quot;cadence_label&quot;: &quot;Weekly&quot;,
+      &quot;conversion_probability&quot;: 82, &quot;total_spend_display&quot;: &quot;₹18,400&quot; }
+  ]
+}
+</code></pre>
+<h3 id="e3-per-customer-insight">E3 — Per-customer insight</h3>
+<p><code>GET /api/v1/admin/customers/:id/insight</code></p>
+<pre><code class="language-json">{ &quot;customer_id&quot;: 42, &quot;first_visited_at&quot;: &quot;2026-01-04T...&quot;, &quot;last_visited_at&quot;: &quot;2026-07-19T...&quot;,
+  &quot;days_since_last_visit&quot;: 2, &quot;visit_count&quot;: 12,
+  &quot;cadence_class&quot;: &quot;weekly&quot;, &quot;median_gap_days&quot;: 6, &quot;expected_next_visit_at&quot;: &quot;2026-07-25T...&quot;,
+  &quot;is_lost&quot;: false, &quot;conversion_probability&quot;: 82,
+  &quot;contacts&quot;: { &quot;count&quot;: 3, &quot;last_contacted_at&quot;: &quot;2026-07-10T...&quot;, &quot;last_outcome&quot;: &quot;reached&quot; },
+  &quot;feedback&quot;: { &quot;count&quot;: 2, &quot;avg_rating&quot;: 4.5, &quot;latest_comment&quot;: &quot;Quick service&quot; } }
+</code></pre>
+<h3 id="e4-customer-type-segmentation">E4 — Customer-type segmentation</h3>
+<p><code>GET /api/v1/admin/dashboard/segments</code> (respects period + filters)</p>
+<pre><code class="language-json">{ &quot;segments&quot;: [
+  { &quot;type&quot;: &quot;drivein&quot;, &quot;label&quot;: &quot;Drive-in&quot;, &quot;customers&quot;: 210, &quot;visits&quot;: 540, &quot;revenue_display&quot;: &quot;₹6,80,000&quot; },
+  { &quot;type&quot;: &quot;otp_fleet&quot;, &quot;label&quot;: &quot;OTP (Fleet)&quot;, &quot;customers&quot;: 34, &quot;visits&quot;: 610, &quot;revenue_display&quot;: &quot;₹14,20,000&quot; },
+  { &quot;type&quot;: &quot;credit&quot;, &quot;label&quot;: &quot;Credit&quot;, &quot;customers&quot;: 12, &quot;visits&quot;: 88, &quot;revenue_display&quot;: &quot;₹2,10,000&quot; },
+  { &quot;type&quot;: &quot;tt&quot;, &quot;label&quot;: &quot;TT&quot;, &quot;customers&quot;: 5, &quot;visits&quot;: 30, &quot;revenue_display&quot;: &quot;₹90,000&quot; } ] }
+</code></pre>
+<h3 id="e5-contact-tracking">E5 — Contact tracking</h3>
+<ul>
+<li><code>POST /api/v1/admin/customers/:id/contacts</code> — body <code>{ channel, contacted_role, outcome, notes, contacted_at }</code> → <code>201</code> with the created contact.</li>
+<li><code>GET /api/v1/admin/customers/:id/contacts</code> — paginated history.</li>
+</ul>
+<h3 id="e6-churn-reach-out">E6 — Churn / reach-out</h3>
+<p><code>GET /api/v1/admin/dashboard/churn</code> (period filters) → same customer shape as E2 with added <code>days_overdue</code>, sorted by <code>conversion_probability desc</code>.</p>
+<h3 id="e7-feedback">E7 — Feedback</h3>
+<ul>
+<li><code>POST /api/v1/admin/customers/:id/feedback</code> — <code>{ rating (1..5), comment, transaction_id? }</code> → <code>201</code>. Also exposed under <code>/api/v1/staff/...</code> so an FSM can capture it at the pump.</li>
+<li><code>GET /api/v1/admin/customers/:id/feedback</code> — history + <code>avg_rating</code>.</li>
+</ul>
+<h3 id="e1-reports-exportable">E1 — Reports (exportable)</h3>
+<p><code>GET /api/v1/admin/reports</code></p>
+<p>Request: <code>dimension</code> (<code>vehicle|transporter|driver|customer</code>), <code>grain</code> (<code>day|week|month|year</code>), <code>start_date</code>, <code>end_date</code> (or <code>preset</code>), <code>fuel_type</code>, <code>fuel_pump_id</code>, <code>format</code> (<code>json|csv</code>).</p>
+<pre><code class="language-json">{ &quot;dimension&quot;: &quot;transporter&quot;, &quot;grain&quot;: &quot;month&quot;,
+  &quot;columns&quot;: [&quot;key&quot;,&quot;label&quot;,&quot;litres&quot;,&quot;amount&quot;,&quot;discount&quot;,&quot;gifts&quot;,&quot;visits&quot;],
+  &quot;rows&quot;: [
+    { &quot;key&quot;: &quot;ABC Logistics&quot;, &quot;label&quot;: &quot;ABC Logistics&quot;, &quot;period&quot;: &quot;2026-07&quot;,
+      &quot;litres&quot;: 12400.5, &quot;amount&quot;: 1226000.0, &quot;discount&quot;: 18400.0, &quot;gifts&quot;: 4200.0, &quot;visits&quot;: 96 } ],
+  &quot;totals&quot;: { &quot;litres&quot;: 12400.5, &quot;amount&quot;: 1226000.0, &quot;discount&quot;: 18400.0, &quot;gifts&quot;: 4200.0, &quot;visits&quot;: 96 } }
+</code></pre>
+<p><code>format=csv</code> streams <code>text/csv</code> (<code>Content-Disposition: attachment</code>) with the same columns; litres/discount render blank when the underlying B2/D1 columns are absent.</p>
+<h3 id="g1-per-pump-filter-edit">G1 — Per-pump filter + edit</h3>
+<ul>
+<li>Dashboard/report/transaction endpoints accept <code>fuel_pump_id</code>. <code>OverviewReport#initialize</code> gains a <code>fuel_pump_id:</code> param; <code>filtered_transactions_for</code> (L145-150) adds <code>.where(fuel_pump_id:)</code> when present; point-entry scope joins through <code>fuel_transaction</code>.</li>
+<li><code>PATCH /api/v1/admin/transactions/:id</code> — body <code>{ fuel_amount?, litres?, discount_amount?, fuel_pump_id?, fuel_pump_nozzle_id?, vehicle_id?, created_at? }</code> → recomputes ₹ from litres×price when litres sent, re-runs accrual, records audit, returns updated <code>TransactionSerializer</code>. Editing a date inside a settled day sets <code>settlement.needs_review = true</code> (D9).</li>
+<li>Add <code>GET /api/v1/admin/transactions</code> filter <code>fuel_pump_id</code>.</li>
+</ul>
+<h2 id="ui">UI</h2>
+<h3 id="rails-pwa">Rails PWA</h3>
+<ul>
+<li><strong>Dashboard</strong> (<code>app/views/admin/dashboard/show.html.erb</code>):</li>
+<li>Make KPI cards (L142-147) and the visits-distribution / repeat-vs-new panels <strong>clickable</strong>: each renders as a <code>link_to admin_dashboard_customers_path(metric:/bucket:, …current filters)</code>. Add a <code>data-drill</code> attribute so <code>admin_dashboard.js</code> can open the list without a full reload.</li>
+<li>New <strong>Customer List drill page</strong> <code>admin/dashboard/customers#index</code> — reuses the existing customer-row styling from <code>app/views/admin/customers/index.html.erb</code>; columns: name, type badge, last visit, cadence chip, conversion %, spend. Row links to the customer show page.</li>
+<li>New <strong>"Customer Types" panel</strong> (E4) in the "Customer Insights" section — a 4-way segmented bar + counts, each segment a drill link.</li>
+<li>New <strong>"Lost customers / Reach out" panel</strong> (E6) below Customer Insights: table sorted by conversion %, each row with a "Log contact" button (opens the contact modal) and a "Send offer" link (F-series hook).</li>
+<li>Add a <strong>pump filter chip row</strong> (G1) next to the existing fuel-type chips (L69-83), populated from <code>FuelPump.active</code>.</li>
+<li><strong>Customer show</strong> (<code>app/views/customers/show.html.erb</code>, admin renders it): add an <strong>Insight card</strong> (last visit, cadence, conversion %, first-seen), a <strong>Contacts timeline</strong> with an "Add contact" modal (E5), and a <strong>Feedback</strong> block with a star-rating form (E7).</li>
+<li><strong>Transactions</strong> (<code>app/views/admin/transactions/index.html.erb</code>): add a <strong>pump filter</strong> to the filter card (L19-78); turn the read-only detail modal (L119-191) into an <strong>Edit form</strong> (litres, discount, pump, nozzle, amount, datetime) with a Save action posting to <code>PATCH admin_transaction_path</code>; add an "Edit" pencil beside the existing eye icon.</li>
+<li><strong>New Reports page</strong> <code>admin/reports#index</code>: dimension selector (vehicle/transporter/driver/customer), grain selector (day/week/month/<strong>year</strong>), date range + pump + fuel filters, a results table with totals row, and a <strong>Download CSV</strong> button (real data export — distinct from the dashboard's chart-screenshot "Download PDF"). Add a nav entry in the admin sidebar.</li>
+</ul>
+<h3 id="android-compose">Android (Compose)</h3>
+<ul>
+<li><strong><code>AdminDashboardScreen.kt</code></strong>: extend <code>DashboardChartsDto</code> (<code>DashboardDtos.kt</code> L72-78) so drillable series carry an optional drill key; make KPI cards and buckets tappable → navigate to a new <strong><code>CustomerDrillScreen</code></strong> (list) backed by a <code>DashboardCustomersRepository</code>/<code>Api</code> calling <code>GET /admin/dashboard/customers</code>. Add a <strong>pump filter</strong> control alongside the existing fuel-type chips, and a <strong>customer-type segment card</strong> (E4) parsing the new <code>segments</code> payload.</li>
+<li><strong>New <code>admin/crm</code> package</strong> (Api/Dtos/Repository/Screen/ViewModel, matching the established admin-area convention):</li>
+<li><code>CustomerInsightScreen</code> (E3): cadence chip, last-visit, conversion gauge, contacts timeline, feedback list.</li>
+<li><code>ContactSheet</code> (E5): bottom sheet with channel / role / outcome / notes → <code>POST contacts</code>.</li>
+<li><code>FeedbackSheet</code> (E7): star selector + comment → <code>POST feedback</code>. Also reachable from the staff-side customer screen so FSMs capture ratings.</li>
+<li><code>ReachOutScreen</code> (E6): churn list from <code>GET /admin/dashboard/churn</code>, sorted by conversion %, each row with Log-contact and Send-offer actions.</li>
+<li><strong>New <code>admin/reports</code> package</strong> (E1): dimension + grain + filter selectors, results table with totals, and an export action. Android export downloads the CSV (respect the download-permission rule) or renders the JSON table with a "Share CSV" intent.</li>
+<li><strong><code>admin/transactions</code></strong> (<code>TransactionsScreen.kt</code>): add a pump filter to the filter row and an <strong>edit sheet</strong> (litres/discount/pump/nozzle/amount/datetime) posting <code>PATCH /admin/transactions/:id</code> via a new repository method.</li>
+</ul>
+<h2 id="validation-edge-cases">Validation &amp; edge cases</h2>
+<ul>
+<li><strong>customer_type</strong> defaults to <code>drivein</code>; unknown/blank values coerce to <code>drivein</code>. Taxonomy is flagged <strong>to confirm</strong> — surface the label mapping in one place so a rename is a single change.</li>
+<li><strong>Cadence</strong> with &lt;3 visits → <code>"new"</code>, never divide-by-zero; single-visit customers have no median gap.</li>
+<li><strong>last_visited_at</strong> must be maintained transactionally in <code>TransactionCreator</code> <em>and</em> on transaction edit/delete; a nightly reconcile job repairs drift. Cold start: backfill migration sets <code>first_visited_at/last_visited_at/visit_count</code> from existing rows.</li>
+<li><strong>Churn period</strong>: if the current period has no prior comparable period (e.g. first week of data), return an empty lost-list rather than flagging everyone.</li>
+<li><strong>Conversion probability</strong> clamps to 0–100; a customer with zero contacts still gets a recency/frequency-based score.</li>
+<li><strong>Feedback rating</strong> must be 1–5 integer; reject others 422. One feedback per transaction max (uniqueness on <code>transaction_id</code> when present).</li>
+<li><strong>Contact</strong> <code>contacted_at</code> cannot be in the future; <code>outcome</code>/<code>channel</code> must be in enum.</li>
+<li><strong>Report edge cases</strong>: empty range → empty rows + zeroed totals; missing litres/discount (pre-B2/D1) render blank, not <code>0</code>, so "no data" ≠ "₹0". Yearly grain must bucket by fiscal-agnostic calendar year unless a fiscal-year setting is later added.</li>
+<li><strong>CSV</strong>: escape commas/quotes/newlines; UTF-8 BOM for ₹ glyph in Excel; stream to avoid loading all rows in memory.</li>
+<li><strong>Transaction edit</strong> must reverse the prior <code>points_ledger</code> earn entry and re-award atomically; block edits that would make litres/amount negative; editing across a settlement boundary flags <code>needs_review</code>.</li>
+<li><strong>Drill-through consistency</strong>: the list count must equal the tile count for the same filters — cover with a request spec asserting <code>dashboard/customers</code> total == the corresponding KPI value.</li>
+<li><strong>Authorization</strong>: all CRM/report endpoints admin-only; the feedback POST is the only one also allowed to staff/FSM.</li>
+</ul>
+<h2 id="dependencies-sequencing">Dependencies &amp; sequencing</h2>
+<p><strong>Must exist first:</strong>
+- <strong>A6 vehicle types</strong> (present) — used by report/segment grouping.
+- <strong>B1 customer master</strong> (partial) — <code>customer_type</code>, <code>transporter_name</code> are added here but the fuller driver/supervisor/owner model belongs to B1; coordinate the migration so columns aren't duplicated.
+- <strong>B2 CustomerDetailsEntry</strong> and <strong>D1 per-nozzle readings</strong> — supply <code>litres</code>, <code>discount_amount</code>, <code>driver_name/phone</code>, <code>fleet_otp</code>. E1 reporting (litres/discount/per-driver) and Q1-derived money are <strong>blocked on these</strong>; E2/E3/E4/E5/E6/E7 do <strong>not</strong> need them and can ship first on visit-count + ₹.
+- <strong>C5 loyalty accrual / points_ledgers</strong> (present) — "gifts" ₹ value in reports.
+- <strong>D9 admin settlement view/edit</strong> — G1 transaction edit sets settlement <code>needs_review</code>; if D9 isn't built, the flag is a no-op column.</p>
+<p><strong>This unblocks:</strong>
+- <strong>F1 campaigns / F2 targeting</strong> — customer_type, cadence, churn list, and conversion score are the targeting inputs.
+- <strong>F3/F4 notifications</strong> — the reach-out surface (E6) and feedback (E7) feed offer + loyalty-bonus pushes and WhatsApp/SMS.
+- <strong>Admin-13 daily-settlement audit</strong> — per-pump transaction visualize/edit (G1) is the operator-facing half of settlement review.</p>
+<p>Suggested order: (1) migrations + backfill (customer_type/last_visited_at/first_visited_at/visit_count, customer_contacts, customer_feedbacks); (2) E2 drill-through + E4 segments (pure re-slice of existing data); (3) E3 insight + E6 churn (<code>CustomerInsight</code> service); (4) E5 contacts + E7 feedback (write paths, both surfaces); (5) G1 pump filter + edit; (6) E1 reports (last, gated on B2/D1 for full columns).</p>
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+<ul>
+<li>[ ] <code>customers</code> has <code>customer_type</code> (enum, default drivein), <code>transporter_name</code>, <code>first_visited_at</code>, <code>last_visited_at</code> (indexed), <code>visit_count</code>; a backfill migration populates them from existing transactions.</li>
+<li>[ ] <code>customer_contacts</code> and <code>customer_feedbacks</code> tables exist with the columns and FKs specified.</li>
+<li>[ ] Tapping any KPI tile or distribution bucket on web <strong>and</strong> Android opens a customer list whose total equals the tile's number for the identical filters.</li>
+<li>[ ] <code>GET /api/v1/admin/dashboard/customers?metric=…</code> returns a paginated list with type, last-visit, cadence, and conversion % for each customer.</li>
+<li>[ ] A customer's insight endpoint/screen shows last visit, visit count, cadence class (daily/weekly/biweekly/monthly/occasional/new), expected-next-visit, and conversion probability.</li>
+<li>[ ] <code>GET /api/v1/admin/dashboard/segments</code> returns the four customer-type buckets with customers/visits/revenue, rendered as a segment card on both surfaces.</li>
+<li>[ ] An admin can log a contact (channel/role/outcome/notes) from web and Android; the contact appears in the customer's timeline and updates contacted-count and last-contacted.</li>
+<li>[ ] The Lost-customers/Reach-out panel lists customers who visited the previous period but not the current one, sorted by conversion %, with a working "Log contact" action.</li>
+<li>[ ] Feedback (rating 1–5 + comment) can be captured by staff at the pump and by admin; the customer view shows average rating and history; invalid ratings are rejected 422.</li>
+<li>[ ] Reports page produces per-vehicle, per-transporter, and per-driver rows at day/week/month/<strong>year</strong> grain with litres, amount, discount, gifts, visits, and a totals row; <strong>Download CSV</strong> returns a well-formed, Excel-openable file (this is a data export, not a chart screenshot).</li>
+<li>[ ] When litres/discount source columns are absent (pre-B2/D1), report cells render blank rather than ₹0, and the report still returns amount from <code>fuel_amount</code> + gift value.</li>
+<li>[ ] The transactions stream (web + Android + both APIs) accepts a <code>fuel_pump_id</code> filter and the dashboard accepts <code>fuel_pump_id</code>, restricting every KPI/chart to that pump.</li>
+<li>[ ] <code>PATCH /api/v1/admin/transactions/:id</code> edits a past-day transaction, re-derives ₹ from litres×price when litres are supplied, re-runs point accrual atomically, and (when D9 exists) flags the affected settlement <code>needs_review</code>.</li>
+<li>[ ] All new CRM/report endpoints are admin-authorized (feedback also allowed to staff); request specs cover authorization and the tile-vs-list count invariant.</li>
+</ul>
+<p>Key source references verified while writing this spec: <code>app/services/admin/dashboard/overview_report.rb</code> (L5-10, L130-135, L145-150, L421-448, L484-506); <code>app/controllers/admin/dashboard_controller.rb</code> (L10-14); <code>app/controllers/admin/transactions_controller.rb</code>; <code>app/controllers/api/v1/admin/{dashboard,transactions}_controller.rb</code>; <code>app/views/admin/dashboard/show.html.erb</code> (L31-34, L69-83, L142-186); <code>app/views/admin/transactions/index.html.erb</code> (L119-191); <code>app/models/customer.rb</code>; <code>config/routes.rb</code> (L51-86, L113-149); <code>android/.../ui/admin/dashboard/DashboardDtos.kt</code> (L67-78); <code>db/schema.rb</code> (customers/transactions/vehicles). Confirmed absent via grep: <code>customer_type</code>, <code>last_visited_at</code>, <code>cadence</code>, <code>churn</code>, <code>feedback</code>, <code>rating</code>.</p>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 15-spec-dashboard-reports.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
+</script>
+
+</body>
+</html>

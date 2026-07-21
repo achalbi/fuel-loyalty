@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A7 — Operator Profile / KYC Fields (Photo, Address, Aadhaar, ID-card Photo) — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">17-spec-operator-kyc.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="a7-operator-profile-kyc-fields-photo-address-aadhaar-id-card-photo">A7 — Operator Profile / KYC Fields (Photo, Address, Aadhaar, ID-card Photo)</h1>
+<p>Extend the operator (staff) user record with the KYC profile the requirement asks for: a profile photo, a postal address, an Aadhaar number, and a photo of the operator's ID card. This is a <strong>profile-fields-only</strong> change per LOCKED DECISION Q3 — it adds data capture and PII handling to the existing user record and admin forms on both the Rails PWA and the native Android app. <strong>Explicit non-goal:</strong> OTP / passwordless login and any SMS/WhatsApp auth provider. Username/mobile + password login (Devise <code>:database_authenticatable</code>) is retained unchanged.</p>
+<h2 id="requirements-covered">Requirements covered</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A7</td>
+<td>Operator user setup captures <strong>Name, Photo, Address, Aadhaar number, ID-card photo</strong> in addition to today's login fields.</td>
+</tr>
+<tr>
+<td>A7 (non-goal)</td>
+<td>Login stays username/mobile + password. <strong>No OTP, no SMS/WhatsApp auth</strong> is added.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="current-state">Current state</h2>
+<p>The <code>users</code> table (<code>db/schema.rb:303-329</code>) has <code>name, username, email, phone_number, employee_code, role, subtitle, active, deleted_at, encrypted_password</code> and the Devise reset/remember columns. <strong>There is no photo, no address, and no Aadhaar column, and no ID-card image.</strong> The audit summary already records A7 as PARTIAL for exactly this reason.</p>
+<ul>
+<li><code>app/models/user.rb</code> — Devise <code>:database_authenticatable, :recoverable, :rememberable, :validatable</code> (line 28). No <code>has_one_attached</code>, no Active Record Encryption, no KYC attributes anywhere in the model.</li>
+<li><code>app/controllers/admin/users_controller.rb:59</code> — <code>user_params</code> permits <code>:name, :username, :phone_number, :email, :active, :password, :password_confirmation</code> only. This is the create/edit path for operators.</li>
+<li><code>app/controllers/admin/staff_members_controller.rb:51</code> — <code>staff_member_params</code> permits <code>:name, :active, :employee_code, :subtitle</code> only (the lighter staff-management edit path).</li>
+<li><code>app/controllers/api/v1/admin/users_controller.rb:12-15</code> — <code>ASSIGNABLE_KEYS</code> is <code>name username phone_number email active password password_confirmation employee_code subtitle</code>. Body is JSON only; there is no multipart handling.</li>
+<li><code>app/serializers/api/v1/user_serializer.rb</code> and <code>app/serializers/api/v1/admin/user_serializer.rb</code> — expose the scalar fields + audit timestamps. No image URLs, no address, no Aadhaar.</li>
+<li><code>app/policies/user_policy.rb</code> — <code>index?/show?/create?/update?</code> are admin-only; <code>destroy?</code> admin + staff record only. There is no field-level guard because there is no sensitive field yet.</li>
+<li><code>app/views/admin/users/_form.html.erb</code> — Bootstrap form with name/username/phone/email/role/active/password. No file inputs, no address, no Aadhaar. <code>form_with</code> is not <code>multipart</code>.</li>
+<li>Android <code>ui/admin/users/</code>: <code>UsersDtos.kt</code> (<code>AdminUserDto</code> / <code>AdminUserRequest</code> — scalar JSON only), <code>UsersApi.kt</code> (Retrofit <code>@Body AdminUserEnvelope</code>, no multipart), <code>AdminUsersScreen.kt</code> (ModalBottomSheet create/edit form), <code>UsersViewModel.kt</code>. No image picker, no upload.</li>
+</ul>
+<p><strong>ActiveStorage is half-wired but not installed.</strong> The <code>image_processing</code> gem is present (<code>Gemfile:39-40</code>), <code>config/storage.yml</code> defines <code>local</code>/<code>test</code> disk services, and <code>config/environments/production.rb:31</code> sets <code>config.active_storage.service = :local</code>. <strong>However there are no <code>active_storage_blobs</code> / <code>active_storage_attachments</code> / <code>active_storage_variant_records</code> tables in <code>db/schema.rb</code></strong> — the install migration was never run. Additionally, production runs on Cloud Run with an <strong>ephemeral local disk</strong>, so <code>:local</code> storage would silently lose every uploaded image on each deploy/restart. Both must be fixed before attachments can be used (see Dependencies).</p>
+<p>There is no PII/encryption infrastructure today: no <code>config.active_record.encryption</code> keys, no masking, no access auditing.</p>
+<h2 id="target-design">Target design</h2>
+<h3 id="data-model-changes">Data model changes</h3>
+<p><strong>1. New scalar columns on <code>users</code></strong> (migration):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Null</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>address</code></td>
+<td><code>text</code></td>
+<td>yes</td>
+<td>Operator postal address (free-form, multi-line). Optional.</td>
+</tr>
+<tr>
+<td><code>aadhaar_number_ciphertext</code></td>
+<td><code>text</code></td>
+<td>yes</td>
+<td>Aadhaar stored <strong>encrypted at rest</strong> via Active Record Encryption (<code>encrypts :aadhaar_number</code>). The column holds ciphertext; the app reads/writes the virtual <code>aadhaar_number</code>. Non-deterministic encryption (not queryable) — we never look up by Aadhaar.</td>
+</tr>
+<tr>
+<td><code>aadhaar_last4</code></td>
+<td><code>string(4)</code></td>
+<td>yes</td>
+<td>Plaintext last 4 digits, written by a callback. Lets lists/serializers show a masked <code>XXXX-XXXX-1234</code> without decrypting the full value on every render.</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>Implementation note: with Active Record Encryption you keep a normal <code>aadhaar_number</code> column and call <code>encrypts :aadhaar_number</code>; Rails encrypts the column value in place. Using an explicit <code>_ciphertext</code> column name is optional. Either way the stored bytes are ciphertext. Keys live in credentials (<code>active_record_encryption.primary_key</code>, <code>deterministic_key</code>, <code>key_derivation_salt</code>), <strong>not</strong> in the repo.</p>
+</blockquote>
+<p><strong>2. Two ActiveStorage attachments</strong> on <code>User</code> (<code>app/models/user.rb</code>):</p>
+<pre><code class="language-ruby">has_one_attached :profile_photo      # operator mugshot — low sensitivity
+has_one_attached :id_card_photo      # Aadhaar/ID card scan — HIGH sensitivity PII
+</code></pre>
+<p>Validate content type (<code>image/jpeg</code>, <code>image/png</code>, <code>image/webp</code>) and size (≤ 8 MB each). Generate a <code>resized</code> variant (max 800×800) for <code>profile_photo</code> display; keep <code>id_card_photo</code> original (legibility) but still validate/strip.</p>
+<p><strong>3. Model rules</strong> (<code>user.rb</code>):</p>
+<ul>
+<li><code>AADHAAR_FORMAT = /\A\d{12}\z/</code>. <code>before_validation</code> strips spaces/dashes; validate <code>format</code> + Verhoeff checksum (Aadhaar's built-in check digit) — reject transposition typos. Optional (<code>allow_blank</code>).</li>
+<li><code>before_save :sync_aadhaar_last4</code> — set <code>aadhaar_last4 = aadhaar_number&amp;.last(4)</code> when <code>aadhaar_number</code> changes; null it when cleared.</li>
+<li><code>masked_aadhaar_number</code> → <code>"XXXX-XXXX-#{aadhaar_last4}"</code> when <code>aadhaar_last4</code> present, else <code>nil</code>.</li>
+<li>Attachment/KYC fields apply to <strong>staff</strong> operators; they are permitted for any user but the UI surfaces them on the operator form. No change to auth.</li>
+</ul>
+<h3 id="pii-handling-access-control-encryption-masking-retention">PII handling (access control, encryption, masking, retention)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Encryption at rest</td>
+<td>Aadhaar number is encrypted with Active Record Encryption (AES-256-GCM). ID-card image bytes sit in the storage bucket; enable bucket-level encryption (GCS default) and serve only via signed, expiring, authenticated URLs.</td>
+</tr>
+<tr>
+<td>Who can read</td>
+<td>Only <code>admin</code> users. <code>UserPolicy#index?/show?/update?</code> already gate this. Add <code>UserPolicy#view_aadhaar?</code> and <code>#view_id_card?</code> (admin-only) for the reveal path. Staff/FSM roles <strong>never</strong> receive Aadhaar or ID-card data in any serializer or view.</td>
+</tr>
+<tr>
+<td>Masking by default</td>
+<td>List and default detail responses expose only <code>aadhaar_masked</code> (<code>XXXX-XXXX-1234</code>) and a <code>profile_photo_url</code>. The <strong>full</strong> Aadhaar and the <strong>ID-card image URL</strong> are returned only from a dedicated reveal endpoint that is admin-authorized and <strong>audited</strong>.</td>
+</tr>
+<tr>
+<td>Access audit</td>
+<td>Every full-Aadhaar / ID-card reveal writes an <code>analytics_event</code> (or a dedicated <code>pii_access_logs</code> row) capturing <code>actor_user_id</code>, <code>target_user_id</code>, <code>field</code>, <code>viewed_at</code>, <code>ip</code>. Reuses the existing <code>analytics_event</code> model.</td>
+</tr>
+<tr>
+<td>Image URL exposure</td>
+<td>Never emit permanent public blob URLs. <code>id_card_photo</code> is served through an authenticated redirect action (<code>GET /admin/users/:id/id_card_photo</code> in web; a signed short-TTL URL from the reveal endpoint for Android). <code>profile_photo</code> may use a normal variant URL (low sensitivity) but still behind admin routes.</td>
+</tr>
+<tr>
+<td>Not in URLs/logs</td>
+<td>Aadhaar never appears in query strings, flash messages, or logs. Add <code>filter_parameter_logging</code> entries for <code>aadhaar_number</code>, <code>aadhaar</code>, and the attachment params.</td>
+</tr>
+<tr>
+<td>Retention</td>
+<td>On hard-delete, <code>dependent: :purge_later</code> purges both attachments and the Aadhaar ciphertext goes with the row. On <strong>soft delete</strong> (<code>deleted_at</code>), records are retained per existing policy; add an admin-triggerable "purge KYC" action that nulls <code>aadhaar_number</code>, clears <code>aadhaar_last4</code>, and purges <code>id_card_photo</code> while keeping the account shell.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="workflow">Workflow</h3>
+<figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">flowchart TD
+    A[Admin opens operator form] --&gt; B[Fill name/username/phone + Address]
+    B --&gt; C[Enter Aadhaar 12 digits]
+    C --&gt; D{Verhoeff checksum valid?}
+    D -- no --&gt; C
+    D -- yes --&gt; E[Pick Profile Photo + ID-card Photo]
+    E --&gt; F[Submit multipart: web form / Android multipart]
+    F --&gt; G[Server validates type,size,format,checksum]
+    G -- invalid --&gt; H[422 with field errors]
+    G -- valid --&gt; I[Encrypt Aadhaar, store last4, attach images]
+    I --&gt; J[Saved. List shows masked Aadhaar + photo thumb]
+    J --&gt; K{Admin clicks Reveal}
+    K --&gt; L[view_aadhaar? / view_id_card? authorize]
+    L --&gt; M[Log pii access -&gt; return full value + signed image URL]
+</pre></figure>
+<h2 id="api-changes">API changes</h2>
+<p>All endpoints are admin-authorized (<code>Api::V1::Admin::BaseController</code>) and mirror the web. Attachments require <strong>multipart</strong> requests; scalar KYC fields ride the existing JSON envelope.</p>
+<p><strong>1. Extend <code>POST /api/v1/admin/users</code> and <code>PATCH /api/v1/admin/users/:id</code></strong></p>
+<p>Add to <code>ASSIGNABLE_KEYS</code>: <code>address</code>, <code>aadhaar_number</code>. Accept an optional multipart part for images. Two supported request shapes:</p>
+<ul>
+<li>JSON (scalars only): <code>{"user": { ..., "address": "...", "aadhaar_number": "123412341234" }}</code></li>
+<li>Multipart (scalars + images): parts <code>user[address]</code>, <code>user[aadhaar_number]</code>, <code>user[profile_photo]</code> (file), <code>user[id_card_photo]</code> (file).</li>
+</ul>
+<p>Response (masked by default):</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: 42, &quot;name&quot;: &quot;...&quot;, &quot;role&quot;: &quot;staff&quot;,
+  &quot;address&quot;: &quot;12 MG Road, Bengaluru 560001&quot;,
+  &quot;aadhaar_present&quot;: true,
+  &quot;aadhaar_masked&quot;: &quot;XXXX-XXXX-1234&quot;,
+  &quot;profile_photo_url&quot;: &quot;https://.../rails/active_storage/.../resized.jpg&quot;,
+  &quot;id_card_present&quot;: true,
+  &quot;created_at&quot;: &quot;...&quot;, &quot;updated_at&quot;: &quot;...&quot;
+}
+</code></pre>
+<p>422 on bad Aadhaar checksum/format, oversized/unsupported image, or uniqueness/last-admin guard (unchanged behavior).</p>
+<p><strong>2. New <code>GET /api/v1/admin/users/:id/kyc_reveal</code></strong> (admin-only, audited)</p>
+<p>Request: bearer token, no body. Server authorizes <code>view_aadhaar?</code>/<code>view_id_card?</code>, writes a <code>pii_access</code> analytics event, returns:</p>
+<pre><code class="language-json">{
+  &quot;aadhaar_number&quot;: &quot;123412341234&quot;,
+  &quot;id_card_photo_url&quot;: &quot;https://storage.googleapis.com/...&amp;X-Goog-Expires=300&quot;,
+  &quot;profile_photo_url&quot;: &quot;https://.../resized.jpg&quot;
+}
+</code></pre>
+<p><code>id_card_photo_url</code> is a signed URL with a short TTL (≤ 5 min). 403 for non-admins; 404 if no ID-card attached.</p>
+<p><strong>3. New <code>DELETE /api/v1/admin/users/:id/kyc</code></strong> (optional, admin-only)</p>
+<p>Purges <code>id_card_photo</code>, nulls <code>aadhaar_number</code>/<code>aadhaar_last4</code>. Returns the masked serializer with <code>aadhaar_present:false, id_card_present:false</code>.</p>
+<p>Serializers: <code>Api::V1::UserSerializer</code> gains <code>address, aadhaar_present, aadhaar_masked, profile_photo_url, id_card_present</code>. It must <strong>never</strong> emit the full Aadhaar or the raw ID-card URL — those come only from <code>kyc_reveal</code>.</p>
+<h2 id="ui">UI</h2>
+<h3 id="rails-pwa">Rails PWA</h3>
+<ul>
+<li><strong><code>app/views/admin/users/_form.html.erb</code></strong> — change <code>form_with</code> to <code>multipart: true</code>. Add, after the email field and before role:</li>
+<li><strong>Address</strong> — <code>form.text_area :address, rows: 2</code>.</li>
+<li><strong>Aadhaar Number</strong> — <code>form.text_field :aadhaar_number</code> with <code>inputmode="numeric"</code>, <code>maxlength=12</code>, <code>pattern="\d{12}"</code>. On <strong>edit</strong>, prefill with the masked value and a "Change" toggle; leaving it untouched keeps the stored value (like the password field).</li>
+<li><strong>Profile Photo</strong> — <code>form.file_field :profile_photo, accept: "image/*"</code>, with a thumbnail preview of the current <code>profile_photo.variant(:resized)</code>.</li>
+<li><strong>ID-card Photo</strong> — <code>form.file_field :id_card_photo, accept: "image/*"</code>. Do <strong>not</strong> inline-render the current ID card; show a "View ID card" button that hits the authenticated redirect action and opens in a new tab (admin only).</li>
+<li><strong><code>app/views/admin/users/show.html.erb</code></strong> — add an "Identity (KYC)" card: profile photo, address, masked Aadhaar with a <strong>Reveal</strong> button (POSTs to reveal action, logs access, then shows full value), and a <strong>View ID card</strong> button. Add a <strong>Purge KYC</strong> danger action.</li>
+<li><strong><code>admin/users_controller.rb</code></strong> — add <code>address</code>, <code>aadhaar_number</code>, <code>profile_photo</code>, <code>id_card_photo</code> to <code>user_params</code>; add member actions <code>id_card_photo</code> (authenticated <code>redirect_to rails_blob_url(...)</code> guarded by <code>view_id_card?</code>), <code>reveal_aadhaar</code>, and <code>purge_kyc</code>. Add the same KYC keys to <code>staff_members_controller</code> only if that lighter form should also edit them (recommend keeping KYC on the full users form).</li>
+<li>Add <code>config.filter_parameters += [:aadhaar_number, :aadhaar]</code> in <code>config/initializers/filter_parameter_logging.rb</code>.</li>
+</ul>
+<h3 id="android-compose">Android (Compose)</h3>
+<ul>
+<li><strong><code>UsersDtos.kt</code></strong> — extend <code>AdminUserDto</code> with <code>address</code>, <code>aadhaarPresent</code>, <code>aadhaarMasked</code>, <code>profilePhotoUrl</code>, <code>idCardPresent</code>; extend <code>AdminUserRequest</code> with <code>address</code> and <code>aadhaarNumber</code>. Add a <code>KycRevealDto(aadhaarNumber, idCardPhotoUrl, profilePhotoUrl)</code>.</li>
+<li><strong><code>UsersApi.kt</code></strong> — add a multipart create/update:
+  <code>kotlin
+  @Multipart @POST("api/v1/admin/users")
+  suspend fun createMultipart(@PartMap fields: Map&lt;String, @JvmSuppressWildcards RequestBody&gt;,
+                              @Part profilePhoto: MultipartBody.Part?,
+                              @Part idCardPhoto: MultipartBody.Part?): AdminUserDto</code>
+  plus a <code>@PATCH ...{id}</code> twin and <code>@GET("api/v1/admin/users/{id}/kyc_reveal") suspend fun kycReveal(...)</code>. Keep the existing JSON methods for edits with no image change.</li>
+<li><strong><code>AdminUsersScreen.kt</code></strong> (the ModalBottomSheet create/edit form) — add:</li>
+<li><code>FormField</code> for <strong>Address</strong> (multi-line).</li>
+<li><code>FormField</code> for <strong>Aadhaar</strong> (numeric keyboard, 12-digit, masked display on edit with a "Change" affordance mirroring the password field).</li>
+<li>Two image rows reusing the existing camera/gallery capability from <code>ui/scanner</code> (photo picker + camera). Show the selected/current thumbnail for <strong>Profile Photo</strong>; for <strong>ID-card Photo</strong> show only a "captured / view" state gated behind a reveal tap.</li>
+<li>A <strong>Reveal Aadhaar</strong> button on the detail view calling <code>kycReveal</code> and rendering the full value transiently (not cached).</li>
+<li><strong><code>UsersViewModel.kt</code></strong> — build the multipart body when an image is chosen (fall back to JSON when not), expose <code>revealKyc(id)</code> state, and never persist revealed Aadhaar/ID URL in saved UI state.</li>
+</ul>
+<h2 id="validation-edge-cases">Validation &amp; edge cases</h2>
+<ul>
+<li><strong>Aadhaar format</strong>: exactly 12 digits after stripping spaces/dashes; reject non-numeric and wrong length with a field error. Enforce the <strong>Verhoeff checksum</strong>; a mistyped digit that passes length but fails checksum is rejected.</li>
+<li><strong>Aadhaar optional</strong>: blank is allowed (KYC may be pending). Clearing on edit nulls both the ciphertext and <code>aadhaar_last4</code>.</li>
+<li><strong>Image type/size</strong>: only <code>image/jpeg|png|webp</code>, ≤ 8 MB; reject with 422 and a clear message. Strip EXIF/orientation on variant generation.</li>
+<li><strong>Edit without re-upload</strong>: omitting the image parts keeps the existing attachment; omitting/masking Aadhaar keeps the stored value (parallel to password handling).</li>
+<li><strong>Non-admin access</strong>: staff/FSM calling any users endpoint or <code>kyc_reveal</code> gets 403; serializers used in staff-facing responses must not include KYC fields at all.</li>
+<li><strong>Masking never leaks</strong>: default serializers/lists show only <code>aadhaar_masked</code>; assert full Aadhaar never appears outside <code>kyc_reveal</code>.</li>
+<li><strong>Ephemeral storage</strong>: with <code>:local</code> on Cloud Run, images vanish on restart — this is a data-loss bug, not cosmetic. Block release until GCS is wired.</li>
+<li><strong>Soft-deleted operators</strong>: KYC remains retrievable to admins unless purged; <code>purge_kyc</code> must succeed on a soft-deleted record.</li>
+<li><strong>Log hygiene</strong>: Aadhaar and image params must be filtered from Rails logs and never placed in flash or URL params.</li>
+<li><strong>Last-admin / uniqueness guards</strong> (existing) still apply; KYC changes must not bypass them.</li>
+</ul>
+<h2 id="dependencies-sequencing">Dependencies &amp; sequencing</h2>
+<p><strong>Must exist first</strong>
+1. <strong>ActiveStorage install</strong> — run <code>active_storage:install</code> and load the <code>active_storage_blobs/attachments/variant_records</code> tables into <code>db/schema.rb</code> (currently absent).
+2. <strong>Durable object storage</strong> — switch production <code>config.active_storage.service</code> off ephemeral <code>:local</code> to <strong>GCS</strong> (bucket per env, <code>google-cloud-storage</code> gem, keyfile/credentials via Secret Manager). Without this, uploads are lost on Cloud Run restarts.
+3. <strong>Active Record Encryption keys</strong> — generate and store <code>primary_key</code>, <code>deterministic_key</code>, <code>key_derivation_salt</code> in Rails credentials / Secret Manager; add <code>config.active_record.encryption</code> setup.
+4. Builds directly on the existing <strong>A7</strong> operator user CRUD (<code>admin/users_controller</code>, <code>api/v1/admin/users_controller</code>, Android <code>ui/admin/users</code>).</p>
+<p><strong>Unblocks / enables</strong>
+- Completes A7 from PARTIAL → PRESENT (KYC profile captured).
+- Provides the operator-photo asset reusable by A8/A9 shift &amp; attendance screens (operator avatars).
+- Establishes the <strong>PII pattern</strong> (encrypt-at-rest + masked-by-default + audited reveal + signed image URLs) reused later by customer master B1 (driver/owner contacts) and any future document capture (D8 stock docs).</p>
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+<ul>
+<li>[ ] <code>users</code> has <code>address</code>, encrypted Aadhaar storage, and <code>aadhaar_last4</code>; <code>db/schema.rb</code> includes the ActiveStorage tables.</li>
+<li>[ ] <code>User</code> declares <code>has_one_attached :profile_photo</code> and <code>:id_card_photo</code> with content-type and size validation.</li>
+<li>[ ] Aadhaar is stored as ciphertext (verified by inspecting the raw column) and only decrypts through <code>aadhaar_number</code>.</li>
+<li>[ ] Aadhaar with a bad Verhoeff checksum or non-12-digit input is rejected with a 422 field error on both web and API.</li>
+<li>[ ] Web operator form (<code>_form.html.erb</code>) is <code>multipart</code>, shows Address, Aadhaar (masked on edit), Profile Photo, and ID-card Photo inputs, and saves them.</li>
+<li>[ ] Android create/edit sheet captures Address, Aadhaar, Profile Photo, and ID-card Photo and uploads via multipart; a no-image edit still works over JSON.</li>
+<li>[ ] Default list/detail responses (web + API) show only <code>aadhaar_masked</code> (<code>XXXX-XXXX-1234</code>) and a profile-photo URL — never the full Aadhaar or raw ID-card URL.</li>
+<li>[ ] <code>GET /api/v1/admin/users/:id/kyc_reveal</code> returns the full Aadhaar and a short-TTL signed ID-card URL <strong>only</strong> to admins and writes a PII-access audit event; non-admins get 403.</li>
+<li>[ ] ID-card image is never served via a permanent public URL; it is reachable only through the authenticated redirect (web) or signed reveal URL (API).</li>
+<li>[ ] <code>aadhaar_number</code> and image params are absent from application logs (filtered) and never appear in any URL.</li>
+<li>[ ] Purge-KYC action nulls Aadhaar/last4 and purges the ID-card attachment, and works on soft-deleted operators.</li>
+<li>[ ] Login remains username/mobile + password; <strong>no OTP/SMS/WhatsApp</strong> code, route, gem, or config was added.</li>
+</ul>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 17-spec-operator-kyc.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
+</script>
+
+</body>
+</html>

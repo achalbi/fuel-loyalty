@@ -57,10 +57,17 @@ import com.acefuel.loyalty.ui.theme.nayara
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomersScreen(onBack: (() -> Unit)? = null, onOpenCustomer: (Long) -> Unit) {
+fun CustomersScreen(
+    onBack: (() -> Unit)? = null,
+    onOpenCustomer: (Long) -> Unit,
+    // E2: when set, scope the list to customers active in this dashboard period.
+    startDate: String? = null,
+    endDate: String? = null,
+) {
     val container = LocalContainer.current
     val viewModel: CustomersViewModel = viewModel(
-        factory = viewModelFactory { initializer { CustomersViewModel(container.staffRepository) } },
+        key = "customers-${startDate.orEmpty()}-${endDate.orEmpty()}",
+        factory = viewModelFactory { initializer { CustomersViewModel(container.staffRepository, startDate, endDate) } },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }

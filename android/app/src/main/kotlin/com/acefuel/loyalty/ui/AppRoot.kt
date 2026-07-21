@@ -354,7 +354,12 @@ fun AppRoot(container: ServiceContainer) {
                     arguments = listOf(navArgument("id") { type = NavType.LongType }),
                 ) { entry ->
                     val id = entry.arguments?.getLong("id") ?: return@composable
-                    CustomerProfileScreen(customerId = id, onBack = { navController.popBackStack() })
+                    val profileUser = (authState as? AuthState.LoggedIn)?.user
+                    CustomerProfileScreen(
+                        customerId = id,
+                        isAdmin = profileUser?.role == "admin",
+                        onBack = { navController.popBackStack() },
+                    )
                 }
 
                 // ---- Admin ----
@@ -387,6 +392,22 @@ fun AppRoot(container: ServiceContainer) {
                 // none) and does not raise the staff tab bar over the admin shell.
                 composable(AdminRoutes.REDEEM) { RedeemScreen(onBack = back) }
 
+                // E2: period-scoped customers list, pushed from the admin dashboard.
+                composable(
+                    AdminRoutes.CUSTOMERS_PERIOD,
+                    arguments = listOf(
+                        navArgument("start") { type = NavType.StringType; nullable = true; defaultValue = null },
+                        navArgument("end") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    ),
+                ) { entry ->
+                    CustomersScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenCustomer = { id -> navController.navigate("customer/$id") },
+                        startDate = entry.arguments?.getString("start")?.ifBlank { null },
+                        endDate = entry.arguments?.getString("end")?.ifBlank { null },
+                    )
+                }
+
                 composable(AdminRoutes.TRANSACTIONS) { AdminTransactionsScreen(onBack = back) }
                 composable(AdminRoutes.USERS) { AdminUsersScreen(onBack = back) }
                 composable(AdminRoutes.FUEL_TYPES) { AdminFuelTypesScreen(onBack = back) }
@@ -395,7 +416,25 @@ fun AppRoot(container: ServiceContainer) {
                 composable(AdminRoutes.REWARD_RATES) { AdminRewardRatesScreen(onBack = back) }
                 composable(AdminRoutes.THEME) { AdminThemeScreen(onBack = back) }
                 composable(AdminRoutes.SCHEDULES) { AdminSchedulesScreen(onBack = back) }
-                composable(AdminRoutes.STAFF) { AdminStaffScreen(onBack = back) }
+                composable(AdminRoutes.STAFF) {
+                    AdminStaffScreen(
+                        onBack = back,
+                        onAssignPump = { id -> navController.navigate(AdminRoutes.assignPump(id)) },
+                    )
+                }
+                composable(
+                    AdminRoutes.ASSIGN_PUMP,
+                    arguments = listOf(navArgument("id") { type = NavType.LongType }),
+                ) { entry ->
+                    val id = entry.arguments?.getLong("id") ?: return@composable
+                    MyPumpScreen(
+                        onBack = back,
+                        staffMemberId = id,
+                        title = "Assign Pump",
+                        intro = "Assign this operator's pump and its active nozzles. Every transaction they record will use this pump.",
+                        saveLabel = "Save Pump Assignment",
+                    )
+                }
                 composable(AdminRoutes.SHIFTS) { AdminShiftsScreen(onBack = back) }
                 composable(AdminRoutes.CYCLES) { AdminCyclesScreen(onBack = back) }
                 composable(AdminRoutes.ATTENDANCE) { AdminAttendanceScreen(onBack = back) }

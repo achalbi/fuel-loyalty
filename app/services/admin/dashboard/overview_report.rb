@@ -24,6 +24,43 @@ module Admin
       }.freeze
       LEGACY_REDEMPTION_BUCKET = :legacy_other
 
+      # Resolve a period filter (used by the customers drill-through, E2) into a
+      # Time range. Explicit start/end dates win; else a QUICK_RANGES preset;
+      # else nil (no period filter). Preset boundaries match #dates_for_preset.
+      def self.period_range(preset: nil, start_date: nil, end_date: nil)
+        from = parse_iso_date(start_date)
+        to = parse_iso_date(end_date)
+        if from || to
+          from ||= to
+          to ||= from
+          from, to = to, from if from > to
+          return from.beginning_of_day..to.end_of_day
+        end
+
+        key = preset.to_s
+        return nil unless QUICK_RANGES.key?(key)
+
+        today = Time.zone.today
+        from, to =
+          case key
+          when "today" then [today, today]
+          when "this_week" then [today.beginning_of_week, today]
+          when "this_month" then [today.beginning_of_month, today]
+          when "last_month"
+            last = today.last_month
+            [last.beginning_of_month, last.end_of_month]
+          end
+        from.beginning_of_day..to.end_of_day
+      end
+
+      def self.parse_iso_date(value)
+        return nil if value.blank?
+
+        Date.iso8601(value.to_s)
+      rescue ArgumentError, TypeError
+        nil
+      end
+
       def initialize(start_date:, end_date:, segment:, preset: nil, fuel_type: nil)
         @preset = QUICK_RANGES.key?(preset.to_s) ? preset.to_s : nil
         @segment = SEGMENTS.key?(segment.to_s) ? segment.to_s : "all"

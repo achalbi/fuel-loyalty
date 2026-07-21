@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceFuels — Phased Implementation Roadmap — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">30-implementation-roadmap.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="acefuels-phased-implementation-roadmap">AceFuels — Phased Implementation Roadmap</h1>
+<blockquote>
+<p><strong>Status:</strong> Delivery plan. This document sequences the work required to close the
+gap between the shipped system and the full requirement. It does <strong>not</strong> re-specify
+features — for <em>what</em> each feature must do read
+<a href="01-functional-requirements.html"><code>01-functional-requirements.html</code></a>; for <em>what exists
+today</em> read <a href="02-current-architecture.html"><code>02-current-architecture.html</code></a>; for the
+program vocabulary and locked decisions read
+<a href="00-product-overview.html"><code>00-product-overview.html</code></a>; for the evidence behind each
+Present/Partial/Absent verdict read
+<a href="40-gap-analysis.html"><code>40-gap-analysis.html</code></a>.</p>
+<p><strong>Progress — Phase 0 COMPLETE ✅ (2026-07-21):</strong> all shipped on every surface, tested — ✅ <strong>C4 global rewards pause</strong> · ✅ <strong>S-PAUSE</strong> · ✅ <strong>fuel types → MS/HSD</strong> · ✅ <strong>S-MYPUMP</strong> · ✅ <strong>A10 admin pump assignment</strong> · ✅ <strong>E2 dashboard drill-through</strong>. Next up: <strong>Phase 1 foundations</strong> (Product Catalog A5, litres/readings model, customer expansion B1/E4/B2, push-token linkage).</p>
+</blockquote>
+<p>Feature IDs (A1–A10, B1–B2, C1–C5, D1–D10, E1–E7, F1–F4, G1, S-MYPUMP, S-PAUSE) are
+shared across all AceFuels docs.</p>
+<hr />
+<h2 id="1-governing-principles">1. Governing principles</h2>
+<p>Three locked decisions from the product overview shape every phase below:</p>
+<ul>
+<li><strong>Q1 — Litres are the source of truth.</strong> Wherever a feature touches money, the
+  physical fact (nozzle reading / litres) is captured and ₹ is <em>derived</em> from the
+  product-catalog selling price. This is why the <strong>Product Catalog (A5)</strong> and a
+  <strong>litres/readings model</strong> sit at the root of the dependency graph: almost nothing
+  downstream can be built "correctly" until amounts can be derived rather than typed.</li>
+<li><strong>Q2 — Both surfaces in lockstep.</strong> Every feature ships on the <strong>Rails PWA</strong>, the
+  <strong>native Android app</strong>, and the <strong>JSON API</strong> that backs Android, in the same
+  milestone. A feature is not "done" when only one surface has it. Each item below
+  names the surfaces it touches; the effort estimate already includes all of them.</li>
+<li><strong>Q3 — Operator KYC is profile-fields-only.</strong> No OTP/SMS provider is introduced.
+  This keeps A7 to ActiveStorage images + PII handling rather than an auth rebuild.</li>
+</ul>
+<p><strong>Lockstep tax.</strong> Because every feature is three surfaces, estimates are larger than a
+Rails-only plan would imply. As a rule of thumb we size the Rails+API work, then add
+~40–60% for the Android screen(s) + repository/DTO/viewmodel wiring described in the
+current-architecture doc. The API is the contract that keeps the two front-ends
+honest, so <strong>API-first within each item</strong> is the working order: define/extend the
+<code>/api/v1</code> endpoint, then build Rails server-rendered views and the Compose screen
+against it.</p>
+<hr />
+<h2 id="2-dependency-graph-the-four-foundations">2. Dependency graph — the four foundations</h2>
+<p>Four foundational capabilities unblock the bulk of the requirement. Everything in
+Phases 2–4 is gated on one or more of them.</p>
+<figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">graph TD
+    subgraph Foundations
+        CAT[&quot;A5 Product Catalog + Stock&lt;br/&gt;(products, batch, MRP, selling price)&quot;]
+        LIT[&quot;Litres / Readings model&lt;br/&gt;(nozzle meter readings → derived ₹)&quot;]
+        CUST[&quot;Customer master expansion + type&lt;br/&gt;(B1 driver/supervisor/owner, E4 OTP/TT/Drive-in/Credit)&quot;]
+        TOK[&quot;Push-token → customer/user linkage&lt;br/&gt;(replace anonymous tokens)&quot;]
+    end
+
+    subgraph Phase2[&quot;Phase 2 — Settlement &amp; Reports&quot;]
+        D1[&quot;D1 per-nozzle readings&quot;]
+        D2[&quot;D2 lubes in settlement + stock&quot;]
+        D3[&quot;D3 discount pull-through&quot;]
+        D6[&quot;D6 final-settle calc&quot;]
+        D7[&quot;D7 denomination + shortage&quot;]
+        D8[&quot;D8 stock received + decantation&quot;]
+        D9[&quot;D9 admin settlement view/edit&quot;]
+        D10[&quot;D10 rate comparison&quot;]
+        E1[&quot;E1 reports (litres/discount/gifts)&quot;]
+    end
+
+    subgraph Phase3[&quot;Phase 3 — Campaigns / KYC&quot;]
+        F1[&quot;F1 campaigns (min-purchase → gift/discount)&quot;]
+        F2[&quot;F2 targeting (customer / type / selected)&quot;]
+        F3[&quot;F3 targeted + auto loyalty push&quot;]
+        F4[&quot;F4 WhatsApp / SMS&quot;]
+        A7[&quot;A7 operator KYC profile fields&quot;]
+    end
+
+    subgraph Phase4[&quot;Phase 4 — CRM intelligence&quot;]
+        E3[&quot;E3 per-customer cadence&quot;]
+        E5[&quot;E5 contact tracking + conversion&quot;]
+        E6[&quot;E6 churn / lost-customer&quot;]
+        E7[&quot;E7 feedback / rating&quot;]
+    end
+
+    B2[&quot;B2 per-visit capture&lt;br/&gt;(litres, discount, fleet/OTP, transport)&quot;]
+
+    CAT --&gt; D2
+    CAT --&gt; D6
+    CAT --&gt; D10
+    CAT --&gt; LIT
+    LIT --&gt; D1
+    LIT --&gt; D6
+    LIT --&gt; B2
+    LIT --&gt; E1
+    D1 --&gt; D6
+    D2 --&gt; D6
+    D3 --&gt; D6
+    B2 --&gt; D3
+    D6 --&gt; D7
+    D6 --&gt; D9
+    D8 --&gt; D9
+    D1 --&gt; D9
+    CUST --&gt; B2
+    CUST --&gt; E1
+    CUST --&gt; F2
+    CUST --&gt; E5
+    CUST --&gt; E6
+    CUST --&gt; E4label[&quot;E4 customer-type view&quot;]
+    B2 --&gt; E3
+    B2 --&gt; E6
+    F2 --&gt; F1
+    F2 --&gt; F3
+    F2 --&gt; F4
+    TOK --&gt; F3
+    TOK --&gt; F4
+    E5 --&gt; F1
+    E6 --&gt; F1
+
+    style CAT fill:#c1121f,color:#fff
+    style LIT fill:#c1121f,color:#fff
+    style CUST fill:#c1121f,color:#fff
+    style TOK fill:#c1121f,color:#fff
+</pre></figure>
+<p><strong>Reading the graph.</strong> The four red nodes are the foundations built in <strong>Phase 1</strong>.
+Their fan-out explains the phase ordering:</p>
+<ul>
+<li><strong>A5 Product Catalog</strong> is the deepest root: the selling price it holds is the
+  multiplier that turns litres into ₹, so it feeds the litres model, all of settlement
+  (D2/D6/D10), and reporting. Nothing that derives money is correct before it lands.</li>
+<li><strong>Litres/readings model</strong> turns the current ₹-only <code>transaction</code> into a physical
+  record. It unblocks D1 (per-nozzle readings), D6 (final settle), B2 (per-visit
+  litres), and litre-based reports (E1).</li>
+<li><strong>Customer master expansion + type</strong> (driver/supervisor/owner triple + OTP/TT/
+  Drive-in/Credit taxonomy) is the join key for per-visit capture, targeting,
+  contact-tracking, churn, and every customer/transporter report.</li>
+<li><strong>Push-token linkage</strong> replaces today's anonymous <code>push_subscriptions</code> tokens with a
+  customer/user association, without which F3 targeted push and F4 WhatsApp/SMS cannot
+  address an individual.</li>
+</ul>
+<hr />
+<h2 id="3-phased-milestones">3. Phased milestones</h2>
+<h3 id="phase-0-quick-wins-no-new-foundations">Phase 0 — Quick wins (no new foundations)</h3>
+<p>Ships correctness fixes and unblocks-nothing-else value that requires <strong>no</strong> schema
+foundation. Good first sprint to establish the both-surfaces-in-lockstep cadence.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Effort</th>
+<th>Surfaces</th>
+<th>Blockers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>—</td>
+<td><strong>Rename fuel types to MS / HSD</strong> (seed <code>fuel_types.code</code>/<code>name</code> to the requirement's MS + HSD; align nozzle labels)</td>
+<td>XS</td>
+<td>Rails, Android, API</td>
+<td>none</td>
+</tr>
+<tr>
+<td>C4</td>
+<td><strong>Global pause</strong> — add a global rewards-pause flag on <code>reward_settings</code> (today only per-customer <code>rewards_paused</code> exists); honor it in <code>TransactionCreator</code> accrual</td>
+<td>S</td>
+<td>Rails, Android, API</td>
+<td>none</td>
+</tr>
+<tr>
+<td>S-PAUSE</td>
+<td><strong>Remove "pause rewards" from staff login</strong> — gate the per-customer pause + any global pause control behind admin role only</td>
+<td>XS</td>
+<td>Rails, Android, API</td>
+<td>C4 (share the guard)</td>
+</tr>
+<tr>
+<td>A10 / S-MYPUMP</td>
+<td><strong>Staff-constraint pair fix</strong> — "My Pump" must be an <em>admin</em> assignment path (A10), <strong>not</strong> staff self-service; disable the staff "My Pump" screen (S-MYPUMP). These are two halves of one change: move the assignment authority from FSM to admin</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>none</td>
+</tr>
+<tr>
+<td>E2</td>
+<td><strong>Dashboard drill-through</strong> — make the existing period tiles (today/this-week/this-month/last-month) clickable into a customer list; wire the customer-list drill-through the tiles already imply</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>none</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Phase 0 exit:</strong> fuel types read MS/HSD everywhere; rewards can be paused outlet-wide;
+staff can no longer pause rewards or self-assign a pump; admin assigns pumps; dashboard
+tiles open a customer list on both surfaces.</p>
+<hr />
+<h3 id="phase-1-foundations">Phase 1 — Foundations</h3>
+<p>Builds the four red nodes. This is the highest-leverage and highest-risk phase; it
+touches the core <code>transaction</code> write path that both surfaces already depend on, so it
+must land behind careful migration (keep ₹ <code>fuel_amount</code> derivable and backfilled).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Effort</th>
+<th>Surfaces</th>
+<th>Blockers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A5</td>
+<td><strong>Product Catalog + stock</strong> — <code>products</code> (name, batch, MRP, selling price, product_kind fuel/lube/adblue) seeded from the requirement's catalog rows; opening/closing stock on stockable products; nozzle <code>fuel_type</code> reconciled to catalog products</td>
+<td>L</td>
+<td>Rails, Android, API</td>
+<td>none</td>
+</tr>
+<tr>
+<td>—</td>
+<td><strong>Litres / readings model</strong> — add litres + nozzle meter-reading to the transaction/settlement path; derive ₹ from A5 selling price; backfill existing ₹-only transactions</td>
+<td>L</td>
+<td>Rails, Android, API</td>
+<td>A5</td>
+</tr>
+<tr>
+<td>B1</td>
+<td><strong>Customer master expansion</strong> — driver / supervisor / owner name+mobile triples, contacted-by checkbox + info; extend <code>customers</code> (or a <code>customer_contacts</code> child)</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>none</td>
+</tr>
+<tr>
+<td>E4</td>
+<td><strong>Customer type</strong> — OTP(Fleet) / TT / Drive-in / Credit taxonomy field on customer; type filter surfaced on dashboard</td>
+<td>S</td>
+<td>Rails, Android, API</td>
+<td>B1</td>
+</tr>
+<tr>
+<td>B2</td>
+<td><strong>Per-visit capture</strong> — the FSM CustomerDetailsEntry form (date, vehicle, driver, litres, pump, discount, fleet/OTP, transport, manager, owner, approx-vehicles) replacing the ₹-only transaction on the staff surfaces</td>
+<td>L</td>
+<td>Rails, Android, API</td>
+<td>A5, litres model, B1, E4</td>
+</tr>
+<tr>
+<td>—</td>
+<td><strong>Push-token linkage</strong> — add customer/user association to <code>push_subscriptions</code>; capture identity on subscribe; keep anonymous tokens working during migration</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>none</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Phase 1 exit:</strong> a customer visit is captured as litres against a nozzle reading with a
+derived ₹, tied to a fully-modeled customer of a known type, on both surfaces; the
+product catalog and stock exist; push tokens can address an individual.</p>
+<hr />
+<h3 id="phase-2-daily-settlement-reports">Phase 2 — Daily Settlement + Reports</h3>
+<p>The single largest body of new product surface. Every item is gated on Phase-1
+foundations. FSM-mobile-first for capture (D1/D2/D3/D6/D7); admin-first for review
+(D9/D10) and reports (E1) — but all three surfaces per Q2.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Effort</th>
+<th>Surfaces</th>
+<th>Blockers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td><strong>Per-nozzle readings</strong> — today's/yesterday's reading (auto-populated), testing litres, net litres sold per nozzle</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>litres model</td>
+</tr>
+<tr>
+<td>D2</td>
+<td><strong>Lubes in settlement + stock</strong> — checkbox-select catalog lubes, qty → amount from price, opening/closing stock movement</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>A5</td>
+</tr>
+<tr>
+<td>D3</td>
+<td><strong>Discount pull-through</strong> — same-day CustomerDetailsEntry discounts (transport, litres, discount, driver/manager/owner) surfaced into settlement</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>B2</td>
+</tr>
+<tr>
+<td>D4</td>
+<td><strong>PhonePe POS + Scanner amounts</strong> — capture the two PhonePe tender lines in settlement</td>
+<td>S</td>
+<td>Rails, Android, API</td>
+<td>D6 (settlement shell)</td>
+</tr>
+<tr>
+<td>D5</td>
+<td><strong>Fleet-OTP / TT credit lines</strong> — litres + discount credit lines (e.g. "OTP 136 Lts NL-01/AE-2471")</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>B2, E4</td>
+</tr>
+<tr>
+<td>D6</td>
+<td><strong>Final-settle calc</strong> — <code>{Fuel sold + Lubes} − {Discounts + PhonePe POS + PhonePe Scanner}</code>; the settlement aggregate</td>
+<td>L</td>
+<td>Rails, Android, API</td>
+<td>D1, D2, D3, A5</td>
+</tr>
+<tr>
+<td>D7</td>
+<td><strong>Denomination + shortage</strong> — 500/100/50/20/10/5 × qty cash breakdown; counted-vs-expected shortage per pump</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>D6</td>
+</tr>
+<tr>
+<td>D8</td>
+<td><strong>Stock received + decantation</strong> — MS/HSD stock received; tank KL decantation readings</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>A5</td>
+</tr>
+<tr>
+<td>D9</td>
+<td><strong>Admin settlement view/edit</strong> — admin reviews/edits current and past settlements per pump and across pumps (also satisfies G1)</td>
+<td>L</td>
+<td>Rails, Android, API</td>
+<td>D1, D6, D8</td>
+</tr>
+<tr>
+<td>D10</td>
+<td><strong>Rate comparison</strong> — JIO-BP vs own selling price</td>
+<td>S</td>
+<td>Rails, Android, API</td>
+<td>A5</td>
+</tr>
+<tr>
+<td>E1</td>
+<td><strong>Reports</strong> — daily/weekly/monthly/yearly per vehicle / transporter / driver (litres, discount, gifts)</td>
+<td>L</td>
+<td>Rails, Android, API</td>
+<td>litres model, B1, B2</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Phase 2 exit:</strong> an FSM can complete a full DailySettlement per the requirement sheet
+(readings → lubes → discounts → tenders → final amount → denomination → shortage →
+stock → decantation → rate comparison); admin can view and edit it per-pump and
+across pumps (closing G1); reports slice litres/discount/gifts by
+vehicle/transporter/driver — all on both surfaces.</p>
+<hr />
+<h3 id="phase-3-campaigns-notifications-operator-kyc">Phase 3 — Campaigns + Notifications + Operator KYC</h3>
+<p>Turns the customer dataset into outreach. Gated on customer type (E4) and token
+linkage from Phase 1. A7 is grouped here as an independent, low-risk KYC add.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Effort</th>
+<th>Surfaces</th>
+<th>Blockers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F2</td>
+<td><strong>Targeting</strong> — address an individual customer, a customer <em>type</em> (OTP/TT/Drive-in/Credit), or a hand-selected set; the reusable audience selector</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>E4, B1</td>
+</tr>
+<tr>
+<td>F1</td>
+<td><strong>Campaigns</strong> — min-purchase-per-period → discount/gift rules, bound to an F2 audience</td>
+<td>L</td>
+<td>Rails, Android, API</td>
+<td>F2, E5/E6 signals (optional)</td>
+</tr>
+<tr>
+<td>F3</td>
+<td><strong>Targeted + auto loyalty push</strong> — replace untargeted broadcast with an offer object addressed via F2; auto push on accumulated loyalty bonus</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>token linkage, F2</td>
+</tr>
+<tr>
+<td>F4</td>
+<td><strong>WhatsApp / SMS</strong> — outbound offer + loyalty notifications over a messaging provider (new integration)</td>
+<td>L</td>
+<td>Rails, Android, API</td>
+<td>token linkage, F2</td>
+</tr>
+<tr>
+<td>A7</td>
+<td><strong>Operator KYC profile fields</strong> — photo, address, Aadhaar number, ID-card photo (ActiveStorage ×2 + PII handling); keep username/mobile + password (Q3, no OTP)</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>none</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Phase 3 exit:</strong> admin can define a campaign, target it three ways, and reach targeted
+customers by push and WhatsApp/SMS; loyalty accrual triggers an automatic bonus push;
+operator records carry KYC profile fields — all on both surfaces.</p>
+<hr />
+<h3 id="phase-4-crm-intelligence">Phase 4 — CRM intelligence</h3>
+<p>The "smart" dashboard layer. Every item consumes the per-visit history and customer
+model built earlier; nothing here can be meaningful before Phases 1–2 populate the data.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Effort</th>
+<th>Surfaces</th>
+<th>Blockers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E3</td>
+<td><strong>Per-customer / transporter cadence</strong> — last-visit + daily/weekly/biweekly rhythm per customer (today only an aggregate visits-distribution chart exists)</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>B2</td>
+</tr>
+<tr>
+<td>E5</td>
+<td><strong>Contact tracking + conversion</strong> — contacted count, last-contact, conversion probability</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>B1, E4</td>
+</tr>
+<tr>
+<td>E6</td>
+<td><strong>Churn / lost-customer</strong> — "came last week, not this week = lost" intelligent lost-customer detection + feedback loop</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>B2, E3</td>
+</tr>
+<tr>
+<td>E7</td>
+<td><strong>Feedback / rating</strong> — capture and surface customer feedback and rating</td>
+<td>M</td>
+<td>Rails, Android, API</td>
+<td>B1</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Phase 4 exit:</strong> the dashboard shows per-customer cadence, flags churned customers,
+tracks contact-to-conversion, and captures feedback/rating — all on both surfaces —
+completing the requirement's intelligent-dashboard vision.</p>
+<hr />
+<h2 id="4-per-feature-effort-table-consolidated">4. Per-feature effort table (consolidated)</h2>
+<p>Effort scale: <strong>XS</strong> ≤0.5 day · <strong>S</strong> ~1–2 days · <strong>M</strong> ~3–5 days · <strong>L</strong> ~1–2 weeks ·
+<strong>XL</strong> &gt;2 weeks. Estimates are for <strong>all three surfaces</strong> (Rails + Android + API) per Q2.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>ID</th>
+<th>Feature</th>
+<th>Effort</th>
+<th>Surfaces</th>
+<th>Key blocker(s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>—</td>
+<td>Rename fuel types → MS/HSD</td>
+<td>XS</td>
+<td>R/A/API</td>
+<td>—</td>
+</tr>
+<tr>
+<td>0</td>
+<td>C4</td>
+<td>Global rewards pause</td>
+<td>S</td>
+<td>R/A/API</td>
+<td>—</td>
+</tr>
+<tr>
+<td>0</td>
+<td>S-PAUSE</td>
+<td>Remove staff pause control</td>
+<td>XS</td>
+<td>R/A/API</td>
+<td>C4</td>
+</tr>
+<tr>
+<td>0</td>
+<td>A10/S-MYPUMP</td>
+<td>Admin-owned pump assignment; disable staff "My Pump"</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>—</td>
+</tr>
+<tr>
+<td>0</td>
+<td>E2</td>
+<td>Dashboard tile drill-through</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>—</td>
+</tr>
+<tr>
+<td>1</td>
+<td>A5</td>
+<td>Product Catalog + stock</td>
+<td>L</td>
+<td>R/A/API</td>
+<td>—</td>
+</tr>
+<tr>
+<td>1</td>
+<td>—</td>
+<td>Litres / readings model</td>
+<td>L</td>
+<td>R/A/API</td>
+<td>A5</td>
+</tr>
+<tr>
+<td>1</td>
+<td>B1</td>
+<td>Customer master expansion</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>—</td>
+</tr>
+<tr>
+<td>1</td>
+<td>E4</td>
+<td>Customer type taxonomy</td>
+<td>S</td>
+<td>R/A/API</td>
+<td>B1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>B2</td>
+<td>Per-visit capture form</td>
+<td>L</td>
+<td>R/A/API</td>
+<td>A5, litres, B1, E4</td>
+</tr>
+<tr>
+<td>1</td>
+<td>—</td>
+<td>Push-token linkage</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D1</td>
+<td>Per-nozzle readings</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>litres</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D2</td>
+<td>Lubes in settlement + stock</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>A5</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D3</td>
+<td>Discount pull-through</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>B2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D4</td>
+<td>PhonePe POS + Scanner tenders</td>
+<td>S</td>
+<td>R/A/API</td>
+<td>D6</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D5</td>
+<td>Fleet-OTP / TT credit lines</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>B2, E4</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D6</td>
+<td>Final-settle calc</td>
+<td>L</td>
+<td>R/A/API</td>
+<td>D1, D2, D3, A5</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D7</td>
+<td>Denomination + shortage</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>D6</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D8</td>
+<td>Stock received + decantation</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>A5</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D9</td>
+<td>Admin settlement view/edit (+G1)</td>
+<td>L</td>
+<td>R/A/API</td>
+<td>D1, D6, D8</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D10</td>
+<td>Rate comparison</td>
+<td>S</td>
+<td>R/A/API</td>
+<td>A5</td>
+</tr>
+<tr>
+<td>2</td>
+<td>E1</td>
+<td>Reports (litres/discount/gifts)</td>
+<td>L</td>
+<td>R/A/API</td>
+<td>litres, B1, B2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>F2</td>
+<td>Targeting / audience selector</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>E4, B1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>F1</td>
+<td>Campaigns</td>
+<td>L</td>
+<td>R/A/API</td>
+<td>F2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>F3</td>
+<td>Targeted + auto loyalty push</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>token, F2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>F4</td>
+<td>WhatsApp / SMS</td>
+<td>L</td>
+<td>R/A/API</td>
+<td>token, F2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>A7</td>
+<td>Operator KYC profile fields</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>—</td>
+</tr>
+<tr>
+<td>4</td>
+<td>E3</td>
+<td>Per-customer / transporter cadence</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>B2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>E5</td>
+<td>Contact tracking + conversion</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>B1, E4</td>
+</tr>
+<tr>
+<td>4</td>
+<td>E6</td>
+<td>Churn / lost-customer</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>B2, E3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>E7</td>
+<td>Feedback / rating</td>
+<td>M</td>
+<td>R/A/API</td>
+<td>B1</td>
+</tr>
+</tbody>
+</table></div>
+<p>Rough phase totals: <strong>Phase 0</strong> ≈ 1 sprint · <strong>Phase 1</strong> ≈ 3–4 weeks (foundation-heavy)
+· <strong>Phase 2</strong> ≈ 6–8 weeks (largest) · <strong>Phase 3</strong> ≈ 4–5 weeks · <strong>Phase 4</strong> ≈ 3–4 weeks.</p>
+<hr />
+<h2 id="5-biggest-changes-ranking">5. Biggest changes — ranking</h2>
+<p>Ordered by combined <strong>effort × downstream fan-out × migration risk</strong>. These are the
+items to staff most carefully and review most closely.</p>
+<ol>
+<li><strong>Litres / readings model (foundation, L).</strong> Rewrites the core <code>transaction</code> write
+   path that <em>both</em> front-ends and <code>TransactionCreator</code> already depend on. Highest
+   blast radius: requires a backfill to keep existing ₹-only rows valid and a
+   dual-write window. Get this wrong and every downstream derive-₹ feature is wrong.</li>
+<li><strong>A5 Product Catalog + stock (foundation, L).</strong> The deepest root of the dependency
+   graph — the selling price it holds is the multiplier for all derived money. Wide
+   fan-out into settlement (D2/D6/D10) and reports.</li>
+<li><strong>D6 Final-settle calc (L).</strong> The settlement aggregate that ties D1+D2+D3 minus the
+   tender lines together; the arithmetic must reconcile against physical litres, and
+   it is the node D7/D9 hang off.</li>
+<li><strong>B2 Per-visit capture (L).</strong> Replaces the staff transaction flow on both surfaces
+   with the full CustomerDetailsEntry form; the join point between operations and CRM
+   (feeds D3, E3, E6). Four blockers before it can start.</li>
+<li><strong>E1 Reports (L).</strong> Broad read-model over litres + customer + visit history across
+   four time grains and three grouping dimensions; cheap to get roughly right, costly
+   to get reconciled-to-the-rupee right.</li>
+<li><strong>F1 Campaigns (L) / F4 WhatsApp-SMS (L).</strong> F1 is new rules-engine surface; F4 adds
+   a brand-new external messaging integration (provider, templates, delivery receipts)
+   with its own compliance surface.</li>
+<li><strong>D9 Admin settlement view/edit (L).</strong> Also closes G1 (per-pump visualize + edit);
+   an editable admin console over the settlement records with cross-pump aggregation.</li>
+</ol>
+<p>Everything else is S/M and low fan-out — parallelizable once its foundation lands.</p>
+<hr />
+<h2 id="6-sequencing-notes">6. Sequencing notes</h2>
+<ul>
+<li><strong>Do Phase 0 first regardless of staffing</strong> — it corrects two requirement violations
+  (S-PAUSE and S-MYPUMP are the <em>opposite</em> of the requirement today) and needs no
+  foundation, so it de-risks the "both surfaces in lockstep" cadence before the hard
+  migrations begin.</li>
+<li><strong>Within Phase 1, land A5 → litres model before B2.</strong> B1/E4 and token linkage are
+  independent and can run in parallel with the A5/litres track.</li>
+<li><strong>Phase 2 is internally parallel once D6 exists</strong> — D1/D2/D3/D8 can be built
+  concurrently, converge on D6, then D4/D5/D7/D9/D10 follow.</li>
+<li><strong>Phases 3 and 4 can partly overlap:</strong> A7 (KYC) has no blockers and can slot into any
+  spare capacity; F1 quality improves if E5/E6 churn signals exist, but does not hard-
+  depend on them.</li>
+<li><strong>API-first per item.</strong> For each feature extend the <code>/api/v1</code> contract first, then
+  build the Rails server-rendered view and the Compose screen against it — this is how
+  the two front-ends stay in lockstep per Q2.</li>
+</ul>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 30-implementation-roadmap.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
+</script>
+
+</body>
+</html>

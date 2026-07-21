@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceFuels — Product & Engineering Documentation</title>
+<style>
+  :root{
+    --bg:#f5f7f9; --surface:#ffffff; --surface-2:#eef1f5; --surface-3:#e7ebf0;
+    --ink:#16202b; --muted:#56646f; --faint:#8593a0; --border:#e0e6ec; --border-strong:#cdd6df;
+    --brand:#1f6bc0; --brand-ink:#17518f; --brand-tint:#e9f1fb;
+    --accent:#d9861a; --accent-tint:#fbeed6;
+    --present:#1f9d6b; --present-bg:#e6f5ee;
+    --partial:#c5851b; --partial-bg:#faf0da;
+    --absent:#c8402f; --absent-bg:#fbe8e4;
+    --shadow:0 1px 2px rgba(16,32,45,.05), 0 4px 16px rgba(16,32,45,.05);
+    --radius:12px; --radius-sm:8px;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --maxw:1160px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0c1219; --surface:#141d27; --surface-2:#1a2531; --surface-3:#22303d;
+      --ink:#e8edf2; --muted:#a2b1bf; --faint:#6d7e8d; --border:#25333f; --border-strong:#33475700;
+      --border-strong:#37485a;
+      --brand:#4f97df; --brand-ink:#7fb4e8; --brand-tint:#152436;
+      --accent:#e6a848; --accent-tint:#2e2413;
+      --present:#37b988; --present-bg:#12271f;
+      --partial:#e0ab44; --partial-bg:#2a2412;
+      --absent:#e2695a; --absent-bg:#2c1a17;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f7f9; --surface:#ffffff; --surface-2:#eef1f5; --surface-3:#e7ebf0;
+    --ink:#16202b; --muted:#56646f; --faint:#8593a0; --border:#e0e6ec; --border-strong:#cdd6df;
+    --brand:#1f6bc0; --brand-ink:#17518f; --brand-tint:#e9f1fb;
+    --accent:#d9861a; --accent-tint:#fbeed6;
+    --present:#1f9d6b; --present-bg:#e6f5ee;
+    --partial:#c5851b; --partial-bg:#faf0da;
+    --absent:#c8402f; --absent-bg:#fbe8e4;
+    --shadow:0 1px 2px rgba(16,32,45,.05), 0 4px 16px rgba(16,32,45,.05);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1219; --surface:#141d27; --surface-2:#1a2531; --surface-3:#22303d;
+    --ink:#e8edf2; --muted:#a2b1bf; --faint:#6d7e8d; --border:#25333f; --border-strong:#37485a;
+    --brand:#4f97df; --brand-ink:#7fb4e8; --brand-tint:#152436;
+    --accent:#e6a848; --accent-tint:#2e2413;
+    --present:#37b988; --present-bg:#12271f;
+    --partial:#e0ab44; --partial-bg:#2a2412;
+    --absent:#e2695a; --absent-bg:#2c1a17;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;
+    font-variant-ligatures:none;
+  }
+  a{color:var(--brand);text-decoration:none}
+  a:hover{text-decoration:underline}
+  :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+  h1,h2,h3,h4{text-wrap:balance;line-height:1.2;margin:0}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+
+  /* ---------- top bar ---------- */
+  .topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+    backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+  .topbar-in{max-width:var(--maxw);margin:0 auto;padding:11px 24px;display:flex;align-items:center;gap:14px}
+  .brand-mark{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em}
+  .drop{width:22px;height:22px;flex:none}
+  .brand-mark .sub{color:var(--faint);font-weight:500;font-size:13px;letter-spacing:.02em}
+  .topbar .spacer{flex:1}
+  .tnav{display:flex;gap:2px}
+  .tnav a{color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-weight:500}
+  .tnav a:hover{color:var(--ink);background:var(--surface-2);text-decoration:none}
+  .toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+    width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+  .toggle:hover{color:var(--ink);border-color:var(--brand)}
+  @media(max-width:860px){.tnav{display:none}}
+
+  /* ---------- hero ---------- */
+  .hero{padding:52px 0 30px;border-bottom:1px solid var(--border);
+    background:radial-gradient(1200px 320px at 82% -40%,var(--brand-tint),transparent 70%)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .hero h1{font-size:clamp(2.1rem,5vw,3.2rem);font-weight:800;letter-spacing:-.025em;margin:.35em 0 .15em}
+  .hero .lede{font-size:clamp(1rem,2.2vw,1.18rem);color:var(--muted);max-width:64ch}
+  .hero .meta{margin-top:14px;font-size:13px;color:var(--faint);font-family:var(--mono)}
+
+  /* ---------- stat band ---------- */
+  .stats{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:14px;margin-top:30px}
+  @media(max-width:720px){.stats{grid-template-columns:1fr 1fr}}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+  .stat .n{font-size:2.1rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+  .stat .l{font-size:12.5px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .stat.total .n{color:var(--brand)}
+  .stat.present .n{color:var(--present)} .stat.partial .n{color:var(--partial)} .stat.absent .n{color:var(--absent)}
+  .stat.total{grid-row:span 1}
+  .bar{display:flex;height:9px;border-radius:6px;overflow:hidden;margin-top:14px;border:1px solid var(--border)}
+  .bar i{display:block;height:100%}
+  .bar .p{background:var(--present)} .bar .q{background:var(--partial)} .bar .a{background:var(--absent)}
+  .bar-key{display:flex;gap:16px;margin-top:9px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+  .bar-key span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:3px;display:inline-block}
+
+  /* ---------- sections ---------- */
+  section{padding:46px 0;border-bottom:1px solid var(--border)}
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
+  .sec-head .idx{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600}
+  h2.sec{font-size:1.6rem;font-weight:750;letter-spacing:-.02em}
+  .sec-sub{color:var(--muted);max-width:72ch;margin:0 0 22px}
+
+  /* ---------- decision cards ---------- */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:820px){.grid3{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
+  .card .tag{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--brand);letter-spacing:.03em}
+  .card h3{font-size:1.05rem;font-weight:700;margin:6px 0 8px}
+  .card p{margin:0;color:var(--muted);font-size:14px}
+  .callout{margin-top:18px;background:var(--accent-tint);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);
+    border-left:4px solid var(--accent);border-radius:var(--radius-sm);padding:14px 16px;font-size:14px}
+  .callout b{color:var(--ink)}
+
+  /* ---------- feature matrix ---------- */
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+  .filters .lbl{font-size:12.5px;color:var(--faint);margin-right:2px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em}
+  .fbtn{appearance:none;cursor:pointer;border:1px solid var(--border-strong);background:var(--surface);color:var(--muted);
+    padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;font-family:inherit;display:inline-flex;align-items:center;gap:7px}
+  .fbtn:hover{color:var(--ink)}
+  .fbtn[aria-pressed="true"]{color:var(--ink);border-color:var(--brand);background:var(--brand-tint)}
+  .fbtn .c{font-variant-numeric:tabular-nums;color:var(--faint);font-weight:600}
+  .fgroup{margin-bottom:26px}
+  .fgroup h3{font-size:.95rem;font-weight:700;color:var(--ink);margin-bottom:2px;display:flex;align-items:center;gap:10px}
+  .fgroup h3 .rng{font-family:var(--mono);font-size:12px;color:var(--faint);font-weight:500}
+  .fgroup .gsub{font-size:13px;color:var(--faint);margin:0 0 12px}
+  .feat{display:grid;grid-template-columns:52px 1fr auto auto;gap:14px;align-items:start;
+    padding:13px 4px;border-top:1px solid var(--border)}
+  .feat:last-child{border-bottom:1px solid var(--border)}
+  .fid{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--brand-ink);background:var(--brand-tint);
+    border:1px solid color-mix(in srgb,var(--brand) 20%,transparent);border-radius:6px;padding:3px 0;text-align:center}
+  .ftitle{font-weight:650;font-size:14.5px}
+  .fgap{color:var(--muted);font-size:13px;margin-top:2px}
+  .fgap .warn{color:var(--absent);font-weight:600}
+  .status{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:4px 10px;border-radius:20px;white-space:nowrap;align-self:start}
+  .status.present{color:var(--present);background:var(--present-bg)}
+  .status.partial{color:var(--partial);background:var(--partial-bg)}
+  .status.absent{color:var(--absent);background:var(--absent-bg)}
+  .effort{font-family:var(--mono);font-size:11.5px;font-weight:700;padding:4px 8px;border-radius:6px;white-space:nowrap;align-self:start;
+    border:1px solid var(--border-strong);color:var(--muted);min-width:34px;text-align:center}
+  .effort[data-e="Done"]{color:var(--present);border-color:color-mix(in srgb,var(--present) 40%,transparent);background:var(--present-bg)}
+  .effort[data-e="XS"]{color:var(--present)}
+  .effort[data-e="S"]{color:var(--brand)}
+  .effort[data-e="M"]{color:var(--accent)}
+  .effort[data-e="L"]{color:var(--absent);border-color:color-mix(in srgb,var(--absent) 45%,transparent);background:var(--absent-bg)}
+  .effort[data-e="XL"]{color:#fff;background:var(--absent);border-color:var(--absent)}
+  .feat.hide{display:none}
+  @media(max-width:640px){
+    .feat{grid-template-columns:44px 1fr;grid-template-areas:"id main" ". chips"}
+    .fid{grid-area:id}.feat>.fmain{grid-area:main}
+    .feat .chips{grid-area:chips;display:flex;gap:8px;margin-top:2px}
+    .status,.effort{align-self:center}
+  }
+  .chips{display:contents}
+  @media(max-width:640px){.chips{display:flex}}
+
+  /* ---------- foundations ---------- */
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  @media(max-width:900px){.grid4{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.grid4{grid-template-columns:1fr}}
+  .found{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--absent);
+    border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+  .found .k{font-family:var(--mono);font-size:11px;color:var(--absent);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  .found h3{font-size:1rem;font-weight:700;margin:7px 0 8px}
+  .found p{margin:0 0 10px;color:var(--muted);font-size:13px}
+  .found .unl{font-size:12px;color:var(--faint);border-top:1px dashed var(--border);padding-top:9px}
+  .found .unl b{color:var(--ink);font-weight:600}
+  .found .unl code{font-family:var(--mono);font-size:11px;background:var(--surface-2);padding:1px 5px;border-radius:4px;color:var(--muted)}
+
+  /* ---------- roadmap ---------- */
+  .phase{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    margin-bottom:14px;box-shadow:var(--shadow);overflow:hidden}
+  .phase-h{display:flex;align-items:center;gap:14px;padding:16px 20px;border-left:4px solid var(--brand)}
+  .phase-0 .phase-h{border-color:var(--present)}
+  .phase-1 .phase-h{border-color:var(--brand)}
+  .phase-2 .phase-h{border-color:var(--accent)}
+  .phase-3 .phase-h{border-color:#8a63c0}
+  .phase-4 .phase-h{border-color:var(--faint)}
+  .phase-h .pn{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
+  .phase-h h3{font-size:1.1rem;font-weight:730;flex:1;min-width:0}
+  .phase-h .est{font-size:12.5px;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+  .ptable{width:100%;border-collapse:collapse;font-size:13.5px}
+  .ptable-wrap{overflow-x:auto}
+  .ptable th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);
+    font-weight:600;padding:9px 20px;border-top:1px solid var(--border);background:var(--surface-2)}
+  .ptable td{padding:10px 20px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+  .ptable td.item{color:var(--ink);font-weight:550}
+  .ptable td.ids{font-family:var(--mono);font-size:12px;color:var(--brand-ink);white-space:nowrap}
+  .ptable td.blk{font-family:var(--mono);font-size:12px;color:var(--faint)}
+  .mini-e{font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;border:1px solid var(--border-strong);color:var(--muted)}
+  .mini-e[data-e="XS"],.mini-e[data-e="S"]{color:var(--present);border-color:color-mix(in srgb,var(--present) 35%,transparent)}
+  .mini-e[data-e="M"]{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+  .mini-e[data-e="L"],.mini-e[data-e="XL"]{color:var(--absent);border-color:color-mix(in srgb,var(--absent) 40%,transparent)}
+
+  /* ---------- biggest changes ---------- */
+  .rank{counter-reset:r;display:flex;flex-direction:column;gap:10px}
+  .rank .row{display:flex;gap:16px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:14px 18px}
+  .rank .row::before{counter-increment:r;content:counter(r);font-family:var(--mono);font-weight:700;font-size:1.1rem;
+    color:var(--accent);width:26px;flex:none;text-align:center}
+  .rank .row .t{font-weight:650;font-size:14.5px}
+  .rank .row .d{color:var(--muted);font-size:13px;margin-top:2px}
+  .rank .row .badge{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--absent);
+    background:var(--absent-bg);padding:3px 9px;border-radius:20px;white-space:nowrap}
+
+  /* ---------- data model ---------- */
+  .dm-meta{display:flex;gap:22px;margin-bottom:20px;flex-wrap:wrap}
+  .dm-meta .m{font-size:13px;color:var(--muted)}
+  .dm-meta .m b{font-size:1.5rem;color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums;display:block;letter-spacing:-.02em}
+  .dm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  @media(max-width:820px){.dm-grid{grid-template-columns:1fr}}
+  .dm-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+  .dm-col h3{font-size:.95rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .dm-col h3 .pill{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+  .pill.new{color:var(--present);background:var(--present-bg)}
+  .pill.chg{color:var(--partial);background:var(--partial-bg)}
+  .tbl-list{display:flex;flex-direction:column;gap:2px}
+  .tbl-list .t{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:7px 0;border-top:1px solid var(--border);align-items:baseline}
+  .tbl-list .t:first-child{border-top:none}
+  .tbl-list code{font-family:var(--mono);font-size:12.5px;color:var(--brand-ink);font-weight:600;white-space:nowrap}
+  .tbl-list .desc{font-size:12.5px;color:var(--muted)}
+
+  /* ---------- api ---------- */
+  .api-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  @media(max-width:820px){.api-grid{grid-template-columns:1fr}}
+  .api{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px}
+  .api h4{font-size:13.5px;font-weight:700;margin-bottom:9px}
+  .ep{display:flex;gap:9px;align-items:baseline;padding:3px 0;font-size:12.5px}
+  .verb{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:5px;min-width:52px;text-align:center;flex:none}
+  .verb.get{color:var(--present);background:var(--present-bg)}
+  .verb.post{color:var(--brand);background:var(--brand-tint)}
+  .verb.patch{color:var(--partial);background:var(--partial-bg)}
+  .ep code{font-family:var(--mono);color:var(--muted);font-size:12px}
+
+  /* ---------- docs list ---------- */
+  .docs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media(max-width:720px){.docs{grid-template-columns:1fr}}
+  .docs a{display:flex;gap:12px;align-items:baseline;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:12px 15px;color:var(--ink)}
+  .docs a:hover{border-color:var(--brand);text-decoration:none;background:var(--surface-2)}
+  .docs .num{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;flex:none}
+  .docs .dt{font-weight:600;font-size:14px}
+  .docs .dd{color:var(--muted);font-size:12.5px}
+
+  footer{padding:34px 0 60px;color:var(--faint);font-size:13px}
+  footer .fnote{font-family:var(--mono);font-size:12px}
+  .lead-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+  .lead-list li{padding-left:20px;position:relative;color:var(--muted);font-size:14px}
+  .lead-list li::before{content:"";position:absolute;left:2px;top:9px;width:7px;height:7px;border-radius:2px;background:var(--accent)}
+  .lead-list li b{color:var(--ink);font-weight:650}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="brand-mark">
+      <svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/><path d="M9.2 12.4a2.9 2.9 0 0 0 2.9 4.3" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".8"/></svg>
+      AceFuels <span class="sub">Docs</span>
+    </span>
+    <span class="spacer"></span>
+    <nav class="tnav">
+      <a href="#decisions">Decisions</a>
+      <a href="#matrix">Matrix</a>
+      <a href="#foundations">Foundations</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#datamodel">Data model</a>
+      <a href="#api">API</a>
+      <a href="#docs">Docs</a>
+    </nav>
+    <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Product &amp; Engineering Documentation</div>
+    <h1>AceFuels — Requirement to Build</h1>
+    <p class="lede">What the requirement spreadsheet asks for, what the app does today across the Rails PWA and native Android surfaces, and the sequenced plan to close the gap — captured as developer-ready specs.</p>
+    <div class="meta">Source: AceFuels_Requirement.xlsx (7 sheets) &nbsp;·&nbsp; Verified against the repo &nbsp;·&nbsp; 2026-07-21</div>
+
+    <div class="stats">
+      <div class="stat total">
+        <div class="n">41</div><div class="l">Features assessed</div>
+        <div class="bar" role="img" aria-label="39% present, 15% partial, 46% absent">
+          <i class="p" style="width:39.0%"></i><i class="q" style="width:14.6%"></i><i class="a" style="width:46.4%"></i>
+        </div>
+        <div class="bar-key">
+          <span><i class="dot" style="background:var(--present)"></i>Present</span>
+          <span><i class="dot" style="background:var(--partial)"></i>Partial</span>
+          <span><i class="dot" style="background:var(--absent)"></i>Absent</span>
+        </div>
+      </div>
+      <div class="stat present"><div class="n">16</div><div class="l">Present</div></div>
+      <div class="stat partial"><div class="n">6</div><div class="l">Partial</div></div>
+      <div class="stat absent"><div class="n">19</div><div class="l">Absent</div></div>
+    </div>
+    <p class="meta" style="margin-top:18px"><b style="color:var(--present)">Phase 0 complete ✅.</b> &nbsp;Shipped (all surfaces, tested): C4 global pause · S-PAUSE · fuel types → MS/HSD · S-MYPUMP · A10 admin pump assignment · E2 dashboard drill-through. &nbsp;Next: Phase 1 foundations (Product Catalog, litres model, customer expansion, push-token linkage).</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- OVERVIEW -->
+  <section id="overview">
+    <div class="sec-head"><span class="idx">01</span><h2 class="sec">The shape of the work</h2></div>
+    <p class="sec-sub">Three structural facts frame everything below. The app is strong on setup and rewards configuration; the large gaps cluster in daily settlement, a priced product catalog, reporting, and CRM intelligence.</p>
+    <ul class="lead-list">
+      <li><b>The app is rupees-centric; the sheet is litres-centric.</b> A transaction stores <code style="font-family:var(--mono);font-size:12px">fuel_amount</code> in ₹, not litres, while the requirement's settlement and per-visit capture are built on meter readings → litres → price. Bridging these is the single biggest architectural decision.</li>
+      <li><b>There is no product pricing anywhere.</b> Fuel types carry only a code and name — no MRP, selling price, batch, or stock, and no representation of lubricants/oils/AdBlue. This "Product Catalog" is the keystone dependency for settlement, reports, and litres capture.</li>
+      <li><b>The app already exceeds the sheet on shifts &amp; attendance.</b> Beyond the requested shift creation and assignment, it ships rotating cycles, swaps, and attendance runs with an audit trail. That subsystem is a strength, not a gap.</li>
+    </ul>
+  </section>
+
+  <!-- DECISIONS -->
+  <section id="decisions">
+    <div class="sec-head"><span class="idx">02</span><h2 class="sec">Locked decisions</h2></div>
+    <p class="sec-sub">Confirmed 2026-07-21. Every spec and the roadmap honor these.</p>
+    <div class="grid3">
+      <div class="card">
+        <span class="tag">Q1 · Units</span>
+        <h3>Litres are the source of truth</h3>
+        <p>Capture meter readings / litres and <b>derive ₹</b> from the catalog selling price. Puts the Product Catalog and litres model at the root of the plan.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Q2 · Surfaces</span>
+        <h3>Both surfaces, in lockstep</h3>
+        <p>Every feature ships on the Rails PWA <b>and</b> the native Android app, backed by the same JSON API. Budget ~1.5–2× per-feature effort.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Q3 · Operator KYC</span>
+        <h3>Profile fields only</h3>
+        <p>Add Photo, Address, Aadhaar #, ID-card photo (ActiveStorage + PII handling). <b>Keep password login — no OTP / SMS</b> this phase.</p>
+      </div>
+    </div>
+    <div class="callout">
+      <b>Open item to confirm — customer taxonomy.</b> Assumed: <b>OTP</b> = fleet/credit accounts billed by litres (not "one-time-password"), <b>TT</b> = tank-truck credit, <b>Drive-in</b> = walk-in cash, <b>Credit</b> = credit account. Features E4, D5 and F2 depend on this reading.
+    </div>
+  </section>
+
+  <!-- MATRIX -->
+  <section id="matrix">
+    <div class="sec-head"><span class="idx">03</span><h2 class="sec">Feature matrix</h2></div>
+    <p class="sec-sub">All 41 requirement features, verified against the code with the gap called out precisely. Effort chips size the work to <em>build the missing part</em> across all three surfaces; present features are marked Done.</p>
+
+    <div class="filters" role="group" aria-label="Filter features by status">
+      <span class="lbl">Filter</span>
+      <button class="fbtn" data-f="all" aria-pressed="true">All <span class="c">41</span></button>
+      <button class="fbtn" data-f="present" aria-pressed="false">Present <span class="c">16</span></button>
+      <button class="fbtn" data-f="partial" aria-pressed="false">Partial <span class="c">6</span></button>
+      <button class="fbtn" data-f="absent" aria-pressed="false">Absent <span class="c">19</span></button>
+    </div>
+
+    <div class="fgroup">
+      <h3>Setup, Users &amp; Shifts <span class="rng">A1–A10</span></h3>
+      <p class="gsub">Pumps, nozzles, fuel/product assignment, vehicle types, operator records and shift assignment.</p>
+      <div class="feat" data-status="present"><span class="fid">A1</span><div class="fmain"><div class="ftitle">Setup number of pumps</div><div class="fgap">Full CRUD, auto-sequenced (Pump 1, 2 …), on web + Android + API.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">A2</span><div class="fmain"><div class="ftitle">Set up nozzles</div><div class="fgap">Nested nozzles under each pump, auto-sequenced.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">A3</span><div class="fmain"><div class="ftitle">Assign nozzles to every pump</div><div class="fgap">Each nozzle belongs to one pump; unique sequence per pump.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">A4</span><div class="fmain"><div class="ftitle">Assign product (MS/HSD) per nozzle</div><div class="fgap">Per-nozzle fuel type works, and defaults now read <b>MS (Petrol)</b> / <b>HSD (Diesel)</b> ✅ (Phase 0, codes unchanged). No <em>price</em> is attached yet — that's A5.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">A5</span><div class="fmain"><div class="ftitle">Product catalog with MRP + selling price (incl. lubes / AdBlue, batch)</div><div class="fgap"><span class="warn">Keystone — nothing exists.</span> No priced product model, no MRP/selling price/batch/stock, no lubricants. Unblocks settlement, reports and litres capture.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="L">L</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">A6</span><div class="fmain"><div class="ftitle">Vehicle types 2W/3W/LMV/LCV/MCV/HCV</div><div class="fgap">Exact six defaults + CRUD + per-type reward config.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="partial"><span class="fid">A7</span><div class="fmain"><div class="ftitle">Operator record + auth</div><div class="fgap">Only Name exists. Missing Photo / Address / Aadhaar # / ID-photo; login is password, not OTP. → add profile fields, keep password (Q3).</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">A8</span><div class="fmain"><div class="ftitle">Create shifts (24 / 12 / 8 hr)</div><div class="fgap">Shift templates present; app also has cycles, swaps and attendance — beyond the sheet.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">A9</span><div class="fmain"><div class="ftitle">Assign operator to a shift</div><div class="fgap">Shift assignments + rotating cycles.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">A10</span><div class="fmain"><div class="ftitle">Assign operator to a pump</div><div class="fgap">✅ <b>Shipped</b> — admin "Assign Pump" flow on <b>web + API + Android</b> (a "Pump" action on the staff list opens the pump/nozzle picker; <code style="font-family:var(--mono);font-size:12px">/api/v1/admin/staff_members/:id/pump</code>, tested). Staff self-service removed.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Customer capture <span class="rng">B1–B2</span></h3>
+      <p class="gsub">Customer master details and the FSM per-visit entry form.</p>
+      <div class="feat" data-status="partial"><span class="fid">B1</span><div class="fmain"><div class="ftitle">Customer master details</div><div class="fgap">Have name + one phone (+ a single commercial owner/manager contact). Missing the driver / supervisor / owner name+mobile triple and the "contacted-by" marker + info button.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="partial"><span class="fid">B2</span><div class="fmain"><div class="ftitle">FSM per-visit CustomerDetailsEntry</div><div class="fgap">No dedicated form. Only a ₹ transaction (overlaps ~2 of 11 fields). Missing litres, discount, Fleet/OTP flag, transport / manager / owner, approx # of vehicles, editable date.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="L">L</span></span></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Rewards &amp; staff-login constraints <span class="rng">C1–C5 · S-*</span></h3>
+      <p class="gsub">Reward configuration (largely present) plus two staff-login constraints the app currently ships <em>backwards</em>.</p>
+      <div class="feat" data-status="present"><span class="fid">C1</span><div class="fmain"><div class="ftitle">Cash reward per ₹100 / x ₹</div><div class="fgap"><code style="font-family:var(--mono);font-size:12px">rupees_per_reward_unit</code> + cash value per point.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">C2</span><div class="fmain"><div class="ftitle">Reward by vehicle type</div><div class="fgap">Per-vehicle-type reward offers / points.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">C3</span><div class="fmain"><div class="ftitle">Reward by fuel type</div><div class="fgap">Per-fuel-type reward rates.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">C4</span><div class="fmain"><div class="ftitle">Pause rewards globally</div><div class="fgap">✅ <b>Shipped</b> — a global "Pause All Rewards" switch on reward settings (web + Android + API) zeroes accrual for everyone; per-customer pause still applies on top.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">C5</span><div class="fmain"><div class="ftitle">Accumulated loyalty bonus</div><div class="fgap">Points ledger accrual + cash value.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">S-PAUSE</span><div class="fmain"><div class="ftitle">Remove "pause rewards" from staff login</div><div class="fgap">✅ <b>Shipped</b> — pause/resume is now admin-only (<code style="font-family:var(--mono);font-size:12px">CustomerPolicy</code>); staff lose the buttons (web) and the control is hidden in the Android profile. Admin keeps it.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">S-MYPUMP</span><div class="fmain"><div class="ftitle">Hide "My Pump" from staff login</div><div class="fgap">✅ <b>Shipped</b> — self-service pump assignment is admin-only (<code style="font-family:var(--mono);font-size:12px">manage_pump?</code>); the nav link, the staff transaction "Change My Pump" control (web) and the Android account tile are all hidden from staff.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Daily Settlement <span class="rng">D1–D10</span></h3>
+      <p class="gsub">The largest gap — the entire shift-end reconciliation module is unbuilt.</p>
+      <div class="feat" data-status="absent"><span class="fid">D1</span><div class="fmain"><div class="ftitle">Per-nozzle settlement readings</div><div class="fgap">Today / yesterday reading (auto-populated), testing litres, net litres, auto price, amount. Nothing exists.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">D2</span><div class="fmain"><div class="ftitle">Lubes in settlement + stock</div><div class="fgap">Checkbox-select catalog lubes, qty → amount, with opening / closing stock.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">D3</span><div class="fmain"><div class="ftitle">Discount pull-through</div><div class="fgap">Aggregate same-day customer-entry discounts into the settlement.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">D4</span><div class="fmain"><div class="ftitle">PhonePe POS + Scanner amounts</div><div class="fgap">The two PhonePe tender lines in settlement.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="S">S</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">D5</span><div class="fmain"><div class="ftitle">Fleet/OTP + TT credit lines</div><div class="fgap">Litres + discount credit lines (e.g. "OTP 136 Lts NL-01/AE-2471"). Needs the customer taxonomy.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">D6</span><div class="fmain"><div class="ftitle">Final amount-to-settle calc</div><div class="fgap">{Fuel + Lubes} − {Discounts + PhonePe POS + Scanner}. The settlement aggregate D7/D9 hang off.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="L">L</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">D7</span><div class="fmain"><div class="ftitle">Denomination breakdown + shortage</div><div class="fgap">500 / 100 / 50 / 20 / 10 / 5 × qty cash count; counted-vs-expected shortage per pump.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">D8</span><div class="fmain"><div class="ftitle">Stock received + decantation</div><div class="fgap">MS/HSD stock received; tank KL decantation readings.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">D9</span><div class="fmain"><div class="ftitle">Admin view/edit settlement</div><div class="fgap">Review / edit current and past settlements per pump and across pumps. Also closes G1.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="L">L</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">D10</span><div class="fmain"><div class="ftitle">Rate comparison</div><div class="fgap">Competitor (JIO-BP) vs own selling price.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="S">S</span></span></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Dashboard, CRM &amp; Reports <span class="rng">E1–E7 · G1</span></h3>
+      <p class="gsub">Descriptive analytics exist; the required per-customer intelligence and periodic reporting do not.</p>
+      <div class="feat" data-status="absent"><span class="fid">E1</span><div class="fmain"><div class="ftitle">Reports (daily → yearly, per vehicle/transporter/driver)</div><div class="fgap">Litres, discount, gifts by four time grains and three grouping dimensions. No reporting subsystem today.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="L">L</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">E2</span><div class="fmain"><div class="ftitle">Dashboard → customers by period</div><div class="fgap">✅ <b>Shipped</b> — a "View customers" drill-through on the dashboard (web + Android) opens a customer list scoped to the selected period, via a <code style="font-family:var(--mono);font-size:12px">Customer.transacted_between</code> filter on the customers index (tested).</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="partial"><span class="fid">E3</span><div class="fmain"><div class="ftitle">Visit-frequency cadence</div><div class="fgap">Aggregate visits-distribution chart only. No per-customer last-visit + daily / weekly / biweekly cadence.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">E4</span><div class="fmain"><div class="ftitle">Customer-type view (OTP/Drive-in/Credit)</div><div class="fgap">No customer_type field or dashboard segment.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="S">S</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">E5</span><div class="fmain"><div class="ftitle">Contact tracking + conversion</div><div class="fgap">Contacted count, last-contact, probability of conversion.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">E6</span><div class="fmain"><div class="ftitle">Churn / lost-customer intelligence</div><div class="fgap">"Came last week, not this week = lost" detection + a reach-out surface.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">E7</span><div class="fmain"><div class="ftitle">Customer feedback / rating</div><div class="fgap">No capture channel or dashboard surface.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="partial"><span class="fid">G1</span><div class="fmain"><div class="ftitle">Visualize per-pump data + edit past days</div><div class="fgap">Transactions list is view-only, has no per-pump filter, and no past-day editing.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="L">L</span></span></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Campaigns &amp; Notifications <span class="rng">F1–F4</span></h3>
+      <p class="gsub">Broadcast push works; targeted campaigns and multi-channel messaging do not.</p>
+      <div class="feat" data-status="absent"><span class="fid">F1</span><div class="fmain"><div class="ftitle">Campaign creation</div><div class="fgap">Min-purchase-per-period → discount / gift rules engine. Only a per-vehicle-type reward multiplier exists.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="L">L</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">F2</span><div class="fmain"><div class="ftitle">Campaign targeting</div><div class="fgap">Address an individual / a customer type / a hand-selected set. Blocked by customer type + token linkage.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="partial"><span class="fid">F3</span><div class="fmain"><div class="ftitle">Push for offers + loyalty bonus</div><div class="fgap">Broadcast + scheduled push work, but sends are untargeted; there's no offer object and nothing auto-pushes a loyalty-bonus milestone.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="absent"><span class="fid">F4</span><div class="fmain"><div class="ftitle">WhatsApp / SMS notifications</div><div class="fgap">New external messaging provider, templates, opt-in and delivery receipts.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="L">L</span></span></div>
+    </div>
+  </section>
+
+  <!-- FOUNDATIONS -->
+  <section id="foundations">
+    <div class="sec-head"><span class="idx">04</span><h2 class="sec">The four foundations</h2></div>
+    <p class="sec-sub">Four capabilities sit at the root of the dependency graph. Almost nothing in the later phases can be built correctly until these land — build them first, in Phase 1.</p>
+    <div class="grid4">
+      <div class="found">
+        <div class="k">Foundation 01</div>
+        <h3>Product Catalog + Stock</h3>
+        <p>Priced products (fuel + lubes/AdBlue) with MRP, selling price, batch and stock. The selling price is the multiplier that turns litres into ₹.</p>
+        <div class="unl"><b>Unlocks</b> <code>D2</code> <code>D6</code> <code>D10</code> <code>E1</code> · feeds the litres model</div>
+      </div>
+      <div class="found">
+        <div class="k">Foundation 02</div>
+        <h3>Litres / Readings model</h3>
+        <p>Turns the ₹-only transaction into a physical record — litres against a nozzle reading, with ₹ derived from the catalog price.</p>
+        <div class="unl"><b>Unlocks</b> <code>D1</code> <code>D6</code> <code>B2</code> <code>E1</code></div>
+      </div>
+      <div class="found">
+        <div class="k">Foundation 03</div>
+        <h3>Customer master + type</h3>
+        <p>Driver / supervisor / owner triple + the OTP/TT/Drive-in/Credit taxonomy. The join key for capture, targeting, reports and churn.</p>
+        <div class="unl"><b>Unlocks</b> <code>B2</code> <code>E1</code> <code>E4</code> <code>F2</code> <code>E5</code> <code>E6</code></div>
+      </div>
+      <div class="found">
+        <div class="k">Foundation 04</div>
+        <h3>Push-token → customer link</h3>
+        <p>Replaces today's anonymous push tokens with a customer/user association so a message can address an individual.</p>
+        <div class="unl"><b>Unlocks</b> <code>F3</code> <code>F4</code></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROADMAP -->
+  <section id="roadmap">
+    <div class="sec-head"><span class="idx">05</span><h2 class="sec">Phased roadmap</h2></div>
+    <p class="sec-sub">Effort scale — <b>XS</b> ≤½ day · <b>S</b> 1–2 days · <b>M</b> 3–5 days · <b>L</b> 1–2 weeks · <b>XL</b> &gt;2 weeks. All estimates cover Rails + Android + API per Q2.</p>
+
+    <div class="phase phase-0">
+      <div class="phase-h"><span class="pn">Phase 0</span><h3>Quick wins &amp; corrections</h3><span class="est">≈ 1 sprint</span></div>
+      <div class="ptable-wrap"><table class="ptable">
+        <thead><tr><th>ID</th><th>Item</th><th>Effort</th><th>Blockers</th></tr></thead>
+        <tbody>
+          <tr><td class="ids">—</td><td class="item">Rename fuel types → MS / HSD</td><td><span class="mini-e" data-e="XS">XS</span></td><td class="blk">—</td></tr>
+          <tr><td class="ids">C4</td><td class="item">Global rewards-pause switch</td><td><span class="mini-e" data-e="S">S</span></td><td class="blk">—</td></tr>
+          <tr><td class="ids">S-PAUSE</td><td class="item">Remove pause-rewards from staff</td><td><span class="mini-e" data-e="XS">XS</span></td><td class="blk">C4</td></tr>
+          <tr><td class="ids">A10 · S-MYPUMP</td><td class="item">Admin-owned pump assignment; hide staff "My Pump"</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">—</td></tr>
+          <tr><td class="ids">E2</td><td class="item">Dashboard tile drill-through to customer list</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">—</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="phase phase-1">
+      <div class="phase-h"><span class="pn">Phase 1</span><h3>Foundations</h3><span class="est">≈ 3–4 weeks</span></div>
+      <div class="ptable-wrap"><table class="ptable">
+        <thead><tr><th>ID</th><th>Item</th><th>Effort</th><th>Blockers</th></tr></thead>
+        <tbody>
+          <tr><td class="ids">A5</td><td class="item">Product Catalog + stock</td><td><span class="mini-e" data-e="L">L</span></td><td class="blk">—</td></tr>
+          <tr><td class="ids">—</td><td class="item">Litres / readings model</td><td><span class="mini-e" data-e="L">L</span></td><td class="blk">A5</td></tr>
+          <tr><td class="ids">B1</td><td class="item">Customer master expansion</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">—</td></tr>
+          <tr><td class="ids">E4</td><td class="item">Customer-type taxonomy</td><td><span class="mini-e" data-e="S">S</span></td><td class="blk">B1</td></tr>
+          <tr><td class="ids">B2</td><td class="item">Per-visit capture form</td><td><span class="mini-e" data-e="L">L</span></td><td class="blk">A5 · litres · B1 · E4</td></tr>
+          <tr><td class="ids">—</td><td class="item">Push-token linkage</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">—</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="phase phase-2">
+      <div class="phase-h"><span class="pn">Phase 2</span><h3>Daily Settlement + Reports</h3><span class="est">≈ 6–8 weeks · largest</span></div>
+      <div class="ptable-wrap"><table class="ptable">
+        <thead><tr><th>ID</th><th>Item</th><th>Effort</th><th>Blockers</th></tr></thead>
+        <tbody>
+          <tr><td class="ids">D1</td><td class="item">Per-nozzle readings</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">litres</td></tr>
+          <tr><td class="ids">D2</td><td class="item">Lubes in settlement + stock</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">A5</td></tr>
+          <tr><td class="ids">D3</td><td class="item">Discount pull-through</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">B2</td></tr>
+          <tr><td class="ids">D4</td><td class="item">PhonePe POS + Scanner tenders</td><td><span class="mini-e" data-e="S">S</span></td><td class="blk">D6</td></tr>
+          <tr><td class="ids">D5</td><td class="item">Fleet-OTP / TT credit lines</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">B2 · E4</td></tr>
+          <tr><td class="ids">D6</td><td class="item">Final-settle calc</td><td><span class="mini-e" data-e="L">L</span></td><td class="blk">D1 · D2 · D3 · A5</td></tr>
+          <tr><td class="ids">D7</td><td class="item">Denomination + shortage</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">D6</td></tr>
+          <tr><td class="ids">D8</td><td class="item">Stock received + decantation</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">A5</td></tr>
+          <tr><td class="ids">D9</td><td class="item">Admin settlement view/edit (+ G1)</td><td><span class="mini-e" data-e="L">L</span></td><td class="blk">D1 · D6 · D8</td></tr>
+          <tr><td class="ids">D10</td><td class="item">Rate comparison</td><td><span class="mini-e" data-e="S">S</span></td><td class="blk">A5</td></tr>
+          <tr><td class="ids">E1</td><td class="item">Reports (litres / discount / gifts)</td><td><span class="mini-e" data-e="L">L</span></td><td class="blk">litres · B1 · B2</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="phase phase-3">
+      <div class="phase-h"><span class="pn">Phase 3</span><h3>Campaigns · Notifications · Operator KYC</h3><span class="est">≈ 4–5 weeks</span></div>
+      <div class="ptable-wrap"><table class="ptable">
+        <thead><tr><th>ID</th><th>Item</th><th>Effort</th><th>Blockers</th></tr></thead>
+        <tbody>
+          <tr><td class="ids">F2</td><td class="item">Targeting / audience selector</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">E4 · B1</td></tr>
+          <tr><td class="ids">F1</td><td class="item">Campaigns rules engine</td><td><span class="mini-e" data-e="L">L</span></td><td class="blk">F2</td></tr>
+          <tr><td class="ids">F3</td><td class="item">Targeted + auto loyalty push</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">token · F2</td></tr>
+          <tr><td class="ids">F4</td><td class="item">WhatsApp / SMS channel</td><td><span class="mini-e" data-e="L">L</span></td><td class="blk">token · F2</td></tr>
+          <tr><td class="ids">A7</td><td class="item">Operator KYC profile fields</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">—</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="phase phase-4">
+      <div class="phase-h"><span class="pn">Phase 4</span><h3>CRM intelligence</h3><span class="est">≈ 3–4 weeks</span></div>
+      <div class="ptable-wrap"><table class="ptable">
+        <thead><tr><th>ID</th><th>Item</th><th>Effort</th><th>Blockers</th></tr></thead>
+        <tbody>
+          <tr><td class="ids">E3</td><td class="item">Per-customer / transporter cadence</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">B2</td></tr>
+          <tr><td class="ids">E5</td><td class="item">Contact tracking + conversion</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">B1 · E4</td></tr>
+          <tr><td class="ids">E6</td><td class="item">Churn / lost-customer</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">B2 · E3</td></tr>
+          <tr><td class="ids">E7</td><td class="item">Feedback / rating</td><td><span class="mini-e" data-e="M">M</span></td><td class="blk">B1</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- BIGGEST CHANGES -->
+  <section id="biggest">
+    <div class="sec-head"><span class="idx">06</span><h2 class="sec">Biggest changes</h2></div>
+    <p class="sec-sub">Ranked by effort × downstream fan-out × migration risk — the items to staff most carefully and review most closely.</p>
+    <div class="rank">
+      <div class="row"><div><div class="t">Litres / readings model</div><div class="d">Rewrites the core transaction write path both front-ends depend on; needs a backfill + dual-write window. Get it wrong and every derived-₹ feature is wrong.</div></div><span class="badge">Foundation · L</span></div>
+      <div class="row"><div><div class="t">Product Catalog + stock (A5)</div><div class="d">The deepest root of the dependency graph — the selling price it holds is the multiplier for all derived money. Wide fan-out into settlement and reports.</div></div><span class="badge">Foundation · L</span></div>
+      <div class="row"><div><div class="t">Final-settle calc (D6)</div><div class="d">The aggregate tying readings + lubes + discounts minus tenders together; must reconcile against physical litres. D7 and D9 hang off it.</div></div><span class="badge">D6 · L</span></div>
+      <div class="row"><div><div class="t">Per-visit capture (B2)</div><div class="d">Replaces the staff transaction flow on both surfaces with the full CustomerDetailsEntry form; the join point between operations and CRM. Four blockers.</div></div><span class="badge">B2 · L</span></div>
+      <div class="row"><div><div class="t">Reports (E1)</div><div class="d">Broad read-model over litres + customer + visit history across four time grains and three grouping dimensions. Cheap to get roughly right, costly to reconcile to the rupee.</div></div><span class="badge">E1 · L</span></div>
+      <div class="row"><div><div class="t">Campaigns (F1) / WhatsApp-SMS (F4)</div><div class="d">F1 is a new rules-engine surface; F4 adds a brand-new external messaging integration with its own compliance surface.</div></div><span class="badge">F1 · F4 · L</span></div>
+      <div class="row"><div><div class="t">Admin settlement view/edit (D9)</div><div class="d">An editable admin console over settlement records with cross-pump aggregation; also closes G1 (per-pump visualize + edit).</div></div><span class="badge">D9 · L</span></div>
+    </div>
+  </section>
+
+  <!-- DATA MODEL -->
+  <section id="datamodel">
+    <div class="sec-head"><span class="idx">07</span><h2 class="sec">Target data model</h2></div>
+    <p class="sec-sub">The schema after every gap is built, honoring litres-as-source-of-truth. Per-customer litres extend <code style="font-family:var(--mono);font-size:12px">transactions</code>; per-nozzle meter litres live on a separate settlement-readings table — they are different numbers and must not share a row.</p>
+    <div class="dm-meta">
+      <div class="m"><b>17</b> new tables</div>
+      <div class="m"><b>6</b> changed tables</div>
+      <div class="m"><b>2</b> ActiveStorage additions</div>
+    </div>
+    <div class="dm-grid">
+      <div class="dm-col">
+        <h3>Product catalog &amp; stock <span class="pill new">new</span></h3>
+        <div class="tbl-list">
+          <div class="t"><code>products</code><span class="desc">priced fuel + lube/AdBlue catalog; MRP, selling price, batch, unit</span></div>
+          <div class="t"><code>product_price_history</code><span class="desc">date-accurate price for re-deriving past rows</span></div>
+          <div class="t"><code>product_stocks</code><span class="desc">running on-hand quantity per product</span></div>
+          <div class="t"><code>stock_receipts</code><span class="desc">D8 stock received (MS/HSD + lubes)</span></div>
+          <div class="t"><code>tank_decantations</code><span class="desc">D8 tank KL readings on tanker unload</span></div>
+        </div>
+      </div>
+      <div class="dm-col">
+        <h3>Daily settlement <span class="pill new">new</span></h3>
+        <div class="tbl-list">
+          <div class="t"><code>settlements</code><span class="desc">one per pump per shift/date; final amount + FSM</span></div>
+          <div class="t"><code>settlement_nozzle_readings</code><span class="desc">D1 opening/closing/testing/net litres</span></div>
+          <div class="t"><code>settlement_lube_lines</code><span class="desc">D2 lube qty × price + stock movement</span></div>
+          <div class="t"><code>settlement_credit_lines</code><span class="desc">D5 Fleet/OTP + TT + pulled discounts</span></div>
+          <div class="t"><code>settlement_payments</code><span class="desc">D4 PhonePe POS / Scanner tenders</span></div>
+          <div class="t"><code>settlement_cash_counts</code><span class="desc">D7 denomination breakdown</span></div>
+        </div>
+      </div>
+      <div class="dm-col">
+        <h3>Customer &amp; campaigns <span class="pill new">new</span></h3>
+        <div class="tbl-list">
+          <div class="t"><code>customer_contacts</code><span class="desc">B1 driver/supervisor/owner triple + contacted-by</span></div>
+          <div class="t"><code>campaigns</code><span class="desc">F1 min-purchase-per-period → discount/gift</span></div>
+          <div class="t"><code>campaign_targets</code><span class="desc">F2 individual / type / selected audience</span></div>
+          <div class="t"><code>campaign_redemptions</code><span class="desc">fulfilment tracking</span></div>
+          <div class="t"><code>customer_feedbacks</code><span class="desc">E7 rating + comment</span></div>
+        </div>
+      </div>
+      <div class="dm-col">
+        <h3>Changed tables <span class="pill chg">change</span></h3>
+        <div class="tbl-list">
+          <div class="t"><code>transactions</code><span class="desc">+ litres, price_per_litre, gross/discount/net, product_id</span></div>
+          <div class="t"><code>customers</code><span class="desc">+ customer_type, transport_name, approx_vehicle_count</span></div>
+          <div class="t"><code>reward_settings</code><span class="desc">+ global rewards_paused flag (C4)</span></div>
+          <div class="t"><code>push_subscriptions</code><span class="desc">+ customer_id / user_id linkage</span></div>
+          <div class="t"><code>users</code><span class="desc">+ address, aadhaar_number, photo &amp; id_card (ActiveStorage)</span></div>
+          <div class="t"><code>notification_schedules</code><span class="desc">+ offer / target references</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- API -->
+  <section id="api">
+    <div class="sec-head"><span class="idx">08</span><h2 class="sec">API surface</h2></div>
+    <p class="sec-sub">New and changed <code style="font-family:var(--mono);font-size:12px">/api/v1</code> endpoints backing the Android app, matched to the existing staff/admin namespaces and token auth. Representative — the full contract lives in <code style="font-family:var(--mono);font-size:12px">20-api-contracts.md</code>.</p>
+    <div class="api-grid">
+      <div class="api">
+        <h4>Product catalog &amp; stock</h4>
+        <div class="ep"><span class="verb get">GET</span><code>/admin/products</code></div>
+        <div class="ep"><span class="verb post">POST</span><code>/admin/products</code></div>
+        <div class="ep"><span class="verb patch">PATCH</span><code>/admin/products/:id</code></div>
+        <div class="ep"><span class="verb get">GET</span><code>/staff/catalog</code> <span style="color:var(--faint);font-size:11px">+ prices</span></div>
+      </div>
+      <div class="api">
+        <h4>Litres transactions &amp; per-visit capture</h4>
+        <div class="ep"><span class="verb post">POST</span><code>/staff/transactions</code> <span style="color:var(--faint);font-size:11px">+ litres</span></div>
+        <div class="ep"><span class="verb post">POST</span><code>/staff/customer_entries</code></div>
+        <div class="ep"><span class="verb get">GET</span><code>/staff/customer_entries</code></div>
+      </div>
+      <div class="api">
+        <h4>Daily settlement</h4>
+        <div class="ep"><span class="verb get">GET</span><code>/staff/settlements/new</code> <span style="color:var(--faint);font-size:11px">prefill</span></div>
+        <div class="ep"><span class="verb post">POST</span><code>/staff/settlements</code></div>
+        <div class="ep"><span class="verb get">GET</span><code>/admin/settlements</code></div>
+        <div class="ep"><span class="verb patch">PATCH</span><code>/admin/settlements/:id</code></div>
+      </div>
+      <div class="api">
+        <h4>Customers &amp; type</h4>
+        <div class="ep"><span class="verb patch">PATCH</span><code>/staff/customers/:id</code> <span style="color:var(--faint);font-size:11px">+ contacts, type</span></div>
+        <div class="ep"><span class="verb post">POST</span><code>/staff/customers/:id/contacts</code></div>
+        <div class="ep"><span class="verb get">GET</span><code>/admin/customers?type=</code></div>
+      </div>
+      <div class="api">
+        <h4>Rewards &amp; assignment</h4>
+        <div class="ep"><span class="verb patch">PATCH</span><code>/admin/reward_rates</code> <span style="color:var(--faint);font-size:11px">+ global pause</span></div>
+        <div class="ep"><span class="verb patch">PATCH</span><code>/admin/users/:id/pump</code></div>
+      </div>
+      <div class="api">
+        <h4>Dashboard &amp; reports</h4>
+        <div class="ep"><span class="verb get">GET</span><code>/admin/customers?period=</code></div>
+        <div class="ep"><span class="verb get">GET</span><code>/admin/reports</code></div>
+        <div class="ep"><span class="verb get">GET</span><code>/admin/customers/:id/cadence</code></div>
+      </div>
+      <div class="api">
+        <h4>Campaigns &amp; notifications</h4>
+        <div class="ep"><span class="verb post">POST</span><code>/admin/campaigns</code></div>
+        <div class="ep"><span class="verb post">POST</span><code>/admin/notifications/send</code> <span style="color:var(--faint);font-size:11px">+ target</span></div>
+        <div class="ep"><span class="verb post">POST</span><code>/push/subscriptions</code> <span style="color:var(--faint);font-size:11px">+ identity</span></div>
+      </div>
+      <div class="api">
+        <h4>Operator KYC</h4>
+        <div class="ep"><span class="verb patch">PATCH</span><code>/admin/users/:id</code> <span style="color:var(--faint);font-size:11px">+ profile</span></div>
+        <div class="ep"><span class="verb post">POST</span><code>/admin/users/:id/documents</code></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOCS -->
+  <section id="docs">
+    <div class="sec-head"><span class="idx">09</span><h2 class="sec">The full documentation set</h2></div>
+    <p class="sec-sub">This page is the visual overview. Each spec below carries the full detail — current state (cited), target design, API, UI for both surfaces, and acceptance criteria.</p>
+    <div class="docs">
+      <a href="00-product-overview.html"><span class="num">00</span><span><span class="dt">Product overview</span><br><span class="dd">Vision, roles, glossary, decisions, scope</span></span></a>
+      <a href="01-functional-requirements.html"><span class="num">01</span><span><span class="dt">Functional requirements</span><br><span class="dd">Every feature ID with acceptance criteria</span></span></a>
+      <a href="02-current-architecture.html"><span class="num">02</span><span><span class="dt">Current architecture</span><br><span class="dd">As-built map, cited to file:line</span></span></a>
+      <a href="03-target-data-model.html"><span class="num">03</span><span><span class="dt">Target data model</span><br><span class="dd">New/changed tables + ER diagram</span></span></a>
+      <a href="10-spec-product-catalog.html"><span class="num">10</span><span><span class="dt">Product catalog + stock</span><br><span class="dd">Keystone spec</span></span></a>
+      <a href="11-spec-litres-readings.html"><span class="num">11</span><span><span class="dt">Litres / readings model</span><br><span class="dd">₹ derivation + reward reconciliation</span></span></a>
+      <a href="12-spec-daily-settlement.html"><span class="num">12</span><span><span class="dt">Daily settlement</span><br><span class="dd">The largest module (D1–D10)</span></span></a>
+      <a href="13-spec-customer-crm-capture.html"><span class="num">13</span><span><span class="dt">Customer master + capture</span><br><span class="dd">Contacts, type, per-visit form</span></span></a>
+      <a href="14-spec-rewards-staff-constraints.html"><span class="num">14</span><span><span class="dt">Rewards + staff constraints</span><br><span class="dd">Quick wins</span></span></a>
+      <a href="15-spec-dashboard-reports.html"><span class="num">15</span><span><span class="dt">Dashboard + reports</span><br><span class="dd">Drill-through, cadence, churn, reporting</span></span></a>
+      <a href="16-spec-campaigns-notifications.html"><span class="num">16</span><span><span class="dt">Campaigns + notifications</span><br><span class="dd">Targeting, push, WhatsApp/SMS</span></span></a>
+      <a href="17-spec-operator-kyc.html"><span class="num">17</span><span><span class="dt">Operator KYC</span><br><span class="dd">Profile fields, ActiveStorage, PII</span></span></a>
+      <a href="20-api-contracts.html"><span class="num">20</span><span><span class="dt">API contracts</span><br><span class="dd">All new/changed endpoints</span></span></a>
+      <a href="30-implementation-roadmap.html"><span class="num">30</span><span><span class="dt">Implementation roadmap</span><br><span class="dd">Phases, effort, dependency graph</span></span></a>
+      <a href="40-gap-analysis.html"><span class="num">40</span><span><span class="dt">Gap analysis</span><br><span class="dd">The audit companion</span></span></a>
+      <a href="README.html"><span class="num">↳</span><span><span class="dt">README index</span><br><span class="dd">Reading order + feature-ID map</span></span></a>
+    </div>
+  </section>
+
+  <footer>
+    <p><span class="fnote">AceFuels — fuel-station loyalty &amp; operations platform.</span><br>
+    Documentation generated from <code style="font-family:var(--mono);font-size:12px">AceFuels_Requirement.xlsx</code> and verified against the repository. Specs cite <code style="font-family:var(--mono);font-size:12px">file:line</code> as of 2026-07-21. Rendered as a self-contained page — no external assets.</p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  // theme toggle (viewer theme still wins via the artifact host; this is for standalone viewing)
+  var btn=document.getElementById('themeBtn');
+  btn.addEventListener('click',function(){
+    var cur=document.documentElement.getAttribute('data-theme');
+    var next = cur==='dark' ? 'light' : (cur==='light' ? 'dark' :
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark'));
+    document.documentElement.setAttribute('data-theme',next);
+  });
+
+  // matrix filter
+  var feats=Array.prototype.slice.call(document.querySelectorAll('.feat'));
+  var groups=Array.prototype.slice.call(document.querySelectorAll('.fgroup'));
+  document.querySelectorAll('.fbtn').forEach(function(b){
+    b.addEventListener('click',function(){
+      var f=b.getAttribute('data-f');
+      document.querySelectorAll('.fbtn').forEach(function(x){x.setAttribute('aria-pressed', x===b ? 'true':'false');});
+      feats.forEach(function(el){
+        var show = f==='all' || el.getAttribute('data-status')===f;
+        el.classList.toggle('hide', !show);
+      });
+      // hide a group heading if it has no visible rows
+      groups.forEach(function(g){
+        var any=g.querySelectorAll('.feat:not(.hide)').length>0;
+        g.style.display = any ? '' : 'none';
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

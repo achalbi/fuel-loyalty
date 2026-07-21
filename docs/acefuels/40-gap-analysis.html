@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceFuels Requirement → App Gap Analysis — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">40-gap-analysis.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="acefuels-requirement-app-gap-analysis">AceFuels Requirement → App Gap Analysis</h1>
+<p>Source: <code>AceFuels_Requirement.xlsx</code> (7 sheets) vs. the current app
+(Rails backend + PWA views, and the native <strong>Android</strong> app under <code>android/</code>).
+Generated 2026-07-21.</p>
+<p><strong>Score: 41 atomic features assessed — 16 present ✅ · 6 partial 🟡 · 19 absent ❌.</strong></p>
+<blockquote>
+<p><strong>Phase 0 complete ✅ (2026-07-21):</strong> shipped on all surfaces, tested — <strong>C4 global pause</strong> · <strong>S-PAUSE</strong> · <strong>fuel types → MS/HSD</strong> · <strong>S-MYPUMP</strong> · <strong>A10 admin pump assignment</strong> · <strong>E2 dashboard drill-through</strong>. Next: Phase 1 foundations (Product Catalog, litres model, customer expansion, push-token linkage).</p>
+<p>Every verdict below was cross-checked against the code (file:line evidence held
+in the audit run). Where the app does something <em>differently</em> than the sheet, it
+is called out rather than glossed as "done".</p>
+</blockquote>
+<hr />
+<h2 id="1-three-structural-facts-that-shape-everything">1. Three structural facts that shape everything</h2>
+<ol>
+<li>
+<p><strong>The app is rupees-centric; the spreadsheet is litres-centric.</strong>
+   A transaction stores <code>fuel_amount</code> in <strong>₹</strong>, not litres (<code>docs/native-handoff/02-data-model.md:80</code> says explicitly "₹ amount, not litres"). Rewards accrue per ₹100. The requirement's <strong>Daily Settlement</strong> and <strong>CustomerDetailsEntry</strong> are built on <strong>meter readings → litres → price</strong>. Bridging the two is the single biggest architectural decision (see §5, Q1).</p>
+</li>
+<li>
+<p><strong>There is no product pricing anywhere.</strong> Fuel types have only <code>code</code>/<code>name</code> — <strong>no MRP, no selling price, no batch, no stock</strong>. There is no representation of lubricants/oils/AdBlue. This "Product Catalog" (Req A5) is the <strong>keystone dependency</strong> — Settlement, Reports and litres-based capture all need it.</p>
+</li>
+<li>
+<p><strong>The app already exceeds the sheet in one area: shifts &amp; attendance.</strong> The sheet only asks to <em>create shifts and assign operators</em>. The app has that <strong>plus</strong> shift cycles, shift swaps, attendance runs with override/audit history. That subsystem is a strength, not a gap.</p>
+</li>
+</ol>
+<hr />
+<h2 id="2-the-requirement-by-sheet-feature-inventory">2. The requirement, by sheet (feature inventory)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sheet</th>
+<th>What it defines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Users</strong></td>
+<td>Two roles: Admin, Pump Operator/FSM</td>
+</tr>
+<tr>
+<td><strong>Admin</strong></td>
+<td>17 admin capabilities: pump/nozzle/product/vehicle-type setup, operator setup + auth, shifts, customer master, reward settings, settlement view/edit, reports, campaigns, notifications, CRM dashboard</td>
+</tr>
+<tr>
+<td><strong>Staff_FSM</strong></td>
+<td>FSM does Daily Settlement (shift-end) + Customer Details capture (many/day). Constraints: "My Pump" hidden from staff; "Pause Rewards" not in staff login</td>
+</tr>
+<tr>
+<td><strong>PumpsNozzlesProductsSetup</strong></td>
+<td>Pump→nozzle→fuel map, and a <strong>priced product catalog</strong>: HSD/MS + ~12 lubes/oils/AdBlue with batch, MRP, selling price</td>
+</tr>
+<tr>
+<td><strong>CustomerDetailsEntry</strong></td>
+<td>Per-visit FSM form: date, vehicle#, driver name/mobile, <strong>litres filled</strong>, pump#, <strong>discount</strong>, <strong>Fleet/OTP flag</strong>, transport/manager/owner details, approx # of vehicles</td>
+</tr>
+<tr>
+<td><strong>DailySettlement</strong></td>
+<td>Shift-end reconciliation: per-nozzle readings, testing litres, net litres, price, amount; lubes w/ qty &amp; stock; discounts; PhonePe POS &amp; Scanner; Fleet/OTP &amp; TT credit; final-amount-to-settle; cash denomination count + shortage</td>
+</tr>
+<tr>
+<td><strong>DailySettlementSample</strong> (image)</td>
+<td>A filled "ACE FUELS" settlement showing totals-by-fuel, per-FSM payments, OTP/TT credit lines, lubes w/ opening/closing stock, cash count, per-pump shortage, <strong>stock received</strong> &amp; <strong>decantation</strong> (tank KL)</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-comparison-matrix">3. Comparison matrix</h2>
+<h3 id="present-16-usable-today">✅ Present (16) — usable today</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Feature</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C4</td>
+<td>Pause rewards globally</td>
+<td>✅ <strong>Shipped (Phase 0)</strong> — global "Pause All Rewards" switch on reward settings zeroes accrual for everyone; per-customer pause still applies on top</td>
+</tr>
+<tr>
+<td>E2</td>
+<td>Dashboard → customers by period</td>
+<td>✅ <strong>Shipped (Phase 0)</strong> — "View customers" drill-through (web + Android) opens a period-scoped customer list via <code>Customer.transacted_between</code></td>
+</tr>
+<tr>
+<td>A10</td>
+<td>Assign operator to a pump</td>
+<td>✅ <strong>Shipped (Phase 0)</strong> — admin "Assign Pump" flow (web + API + Android) reusing <code>update_pump_assignment</code>; staff self-service removed</td>
+</tr>
+<tr>
+<td>S-PAUSE</td>
+<td>Pause rewards not in staff login</td>
+<td>✅ <strong>Shipped (Phase 0)</strong> — pause/resume gated admin-only in <code>CustomerPolicy</code>; staff lose the buttons (web) and the control is hidden in the Android profile; admin keeps it</td>
+</tr>
+<tr>
+<td>S-MYPUMP</td>
+<td>Hide "My Pump" from staff login</td>
+<td>✅ <strong>Shipped (Phase 0)</strong> — self-service pump assignment is admin-only; nav link, staff transaction control (web) and Android account tile are hidden from staff</td>
+</tr>
+<tr>
+<td>A1</td>
+<td>Setup number of pumps</td>
+<td>Full CRUD, web + Android + API</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>Set up nozzles</td>
+<td>Nested under pump, auto-sequenced</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>Assign nozzles to pumps</td>
+<td>Inherent in pump→nozzle model</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>Assign product (MS/HSD) per nozzle</td>
+<td>Per-nozzle <strong>fuel type</strong> works; defaults now read <strong>MS (Petrol)</strong> / <strong>HSD (Diesel)</strong> ✅ (Phase 0, codes unchanged). No <em>price</em> attached — that's A5</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>Vehicle types 2W/3W/LMV/LCV/MCV/HCV</td>
+<td>Exact six defaults + CRUD + per-type reward config</td>
+</tr>
+<tr>
+<td>A8</td>
+<td>Create shifts (24/12/8 hr)</td>
+<td>Shift templates; app also has cycles/swaps/attendance</td>
+</tr>
+<tr>
+<td>A9</td>
+<td>Assign operator to a shift</td>
+<td>Shift assignments + cycles</td>
+</tr>
+<tr>
+<td>C1</td>
+<td>Cash reward per ₹100 / x ₹</td>
+<td><code>rupees_per_reward_unit</code> + <code>cash_value_per_point</code></td>
+</tr>
+<tr>
+<td>C2</td>
+<td>Reward by vehicle type</td>
+<td><code>vehicle_type_reward_offers</code> / per-type points</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>Reward by fuel type</td>
+<td><code>fuel_reward_rates</code></td>
+</tr>
+<tr>
+<td>C5</td>
+<td>Accumulated loyalty bonus</td>
+<td>Points ledger + cash value</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="partial-6-exists-but-doesnt-fully-meet-the-sheet">🟡 Partial (6) — exists but doesn't fully meet the sheet</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Feature</th>
+<th>What's missing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A7</td>
+<td>Operator user record + auth</td>
+<td>Only <strong>Name</strong> exists. <strong>No Photo, Address, Aadhaar #, ID-card photo</strong>. → <strong>Decision: add these profile fields; keep username/mobile + password (no OTP).</strong> Needs ActiveStorage for 2 images + PII handling</td>
+</tr>
+<tr>
+<td>B1</td>
+<td>Customer master details</td>
+<td>Have: name + single phone + (commercial vehicles only) one owner/manager contact. <strong>Missing:</strong> separate Driver / Supervisor / Owner name+mobile triple, and the <strong>"Contacted-by" checkbox + info button</strong></td>
+</tr>
+<tr>
+<td>B2</td>
+<td>FSM per-visit CustomerDetailsEntry</td>
+<td>No dedicated form. Overlaps only on vehicle# + pump#. <strong>Missing:</strong> litres, discount, Fleet/OTP flag, driver/transport/manager/owner, approx # of vehicles, editable date</td>
+</tr>
+<tr>
+<td>E3</td>
+<td>Visit-frequency analysis</td>
+<td>Has a visits-distribution chart, but <strong>no per-customer last-visit + daily/weekly/biweekly cadence</strong></td>
+</tr>
+<tr>
+<td>F3</td>
+<td>Push for offers + loyalty bonus</td>
+<td>FCM broadcast + scheduled push work, but sends are <strong>untargeted broadcasts</strong>, there's <strong>no offer object</strong> to attach, and <strong>nothing auto-pushes</strong> a loyalty-bonus milestone</td>
+</tr>
+<tr>
+<td>G1</td>
+<td>Visualize per-pump data + edit past days</td>
+<td>Transactions list is <strong>view-only</strong> (no edit), and has <strong>no per-pump filter</strong>. "Edit current/past days" not implemented</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="absent-19-not-built">❌ Absent (19) — not built</h3>
+<p><strong>Daily Settlement (the biggest single gap — 9 features, all missing):</strong>
+| ID | Feature |
+|---|---|
+| D1 | Per-nozzle settlement entry (today/yesterday reading auto-pop, testing, net litres, price auto, amount) |
+| D2 | Lubes in settlement (checkbox, qty, amount, <strong>opening/closing stock</strong>) |
+| D3 | Discounts pulled from customer entries into settlement |
+| D4 | PhonePe POS + PhonePe Scanner amounts |
+| D5 | Fleet/OTP + TT (tank-truck) credit lines |
+| D6 | Final-amount-to-settle calculation |
+| D7 | Cash denomination breakdown + <strong>shortage</strong> per pump |
+| D8 | Stock received (MS/HSD) + decantation (tank KL) |
+| D9 | Admin view/edit settlement per pump &amp; across pumps, incl. past days |
+| D10 | Rate comparison (competitor JIO-BP vs own price) |</p>
+<p><strong>Catalog, CRM, campaigns, reports, notifications, staff constraints:</strong>
+| ID | Feature |
+|---|---|
+| A5 | <strong>Product catalog</strong> with MRP + selling price incl. lubricants/AdBlue + batch (<strong>keystone</strong>) |
+| E1 | Reports daily/weekly/monthly/<strong>yearly</strong> per vehicle/transporter/driver (litres, discount, gifts) |
+| E4 | Customer-type view: <strong>OTP(Fleet) / Drive-in / Credit</strong> |
+| E5 | Contact tracking + probability of conversion |
+| E6 | Intelligent <strong>lost-customer / churn</strong> feedback ("who to reach out to") |
+| E7 | Customer feedback / rating |
+| F1 | <strong>Campaign</strong> creation (min purchase per period → discount/gift) |
+| F2 | Campaign <strong>targeting</strong>: individual / customer-type / selected customers |
+| F4 | <strong>WhatsApp / SMS</strong> notifications |</p>
+<blockquote>
+<p>Note: <strong>S-MYPUMP and A10 both shipped in Phase 0</strong> — self-service pump assignment
+is now admin-only and hidden from staff, and admins assign an operator's pump via
+an "Assign Pump" flow on all three surfaces (web + API + Android), so the staff
+transaction flow still resolves an assigned pump.</p>
+</blockquote>
+<hr />
+<h2 id="4-dependency-map-why-order-matters">4. Dependency map (why order matters)</h2>
+<pre><code>A5 Product Catalog (prices, lubes, stock)  ─┬─► D1/D2 Settlement pricing &amp; lubes
+                                            ├─► E1  Reports (₹/litre, product mix)
+Litres decision (Q1) ───────────────────────┴─► B2  Litres capture ─► D1 readings
+
+Customer model expansion (B1/B2) ─┬─► E4 Customer type (OTP/Drive-in/Credit)
+  (driver/owner/transport, type)  ├─► D5 Fleet/OTP &amp; TT credit lines
+                                  ├─► E1 per-transporter/driver reports
+                                  └─► F2 campaign targeting
+
+Push token ↔ customer link ───────┬─► F2 targeted send
+                                  └─► F3 auto loyalty-bonus push
+F1 Campaign object ───────────────┴─► F3 offer push
+
+E3 cadence baseline ──────────────────► E6 churn / &quot;who to reach out to&quot;
+</code></pre>
+<p>Four foundations unlock most of the backlog: <strong>(1) Product Catalog</strong>, <strong>(2) the litres decision</strong>, <strong>(3) an expanded customer model with a customer-type</strong>, <strong>(4) a push-token↔customer link</strong>.</p>
+<hr />
+<h2 id="5-priority-roadmap">5. Priority roadmap</h2>
+<blockquote>
+<p><strong>Locked decisions (2026-07-21):</strong>
+<strong>(Q1) Litres = source of truth</strong> — capture meter readings/litres and derive ₹ from catalog price. This makes A5 (catalog) + the litres/readings model the top of Tier 1, and reshapes B2/D1/E1.
+<strong>(Q2) Both surfaces in lockstep</strong> — every feature lands in Rails PWA <strong>and</strong> native Android (+ API). Budget ~1.5–2× per-feature effort accordingly.
+<strong>(Q3) Operator KYC = profile fields only</strong> — add Photo/Address/Aadhaar#/ID-photo (ActiveStorage + PII handling); <strong>keep password login, no OTP/SMS</strong>. A7 drops from High → <strong>Medium</strong>.</p>
+</blockquote>
+<h3 id="tier-0-quick-wins-corrections-low-effort-do-first">Tier 0 — Quick wins &amp; corrections (low effort, do first)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Feature</th>
+<th>Effort</th>
+<th>Why now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A4</td>
+<td>Rename/seed fuel types to <strong>MS/HSD</strong></td>
+<td>XS</td>
+<td>Config only; makes the app read like the sheet</td>
+</tr>
+<tr>
+<td>S-PAUSE</td>
+<td>Remove Pause-Rewards from staff</td>
+<td>S</td>
+<td>Policy change + drop staff route/button</td>
+</tr>
+<tr>
+<td>C4</td>
+<td><strong>Global</strong> pause-rewards switch</td>
+<td>S</td>
+<td>One flag on <code>reward_settings</code> + one accrual check</td>
+</tr>
+<tr>
+<td>A10 + S-MYPUMP</td>
+<td>Move pump assignment to <strong>admin</strong>, hide "My Pump" from staff</td>
+<td>S–M</td>
+<td>Model already supports it; do the pair together</td>
+</tr>
+<tr>
+<td>E2</td>
+<td>Make dashboard tiles/leaderboard <strong>click through</strong> to a period-filtered customer list</td>
+<td>M</td>
+<td>Reuses existing data; high perceived value</td>
+</tr>
+<tr>
+<td>D10</td>
+<td>Rate comparison (own vs competitor price)</td>
+<td>S</td>
+<td>Small, but only meaningful once A5 exists</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="tier-1-foundations-unblock-the-rest">Tier 1 — Foundations (unblock the rest)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Feature</th>
+<th>Effort</th>
+<th>Unlocks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A5</td>
+<td><strong>Product Catalog</strong> (fuel + lubes/AdBlue, MRP, selling price, batch, stock)</td>
+<td>H</td>
+<td>D1, D2, E1, B2</td>
+</tr>
+<tr>
+<td>—</td>
+<td><strong>Litres/readings model</strong> — add litres to transactions, derive ₹ from catalog price (decided Q1)</td>
+<td>M–H</td>
+<td>D1, B2, E1</td>
+</tr>
+<tr>
+<td>B1/B2</td>
+<td>Expand <strong>customer model</strong> (driver/supervisor/owner + contacted + transport + <strong>customer type</strong> + Fleet/OTP flag) &amp; FSM capture form</td>
+<td>H</td>
+<td>E1, E4, D5, F2</td>
+</tr>
+<tr>
+<td>F2-prep</td>
+<td><strong>Push-token ↔ customer</strong> opt-in link</td>
+<td>M</td>
+<td>F2, F3</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="tier-2-major-new-subsystems">Tier 2 — Major new subsystems</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Feature</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1–D9</td>
+<td><strong>Daily Settlement</strong> module (readings, lubes+stock, discounts, PhonePe, credit lines, final settle, cash count+shortage, stock/decantation, admin view/edit)</td>
+<td>Very high</td>
+</tr>
+<tr>
+<td>E1</td>
+<td><strong>Reporting</strong> subsystem (periodic, per vehicle/transporter/driver, exportable)</td>
+<td>High</td>
+</tr>
+<tr>
+<td>F1/F2</td>
+<td><strong>Campaign</strong> engine + targeting</td>
+<td>High</td>
+</tr>
+<tr>
+<td>A7</td>
+<td><strong>Operator profile fields</strong>: Photo/Address/Aadhaar#/ID-photo (ActiveStorage + PII); password login kept, no OTP (decided Q3)</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>F4</td>
+<td><strong>WhatsApp / SMS</strong> channel (new provider)</td>
+<td>M–H</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="tier-3-intelligence-advanced-crm">Tier 3 — Intelligence / advanced CRM</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Feature</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E4</td>
+<td>Customer-type dashboard view</td>
+<td>M</td>
+</tr>
+<tr>
+<td>E3</td>
+<td>Per-customer visit cadence</td>
+<td>M</td>
+</tr>
+<tr>
+<td>E7</td>
+<td>Customer feedback / rating</td>
+<td>M</td>
+</tr>
+<tr>
+<td>E5</td>
+<td>Contact tracking + conversion probability</td>
+<td>H</td>
+</tr>
+<tr>
+<td>E6</td>
+<td>Churn detection / "who to reach out to"</td>
+<td>H</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="biggest-change-ranking-by-effort-ripple">"Biggest change" ranking (by effort × ripple)</h3>
+<ol>
+<li><strong>Daily Settlement</strong> subsystem — largest single build (9 features), depends on almost everything else.</li>
+<li><strong>Rupees → Litres</strong> model shift — ripples into rewards, capture, reports.</li>
+<li><strong>Product Catalog + inventory/stock</strong> — new priced entity, the keystone.</li>
+<li><strong>Campaign engine + targeting</strong> — new model + segmentation + per-recipient send.</li>
+<li><strong>Reporting</strong> subsystem — new pipeline + several missing data captures.</li>
+<li><strong>OTP auth + Aadhaar PII</strong> — new auth strategy + compliance/storage.</li>
+<li><strong>CRM intelligence</strong> (churn, conversion, cadence) — new analytics + surfaces.</li>
+<li><strong>WhatsApp/SMS</strong> — external integration + templates/opt-in.</li>
+</ol>
+<p>Every gap requires <strong>backend + at least one client</strong> (Rails PWA and/or native Android), so each lands in 2–3 surfaces.</p>
+<hr />
+<h2 id="6-decisions-remaining-open-item">6. Decisions &amp; remaining open item</h2>
+<p><strong>Resolved 2026-07-21:</strong>
+- <strong>Q1 — Units:</strong> ✅ Move to <strong>litres/readings</strong> as source of truth; derive ₹ from catalog price.
+- <strong>Q2 — Surface:</strong> ✅ <strong>Both</strong> Rails PWA and native Android in lockstep (+ API).
+- <strong>Q3 — Operator KYC:</strong> ✅ <strong>Profile fields only</strong> (Photo/Address/Aadhaar#/ID-photo); keep password login, no OTP/SMS.</p>
+<p><strong>Still open:</strong>
+- <strong>Domain terms (inferred, please confirm):</strong> OTP = fleet/credit account customers (billed by litres, not "one-time password"); TT = <strong>tank-truck</strong> credit; Drive-in = walk-in cash; Credit = credit-account. Features E4/D5/F2 depend on this taxonomy.</p>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 40-gap-analysis.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+</body>
+</html>

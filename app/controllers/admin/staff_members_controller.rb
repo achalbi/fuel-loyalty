@@ -39,7 +39,42 @@ module Admin
       redirect_to admin_staff_members_path, alert: @staff_member.errors.full_messages.to_sentence.presence || "Unable to soft delete this staff member."
     end
 
+    # GET /admin/staff_members/:id/pump — admin assigns this operator's pump (A10).
+    def pump
+      @staff_member = staff_member_for_pump
+      authorize @staff_member, :assign_pump?
+      load_pump_form_state
+    end
+
+    # PATCH /admin/staff_members/:id/pump
+    def update_pump
+      @staff_member = staff_member_for_pump
+      authorize @staff_member, :assign_pump?
+
+      if @staff_member.update_pump_assignment(pump_assignment_params)
+        redirect_to admin_staff_members_path, notice: "Pump assignment updated for #{@staff_member.name}."
+      else
+        load_pump_form_state
+        render :pump, status: :unprocessable_entity
+      end
+    end
+
     private
+
+    def staff_member_for_pump
+      User.kept.where(role: :staff).find(params[:id])
+    end
+
+    def load_pump_form_state
+      @assignable_fuel_pumps = FuelPump.includes(nozzles: :fuel_type_record).ordered.to_a
+      @assignable_fuel_pump_nozzles = @assignable_fuel_pumps.index_with do |fuel_pump|
+        fuel_pump.nozzles.active.ordered.to_a
+      end
+    end
+
+    def pump_assignment_params
+      params.require(:user).permit(:fuel_pump_id, assigned_fuel_pump_nozzle_ids: [])
+    end
 
     def staff_members_scope
       User.kept.where(role: :staff)

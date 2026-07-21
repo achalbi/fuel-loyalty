@@ -91,7 +91,7 @@ module Api
 
         def reward_setting_params
           params.fetch(:reward_setting, ActionController::Parameters.new)
-                .permit(:rupees_per_reward_unit, :cash_value_per_point, :minimum_redeemable_points)
+                .permit(:rupees_per_reward_unit, :cash_value_per_point, :minimum_redeemable_points, :rewards_paused)
         end
       end
     end

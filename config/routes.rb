@@ -64,6 +64,10 @@ Rails.application.routes.draw do
         match "theme_settings", to: "theme_settings#update", via: %i[patch put]
         resources :staff_members, only: %i[index update destroy] do
           resources :shift_assignments, only: :create
+          member do
+            get :pump
+            patch :pump, action: :update_pump
+          end
         end
         resources :shift_templates, only: %i[index create update]
         resources :shift_cycles, only: %i[index create update destroy] do
@@ -118,6 +122,10 @@ Rails.application.routes.draw do
     post "notifications/send", to: "notification_deliveries#create", as: :send_notifications
     resources :staff_members, only: %i[index update destroy] do
       resources :shift_assignments, only: :create
+      member do
+        get :pump
+        patch :pump, action: :update_pump
+      end
     end
     resources :shift_templates, only: %i[index create update]
     resources :shift_cycles, only: %i[index create update destroy] do

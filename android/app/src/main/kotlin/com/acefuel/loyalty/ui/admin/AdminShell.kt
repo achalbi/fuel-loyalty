@@ -135,7 +135,10 @@ fun AdminShell(
                     // arrow is the visible way *out* of the console back to the
                     // staff app — the landing tab owns the section's exit
                     // (system back from here does the same).
-                    AdminTab.Overview -> AdminDashboardScreen(onBack = onExit)
+                    AdminTab.Overview -> AdminDashboardScreen(
+                        onBack = onExit,
+                        onViewCustomers = { start, end -> onOpen(AdminRoutes.customersPeriod(start, end)) },
+                    )
 
                     // The same customers screen staff use. An admin's customer
                     // list is not a different customer list, and shipping a second
@@ -192,6 +195,12 @@ object AdminRoutes {
     const val THEME = "admin_theme"
     const val SCHEDULES = "admin_schedules"
     const val STAFF = "admin_staff"
+    const val ASSIGN_PUMP = "admin_assign_pump/{id}"
+    fun assignPump(id: Long) = "admin_assign_pump/$id"
+    // E2 dashboard drill-through: a period-scoped customers list.
+    const val CUSTOMERS_PERIOD = "admin_customers_period?start={start}&end={end}"
+    fun customersPeriod(start: String?, end: String?) =
+        "admin_customers_period?start=${start.orEmpty()}&end=${end.orEmpty()}"
     const val SHIFTS = "admin_shifts"
     const val CYCLES = "admin_cycles"
     const val ATTENDANCE = "admin_attendance"

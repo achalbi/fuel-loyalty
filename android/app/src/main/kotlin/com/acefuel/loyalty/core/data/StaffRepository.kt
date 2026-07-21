@@ -40,8 +40,14 @@ class StaffRepository(
     suspend fun adjustPoints(phoneNumber: String, points: Int): ApiResult<PointsAdjustmentResponse> =
         apiCall(json) { api.adjustPoints(PointsAdjustmentEnvelope(PointsAdjustmentRequest(phoneNumber, points))) }
 
-    suspend fun customers(query: String?): ApiResult<List<CustomerSummaryDto>> =
-        apiCall(json) { api.staffCustomers(query?.ifBlank { null }).customers }
+    suspend fun customers(
+        query: String?,
+        startDate: String? = null,
+        endDate: String? = null,
+    ): ApiResult<List<CustomerSummaryDto>> =
+        apiCall(json) {
+            api.staffCustomers(query?.ifBlank { null }, startDate?.ifBlank { null }, endDate?.ifBlank { null }).customers
+        }
 
     suspend fun customerProfile(id: Long): ApiResult<CustomerProfileDto> =
         apiCall(json) { api.staffCustomerProfile(id) }
@@ -81,6 +87,24 @@ class StaffRepository(
     suspend fun updateMyPump(fuelPumpId: Long, nozzleIds: List<Long>): ApiResult<MyPumpDto> =
         apiCall(json) {
             api.updateMyPump(
+                MyPumpUpdateEnvelope(
+                    MyPumpUpdateRequest(
+                        fuelPumpId = fuelPumpId,
+                        assignedNozzleIds = listOf("") + nozzleIds.map(Long::toString),
+                    ),
+                ),
+            )
+        }
+
+    /** Admin: read a staff member's pump assignment + the pump catalog (A10). */
+    suspend fun staffMemberPump(staffMemberId: Long): ApiResult<MyPumpDto> =
+        apiCall(json) { api.staffMemberPump(staffMemberId) }
+
+    /** Admin: assign a staff member's pump + active nozzles (A10). */
+    suspend fun updateStaffMemberPump(staffMemberId: Long, fuelPumpId: Long, nozzleIds: List<Long>): ApiResult<MyPumpDto> =
+        apiCall(json) {
+            api.updateStaffMemberPump(
+                staffMemberId,
                 MyPumpUpdateEnvelope(
                     MyPumpUpdateRequest(
                         fuelPumpId = fuelPumpId,

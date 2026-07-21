@@ -101,6 +101,14 @@
                     <span>Shift</span>
                   <% end %>
 
+                  <%= link_to pump_admin_staff_member_path(staff_member),
+                    class: "admin-staff-member__action",
+                    aria: { label: "Assign pump for #{staff_member.display_name}" },
+                    title: "Assign pump" do %>
+                    <i class="ti ti-gas-station" aria-hidden="true"></i>
+                    <span>Pump</span>
+                  <% end %>
+
                   <%= button_to admin_staff_member_path(staff_member),
                     method: :delete,
                     class: "customer-details-history-preview-action admin-shift-item__delete",

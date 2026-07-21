@@ -34,6 +34,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -88,7 +89,11 @@ private enum class DashState { Loading, Error, Empty, Content }
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminDashboardScreen(onBack: (() -> Unit)? = null) {
+fun AdminDashboardScreen(
+    onBack: (() -> Unit)? = null,
+    // E2: drill through to the customers active in the selected period.
+    onViewCustomers: (startDate: String?, endDate: String?) -> Unit = { _, _ -> },
+) {
     val container = LocalContainer.current
     val repo = remember {
         DashboardRepository(container.retrofit.create(DashboardApi::class.java), container.json)
@@ -127,6 +132,16 @@ fun AdminDashboardScreen(onBack: (() -> Unit)? = null) {
                         vm.selectPreset(it.first)
                     },
                 )
+                TextButton(
+                    onClick = {
+                        haptics.tick()
+                        onViewCustomers(state.data?.filters?.startDate, state.data?.filters?.endDate)
+                    },
+                    enabled = state.data != null,
+                    contentPadding = PaddingValues(horizontal = 0.dp),
+                ) {
+                    Text("View customers for this period")
+                }
             }
 
             // Reload-in-place (chip change with stale data on screen).

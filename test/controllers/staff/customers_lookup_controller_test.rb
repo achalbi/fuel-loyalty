@@ -80,16 +80,19 @@ module Staff
       assert customers(:one).reload.active?
     end
 
-    test "staff can pause and resume customer rewards" do
+    test "staff cannot pause or resume customer rewards" do
       sign_in users(:two)
 
+      # Pausing rewards is admin-only (S-PAUSE); staff are redirected away and
+      # the customer's reward state is unchanged.
       patch pause_rewards_staff_customer_path(customers(:one))
-      assert_redirected_to customer_path(customers(:one))
-      assert customers(:one).reload.rewards_paused?
+      assert_redirected_to root_path
+      assert_not customers(:one).reload.rewards_paused?
 
+      customers(:one).update!(rewards_paused: true)
       patch resume_rewards_staff_customer_path(customers(:one))
-      assert_redirected_to customer_path(customers(:one))
-      refute customers(:one).reload.rewards_paused?
+      assert_redirected_to root_path
+      assert customers(:one).reload.rewards_paused?
     end
   end
 end

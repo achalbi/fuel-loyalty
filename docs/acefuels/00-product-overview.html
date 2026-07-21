@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceFuels — Product Overview — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">00-product-overview.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="acefuels-product-overview">AceFuels — Product Overview</h1>
+<blockquote>
+<p><strong>Status:</strong> Foundational spec. This is the entry-point document for the AceFuels
+program. Read it first; every other doc in <code>docs/acefuels/</code> builds on the
+vocabulary, roles, and locked decisions defined here.</p>
+</blockquote>
+<hr />
+<h2 id="1-product-vision">1. Product vision</h2>
+<p><strong>AceFuels</strong> is a fuel-station loyalty <strong>and</strong> operations platform. It runs a
+single fuel outlet's day-to-day: the operators who work the pumps, the customers
+who fuel up, the rewards those customers earn, and the shift-end money-and-fuel
+reconciliation that keeps the outlet honest.</p>
+<p>Two things make AceFuels more than a punch-card loyalty app:</p>
+<ol>
+<li><strong>Litres are the source of truth.</strong> The platform is built around physical
+   nozzle meter-readings and litres dispensed. Rupee amounts are <em>derived</em> from
+   the product catalog's selling price — not typed in as the primary fact. This
+   is what lets rewards, settlement, and reports all reconcile against the same
+   physical reality.</li>
+<li><strong>Operations and loyalty share one dataset.</strong> The same customer visit that
+   awards loyalty points also feeds the daily settlement, the churn dashboard,
+   and the campaign engine. Capture once, use everywhere.</li>
+</ol>
+<p>The near-term goal is to take the existing loyalty app (which today records only
+a rupee <code>fuel_amount</code> per transaction) and grow it into the full operations
+platform described across these docs — on <strong>every</strong> surface the outlet uses.</p>
+<hr />
+<h2 id="2-the-two-roles">2. The two roles</h2>
+<p>AceFuels has exactly two user roles. Everything in the product is framed as
+"what the Admin does" or "what the FSM does".</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Also called</th>
+<th>Who they are</th>
+<th>What they do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Admin</strong></td>
+<td>Owner / Manager</td>
+<td>The outlet owner or manager</td>
+<td>Sets up the outlet (pumps, nozzles, products, vehicle types, staff, shifts); configures reward rules; runs campaigns and notifications; views and edits daily settlements and per-pump data; reads the dashboard, CRM, and reports.</td>
+</tr>
+<tr>
+<td><strong>FSM</strong></td>
+<td>Pump Operator, Forecourt Service Member</td>
+<td>The person working the forecourt</td>
+<td>Captures customer details at the pump many times a day; files the <strong>Daily Settlement</strong> at shift end (nozzle readings, lubes sold, discounts, digital payments, cash denominations, shortages).</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="role-boundaries-constraints">Role boundaries (constraints)</h3>
+<p>Two capabilities that exist for the Admin are <strong>explicitly denied</strong> to the FSM
+login. These are hard requirements, not preferences:</p>
+<ul>
+<li><strong>"My Pump" self-assignment is DISABLED in the FSM login.</strong> Operators do not
+  pick their own pump; the Admin assigns it. <em>(Today's app does the opposite —
+  see feature <code>S-MYPUMP</code> in the gap analysis.)</em></li>
+<li><strong>"Pause rewards" is NOT available in the FSM login.</strong> Only the Admin can pause
+  a customer's or the outlet's rewards. <em>(Today's app does the opposite — see
+  <code>S-PAUSE</code>.)</em></li>
+</ul>
+<hr />
+<h2 id="3-glossary">3. Glossary</h2>
+<p>New readers should skim this before the feature docs. Terms marked <strong>(assumed,
+to confirm)</strong> are our current interpretation and must be validated with the
+outlet before we build against them.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>FSM</strong></td>
+<td><em>Forecourt Service Member</em> — the pump operator. The non-admin role.</td>
+</tr>
+<tr>
+<td><strong>Nozzle</strong></td>
+<td>The individual fuel gun. Each nozzle dispenses one fuel type and has a running meter (totalizer) reading. A pump has several nozzles.</td>
+</tr>
+<tr>
+<td><strong>Pump</strong></td>
+<td>A dispenser unit on the forecourt. Holds multiple nozzles. Example layout: <code>P1[N1 HSD, N2 HSD] P2[N3 HSD, N4 MS] P3[N5 HSD, N6 HSD, N7 MS, N8 MS]</code>.</td>
+</tr>
+<tr>
+<td><strong>MS</strong></td>
+<td><em>Motor Spirit</em> — petrol.</td>
+</tr>
+<tr>
+<td><strong>HSD</strong></td>
+<td><em>High-Speed Diesel</em> — diesel.</td>
+</tr>
+<tr>
+<td><strong>Lube</strong></td>
+<td>Lubricant / engine-oil product sold alongside fuel (e.g. 2T oils, 10W30, Milex). Sold by the unit from the product catalog.</td>
+</tr>
+<tr>
+<td><strong>AdBlue</strong></td>
+<td>Diesel-exhaust fluid (urea solution) sold in 5L / 10L / 20L packs. A catalog product like a lube.</td>
+</tr>
+<tr>
+<td><strong>Meter reading / totalizer</strong></td>
+<td>The cumulative litres a nozzle has ever dispensed. Litres sold in a shift = today's reading − yesterday's reading, minus testing litres.</td>
+</tr>
+<tr>
+<td><strong>Testing litres</strong></td>
+<td>Litres pumped out for calibration/testing and pumped back — subtracted from litres sold so they aren't billed.</td>
+</tr>
+<tr>
+<td><strong>Decantation</strong></td>
+<td>Unloading fuel from a delivery tank-truck into the outlet's underground storage tanks; tracked via tank KL (kilo-litre) readings.</td>
+</tr>
+<tr>
+<td><strong>Daily Settlement</strong></td>
+<td>The shift-end reconciliation an FSM files per pump: fuel sold + lubes sold, minus discounts and digital payments, reconciled against counted cash.</td>
+</tr>
+<tr>
+<td><strong>PhonePe POS</strong></td>
+<td>Payments taken on the physical PhonePe card <strong>machine</strong> at the pump.</td>
+</tr>
+<tr>
+<td><strong>PhonePe Scanner</strong></td>
+<td>Payments taken by the customer scanning a PhonePe <strong>QR code</strong>. Tracked separately from POS.</td>
+</tr>
+<tr>
+<td><strong>TT</strong></td>
+<td><em>Tank-Truck</em> credit — fuel supplied on credit to a tank-truck, recorded as a credit line (litres + discount, e.g. "OTP 136 Lts NL-01/AE-2471").</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="customer-taxonomy-assumed-to-confirm">Customer taxonomy — <strong>assumed, to confirm</strong></h3>
+<p>The requirement refers to customer <em>types</em> — <strong>OTP / Fleet</strong>, <strong>TT</strong>,
+<strong>Drive-in</strong>, <strong>Credit</strong> — but never defines them. Our working interpretation,
+which <strong>must be confirmed with the outlet before we build type-specific logic</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Assumed meaning (to confirm)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>OTP / Fleet</strong></td>
+<td>Fleet/credit accounts billed by litres. <strong>"OTP" here is assumed to mean the fleet-account customer type, NOT a one-time-password.</strong></td>
+</tr>
+<tr>
+<td><strong>TT</strong></td>
+<td>Tank-truck credit customers (fuel on credit to a tanker).</td>
+</tr>
+<tr>
+<td><strong>Drive-in</strong></td>
+<td>Walk-in retail customers paying cash/card on the spot.</td>
+</tr>
+<tr>
+<td><strong>Credit</strong></td>
+<td>Credit-account customers billed periodically.</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="4-platform-shape">4. Platform shape</h2>
+<p>AceFuels ships every feature on a common backend with three client surfaces.</p>
+<pre><code>                        ┌─────────────────────────────┐
+                        │   Rails server (source of    │
+                        │   truth: DB, business logic, │
+                        │   points, settlement calc)   │
+                        └──────────────┬──────────────┘
+                          server-rendered │ serves
+                    ┌───────────────┐     │     ┌──────────────────┐
+                    │  PWA views    │◀────┼────▶│   JSON API (v1)  │
+                    │ (Rails HTML,  │     │     │  token-auth      │
+                    │  installable) │     │     └────────┬─────────┘
+                    └───────────────┘     │              │ backs
+                                          │     ┌────────▼─────────┐
+                                          │     │  Native Android  │
+                                          │     │ (Kotlin/Compose) │
+                                          └─────┴──────────────────┘
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Server</strong></td>
+<td>Ruby on Rails</td>
+<td>Owns the database, business logic (points accrual, settlement math), and both the server-rendered views and the API.</td>
+</tr>
+<tr>
+<td><strong>PWA</strong></td>
+<td>Rails-rendered HTML views</td>
+<td>Installable progressive web app; the browser-based Admin + FSM experience.</td>
+</tr>
+<tr>
+<td><strong>Native Android</strong></td>
+<td>Kotlin + Jetpack Compose</td>
+<td>Under <code>android/</code>. Consumes the JSON API. Currently at versionCode 5 / v1.1.1.</td>
+</tr>
+<tr>
+<td><strong>JSON API</strong></td>
+<td><code>api/v1/*</code>, token auth</td>
+<td>Mirrors the web controllers; the contract that backs Android.</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="5-the-three-locked-decisions">5. The three LOCKED DECISIONS</h2>
+<p>These decisions were locked on <strong>2026-07-21</strong>. Every feature doc must honor them
+verbatim. They are reproduced here word-for-word.</p>
+<blockquote>
+<p><strong>Q1 UNITS:</strong> Litres/meter-readings are the SOURCE OF TRUTH. Capture
+readings/litres; DERIVE ₹ from the product-catalog selling price. (Today
+transactions store only ₹ fuel_amount.)</p>
+<p><strong>Q2 SURFACES:</strong> Build EVERY feature on BOTH the Rails PWA and the native
+Android app (Kotlin/Compose), plus the JSON API that backs Android. Specs must
+describe both surfaces.</p>
+<p><strong>Q3 OPERATOR KYC:</strong> Add operator PROFILE FIELDS ONLY — Photo, Address, Aadhaar
+number, ID-card photo (ActiveStorage for the two images + PII handling). KEEP
+username/mobile + password login. NO OTP / SMS provider.</p>
+</blockquote>
+<h3 id="what-each-decision-implies">What each decision implies</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Implications for the build</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q1 — Litres are truth</strong></td>
+<td>A <strong>product catalog with selling prices</strong> (feature A5) becomes a prerequisite for almost everything downstream. Transactions/settlements must store litres and readings; ₹ is a derived, recomputable value. The current <code>transactions.fuel_amount</code>-only model must be extended, and reward accrual must be re-expressed against litres/₹ derived from the catalog.</td>
+</tr>
+<tr>
+<td><strong>Q2 — Both surfaces</strong></td>
+<td>No feature is "web-only" or "Android-only". Each feature spec describes the PWA view, the Compose screen, <strong>and</strong> the API endpoints that connect them. Parity is a shipping requirement, not a follow-up.</td>
+</tr>
+<tr>
+<td><strong>Q3 — Profile-only KYC</strong></td>
+<td>Operator records gain Photo, Address, Aadhaar number, and ID-card photo (two images via ActiveStorage, with PII handling). Login stays <strong>username/mobile + password</strong>. <strong>No OTP, no SMS provider is in scope this phase</strong> — the requirement's "login by mobile + OTP" is deliberately deferred.</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="6-scope-non-goals">6. Scope &amp; non-goals</h2>
+<h3 id="in-scope-this-program">In scope (this program)</h3>
+<ul>
+<li>The full Admin setup surface: pumps, nozzles, nozzle→pump assignment,
+  fuel-type-per-nozzle, <strong>product catalog with MRP + selling price</strong> (incl. lubes
+  and AdBlue), vehicle types, operator profiles (with KYC fields), shifts, and
+  shift/pump assignment.</li>
+<li>Customer master and per-visit customer capture keyed on litres.</li>
+<li>Reward configuration (per ₹, by vehicle type, by fuel type, global + per-customer pause).</li>
+<li>The full <strong>Daily Settlement</strong> workflow for the FSM, and Admin view/edit of it.</li>
+<li>Dashboard, CRM (contact tracking, churn/lost-customer, cadence, feedback),
+  and daily/weekly/monthly/yearly reports.</li>
+<li>Campaigns and notifications (push in-scope; WhatsApp/SMS tracked as a feature).</li>
+</ul>
+<h3 id="explicit-non-goals-this-phase">Explicit non-goals (this phase)</h3>
+<ul>
+<li><strong>No OTP / mobile-OTP login and no SMS provider.</strong> Login is username/mobile +
+  password only (per Q3). The requirement's OTP login is deferred.</li>
+<li><strong>No re-interpretation of the customer taxonomy without confirmation.</strong> The
+  OTP/TT/Drive-in/Credit meanings in §3 are assumptions to validate, not settled
+  facts to build type-specific billing on yet.</li>
+<li><strong>Single-outlet scope.</strong> The platform models one fuel station; multi-outlet /
+  franchise rollout is out of scope for this program.</li>
+</ul>
+<hr />
+<h2 id="7-how-these-docs-are-organized">7. How these docs are organized</h2>
+<p>All AceFuels docs live in <code>docs/acefuels/</code>. Feature IDs (A1–A10, B1–B2, C1–C5,
+D1–D10, E1–E7, F1–F4, G1, plus the S-MYPUMP / S-PAUSE staff constraints) are
+<strong>shared across every doc</strong> so a feature can be traced from requirement to gap to
+spec.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Document</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>00-product-overview.md</code></strong> <em>(this file)</em></td>
+<td>Vision, roles, glossary, platform shape, locked decisions, scope. The entry point.</td>
+</tr>
+<tr>
+<td><strong><code>40-gap-analysis.md</code></strong></td>
+<td>The verified as-built audit: which of the 41 features are Present / Partial / Absent today, and the delta to the requirement.</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>The remaining per-area feature specs (setup, customer capture, rewards, daily
+settlement, dashboard/CRM/reports, campaigns/notifications) are authored as
+companion docs and reference the same feature IDs. As each is written it is
+added to the table above.</p>
+</blockquote>
+<h3 id="feature-id-map-quick-reference">Feature-ID map (quick reference)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID range</th>
+<th>Area</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A1–A10</strong></td>
+<td>Outlet setup: pumps, nozzles, product catalog, vehicle types, operator profiles, shifts, assignments.</td>
+</tr>
+<tr>
+<td><strong>B1–B2</strong></td>
+<td>Customer master (B1) and per-visit customer capture (B2).</td>
+</tr>
+<tr>
+<td><strong>C1–C5</strong></td>
+<td>Reward settings and loyalty accrual.</td>
+</tr>
+<tr>
+<td><strong>D1–D10</strong></td>
+<td>The Daily Settlement workflow (readings, lubes, discounts, digital payments, cash denominations, shortage, stock, decantation, rate comparison, admin view/edit).</td>
+</tr>
+<tr>
+<td><strong>E1–E7</strong></td>
+<td>Dashboard, reports, CRM: customer types, contact tracking/conversion, churn, feedback.</td>
+</tr>
+<tr>
+<td><strong>F1–F4</strong></td>
+<td>Campaigns (F1), targeting (F2), push (F3), WhatsApp/SMS (F4).</td>
+</tr>
+<tr>
+<td><strong>G1</strong></td>
+<td>Per-pump visualize + edit of current and past days.</td>
+</tr>
+<tr>
+<td><strong>S-MYPUMP / S-PAUSE</strong></td>
+<td>FSM-login constraints: "My Pump" disabled, "Pause rewards" absent.</td>
+</tr>
+</tbody>
+</table></div>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 00-product-overview.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+</body>
+</html>

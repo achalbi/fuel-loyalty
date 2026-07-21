@@ -21,7 +21,13 @@ data class CustomersUiState(
     val error: String? = null,
 )
 
-class CustomersViewModel(private val repository: StaffRepository) : ViewModel() {
+class CustomersViewModel(
+    private val repository: StaffRepository,
+    // E2: when set, the list is scoped to customers who transacted in this
+    // dashboard period (fixed for the screen instance).
+    private val startDate: String? = null,
+    private val endDate: String? = null,
+) : ViewModel() {
 
     private val _state = MutableStateFlow(CustomersUiState())
     val state: StateFlow<CustomersUiState> = _state.asStateFlow()
@@ -55,7 +61,7 @@ class CustomersViewModel(private val repository: StaffRepository) : ViewModel() 
         val epoch = ++searchEpoch
         _state.update { it.copy(loading = !asRefresh, refreshing = asRefresh, error = null) }
         viewModelScope.launch {
-            val result = repository.customers(query)
+            val result = repository.customers(query, startDate, endDate)
             if (epoch != searchEpoch) return@launch // superseded by a newer search
             when (result) {
                 is ApiResult.Success ->

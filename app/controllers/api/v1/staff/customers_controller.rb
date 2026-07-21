@@ -8,7 +8,10 @@ module Api
         # Blank query -> top 3 by points; else name/phone search (limit 50).
         def index
           authorize Customer, :lookup?
-          customers = customer_scope(params[:q].to_s.strip)
+          range = ::Admin::Dashboard::OverviewReport.period_range(
+            preset: params[:preset], start_date: params[:start_date], end_date: params[:end_date]
+          )
+          customers = customer_scope(params[:q].to_s.strip, range)
           render json: { customers: customers.map { |c| CustomerSummarySerializer.call(c) } }, status: :ok
         end
 
@@ -159,13 +162,18 @@ module Api
           render json: CustomerProfileSerializer.call(customer.reload, RewardSetting.current), status: :ok
         end
 
-        def customer_scope(query)
+        def customer_scope(query, range = nil)
+          base = Customer.left_joins(:points_ledgers).includes(:vehicles)
+                         .select("customers.*, COALESCE(SUM(points_ledgers.points), 0) AS total_points_sum")
+                         .group("customers.id")
+          # E2: when a dashboard period is passed, restrict to customers who
+          # transacted in it and relax the blank-query top-3 cap so the drilled-in
+          # list actually shows the period's customers.
+          base = base.where(id: Transaction.where(created_at: range).select(:customer_id)) if range
+
           if query.blank?
-            Customer.left_joins(:points_ledgers).includes(:vehicles)
-                    .select("customers.*, COALESCE(SUM(points_ledgers.points), 0) AS total_points_sum")
-                    .group("customers.id")
-                    .order(Arel.sql("COALESCE(SUM(points_ledgers.points), 0) DESC, customers.created_at DESC"))
-                    .limit(3)
+            base.order(Arel.sql("COALESCE(SUM(points_ledgers.points), 0) DESC, customers.created_at DESC"))
+                .limit(range ? 100 : 3)
           else
             escaped = ActiveRecord::Base.sanitize_sql_like(query)
             normalized_phone = Customer.normalize_phone_number(query)
@@ -175,12 +183,9 @@ module Api
               conditions << "customers.phone_number LIKE :phone"
               values[:phone] = "%#{normalized_phone}%"
             end
-            Customer.left_joins(:points_ledgers).includes(:vehicles)
-                    .select("customers.*, COALESCE(SUM(points_ledgers.points), 0) AS total_points_sum")
-                    .where(conditions.join(" OR "), values)
-                    .group("customers.id")
-                    .order(Arel.sql("customers.created_at DESC"))
-                    .limit(50)
+            base.where(conditions.join(" OR "), values)
+                .order(Arel.sql("customers.created_at DESC"))
+                .limit(50)
           end
         end
       end

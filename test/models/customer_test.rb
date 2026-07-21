@@ -44,4 +44,21 @@ class CustomerTest < ActiveSupport::TestCase
 
     assert_equal 250, customer.minimum_redeemable_points
   end
+
+  test "transacted_between returns only customers with a transaction in the range" do
+    staff = users(:two)
+    recent = Customer.create!(name: "Recent", phone_number: "9812340001")
+    recent_vehicle = recent.vehicles.create!(vehicle_number: "TN20AA0001", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+    recent.transactions.create!(user: staff, vehicle: recent_vehicle, fuel_amount: 400, created_at: 1.day.ago)
+
+    stale = Customer.create!(name: "Stale", phone_number: "9812340002")
+    stale_vehicle = stale.vehicles.create!(vehicle_number: "TN20AA0002", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+    stale.transactions.create!(user: staff, vehicle: stale_vehicle, fuel_amount: 400, created_at: 40.days.ago)
+
+    range = 7.days.ago.beginning_of_day..Time.current.end_of_day
+    ids = Customer.transacted_between(range).pluck(:id)
+
+    assert_includes ids, recent.id
+    assert_not_includes ids, stale.id
+  end
 end

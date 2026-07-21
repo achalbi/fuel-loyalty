@@ -80,6 +80,12 @@ module Admin
     def load_index_state(form_customer: Customer.new)
       @query = params[:q].to_s.strip
       @current_status = normalized_status_filter
+      @current_preset = normalized_preset
+      @current_start_date = params[:start_date].to_s.presence
+      @current_end_date = params[:end_date].to_s.presence
+      @period_range = Admin::Dashboard::OverviewReport.period_range(
+        preset: @current_preset, start_date: @current_start_date, end_date: @current_end_date
+      )
       @customers = filtered_customers
       @customer = form_customer
     end
@@ -132,12 +138,19 @@ module Admin
         scope
       end
 
+      scope = scope.merge(Customer.transacted_between(@period_range)) if @period_range
+
       scope.preload(:vehicles).order(created_at: :desc)
     end
 
     def normalized_status_filter
       status = params[:status].to_s
       %w[all active inactive].include?(status) ? status : "all"
+    end
+
+    def normalized_preset
+      preset = params[:preset].to_s
+      Admin::Dashboard::OverviewReport::QUICK_RANGES.key?(preset) ? preset : nil
     end
 
     def prepare_show_state(open_edit_modal: false)

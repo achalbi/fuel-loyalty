@@ -95,5 +95,57 @@ module Admin
       assert_equal "User is in active state. Deactivate before soft deleting", flash[:alert]
       assert_nil users(:two).reload.deleted_at
     end
+
+    test "admin can view the assign-pump page for a staff member" do
+      sign_in users(:one)
+
+      get pump_admin_staff_member_path(users(:two))
+
+      assert_response :success
+      assert_select "h1", text: "Assign Pump"
+      assert_select "form[action='#{pump_admin_staff_member_path(users(:two))}'][data-my-pump-form='true']"
+      assert_select "select[name='user[fuel_pump_id]']", 1
+    end
+
+    test "admin can assign a staff member's pump and nozzles" do
+      sign_in users(:one)
+      second_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
+      second_nozzle = second_pump.nozzles.first
+
+      patch pump_admin_staff_member_path(users(:two)), params: {
+        user: { fuel_pump_id: second_pump.id, assigned_fuel_pump_nozzle_ids: ["", second_nozzle.id] }
+      }
+
+      assert_redirected_to admin_staff_members_path
+      assert_equal second_pump, users(:two).reload.assigned_fuel_pump
+      assert_equal [second_nozzle.id], users(:two).assigned_fuel_pump_nozzle_ids
+    end
+
+    test "assigning a pump requires at least one nozzle and leaves the old assignment intact" do
+      sign_in users(:one)
+      before_pump = users(:two).fuel_pump_id
+      before_nozzles = users(:two).assigned_fuel_pump_nozzle_ids.sort
+      assert before_pump.present?
+      assert before_nozzles.any?, "fixture must start with an existing assignment"
+
+      patch pump_admin_staff_member_path(users(:two)), params: {
+        user: { fuel_pump_id: fuel_pumps(:one).id, assigned_fuel_pump_nozzle_ids: [""] }
+      }
+
+      assert_response :unprocessable_entity
+      assert_select ".alert.alert-danger", 1
+      assert_match(/Select at least one nozzle for the chosen pump\./i, response.body)
+      users(:two).reload
+      assert_equal before_pump, users(:two).fuel_pump_id
+      assert_equal before_nozzles, users(:two).assigned_fuel_pump_nozzle_ids.sort
+    end
+
+    test "staff cannot open the admin assign-pump page" do
+      sign_in users(:two)
+
+      get pump_admin_staff_member_path(users(:two))
+
+      assert_redirected_to root_path
+    end
   end
 end

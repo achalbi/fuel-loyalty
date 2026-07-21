@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AceFuels — Current Architecture (as-built) — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">02-current-architecture.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="acefuels-current-architecture-as-built">AceFuels — Current Architecture (as-built)</h1>
+<p>An accurate map of what exists <strong>today</strong> in <code>fuel-loyalty</code>, verified by reading the
+code. This is not a plan and not the requirement sheet — it documents the shipped
+system so the gap analysis and feature specs can build on solid ground.</p>
+<p>Provenance: Rails 8.1 schema (<code>db/schema.rb:13</code>), app at Android <code>versionCode 5 /
+1.1.1</code> (<code>android/app/build.gradle.kts:28-29</code>), package <code>com.acefuel.loyalty</code>.</p>
+<hr />
+<h2 id="1-system-topology">1. System topology</h2>
+<p>Five cooperating pieces share <strong>one Rails backend and one Postgres database</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>What it is</th>
+<th>Entry point</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Rails server</strong></td>
+<td>Rails 8.1 monolith (API + server-rendered PWA)</td>
+<td><code>config/routes.rb</code></td>
+</tr>
+<tr>
+<td><strong>PWA</strong></td>
+<td>Server-rendered HTML + Hotwire, installable; manifest + service worker served by Rails</td>
+<td><code>PwaController</code> (<code>config/routes.rb:7-8</code>), <code>app/assets/javascripts/vehicle_plate_scanner.js</code></td>
+</tr>
+<tr>
+<td><strong>Native Android</strong></td>
+<td>Kotlin/Compose app talking to the JSON API</td>
+<td><code>android/app/src/main/kotlin/com/acefuel/loyalty</code></td>
+</tr>
+<tr>
+<td><strong>JSON API</strong></td>
+<td><code>/api/v1/*</code>, token-authenticated, backs Android</td>
+<td><code>config/routes.rb:16-88</code></td>
+</tr>
+<tr>
+<td><strong>FCM push</strong></td>
+<td>Firebase Cloud Messaging fan-out to web + Android tokens</td>
+<td><code>app/services/firebase_push_service.rb</code></td>
+</tr>
+<tr>
+<td><strong>Plate scanner</strong></td>
+<td>On-device ANPR (web JS + Android CameraX/ML-Kit) posting cropped text to the server</td>
+<td><code>vehicle_plate_scanner.js</code>, <code>ui/scanner/PlateScannerScreen.kt</code>, <code>app/services/vehicle_plate_recognizer.rb</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Key property: <strong>the PWA and Android are two front-ends over the same models and
+business services.</strong> The PWA renders server-side and calls the same service objects
+(<code>TransactionCreator</code>, <code>PointsRedeemer</code>) directly; Android calls the <code>/api/v1</code>
+controllers, which call those same services. There is no separate business logic on
+the client.</p>
+<figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">graph TB
+  subgraph Clients
+    PWA[&quot;PWA (server-rendered HTML + Hotwire)&lt;br/&gt;installable, service worker&quot;]
+    ANDROID[&quot;Native Android&lt;br/&gt;Kotlin/Compose + Retrofit&quot;]
+  end
+
+  subgraph Rails[&quot;Rails 8.1 monolith&quot;]
+    WEBC[&quot;Web controllers&lt;br/&gt;admin/ · staff/ · loyalty · customers&quot;]
+    APIC[&quot;API controllers&lt;br/&gt;/api/v1 (token auth)&quot;]
+    SVC[&quot;Service objects&lt;br/&gt;TransactionCreator · PointsCalculator&lt;br/&gt;PointsRedeemer · OverviewReport&lt;br/&gt;FirebasePushService · ScheduleRunner&quot;]
+    POL[&quot;Pundit policies&quot;]
+    MOD[&quot;ActiveRecord models&quot;]
+  end
+
+  DB[(&quot;PostgreSQL&quot;)]
+  FCM[&quot;Firebase Cloud Messaging&quot;]
+  ANPR[&quot;On-device ANPR&lt;br/&gt;(ML-Kit / OpenCV)&quot;]
+
+  PWA --&gt;|&quot;Devise session cookie&quot;| WEBC
+  ANDROID --&gt;|&quot;Bearer JWT&quot;| APIC
+  WEBC --&gt; SVC
+  APIC --&gt; SVC
+  WEBC --&gt; POL
+  APIC --&gt; POL
+  SVC --&gt; MOD
+  MOD --&gt; DB
+  SVC --&gt;|&quot;broadcast&quot;| FCM
+  FCM --&gt;|&quot;data+notification&quot;| PWA
+  FCM --&gt;|&quot;data+notification&quot;| ANDROID
+  ANDROID -.-&gt;|&quot;cropped plate text&quot;| APIC
+  PWA -.-&gt;|&quot;cropped plate text&quot;| WEBC
+  ANPR -.-&gt; ANDROID
+  ANPR -.-&gt; PWA
+</pre></figure>
+<hr />
+<h2 id="2-auth-model">2. Auth model</h2>
+<p>Two authentication schemes over the <strong>same <code>users</code> table</strong>, both funneling through
+the same Devise credential resolver and the same active/soft-delete gates.</p>
+<h3 id="21-web-pwa-devise-session">2.1 Web (PWA) — Devise session</h3>
+<ul>
+<li>Devise modules: <code>:database_authenticatable, :recoverable, :rememberable,
+  :validatable</code> (<code>app/models/user.rb:28</code>). DB-backed password auth; <strong>no OTP/SMS</strong>.</li>
+<li>Login accepts <strong>username OR email OR 10-digit phone</strong>, resolved by
+  <code>User.find_for_database_authentication</code> (<code>app/models/user.rb:84-102</code>) — it builds a
+  <code>LOWER(username)=… OR LOWER(email)=… OR phone_number=…</code> query scoped to <code>kept</code>
+  (non-soft-deleted) users.</li>
+<li>Gates: <code>active_for_authentication?</code> requires <code>active? &amp;&amp; !soft_deleted?</code>
+  (<code>app/models/user.rb:132-134</code>).</li>
+<li>Phone-only accounts get a synthesized internal email
+  (<code>user-&lt;digits&gt;@users.fuel-loyalty.local</code>, <code>app/models/user.rb:120-126,264-270</code>) so
+  Devise's email validations are satisfied without a real address.</li>
+</ul>
+<h3 id="22-api-android-stateless-jwt">2.2 API (Android) — stateless JWT</h3>
+<ul>
+<li><code>Api::TokenService</code> (<code>app/services/api/token_service.rb</code>) issues an <strong>access token
+  (30 min)</strong> and a <strong>refresh token (30 days)</strong>, both HS256-signed (not encrypted).
+  Signing key derives from <code>secret_key_base</code> unless <code>API_JWT_SECRET</code> is set
+  (<code>token_service.rb:72-76</code>).</li>
+<li><code>POST /api/v1/auth/login</code> reuses the same Devise resolver + gates
+  (<code>sessions_controller.rb:11-27</code>); <code>refresh</code>, <code>logout</code> (client-side discard), <code>me</code>.</li>
+<li>Every API request re-validates the bearer token AND re-checks
+  <code>active_for_authentication?</code> on each call (<code>api/v1/base_controller.rb:42-51</code>), so a
+  deactivated user is locked out on the next request even with a live token.</li>
+<li><strong>No server-side revocation list</strong> — logout is token discard; password/role changes
+  take effect at next access-token expiry (documented in <code>token_service.rb:10-12</code>).</li>
+<li>Android token plumbing: <code>TokenStore</code>, <code>AuthInterceptor</code> (attaches Bearer),
+  <code>TokenAuthenticator</code> (401 → refresh) in <code>core/network/</code> and <code>core/auth/</code>.</li>
+</ul>
+<h3 id="23-roles-policies">2.3 Roles &amp; policies</h3>
+<ul>
+<li>Role is an enum on <code>users</code>: <code>{ admin: 0, staff: 1 }</code>, default <code>staff</code>
+  (<code>app/models/user.rb:10</code>).</li>
+<li><strong>Authorization is enforced by controller base classes, one per surface</strong>, all
+  checking the same role predicate:</li>
+<li>Web admin: <code>Admin::BaseController#ensure_admin!</code> (<code>admin/base_controller.rb:8-10</code>).</li>
+<li>Web staff: <code>Staff::BaseController#ensure_staff_access</code> — admin <strong>or</strong> staff
+    (<code>staff/base_controller.rb:8-11</code>).</li>
+<li>API admin: <code>Api::V1::Admin::BaseController#ensure_admin</code>
+    (<code>api/v1/admin/base_controller.rb:11-13</code>).</li>
+<li>API staff: <code>Api::V1::Staff::BaseController#ensure_staff_access</code>
+    (<code>api/v1/staff/base_controller.rb:11-16</code>).</li>
+<li><strong>Pundit</strong> is included in both <code>ApplicationController</code> and the API base; policies
+  live in <code>app/policies/</code> (16 policies: customer, transaction, dashboard, fuel_pump,
+  user, shift_*, etc.). Failures raise <code>Pundit::NotAuthorizedError</code> → web redirect /
+  API 403 (<code>api/v1/base_controller.rb:70-73</code>).</li>
+</ul>
+<blockquote>
+<p>Note the audit finding <strong>S-MYPUMP / S-PAUSE</strong>: "My Pump" and per-customer
+"pause rewards" are reachable by staff today, which is the <em>opposite</em> of the sheet's
+constraint that those be hidden from staff. That is a policy-surface gap, not an
+auth-scheme gap.</p>
+</blockquote>
+<hr />
+<h2 id="3-loyalty-points-pipeline">3. Loyalty / points pipeline</h2>
+<p>This is the core value flow. <strong>A transaction stores only a rupee amount today
+(<code>transactions.fuel_amount</code>, decimal 10,2 — <code>db/schema.rb:279</code>); there are no litres,
+no meter readings, no discount.</strong> Points are derived from the ₹ amount.</p>
+<h3 id="31-earning-transactioncreator-appservicestransaction_creatorrb">3.1 Earning — <code>TransactionCreator</code> (<code>app/services/transaction_creator.rb</code>)</h3>
+<p>One DB transaction (<code>transaction_creator.rb:21</code>) does everything:</p>
+<ol>
+<li><strong>Resolve customer + vehicle</strong> by either phone lookup or vehicle-number lookup
+   (<code>resolve_customer_and_vehicle!</code>, lines 54-65); both paths enforce the customer is
+   <code>active?</code>.</li>
+<li><strong>Resolve pump + nozzle</strong> (<code>resolve_fuel_pump_and_nozzle!</code>, lines 140-186):
+   - If <code>RewardSetting.nozzle_feature_enabled?</code> (the default), the pump comes from the
+     operator's <strong>My Pump</strong> assignment (<code>user.transaction_fuel_pump</code>), and the nozzle
+     must be one of the operator's assigned nozzles AND its fuel type must match the
+     vehicle's fuel type (lines 143-171).
+   - If the nozzle feature is off, the operator just picks an active pump; no nozzle
+     (<code>resolve_selected_pump!</code>, lines 174-186).</li>
+<li><strong>Create the transaction</strong> with <code>fuel_amount</code> + <code>payment_mode</code> (cash/credit)
+   (lines 26-33).</li>
+<li><strong>Award points</strong> unless <code>customer.rewards_paused?</code> (lines 34-44): calls
+   <code>PointsCalculator</code> and writes an <code>earn</code> row to <code>points_ledgers</code>.</li>
+</ol>
+<h3 id="32-point-math-pointscalculator-appservicespoints_calculatorrb">3.2 Point math — <code>PointsCalculator</code> (<code>app/services/points_calculator.rb</code>)</h3>
+<pre><code>points = floor(fuel_amount / rupees_per_reward_unit) * points_per_100
+</code></pre>
+<ul>
+<li><code>rupees_per_reward_unit</code> comes from <code>RewardSetting.current</code> (default 100,
+  <code>reward_setting.rb:3,35</code>).</li>
+<li><code>points_per_100</code> is <strong>vehicle-type override first, fuel-type fallback</strong>
+  (<code>points_calculator.rb:20-26</code>): <code>VehicleType.reward_points_per_100_for(vehicle_kind)</code>
+  if present, else <code>FuelRewardRate.points_per_100_for(fuel_type)</code>. This is the shipped
+  form of requirements <strong>C1/C2/C3</strong>.</li>
+</ul>
+<h3 id="33-redeeming-pointsredeemer-appservicespoints_redeemerrb">3.3 Redeeming — <code>PointsRedeemer</code> (<code>app/services/points_redeemer.rb</code>)</h3>
+<ul>
+<li>Redemption increment = the customer's effective minimum redeemable points
+  (<code>redemption_increment</code>, <code>points_redeemer.rb:10-14</code>; <code>reward_setting.rb:63-65</code>),
+  defaulting to 100.</li>
+<li>Validates: rewards not paused, at/above minimum, positive, a multiple of the
+  increment, not over <code>max_redeemable_points</code> (lines 30-64).</li>
+<li>Writes a negative-points <code>redeem</code> row; the cash value is snapshotted onto the ledger
+  entry (<code>points_ledgers.cash_reward_amount</code>) at write time from
+  <code>RewardSetting.cash_value_for_points</code> (<code>points_ledger.rb:30-37</code>,
+  <code>reward_setting.rb:53-57</code>) — implements the "cash reward per point" side of <strong>C1</strong>.</li>
+</ul>
+<h3 id="34-ledger-points_ledgers">3.4 Ledger — <code>points_ledgers</code></h3>
+<p><code>entry_type</code> enum <code>{ earn:0, redeem:1, expire:2, adjust:3 }</code>
+(<code>points_ledger.rb:5</code>). <code>earn</code>/<code>redeem</code> are produced by the two services above;
+<code>adjust</code> is produced by the admin points-adjustment path
+(<code>admin/points_adjustments_controller</code>, <code>api/v1/admin/points_adjustments_controller</code>).
+A customer's balance is <code>points_ledgers.sum(:points)</code> (<code>customer.rb:36-40</code>).</p>
+<p><strong>Public loyalty lookup:</strong> an unauthenticated customer can check their balance via
+<code>/loyalty</code> (<code>LoyaltyController</code>) / <code>POST /api/v1/loyalty/lookup</code>
+(<code>api/v1/loyalty_controller</code>), gated by a signed <code>LoyaltyLookupToken</code>
+(<code>app/services/loyalty_lookup_token.rb</code>) — no login required.</p>
+<hr />
+<h2 id="4-notification-pipeline">4. Notification pipeline</h2>
+<p><strong>Broadcast-only, untargeted push</strong> (audit finding F3). No per-customer or
+per-segment targeting, no offer object, no automatic loyalty push.</p>
+<h3 id="41-subscriptions">4.1 Subscriptions</h3>
+<ul>
+<li><code>push_subscriptions(token, platform, active)</code> — <strong>anonymous tokens, no customer/user
+  FK</strong> (<code>db/schema.rb:162</code>; per audit). Registered via <code>POST /push/subscriptions</code>
+  (<code>push_subscriptions_controller</code>), from both web (FCM web SDK, gated by
+  <code>FirebaseAppConfig.web_push_ready?</code>, <code>application_controller.rb:155-168</code>) and Android
+  (<code>core/push/Push.kt</code>, <code>AceFuelMessagingService.kt</code>).</li>
+</ul>
+<h3 id="42-delivery-firebasepushservice-appservicesfirebase_push_servicerb">4.2 Delivery — <code>FirebasePushService</code> (<code>app/services/firebase_push_service.rb</code>)</h3>
+<ul>
+<li><code>broadcast(title:, message:)</code> fans out to <strong>all active subscriptions</strong> in batches of
+  500 (<code>firebase_push_service.rb:31-66</code>), calling FCM v1 <code>messages:send</code> per token with
+  an OAuth access token from the service account (<code>fetch_access_token</code>, lines 76-82).</li>
+<li>Payload carries both <code>notification</code> and <code>data</code> blocks plus platform-specific
+  <code>android</code> (channel <code>fuel_loyalty_broadcast</code>, line 16) and <code>webpush</code> sections
+  (lines 124-164).</li>
+<li>Self-healing: tokens returning <code>UNREGISTERED</code>/<code>INVALID_ARGUMENT</code> are deactivated
+  (<code>deactivate!</code>, lines 105-108).</li>
+</ul>
+<h3 id="43-scheduling">4.3 Scheduling</h3>
+<ul>
+<li><code>notification_schedules(title, message, frequency, scheduled_time, day_of_week,
+  day_of_month, scheduled_date, last_sent_at, active)</code> (<code>db/schema.rb:134</code>).</li>
+<li><strong>Immediate send:</strong> admin "send now" → <code>Admin::NotificationDeliveriesController</code> /
+  <code>POST /api/v1/admin/notifications/send</code> → <code>FirebasePushService#broadcast</code>.</li>
+<li><strong>Scheduled send:</strong> <code>NotificationScheduleRunner</code>
+  (<code>app/services/notification_schedule_runner.rb</code>) evaluates each active schedule's
+  next occurrence (<code>is_due?</code> / <code>occurrence_at</code>, lines 20-52) for once/daily/weekly/
+  monthly, then broadcasts and stamps <code>last_sent_at</code> (once-schedules auto-deactivate,
+  line 94). A <strong><code>SchedulerLease</code></strong> row provides distributed mutual exclusion with a
+  10-minute heartbeat lease so concurrent runners don't double-send (lines 118-158).
+  Triggered by <code>POST /admin/schedules/run</code> and its API twin.</li>
+</ul>
+<hr />
+<h2 id="5-shift-attendance-subsystem-exceeds-the-sheet">5. Shift / attendance subsystem (exceeds the sheet)</h2>
+<p>The requirement sheet asks only for <strong>shift definitions (A8) and assigning operators
+to shifts (A9)</strong>. The as-built system implements a <strong>far richer rostering + attendance
+engine</strong> that goes well beyond that.</p>
+<p>Models: <code>shift_template</code>, <code>shift_cycle</code> (+<code>shift_cycle_step</code>), <code>shift_assignment</code>,
+<code>shift_swap</code>, <code>attendance_run</code>, <code>attendance_entry</code> (+<code>attendance_entry_change</code>),
+<code>scheduler_lease</code>.</p>
+<p>Capabilities present today:
+- <strong>Shift templates</strong> with configurable start/duration (<code>shift_template.rb</code>), covering
+  the sheet's 24/12/8-hour patterns.
+- <strong>Rotating shift cycles</strong> — ordered <code>shift_cycle_step</code>s the sheet never asked for
+  (<code>shift_cycle.rb</code>).
+- <strong>Time-bounded assignments</strong> — <code>shift_assignment</code> has <code>effective_from</code>/<code>effective_to</code>
+  windows and an <code>active</code> flag, with <code>effective_at</code> scoping so an operator's current
+  shift is resolved for any point in time (<code>shift_assignment.rb:6-11,90-92</code>;
+  <code>user.rb:160-171</code>).
+- <strong>Shift swaps</strong> between operators (<code>shift_swap.rb</code>).
+- <strong>Attendance runs &amp; entries</strong> — a roster is materialized per run
+  (<code>AttendanceRosterBuilder</code>), each <code>attendance_entry</code> tracking scheduled vs actual vs
+  replacement operator with an audit trail of <code>attendance_entry_change</code>s and
+  invalidate/mark-valid controls (<code>admin/attendance_runs_controller</code>, routes
+  <code>config/routes.rb:75-80,127-130</code>).</p>
+<p>Admin controllers: <code>shift_templates</code>, <code>shift_cycles</code>, <code>staff_members</code> (+nested
+<code>shift_assignments</code>), <code>attendance_runs</code> — mirrored under <code>/api/v1/admin/*</code>. Android
+surfaces: <code>ui/admin/shifts</code>, <code>ui/admin/cycles</code>, <code>ui/admin/attendance</code>,
+<code>ui/admin/staff</code>.</p>
+<blockquote>
+<p>This subsystem is the single largest area where the code <strong>exceeds</strong> the requirement.
+It is worth flagging so the gap analysis does not treat A8/A9 as partial — they are
+over-delivered.</p>
+</blockquote>
+<hr />
+<h2 id="6-per-layer-feature-inventory">6. Per-layer feature inventory</h2>
+<p>Feature IDs match the shared scheme. "Android" lists the Compose screen package under
+<code>android/app/src/main/kotlin/com/acefuel/loyalty/</code>. API endpoints all live under
+<code>/api/v1</code> (see <code>config/routes.rb:16-88</code>).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature (ID)</th>
+<th>Rails model(s)</th>
+<th>Web controller(s)</th>
+<th>API controller(s)</th>
+<th>Android screen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pumps (A1)</td>
+<td><code>fuel_pump</code></td>
+<td><code>admin/fuel_pumps</code></td>
+<td><code>admin/fuel_pumps</code></td>
+<td><code>ui/admin/pumps</code></td>
+</tr>
+<tr>
+<td>Nozzles + fuel-type-per-nozzle (A2/A4)</td>
+<td><code>fuel_pump_nozzle</code>, <code>fuel_type</code></td>
+<td><code>admin/fuel_pumps</code> (feature_settings), <code>admin/fuel_types</code></td>
+<td><code>admin/fuel_pumps</code>, <code>admin/fuel_types</code></td>
+<td><code>ui/admin/pumps</code>, <code>ui/admin/fueltypes</code></td>
+</tr>
+<tr>
+<td>Assign nozzle to operator / My Pump (A3/A10)</td>
+<td><code>user_pump_nozzle_assignment</code>, <code>fuel_pump_nozzle</code></td>
+<td><code>my_pumps</code></td>
+<td><code>my_pump</code>, <code>staff/catalog</code></td>
+<td><code>ui/mypump</code></td>
+</tr>
+<tr>
+<td>Vehicle types (A6)</td>
+<td><code>vehicle_type</code></td>
+<td><code>admin/vehicle_types</code></td>
+<td><code>admin/vehicle_types</code></td>
+<td><code>ui/admin/vehicletypes</code></td>
+</tr>
+<tr>
+<td>Operator/user setup (A7)</td>
+<td><code>user</code></td>
+<td><code>admin/users</code>, <code>admin/staff_members</code></td>
+<td><code>admin/users</code>, <code>admin/staff_members</code></td>
+<td><code>ui/admin/users</code>, <code>ui/admin/staff</code></td>
+</tr>
+<tr>
+<td>Shifts + assignment (A8/A9) <em>(exceeds sheet)</em></td>
+<td><code>shift_template</code>, <code>shift_cycle(_step)</code>, <code>shift_assignment</code>, <code>shift_swap</code>, <code>attendance_run</code>, <code>attendance_entry</code></td>
+<td><code>admin/shift_templates</code>, <code>admin/shift_cycles</code>, <code>admin/staff_members</code>, <code>admin/attendance_runs</code></td>
+<td>same under <code>/api/v1/admin</code></td>
+<td><code>ui/admin/shifts</code>, <code>ui/admin/cycles</code>, <code>ui/admin/attendance</code></td>
+</tr>
+<tr>
+<td>Customer master (B1)</td>
+<td><code>customer</code>, <code>vehicle</code></td>
+<td><code>staff/customers</code>, <code>admin/customers</code>, <code>customers</code>, <code>vehicles</code></td>
+<td><code>staff/customers</code>, <code>staff/vehicles</code></td>
+<td><code>ui/customers</code></td>
+</tr>
+<tr>
+<td>Per-visit transaction capture (B2 partial)</td>
+<td><code>transaction</code></td>
+<td><code>staff/transactions</code></td>
+<td><code>staff/transactions</code></td>
+<td><code>ui/transaction</code></td>
+</tr>
+<tr>
+<td>Reward settings — ₹/100, by fuel, by vtype, per-customer pause (C1–C4)</td>
+<td><code>reward_setting</code>, <code>fuel_reward_rate</code>, <code>vehicle_type</code></td>
+<td><code>admin/fuel_reward_rates</code>, <code>staff/customers</code> (pause)</td>
+<td><code>admin/reward_rates</code>, <code>staff/customers</code> (pause/resume)</td>
+<td><code>ui/admin/rewardrates</code></td>
+</tr>
+<tr>
+<td>Loyalty accrual/redemption (C5)</td>
+<td><code>points_ledger</code>, <code>transaction</code></td>
+<td><code>staff/redemptions</code>, <code>loyalty</code>, <code>admin/points_adjustments</code></td>
+<td><code>staff/redemptions</code>, <code>loyalty</code>, <code>admin/points_adjustments</code></td>
+<td><code>ui/redeem</code>, <code>ui/loyalty</code>, <code>ui/adjust</code></td>
+</tr>
+<tr>
+<td>Dashboard / KPIs (E2 partial)</td>
+<td>aggregates over <code>transaction</code>, <code>customer</code>, <code>points_ledger</code></td>
+<td><code>admin/dashboard</code> (+<code>data</code>)</td>
+<td><code>admin/dashboard</code> (<code>#data</code>)</td>
+<td><code>ui/admin/dashboard</code></td>
+</tr>
+<tr>
+<td>Transactions view (G1 partial)</td>
+<td><code>transaction</code></td>
+<td><code>admin/transactions</code> (index only)</td>
+<td><code>admin/transactions</code> (index)</td>
+<td><code>ui/admin/transactions</code></td>
+</tr>
+<tr>
+<td>Notifications / push (F3 partial)</td>
+<td><code>notification_schedule</code>, <code>push_subscription</code></td>
+<td><code>admin/notifications</code>, <code>admin/notification_deliveries</code>, <code>admin/schedules</code>, <code>push_subscriptions</code></td>
+<td><code>admin/notifications</code>, <code>admin/schedules</code></td>
+<td><code>ui/admin/schedules</code></td>
+</tr>
+<tr>
+<td>Theme / branding</td>
+<td><code>theme_setting</code></td>
+<td><code>admin/theme_settings</code></td>
+<td><code>theme</code>, <code>admin/theme_settings</code></td>
+<td><code>ui/admin/theme</code>, <code>core/theme</code></td>
+</tr>
+<tr>
+<td>Plate scanner (ANPR)</td>
+<td>(none; text-only) <code>vehicle</code></td>
+<td><code>staff/transactions#recognize_plate</code></td>
+<td><code>staff/transactions#recognize_plate</code></td>
+<td><code>ui/scanner</code></td>
+</tr>
+<tr>
+<td>Account / session</td>
+<td><code>user</code></td>
+<td>Devise, <code>passwords</code></td>
+<td><code>auth/sessions</code>, <code>password</code></td>
+<td><code>ui/account</code>, <code>ui/login</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Business services backing the above: <code>TransactionCreator</code>, <code>PointsCalculator</code>,
+<code>PointsRedeemer</code> (loyalty); <code>Admin::Dashboard::OverviewReport</code> (dashboard, see §7);
+<code>FirebasePushService</code> + <code>NotificationScheduleRunner</code> (notifications);
+<code>VehiclePlateRecognizer</code> + <code>VehiclePlateText</code> (ANPR); <code>AttendanceRosterBuilder</code>
+(shifts); <code>LoyaltyLookupToken</code> (public lookup); <code>Api::TokenService</code> (JWT).</p>
+<hr />
+<h2 id="7-dashboard-reporting-engine-admindashboardoverviewreport">7. Dashboard reporting engine — <code>Admin::Dashboard::OverviewReport</code></h2>
+<p><code>app/services/admin/dashboard/overview_report.rb</code> is a single ~700-line service that
+computes the entire admin dashboard JSON payload (consumed by both the web dashboard
+and <code>GET /api/v1/admin/dashboard</code>).</p>
+<ul>
+<li><strong>Period presets</strong> <code>today / this_week / this_month / last_month</code> plus an explicit
+  start/end range (<code>QUICK_RANGES</code>, lines 5-10,108-124), a <strong>segment</strong> filter
+  (all/new/repeat, lines 11-15), and a <strong>fuel-type</strong> filter (lines 100-106).</li>
+<li><strong>Summary cards</strong> with period-over-period % change: total/active customers,
+  transactions, revenue (+fuel-type breakdown), points issued/redeemed, avg spend/visit,
+  visits/customer (<code>summary_cards</code>, lines 293-337).</li>
+<li><strong>Charts:</strong> transactions/revenue/points/active-users trends, repeat-vs-new,
+  <strong>visits distribution</strong> (1 / 2-5 / 6+ visits), top customers by count and revenue,
+  top redemption slabs, by-hour and by-weekday histograms (<code>chart_payload</code>, lines
+  362-376).</li>
+</ul>
+<p>Audit caveat (<strong>E2</strong>): the tiles are computed but <strong>not click-through</strong> to a customer
+list, and there is <strong>no per-customer cadence / last-visit / churn</strong> view — those are
+the E-series gaps.</p>
+<hr />
+<h2 id="8-what-the-data-model-does-not-capture-today">8. What the data model does NOT capture today</h2>
+<p>Load-bearing for the gap analysis and the locked units decision (litres = source of
+truth):</p>
+<ul>
+<li><strong>No litres, no meter/nozzle readings, no discount</strong> on <code>transactions</code> — only
+  <code>fuel_amount</code> in ₹ (<code>db/schema.rb:276-291</code>). Points are derived from ₹, the inverse
+  of the locked Q1 decision.</li>
+<li><strong>No product catalog / MRP / selling price / lubes / stock</strong> anywhere (no such
+  model; A5, D1-D2, D8 absent).</li>
+<li><strong>No Daily Settlement</strong> model or subsystem (D-series absent) — the shift/attendance
+  subsystem is unrelated to shift-end cash settlement.</li>
+<li><strong>Customer master is thin</strong> (<code>customers</code>: name, phone, vehicle_number, active,
+  rewards_paused — <code>db/schema.rb:83-92</code>): no driver/supervisor/owner triple, no
+  contacted flag, no customer type (OTP/TT/Drive-in/Credit). Commercial contact info
+  lives on <code>vehicles</code> as a single company/contact block
+  (<code>commercial_*</code> columns, <code>db/schema.rb:360-374</code>), not the sheet's three-contact model.</li>
+<li><strong>Push has no targeting and no offer object</strong> (<code>push_subscriptions</code> has no
+  customer/user FK); no WhatsApp/SMS channel (F1/F2/F4 absent).</li>
+<li><strong>No global reward pause</strong> — only per-customer <code>rewards_paused</code>
+  (<code>reward_settings</code> has no such flag; C4 partial).</li>
+</ul>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 02-current-architecture.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
+</script>
+
+</body>
+</html>

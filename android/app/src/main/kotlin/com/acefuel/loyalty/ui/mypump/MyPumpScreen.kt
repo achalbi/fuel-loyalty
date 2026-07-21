@@ -64,10 +64,20 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyPumpScreen(onBack: () -> Unit) {
+fun MyPumpScreen(
+    onBack: () -> Unit,
+    // When set, an admin is assigning this staff member's pump (A10) via the
+    // admin endpoint instead of the self-service /my_pump endpoint (S-MYPUMP).
+    staffMemberId: Long? = null,
+    title: String = "My Pump",
+    intro: String = "Choose the pump you work on and the nozzles available to you. New " +
+        "transactions use this pump and show your nozzles as options.",
+    saveLabel: String = "Save My Pump",
+) {
     val container = LocalContainer.current
     val viewModel: MyPumpViewModel = viewModel(
-        factory = viewModelFactory { initializer { MyPumpViewModel(container.staffRepository) } },
+        key = "pump-${staffMemberId ?: "self"}",
+        factory = viewModelFactory { initializer { MyPumpViewModel(container.staffRepository, staffMemberId) } },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val haptics = rememberHaptics()
@@ -83,7 +93,7 @@ fun MyPumpScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
-        topBar = { NayaraTopBar(title = "My Pump", onBack = onBack) },
+        topBar = { NayaraTopBar(title = title, onBack = onBack) },
         snackbarHost = { NayaraSnackbarHost(snackbar) },
     ) { innerPadding ->
         Column(
@@ -94,8 +104,7 @@ fun MyPumpScreen(onBack: () -> Unit) {
                 .padding(horizontal = NayaraSpacing.ScreenMargin, vertical = NayaraSpacing.Lg),
         ) {
             Text(
-                "Choose the pump you work on and the nozzles available to you. New " +
-                    "transactions use this pump and show your nozzles as options.",
+                intro,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.nayara.textSecondary,
             )
@@ -119,6 +128,7 @@ fun MyPumpScreen(onBack: () -> Unit) {
 
                 else -> PumpForm(
                     state = state,
+                    saveLabel = saveLabel,
                     onSelectPump = { haptics.tick(); viewModel.selectPump(it) },
                     onToggleNozzle = { haptics.tick(); viewModel.toggleNozzle(it) },
                     onSave = { haptics.tick(); viewModel.save() },
@@ -131,6 +141,7 @@ fun MyPumpScreen(onBack: () -> Unit) {
 @Composable
 private fun PumpForm(
     state: MyPumpUiState,
+    saveLabel: String,
     onSelectPump: (Long) -> Unit,
     onToggleNozzle: (Long) -> Unit,
     onSave: () -> Unit,
@@ -177,7 +188,7 @@ private fun PumpForm(
         loading = state.saving,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text("Save My Pump")
+        Text(saveLabel)
     }
     Spacer(Modifier.height(NayaraSpacing.Xxl))
 }

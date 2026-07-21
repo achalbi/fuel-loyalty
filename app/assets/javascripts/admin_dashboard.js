@@ -577,10 +577,26 @@
     window.history.replaceState({}, "", nextUrl);
   };
 
+  const renderCustomersLink = (root, payload) => {
+    const link = root.querySelector("[data-dashboard-customers-link]");
+    const base = root.dataset.dashboardCustomersEndpoint;
+    if (!link || !base) return;
+
+    const filters = payload.filters || {};
+    const params = new URLSearchParams();
+    if (filters.start_date) params.set("start_date", filters.start_date);
+    if (filters.end_date) params.set("end_date", filters.end_date);
+    if (filters.preset) params.set("preset", filters.preset);
+
+    const query = params.toString();
+    link.href = query ? `${base}?${query}` : base;
+  };
+
   const renderDashboard = (root, payload) => {
     try {
       renderExportSummary(root, payload);
       renderMeta(root, payload.meta || {});
+      renderCustomersLink(root, payload);
       renderKpis(root, payload.summary || []);
       renderCharts(root, payload.charts || {});
       renderLeaderboards(root, payload.charts || {});

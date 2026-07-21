@@ -72,6 +72,22 @@
               </div>
             </div>
 
+            <div class="reward-rate-row">
+              <div class="reward-rate-copy">
+                <label for="reward_setting_rewards_paused" class="reward-rate-title">Pause All Rewards</label>
+                <p class="reward-rate-meta mb-0">When on, no points are awarded to any customer until you turn it back off. Per-customer pauses still apply on top of this.</p>
+              </div>
+
+              <div class="reward-rate-field">
+                <div class="form-check form-switch fs-5">
+                  <%= form.check_box :rewards_paused, class: "form-check-input" %>
+                  <label class="form-check-label small text-muted" for="reward_setting_rewards_paused">
+                    <%= @reward_setting.rewards_paused? ? "Rewards are paused for everyone" : "Rewards are active" %>
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <%= form.submit "Save Reward Settings", class: "btn btn-outline-primary" %>
           <% end %>
         </section>

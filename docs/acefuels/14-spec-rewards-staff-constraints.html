@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rewards completion &amp; staff-login corrections (C4 global pause, A10 admin pump assignment, S-MYPUMP, S-PAUSE) — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">14-spec-rewards-staff-constraints.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="rewards-completion-staff-login-corrections-c4-global-pause-a10-admin-pump-assignment-s-mypump-s-pause">Rewards completion &amp; staff-login corrections (C4 global pause, A10 admin pump assignment, S-MYPUMP, S-PAUSE)</h1>
+<p>Four small, tightly-coupled changes that finish the rewards subsystem and correct the staff-login permission model. Today rewards can only be paused per-customer, pump/nozzle assignment is a staff self-service screen ("My Pump"), and staff can both open "My Pump" and pause/resume rewards — the last two contradict the requirement. This spec adds a <strong>global pause</strong> switch that composes with the per-customer flag, <strong>moves pump/nozzle assignment to an admin action</strong> on the user/staff form, then <strong>hides "My Pump" from staff</strong> and <strong>removes "Pause Rewards" from staff</strong>. These are coupled: the moment staff self-service assignment disappears, admin must own pump assignment or the staff transaction flow's pump resolution (<code>resolve_fuel_pump_and_nozzle!</code>) has no pump to read and every staff transaction fails. Effort: <strong>low / small</strong> across the board — no new tables, one boolean column, policy + params + route + nav edits, one Compose visibility gate.</p>
+<blockquote>
+<p><strong>Implementation status (2026-07-21):</strong> ✅ <strong>C4 shipped</strong> — <code>reward_settings.rewards_paused</code> boolean; honored in <code>TransactionCreator</code> alongside the per-customer flag; global "Pause All Rewards" switch on the web reward-settings form and the Android reward-rates screen; exposed via <code>GET/PATCH /api/v1/admin/reward_rates</code>. Covered by model, service, and controller tests. ✅ <strong>S-PAUSE shipped</strong> — <code>CustomerPolicy#pause_rewards?</code>/<code>#resume_rewards?</code> gated admin-only; staff lose the web buttons (view gate) and are 403'd on the action, and the Pause/Resume control is hidden in the Android customer profile; admin retains it. ✅ <strong>S-MYPUMP shipped</strong> — <code>UserPolicy#manage_pump?</code> gated admin-only, so staff can't open/change "My Pump"; the nav link, the staff transaction "Change My Pump" control and the Android account tile are hidden from staff. ✅ <strong>A10 shipped (web + API + Android)</strong> — an admin "Assign Pump" flow + <code>GET/PATCH /api/v1/admin/staff_members/:id/pump</code> (reusing <code>User#update_pump_assignment</code> and the shared pump-picker partial on web; on Android a "Pump" action on the staff list reuses the My-Pump picker against the admin endpoint), covered by web + API tests and an Android compile. <strong>All four Phase-0 corrections + the rename are done; only E2 (dashboard drill-through) remains.</strong></p>
+</blockquote>
+<h2 id="requirements-covered">Requirements covered</h2>
+<ul>
+<li><strong>C4</strong> — Global "pause rewards" switch on reward settings, honored across the points pipeline in addition to the existing per-customer pause.</li>
+<li><strong>A10</strong> — Assign operator to a pump (and its nozzles) as an <strong>admin</strong> action on the user/staff record, replacing staff self-service.</li>
+<li><strong>S-MYPUMP</strong> — "My Pump" is <strong>not</strong> available in staff login (currently it is — inverted requirement).</li>
+<li><strong>S-PAUSE</strong> — "Pause rewards" is <strong>not</strong> available in staff login (currently it is — inverted requirement).</li>
+</ul>
+<h2 id="current-state">Current state</h2>
+<h3 id="c4-no-global-pause-exists">C4 — no global pause exists</h3>
+<ul>
+<li><code>reward_settings</code> has no global-pause column: <code>cash_value_per_point</code>, <code>minimum_redeemable_points</code>, <code>nozzle_feature_enabled</code>, <code>rupees_per_reward_unit</code> only — <code>db/schema.rb:175-182</code>.</li>
+<li>Pause is per-customer only via <code>customers.rewards_paused</code> (<code>db/schema.rb:88</code>).</li>
+<li>Earn path checks only the customer flag: <code>TransactionCreator#call</code> — <code>app/services/transaction_creator.rb:35</code> (<code>if customer.rewards_paused?</code> → <code>points = 0</code>, no ledger row).</li>
+<li><code>PointsCalculator</code> (<code>app/services/points_calculator.rb</code>) never consults pause state.</li>
+<li>Redeem path checks only the customer flag: <code>PointsRedeemer</code> — <code>app/services/points_redeemer.rb:34-35</code>; <code>Customer#max_redeemable_points</code> returns 0 only when <code>rewards_paused?</code> — <code>app/models/customer.rb:47-48</code>; <code>Customer#rewards_enabled?</code> = <code>active? &amp;&amp; !rewards_paused?</code> — <code>app/models/customer.rb:32-34</code>.</li>
+<li><strong>Missing:</strong> any global switch and any place it is read.</li>
+</ul>
+<h3 id="a10-assignment-is-staff-self-service-not-admin">A10 — assignment is staff self-service, not admin</h3>
+<ul>
+<li>Web self-service controller <code>MyPumpsController#show/#update</code> calls <code>current_user.update_pump_assignment(...)</code> — <code>app/controllers/my_pumps_controller.rb:8-20</code>; API mirror <code>Api::V1::MyPumpController</code> — <code>app/controllers/api/v1/my_pump_controller.rb</code>.</li>
+<li>Both authorize <code>manage_pump?</code>, which is deliberately <strong>self-only</strong>: <code>record == user &amp;&amp; (user.admin? || user.staff?)</code> — <code>app/policies/user_policy.rb:22-24</code>.</li>
+<li>The assignment model plumbing already exists on <code>User</code>: <code>belongs_to :assigned_fuel_pump</code> (FK <code>fuel_pump_id</code>) — <code>app/models/user.rb:13</code>; <code>has_many :assigned_fuel_pump_nozzles, through:</code> — <code>app/models/user.rb:15</code>; validations run on the <code>:pump_assignment</code> context — <code>app/models/user.rb:48-51</code>; atomic writer <code>update_pump_assignment</code> — <code>app/models/user.rb:201-211</code>; <code>transaction_fuel_pump</code> / <code>transaction_fuel_pump_nozzles</code> — <code>app/models/user.rb:173-186</code>.</li>
+<li>The staff transaction flow <strong>depends on that assignment</strong>: <code>resolve_fuel_pump_and_nozzle!</code> reads <code>user.transaction_fuel_pump</code> and <code>user.transaction_fuel_pump_nozzles</code> when the nozzle feature is on, and errors <code>"Set up My Pump ... before recording a transaction"</code> if unset — <code>app/services/transaction_creator.rb:135-170</code>.</li>
+<li>Admin forms do <strong>not</strong> touch pump assignment: <code>Admin::UsersController#user_params</code> permits <code>name, username, phone_number, email, active, password, password_confirmation</code> — <code>app/controllers/admin/users_controller.rb:56-58</code>; <code>Admin::StaffMembersController#staff_member_params</code> permits <code>name, active, employee_code, subtitle</code> — <code>app/controllers/admin/staff_members_controller.rb:57</code>. Neither passes <code>fuel_pump_id</code> / <code>assigned_fuel_pump_nozzle_ids</code>, so admins cannot assign pumps at all.</li>
+<li><strong>Missing:</strong> an admin path to set a user's pump + nozzles.</li>
+</ul>
+<h3 id="s-mypump-my-pump-is-exposed-to-staff">S-MYPUMP — My Pump is exposed to staff</h3>
+<ul>
+<li>Web routes: <code>resource :my_pump</code> at both root (<code>config/routes.rb:13</code>) and API (<code>config/routes.rb:26</code>).</li>
+<li>Web nav link renders for everyone who reaches the layout — <code>app/views/layouts/application.html.erb:180</code>.</li>
+<li>Android account row "My Pump" is shown to all users (no role gate) — <code>AccountScreen.kt:123-131</code>, wired in <code>AppRoot.kt:302</code> (<code>onMyPump → Routes.MY_PUMP</code>). The transaction screen also deep-links to it via <code>onSetupPump → Routes.MY_PUMP</code> — <code>AppRoot.kt</code> transaction block.</li>
+<li><strong>Wrong per S-MYPUMP:</strong> staff can open and edit My Pump.</li>
+</ul>
+<h3 id="s-pause-pause-rewards-is-exposed-to-staff">S-PAUSE — Pause Rewards is exposed to staff</h3>
+<ul>
+<li><code>CustomerPolicy#pause_rewards?</code> / <code>#resume_rewards?</code> both return <code>staff_access?</code> (admin <strong>or</strong> staff) — <code>app/policies/customer_policy.rb:38-44</code>.</li>
+<li>Staff routes expose the actions: <code>patch :pause_rewards</code> / <code>:resume_rewards</code> under <code>namespace :staff</code> (<code>config/routes.rb:39-40</code> API, <code>config/routes.rb:102-103</code>… actually the staff web member routes) and the API staff customers member routes (<code>config/routes.rb:39-40</code>).</li>
+<li>Android <code>CustomerProfileScreen</code> renders a "Pause Rewards / Resume Rewards" button unconditionally — <code>CustomerProfileScreen.kt:288-296</code>, <code>togglePaused()</code> in <code>CustomerProfileViewModel.kt:135-140</code>.</li>
+<li><strong>Wrong per S-PAUSE:</strong> staff can pause/resume rewards.</li>
+</ul>
+<h2 id="target-design">Target design</h2>
+<h3 id="data-model">Data model</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Column</th>
+<th>Type</th>
+<th>Default</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reward_settings</code></td>
+<td><code>rewards_paused</code></td>
+<td>boolean, <code>null: false</code></td>
+<td><code>false</code></td>
+<td>Single global kill-switch. <code>RewardSetting</code> is already a singleton (<code>RewardSetting.current</code> → <code>first_or_initialize</code>), so one row holds outlet-wide state. Boolean mirrors the existing <code>nozzle_feature_enabled</code> pattern.</td>
+</tr>
+</tbody>
+</table></div>
+<p>No other schema changes. Per-customer <code>customers.rewards_paused</code> stays; pump assignment already has all columns/joins (<code>users.fuel_pump_id</code>, <code>user_pump_nozzle_assignments</code>).</p>
+<p>Migration:</p>
+<pre><code class="language-ruby">add_column :reward_settings, :rewards_paused, :boolean, null: false, default: false
+</code></pre>
+<h3 id="business-rules-pause-precedence">Business rules — pause precedence</h3>
+<p>Rewards are suspended for a customer when <strong>either</strong> switch is on. Global wins outrightly; per-customer is an additional narrowing.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Global <code>reward_settings.rewards_paused</code></th>
+<th>Per-customer <code>customers.rewards_paused</code></th>
+<th>Earn</th>
+<th>Redeem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>false</td>
+<td>false</td>
+<td>✅ accrue</td>
+<td>✅ allowed</td>
+</tr>
+<tr>
+<td>false</td>
+<td>true</td>
+<td>⛔ 0 pts, no ledger</td>
+<td>⛔ blocked (per-customer msg)</td>
+</tr>
+<tr>
+<td>true</td>
+<td>false</td>
+<td>⛔ 0 pts, no ledger</td>
+<td>⛔ blocked (global msg)</td>
+</tr>
+<tr>
+<td>true</td>
+<td>true</td>
+<td>⛔ 0 pts, no ledger</td>
+<td>⛔ blocked (global msg takes precedence)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Effective predicate, added to <code>RewardSetting</code>:</p>
+<pre><code class="language-ruby">def rewards_globally_paused? = self[:rewards_paused] == true
+</code></pre>
+<p>And a composite helper on <code>Customer</code>:</p>
+<pre><code class="language-ruby">def rewards_effectively_paused?
+  rewards_paused? || RewardSetting.current.rewards_globally_paused?
+end
+</code></pre>
+<p>Replace the pause reads in the pipeline with the composite:
+- <code>TransactionCreator#call</code> (<code>:35</code>) → branch on <code>customer.rewards_effectively_paused?</code>. When paused: create the transaction (source-of-truth capture is unaffected), set <code>points = 0</code>, skip the <code>points_ledgers</code> earn row, and surface <code>rewards_paused: true</code> in the <code>Result</code> (already a field).
+- <code>Customer#max_redeemable_points</code> (<code>:47</code>), <code>#rewards_enabled?</code> (<code>:32</code>) → use <code>rewards_effectively_paused?</code>.
+- <code>PointsRedeemer#call</code> (<code>:34</code>) → when globally paused, raise <code>invalid_redemption!</code> with message <code>"cannot be redeemed while rewards are globally paused"</code>; keep the existing per-customer message when only the customer flag is set (check global first).</p>
+<p>Global pause is <strong>display-and-earn/redeem only</strong> — it never mutates <code>customers.rewards_paused</code>, so unpausing globally restores each customer's own state.</p>
+<h3 id="admin-pump-assignment-a10">Admin pump assignment (A10)</h3>
+<p>Reuse the existing <code>:pump_assignment</code> validation context and <code>update_pump_assignment</code> writer — do <strong>not</strong> re-implement. Admin edit/create submits <code>user[fuel_pump_id]</code> and <code>user[assigned_fuel_pump_nozzle_ids][]</code>; the controller runs the atomic writer so a rejected assignment rolls back the join rows (<code>app/models/user.rb:201-211</code>).</p>
+<p>Controller changes:
+- <code>Admin::UsersController</code> and <code>Admin::StaffMembersController</code>: permit <code>:fuel_pump_id</code> and <code>assigned_fuel_pump_nozzle_ids: []</code>. After the main <code>save</code>, call <code>user.update_pump_assignment(pump_params)</code> (or fold pump params into a single transaction) so the <code>:pump_assignment</code>-context validations fire and errors render on the same form. On <code>create</code>, assign after the user persists (nozzle join rows need an id).
+- Clearing the pump: blank <code>fuel_pump_id</code> ⇒ <code>clear_assigned_nozzles_without_pump</code> already nils the nozzles (<code>app/models/user.rb:273</code>) — assignment becomes empty, staff transaction flow will then error until re-assigned (intended; admin owns it).</p>
+<h3 id="policy-changes">Policy changes</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Policy method</th>
+<th>Before</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UserPolicy#manage_pump?</code></td>
+<td>self + (admin or staff)</td>
+<td><code>user&amp;.admin?</code> only (admin assigns any user's pump)</td>
+</tr>
+<tr>
+<td><code>CustomerPolicy#pause_rewards?</code></td>
+<td><code>staff_access?</code></td>
+<td><code>user&amp;.admin?</code></td>
+</tr>
+<tr>
+<td><code>CustomerPolicy#resume_rewards?</code></td>
+<td><code>staff_access?</code></td>
+<td><code>user&amp;.admin?</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>RewardSettingPolicy#update?</code> already admin-gated — the global-pause toggle rides the existing <code>feature_settings</code> admin path.</p>
+<h3 id="workflows">Workflows</h3>
+<figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">flowchart TD
+  A[Staff records transaction] --&gt; B[TransactionCreator]
+  B --&gt; C{customer.rewards_effectively_paused?}
+  C -- yes --&gt; D[Create transaction, points=0, no earn ledger]
+  C -- no --&gt; E[PointsCalculator awards points, write earn ledger]
+  D --&gt; F[Result rewards_paused=true]
+  E --&gt; F
+
+  G[Admin edits user/staff] --&gt; H[Set fuel_pump_id + nozzle ids]
+  H --&gt; I[update_pump_assignment on :pump_assignment context]
+  I --&gt; J[user.transaction_fuel_pump ready]
+  J --&gt; B
+</pre></figure>
+<p>Global pause toggle: Admin → Pump settings (existing <code>feature_settings</code> form) → flip "Pause all rewards" → <code>Admin::FuelPumpsController#feature_settings</code> updates <code>reward_settings.rewards_paused</code> → next transaction/redeem reads it.</p>
+<h2 id="api-changes">API changes</h2>
+<p>All under <code>api/v1</code>. Token auth unchanged.</p>
+<h3 id="removed-restricted">Removed / restricted</h3>
+<ul>
+<li><code>GET/PATCH /api/v1/my_pump</code> (<code>Api::V1::MyPumpController</code>) — <strong>remove the route</strong> (<code>config/routes.rb:26</code>) so staff cannot self-assign; the Android account entry point disappears with it. (Alternative if keeping the endpoint for admins is desired: leave the route but change <code>manage_pump?</code> to admin-only — spec assumes removal since only staff used it.)</li>
+</ul>
+<h3 id="changed-admin-user-assignment">Changed — admin user assignment</h3>
+<p><code>POST /api/v1/admin/users</code> and <code>PATCH /api/v1/admin/users/:id</code> accept two new fields:</p>
+<p>Request (additional keys):</p>
+<pre><code class="language-json">{ &quot;user&quot;: { &quot;fuel_pump_id&quot;: 3, &quot;assigned_fuel_pump_nozzle_ids&quot;: [5, 6] } }
+</code></pre>
+<p>Response <code>200/201</code> (add to the existing user payload):</p>
+<pre><code class="language-json">{ &quot;user&quot;: { &quot;id&quot;: 12, &quot;fuel_pump_id&quot;: 3, &quot;assigned_fuel_pump_nozzle_ids&quot;: [5,6],
+            &quot;pump_ready&quot;: true } }
+422 { &quot;code&quot;: &quot;validation_failed&quot;,
+      &quot;message&quot;: &quot;Assigned fuel pump nozzles must include at least one nozzle&quot;,
+      &quot;details&quot;: { &quot;assigned_fuel_pump_nozzle_ids&quot;: [&quot;...&quot;] } }
+</code></pre>
+<p>The admin users index/show serializer must include <code>fuel_pump_id</code>, <code>assigned_fuel_pump_nozzle_ids</code>, and the assignable pumps/nozzles catalog (reuse <code>MyPumpSerializer</code>'s shape for the picker, or embed under <code>assignable_pumps</code>).</p>
+<h3 id="changed-global-pause-in-rewardfeature-settings">Changed — global pause in reward/feature settings</h3>
+<ul>
+<li><code>GET /api/v1/admin/reward_rates</code> (or the pump feature-settings read) response gains <code>rewards_paused: &lt;bool&gt;</code>.</li>
+<li><code>PATCH /api/v1/admin/fuel_pumps/feature_settings</code> accepts <code>reward_setting[rewards_paused]</code>.</li>
+<li>Staff-facing lookup serializers (<code>CustomerLookupSerializer</code>, <code>CustomerProfileSerializer</code>, <code>LoyaltySerializer</code>) should expose an effective flag, e.g. <code>rewards_effectively_paused: &lt;bool&gt;</code>, so the app can show "Rewards paused" without staff being able to change it.</li>
+</ul>
+<h3 id="changed-staff-customer-pause-endpoints">Changed — staff customer pause endpoints</h3>
+<ul>
+<li><code>PATCH /api/v1/staff/customers/:id/pause_rewards</code> and <code>/resume_rewards</code> now authorize admin-only ⇒ return <code>403</code> for staff tokens. Keep the routes (admins call them), but the app must not offer the control to staff.</li>
+</ul>
+<h2 id="ui">UI</h2>
+<h3 id="rails-pwa">Rails PWA</h3>
+<ul>
+<li><strong>Global pause (C4):</strong> in the admin pump/feature-settings form rendered by <code>Admin::FuelPumpsController#index</code> (the <code>feature_settings</code> toggle group that today holds <code>nozzle_feature_enabled</code>), add a switch <strong>"Pause all rewards"</strong> bound to <code>reward_setting[rewards_paused]</code>, with helper text "No customer earns or redeems while this is on. Per-customer pauses are unaffected." Show a persistent banner across staff + admin screens when on (reuse the existing rewards-status chip styling).</li>
+<li><strong>Admin pump assignment (A10):</strong> in <code>app/views/admin/users/_form.html.erb</code> (and the staff-member edit form) add a <strong>"Pump assignment"</strong> section after Role (<code>_form.html.erb:36</code>): a pump <code>select</code> (<code>fuel_pump_id</code>, active pumps) and a checkbox group for that pump's active nozzles (<code>assigned_fuel_pump_nozzle_ids[]</code>), mirroring the controls already in <code>app/views/my_pumps/show.html.erb</code>. Reuse that partial's markup. Include a "None" option to clear.</li>
+<li><strong>S-MYPUMP:</strong> remove the "My Pump" nav link (<code>app/views/layouts/application.html.erb:180</code>) and the <code>resource :my_pump</code> root route (<code>config/routes.rb:13</code>); delete/retire <code>MyPumpsController</code> + <code>app/views/my_pumps/</code>. In <code>staff/transactions/_pump_selection_fields.html.erb</code>, the "change" link points at <code>my_pump_path</code> (<code>:37</code>) — replace with read-only text ("Assigned by your manager") since staff can no longer edit; nozzle selection <strong>within</strong> a transaction stays (that's per-transaction, not assignment).</li>
+<li><strong>S-PAUSE:</strong> the pause/resume control lives on the admin/staff customer views; ensure staff-facing customer pages (<code>staff/customers</code>, and the shared <code>customers/show</code>) do not render pause/resume buttons for staff. With <code>CustomerPolicy#pause_rewards?</code> now admin-only, gate the button on <code>policy(customer).pause_rewards?</code>.</li>
+</ul>
+<h3 id="android-compose">Android (Compose)</h3>
+<ul>
+<li><strong>S-MYPUMP:</strong> gate the "My Pump" row in <code>AccountScreen.kt</code> (<code>:123-131</code>) behind <code>isAdmin</code> (the flag already exists at <code>AccountScreen.kt:71</code>). Remove the transaction screen's <code>onSetupPump → Routes.MY_PUMP</code> affordance for staff (<code>AppRoot.kt</code> transaction block); when a staff member has no pump assigned, show "No pump assigned — ask your manager" instead of a link to My Pump. The <code>MyPumpScreen</code>/<code>MyPumpViewModel</code> can stay in-tree but is only reachable by admins (or be removed entirely if admins assign via the users screen).</li>
+<li><strong>A10:</strong> in the admin users editor (<code>AdminUsersScreen.kt</code> + <code>UsersViewModel/UsersDtos/UsersApi</code>) add a pump dropdown + nozzle multi-select, posting <code>fuel_pump_id</code> and <code>assigned_fuel_pump_nozzle_ids</code>. Reuse the pump/nozzle picker composables from <code>mypump/MyPumpScreen.kt</code>. Do the same on the staff editor if it exposes a form (<code>admin/staff</code>).</li>
+<li><strong>S-PAUSE:</strong> in <code>CustomerProfileScreen.kt</code>, gate the pause/resume button (<code>:288-296</code>) behind admin role; for staff render only the read-only <code>InfoChip("Rewards Paused")</code> status (<code>:268</code>). <code>CustomerProfileViewModel.togglePaused()</code> should never be invoked from a staff session; if the API returns 403, surface a benign error.</li>
+<li><strong>Global pause (C4):</strong> in <code>admin/rewardrates</code> (<code>RewardRatesScreen.kt</code>) or the pump feature-settings screen, add a "Pause all rewards" switch bound to the new field. On staff transaction/customer screens, when <code>rewards_effectively_paused</code> is true, show the existing "Rewards Paused" chip so operators understand why 0 points accrued.</li>
+</ul>
+<h2 id="validation-edge-cases">Validation &amp; edge cases</h2>
+<ul>
+<li><strong>Precedence:</strong> global-paused message must take priority over per-customer message in <code>PointsRedeemer</code> (check global first). Earn path treats both identically (0 points, no ledger).</li>
+<li><strong>Transaction still recorded when paused:</strong> capture is source-of-truth; pausing must not block recording the transaction — only the earn ledger row is skipped. <code>Result.rewards_paused</code> reflects the effective state.</li>
+<li><strong>Unpausing global</strong> restores per-customer state exactly (no data was mutated).</li>
+<li><strong>Admin assignment atomicity:</strong> invalid nozzle set (empty, wrong pump, inactive) must roll back join rows via <code>update_pump_assignment</code>; the four <code>:pump_assignment</code> validations (<code>app/models/user.rb:289-316</code>) already cover active-pump, ≥1 nozzle, nozzle-belongs-to-pump, nozzle-active.</li>
+<li><strong>Clearing a pump</strong> while <code>nozzle_feature_enabled?</code> leaves staff unable to transact — surface the existing <code>"Set up My Pump…"</code>-style error, reworded to <code>"No pump assigned — contact your manager"</code>, so it doesn't reference a screen staff can't open.</li>
+<li><strong>Assigning a nozzle whose fuel type mismatches the vehicle</strong> is still caught per-transaction in <code>resolve_fuel_pump_and_nozzle!</code> (<code>app/services/transaction_creator.rb:157</code>) — unchanged.</li>
+<li><strong>Staff hitting removed/restricted endpoints</strong> (<code>my_pump</code>, <code>pause_rewards</code>) must get 403/404, not a 500; the app must not show controls that only 403.</li>
+<li><strong>Reassigning the same pump/nozzles</strong> is idempotent.</li>
+<li><strong><code>RewardSetting.current</code> before DB exists</strong> already rescues (<code>reward_setting.rb:37</code>) — default new column to <code>false</code> there too.</li>
+</ul>
+<h2 id="dependencies-sequencing">Dependencies &amp; sequencing</h2>
+<ul>
+<li><strong>Must exist first:</strong> A1 pumps, A2 nozzles, A3 assign-nozzle-to-pump (all PRESENT) — the pump/nozzle catalog the admin picker reads. <code>RewardSetting</code> singleton and its <code>feature_settings</code> admin path (PRESENT).</li>
+<li><strong>Internal ordering (coupling):</strong> ship A10 (admin assignment) <strong>before or with</strong> S-MYPUMP. Hiding My Pump without giving admins the assignment path breaks <code>resolve_fuel_pump_and_nozzle!</code> for every staff transaction. C4 and S-PAUSE are independent of the pump work and can land in parallel.</li>
+<li><strong>Unblocks:</strong> D1/D9 daily-settlement pump ownership (admin-assigned pump identity), E-series per-operator dashboards, and any future audit that "who owns which pump" is an admin fact rather than staff self-declared.</li>
+</ul>
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+<ul>
+<li>[ ] <code>reward_settings.rewards_paused</code> column exists (boolean, not-null, default false) and <code>RewardSetting.current.rewards_globally_paused?</code> returns it.</li>
+<li>[ ] Admin can toggle "Pause all rewards" on the pump/feature-settings form (PWA) and the reward-rates/settings screen (Android); the value persists.</li>
+<li>[ ] With global pause <strong>on</strong>, recording a staff transaction creates the transaction, awards <strong>0</strong> points, and writes <strong>no</strong> earn <code>points_ledger</code> row.</li>
+<li>[ ] With global pause <strong>on</strong>, <code>PointsRedeemer</code> rejects redemption with a global-pause message; with only per-customer pause on, it rejects with the per-customer message.</li>
+<li>[ ] Unsetting global pause restores each customer's own earn/redeem eligibility exactly as before (no per-customer data changed).</li>
+<li>[ ] Admin can set a user's <code>fuel_pump_id</code> + <code>assigned_fuel_pump_nozzle_ids</code> from the users form (PWA) and admin users screen (Android); invalid sets are rejected atomically with field errors and no orphaned join rows.</li>
+<li>[ ] After admin assigns a pump, that staff member's <code>transaction_fuel_pump</code>/<code>transaction_fuel_pump_nozzles</code> resolve and a staff transaction succeeds without visiting any self-service screen.</li>
+<li>[ ] <code>UserPolicy#manage_pump?</code> returns false for staff; <code>GET/PATCH /api/v1/my_pump</code> and the web <code>my_pump</code> route are gone (or 403 for staff).</li>
+<li>[ ] "My Pump" no longer appears in the web nav or the Android staff account screen; it appears for admins only if retained.</li>
+<li>[ ] <code>CustomerPolicy#pause_rewards?</code>/<code>resume_rewards?</code> return false for staff; staff PWA customer pages and Android <code>CustomerProfileScreen</code> show rewards-paused status read-only with no pause/resume control; staff API calls to those endpoints return 403.</li>
+<li>[ ] Staff still select a nozzle <strong>within</strong> a transaction; only pump/nozzle <strong>assignment</strong> and rewards <strong>pause</strong> are removed from staff.</li>
+</ul>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 14-spec-rewards-staff-constraints.md &middot; 2026-07-21</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
+</script>
+
+</body>
+</html>

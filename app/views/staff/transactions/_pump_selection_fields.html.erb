@@ -35,7 +35,7 @@
         </div>
       </div>
     </div>
-    <% if nozzle_feature_enabled %>
+    <% if nozzle_feature_enabled && policy(current_user).manage_pump? %>
       <%= link_to my_pump_path,
         class: "transaction-pump-card__change-link customer-details-vehicle-row__menu-toggle",
         aria: { label: "Change My Pump" },
@@ -125,8 +125,7 @@
   <% else %>
     <div class="alert alert-warning mb-0">
       <% if nozzle_feature_enabled %>
-        Set up My Pump with at least one active nozzle before recording transactions.
-        <%= link_to "Open My Pump", my_pump_path, class: "alert-link" %>
+        Ask an admin to assign your pump with at least one active nozzle before recording transactions.
       <% else %>
         No active pumps are available right now. Ask an admin to add or activate a pump before recording transactions.
       <% end %>

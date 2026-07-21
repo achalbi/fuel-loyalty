@@ -70,6 +70,30 @@ class TransactionCreatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "creates a transaction without awarding points when rewards are paused globally" do
+    RewardSetting.current.update!(rewards_paused: true)
+    user = User.create!(name: "Staff Global Paused", username: "staff_global_paused", phone_number: "9019991111", password: "password123", password_confirmation: "password123", role: :staff)
+    petrol_nozzle, = assign_pump_to_user(user)
+    customer = Customer.create!(name: "Active Customer", phone_number: "9876543311")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN14AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    assert_difference -> { Transaction.count }, 1 do
+      assert_no_difference -> { PointsLedger.count } do
+        result = TransactionCreator.call(
+          user: user,
+          phone_number: customer.phone_number,
+          fuel_amount: 250,
+          vehicle_id: vehicle.id,
+          fuel_pump_nozzle_id: petrol_nozzle.id
+        )
+
+        assert_equal 0, result.points_earned
+        assert_equal true, result.rewards_paused
+        assert_equal false, customer.reload.rewards_paused?
+      end
+    end
+  end
+
   test "uses vehicle type reward rate overrides when present" do
     user = User.create!(name: "Staff Vehicle Reward", username: "staff_vehicle_reward", phone_number: "9012345678", password: "password123", password_confirmation: "password123", role: :staff)
     petrol_nozzle, = assign_pump_to_user(user)

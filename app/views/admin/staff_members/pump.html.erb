@@ -1,0 +1,33 @@
+<% content_for :title, "Assign Pump" %>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="mb-3">
+          <h1 class="h3 mb-1">Assign Pump</h1>
+          <p class="text-muted mb-0">Assign <strong><%= @staff_member.name %></strong> to a pump and its active nozzles. This becomes their default pump for every transaction they record.</p>
+        </div>
+
+        <% if @assignable_fuel_pumps.empty? %>
+          <div class="alert alert-warning mb-0">
+            No pumps are available yet. <%= link_to "Add pumps", admin_fuel_pumps_path, class: "alert-link" %> first.
+          </div>
+        <% else %>
+          <%= form_with model: @staff_member, url: pump_admin_staff_member_path(@staff_member), method: :patch, class: "vstack gap-3", data: { my_pump_form: true } do |form| %>
+            <%= render "shared/pump_assignment_fields",
+              form: form,
+              user: @staff_member,
+              assignable_fuel_pumps: @assignable_fuel_pumps,
+              assignable_fuel_pump_nozzles: @assignable_fuel_pump_nozzles %>
+
+            <div class="d-flex gap-2">
+              <%= form.submit "Save Pump Assignment", class: "btn btn-primary" %>
+              <%= link_to "Back", admin_staff_members_path, class: "btn btn-outline-secondary" %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
