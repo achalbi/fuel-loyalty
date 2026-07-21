@@ -47,6 +47,26 @@ module Api
           assert_nil response.parsed_body["visit_entry"]["customer_id"]
         end
 
+        test "a visit whose driver phone equals the owner phone records one contact, not a 500" do
+          vehicle = vehicles(:one)
+
+          assert_difference -> { VisitEntry.count }, 1 do
+            post api_v1_staff_visit_entries_path, params: {
+              visit_entry: {
+                vehicle_number: vehicle.vehicle_number, litres: "50", fuel_pump_id: fuel_pumps(:one).id,
+                driver_name: "Ravi", driver_phone_number: "9800022222",
+                owner_name: "Ravi (owner)", owner_phone_number: "9800022222"
+              },
+            }, headers: auth_headers(users(:two))
+          end
+
+          assert_response :created
+          # The role-agnostic [customer_id, phone_number] index means one row per phone.
+          contacts = customers(:one).customer_contacts.where(phone_number: "9800022222")
+          assert_equal 1, contacts.count
+          assert_equal "driver", contacts.first.role, "the earliest role wins"
+        end
+
         test "rejects a zero-litre capture" do
           assert_no_difference -> { VisitEntry.count } do
             post api_v1_staff_visit_entries_path, params: {

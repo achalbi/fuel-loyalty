@@ -29,6 +29,20 @@ class Customer < ApplicationRecord
   validates :name, presence: true
   validates :phone_number, presence: true, uniqueness: true
   validates :phone_number, format: { with: PHONE_NUMBER_FORMAT, message: PHONE_NUMBER_ERROR_MESSAGE }
+  # Per-contact uniqueness only checks the DB; this catches two *new* rows with
+  # the same phone submitted together (nested attributes) before they hit the
+  # [customer_id, phone_number] index as a 500.
+  validate :customer_contact_phones_are_distinct
+
+  def customer_contact_phones_are_distinct
+    phones = customer_contacts.reject(&:marked_for_destruction?)
+                              .map { |contact| self.class.normalize_phone_number(contact.phone_number).presence }
+                              .compact
+    repeated = phones.tally.select { |_phone, count| count > 1 }.keys
+    return if repeated.empty?
+
+    errors.add(:base, "A contact phone number is used more than once (#{repeated.join(', ')}). Each contact needs a distinct phone.")
+  end
 
   def self.normalize_phone_number(value)
     value.to_s.gsub(/\D/, "")

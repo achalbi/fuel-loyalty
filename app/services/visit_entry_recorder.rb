@@ -91,12 +91,18 @@ class VisitEntryRecorder
   end
 
   def upsert_contact(customer, role, name, phone)
+    # The DB enforces one contact per [customer_id, phone_number] (role-agnostic),
+    # so a phone must be matched by phone alone — not [role, phone], which would
+    # build a second row for the same phone under a different role (e.g. an
+    # owner-operator whose driver phone == owner phone) and hit the unique index.
+    # The earliest role wins; later captures only enrich the name.
     contact =
       if phone.present?
-        customer.customer_contacts.find_or_initialize_by(role: role, phone_number: phone)
+        customer.customer_contacts.find_or_initialize_by(phone_number: phone)
       else
         customer.customer_contacts.find_or_initialize_by(role: role, name: name)
       end
+    contact.role = role if contact.new_record? || contact.role.blank?
     contact.name = name if name.present?
     contact.phone_number = phone if phone.present?
     contact.save! if contact.new_record? || contact.changed?

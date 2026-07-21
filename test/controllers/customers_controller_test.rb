@@ -65,6 +65,26 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil contact.contacted_at
   end
 
+  test "rejects two contacts sharing a phone with a 422 instead of a 500" do
+    sign_in users(:two)
+    customer = customers(:one)
+
+    assert_no_difference -> { customer.customer_contacts.count } do
+      patch customer_path(customer), params: {
+        customer: {
+          name: customer.name,
+          phone_number: customer.phone_number,
+          customer_contacts_attributes: {
+            "0" => { role: "driver", name: "A", phone_number: "9000012345" },
+            "1" => { role: "owner", name: "B", phone_number: "9000012345" }
+          }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "staff can remove a customer contact via _destroy" do
     sign_in users(:two)
     customer = customers(:one)

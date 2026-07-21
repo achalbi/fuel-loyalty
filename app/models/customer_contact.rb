@@ -12,6 +12,10 @@ class CustomerContact < ApplicationRecord
   validates :phone_number,
     format: { with: Customer::PHONE_NUMBER_FORMAT, message: Customer::PHONE_NUMBER_ERROR_MESSAGE },
     allow_blank: true
+  # Mirrors the partial unique index on [customer_id, phone_number] so a repeat
+  # phone surfaces as a 422 instead of a DB-level RecordNotUnique (500). One
+  # person = one contact row regardless of role.
+  validates :phone_number, uniqueness: { scope: :customer_id }, allow_blank: true
   validates :contacted, inclusion: { in: [true, false] }
 
   scope :active, -> { where(active: true) }
