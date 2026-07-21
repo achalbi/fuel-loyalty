@@ -10,6 +10,7 @@ class User < ApplicationRecord
   enum :role, { admin: 0, staff: 1 }, default: :staff, validate: true
 
   has_many :transactions, dependent: :restrict_with_exception
+  has_many :push_subscriptions, dependent: :nullify
   belongs_to :assigned_fuel_pump, class_name: "FuelPump", foreign_key: :fuel_pump_id, inverse_of: :assigned_users, optional: true
   has_many :pump_nozzle_assignments, class_name: "UserPumpNozzleAssignment", dependent: :destroy, inverse_of: :user
   has_many :assigned_fuel_pump_nozzles, through: :pump_nozzle_assignments, source: :fuel_pump_nozzle

@@ -8,6 +8,7 @@ class Customer < ApplicationRecord
   has_many :vehicles, -> { order(:vehicle_number) }, dependent: :destroy
   has_many :customer_contacts, dependent: :destroy
   has_many :visit_entries, dependent: :nullify
+  has_many :push_subscriptions, dependent: :nullify
   belongs_to :primary_contact, class_name: "CustomerContact", optional: true
   # A contact row only persists if it carries a name or phone — a role picked on
   # an otherwise-empty row is treated as an untouched blank and dropped.

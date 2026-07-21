@@ -2,6 +2,8 @@
 
 Give the admin a campaign engine that rewards customers who cross a minimum-purchase threshold within a period window (with a discount or a gift), targets those rewards at an individual customer, a customer *type* (OTP/Credit/Drive-in), or a hand-picked set of customers, and delivers the resulting offer — plus automatic loyalty-bonus milestones — over **push, WhatsApp, and SMS**. This turns today's single, untargeted, push-only broadcast into a targeted, multi-channel, offer-aware notification system. The load-bearing prerequisite is a **push-token → customer linkage**: today `push_subscriptions` are anonymous, so no push can be aimed at one person.
 
+> **Foundation status (2026-07-22):** ✅ **The push-token → identity linkage shipped, tested (Phase 1).** `push_subscriptions` gained nullable `customer_id` **and `user_id`** (FK nullify); `POST /push/subscriptions` links a signed-in staff `user` (session) and an identified `customer` (optional `phone_number`), staying anonymous otherwise, and a later anonymous re-register preserves a learned link. `PushSubscription.for_customer(customer)` plus the existing `subscriptions:` scope on `FirebasePushService` make a targeted send a filtered scope away. **Deferred to the F2/F3 build:** the explicit `consent_at` opt-in, the campaign/offer objects, the delivery log, the audience-selector UI, and the WhatsApp/SMS channels. The rest of this spec is the forward design that builds on this foundation.
+
 ## Requirements covered
 
 | ID | Requirement (one line) |

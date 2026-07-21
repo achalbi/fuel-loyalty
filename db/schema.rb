@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -207,14 +207,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_130000) do
   create_table "push_subscriptions", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
+    t.bigint "customer_id"
     t.datetime "last_used_at", null: false
     t.string "platform", null: false
     t.text "token", null: false
     t.datetime "updated_at", null: false
+    t.bigint "user_id"
     t.index ["active"], name: "index_push_subscriptions_on_active"
+    t.index ["customer_id"], name: "index_push_subscriptions_on_customer_id"
     t.index ["last_used_at"], name: "index_push_subscriptions_on_last_used_at"
     t.index ["platform"], name: "index_push_subscriptions_on_platform"
     t.index ["token"], name: "index_push_subscriptions_on_token", unique: true
+    t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
   end
 
   create_table "reward_settings", force: :cascade do |t|
@@ -476,6 +480,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_130000) do
   add_foreign_key "points_ledgers", "customers"
   add_foreign_key "points_ledgers", "transactions"
   add_foreign_key "products", "fuel_types", column: "fuel_type_code", primary_key: "code"
+  add_foreign_key "push_subscriptions", "customers", on_delete: :nullify
+  add_foreign_key "push_subscriptions", "users", on_delete: :nullify
   add_foreign_key "shift_assignments", "shift_cycles"
   add_foreign_key "shift_assignments", "shift_templates"
   add_foreign_key "shift_assignments", "users"

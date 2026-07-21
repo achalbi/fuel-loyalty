@@ -12,10 +12,15 @@ class PushSubscriptionsController < ApplicationController
     # `platform` is optional: some clients (e.g. the native app via kotlinx, which
     # drops default-valued fields) omit it. The model coerces a blank/unknown value
     # to "unknown", so only the token is truly required.
+    #
+    # Optional identity (F2 targeting): a signed-in staff user is captured from
+    # the session, and an identified customer from an optional `phone_number`.
     subscription = PushSubscription.register!(
       token: token,
       platform: subscription_params[:platform],
-      last_used_at: Time.current
+      last_used_at: Time.current,
+      customer: resolve_customer,
+      user: current_user
     )
 
     render json: {
@@ -41,6 +46,16 @@ class PushSubscriptionsController < ApplicationController
   private
 
   def subscription_params
-    params.permit(:token, :platform)
+    params.permit(:token, :platform, :phone_number)
+  end
+
+  # Links the token to a customer when the client supplies a valid, known phone
+  # (e.g. a customer who identified on the loyalty PWA). Unknown/blank -> nil,
+  # so the subscription stays anonymous rather than erroring.
+  def resolve_customer
+    phone = Customer.normalize_phone_number(subscription_params[:phone_number])
+    return nil unless Customer.valid_phone_number?(phone)
+
+    Customer.find_by(phone_number: phone)
   end
 end
