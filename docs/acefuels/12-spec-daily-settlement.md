@@ -1,13 +1,17 @@
 # Daily Settlement (D1–D10, Staff-1, Admin-12/13)
 
-> **Build status (Phase 2, 2026-07-21):** 🚧 in progress. **Foundation shipped** —
-> the `daily_settlements` parent + all 9 child/audit tables, their models (nested
-> attributes, `allow_destroy`, line-level derivation), and the `Settlement::Builder`
-> / `Settlement::Calculator` / `Settlement::Persister` services, with model + service
-> tests. The B2 source table is `visit_entries` (the spec's `customer_detail_entries`);
-> `settlement_discount_lines.visit_entry_id` references it. Still to ship: the staff
-> API, the Rails PWA form, the Android screen, admin D9 (edit/reconcile/audit + points
-> recompute), and E1 reports.
+> **Build status (Phase 2, 2026-07-22):** 🚧 in progress. **Staff surface COMPLETE on
+> all three surfaces** (D1–D8, D10 capture + D6/D7 math), tested: the `daily_settlements`
+> parent + all 9 child/audit tables and models (nested attributes, `allow_destroy`,
+> line-level derivation); the `Settlement::Builder` / `Settlement::Calculator` /
+> `Settlement::Persister` / `Settlement::FormRows` services; the staff JSON API
+> (`/api/v1/staff/settlements` + `/new`, `/:id`) with full/summary/draft serializers and
+> `DailySettlementPolicy`; the Rails PWA `Staff::SettlementsController` + sectioned form
+> with `settlement_form.js` live totals (browser-verified); and the Android
+> `ui/settlement` area + home quick-action (compiles clean). The B2 source table is
+> `visit_entries` (the spec's `customer_detail_entries`); `settlement_discount_lines.visit_entry_id`
+> references it. Still to ship: **admin D9** (view/edit/reconcile/audit + points recompute,
+> closes G1) and **E1 reports**. Native decantation (D8 tank dips) inputs are web-only for now.
 
 Daily Settlement is the shift-end reconciliation ledger for a fuel outlet. At the end of a shift the FSM (pump operator) picks their pump, and the system shows that pump's nozzles and their fuel. The FSM enters today's meter readings; the app auto-populates yesterday's closing reading from the prior settlement, subtracts testing litres, derives net litres sold, prices each nozzle from the product catalog's selling price, and totals fuel by type. The FSM then records lubricant sales (with opening/closing stock), pulls same-day customer discounts, enters PhonePe POS and Scanner receipts, Fleet/OTP and tank-truck credit lines, and finally reconciles cash by denomination against the computed **Final Amount to Settle**, capturing shortage. Stock received, tank decantation, and a JIO-BP-vs-own rate comparison round out the record. Admins can view and edit any settlement — current or past, per pump or across pumps — with a full audit trail, and any edit that changes derived ₹ recomputes loyalty points. This is the single largest module and the source of truth for litres sold (per LOCKED Q1: readings/litres are canonical; ₹ is derived from catalog selling price).
 
