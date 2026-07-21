@@ -42,7 +42,7 @@ module Admin
     def update
       @customer = Customer.includes(:vehicles, transactions: %i[user vehicle]).find(params[:id])
       authorize @customer
-      @customer.assign_attributes(customer_params.slice(:name, :phone_number))
+      @customer.assign_attributes(customer_params.slice(:name, :phone_number, :customer_type, :transport_name, :approx_vehicle_count, :info_note))
       @customer.phone_number = Customer.normalize_phone_number(customer_params[:phone_number])
 
       if @customer.save
@@ -86,6 +86,7 @@ module Admin
       @period_range = Admin::Dashboard::OverviewReport.period_range(
         preset: @current_preset, start_date: @current_start_date, end_date: @current_end_date
       )
+      @current_customer_type = normalized_customer_type
       @customers = filtered_customers
       @customer = form_customer
     end
@@ -139,8 +140,14 @@ module Admin
       end
 
       scope = scope.merge(Customer.transacted_between(@period_range)) if @period_range
+      scope = scope.where(customer_type: @current_customer_type) if @current_customer_type
 
       scope.preload(:vehicles).order(created_at: :desc)
+    end
+
+    def normalized_customer_type
+      type = params[:type].to_s
+      Customer.customer_types.key?(type) ? type : nil
     end
 
     def normalized_status_filter
@@ -166,11 +173,16 @@ module Admin
         :vehicle_number,
         :fuel_type,
         :vehicle_kind,
+        :customer_type,
+        :transport_name,
+        :approx_vehicle_count,
+        :info_note,
         :commercial_company_name,
         :commercial_contact_name,
         :commercial_contact_phone_number,
         :commercial_address,
-        :commercial_notes
+        :commercial_notes,
+        customer_contacts_attributes: %i[id role name phone_number contacted notes active _destroy]
       )
     end
 

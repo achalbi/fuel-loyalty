@@ -294,8 +294,8 @@
     <div class="stats">
       <div class="stat total">
         <div class="n">41</div><div class="l">Features assessed</div>
-        <div class="bar" role="img" aria-label="39% present, 15% partial, 46% absent">
-          <i class="p" style="width:39.0%"></i><i class="q" style="width:14.6%"></i><i class="a" style="width:46.4%"></i>
+        <div class="bar" role="img" aria-label="41% present, 15% partial, 44% absent">
+          <i class="p" style="width:41.5%"></i><i class="q" style="width:14.6%"></i><i class="a" style="width:43.9%"></i>
         </div>
         <div class="bar-key">
           <span><i class="dot" style="background:var(--present)"></i>Present</span>
@@ -303,11 +303,11 @@
           <span><i class="dot" style="background:var(--absent)"></i>Absent</span>
         </div>
       </div>
-      <div class="stat present"><div class="n">16</div><div class="l">Present</div></div>
+      <div class="stat present"><div class="n">17</div><div class="l">Present</div></div>
       <div class="stat partial"><div class="n">6</div><div class="l">Partial</div></div>
-      <div class="stat absent"><div class="n">19</div><div class="l">Absent</div></div>
+      <div class="stat absent"><div class="n">18</div><div class="l">Absent</div></div>
     </div>
-    <p class="meta" style="margin-top:18px"><b style="color:var(--present)">Phase 0 complete ✅.</b> &nbsp;Shipped (all surfaces, tested): C4 global pause · S-PAUSE · fuel types → MS/HSD · S-MYPUMP · A10 admin pump assignment · E2 dashboard drill-through. &nbsp;Next: Phase 1 foundations (Product Catalog, litres model, customer expansion, push-token linkage).</p>
+    <p class="meta" style="margin-top:18px"><b style="color:var(--present)">Phase 0 complete ✅ · Phase 1 in progress.</b> &nbsp;Phase 1: ✅ <b>A5 Product Catalog</b> · ✅ <b>litres/readings model</b> · 🟡 <b>B1/E4 customer type + contacts</b> (backend + web shipped, tested — Android + contact-editing UI pending) shipped. Next: B2 per-visit capture, push-token linkage.</p>
   </div>
 </header>
 
@@ -358,9 +358,9 @@
     <div class="filters" role="group" aria-label="Filter features by status">
       <span class="lbl">Filter</span>
       <button class="fbtn" data-f="all" aria-pressed="true">All <span class="c">41</span></button>
-      <button class="fbtn" data-f="present" aria-pressed="false">Present <span class="c">16</span></button>
+      <button class="fbtn" data-f="present" aria-pressed="false">Present <span class="c">17</span></button>
       <button class="fbtn" data-f="partial" aria-pressed="false">Partial <span class="c">6</span></button>
-      <button class="fbtn" data-f="absent" aria-pressed="false">Absent <span class="c">19</span></button>
+      <button class="fbtn" data-f="absent" aria-pressed="false">Absent <span class="c">18</span></button>
     </div>
 
     <div class="fgroup">
@@ -370,7 +370,7 @@
       <div class="feat" data-status="present"><span class="fid">A2</span><div class="fmain"><div class="ftitle">Set up nozzles</div><div class="fgap">Nested nozzles under each pump, auto-sequenced.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
       <div class="feat" data-status="present"><span class="fid">A3</span><div class="fmain"><div class="ftitle">Assign nozzles to every pump</div><div class="fgap">Each nozzle belongs to one pump; unique sequence per pump.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
       <div class="feat" data-status="present"><span class="fid">A4</span><div class="fmain"><div class="ftitle">Assign product (MS/HSD) per nozzle</div><div class="fgap">Per-nozzle fuel type works, and defaults now read <b>MS (Petrol)</b> / <b>HSD (Diesel)</b> ✅ (Phase 0, codes unchanged). No <em>price</em> is attached yet — that's A5.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
-      <div class="feat" data-status="absent"><span class="fid">A5</span><div class="fmain"><div class="ftitle">Product catalog with MRP + selling price (incl. lubes / AdBlue, batch)</div><div class="fgap"><span class="warn">Keystone — nothing exists.</span> No priced product model, no MRP/selling price/batch/stock, no lubricants. Unblocks settlement, reports and litres capture.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="L">L</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">A5</span><div class="fmain"><div class="ftitle">Product catalog with MRP + selling price (incl. lubes / AdBlue, batch)</div><div class="fgap">✅ <b>Shipped</b> — priced <code style="font-family:var(--mono);font-size:12px">products</code> catalog (fuel + lubes/oil/additive, MRP, selling price, batch, fuel-type linkage), 14 rows seeded, admin CRUD on <b>web + API + Android</b>, tested. Selling price is the settlement pricing source. <em>(Stock ledger lands with D2/D8.)</em></div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
       <div class="feat" data-status="present"><span class="fid">A6</span><div class="fmain"><div class="ftitle">Vehicle types 2W/3W/LMV/LCV/MCV/HCV</div><div class="fgap">Exact six defaults + CRUD + per-type reward config.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
       <div class="feat" data-status="partial"><span class="fid">A7</span><div class="fmain"><div class="ftitle">Operator record + auth</div><div class="fgap">Only Name exists. Missing Photo / Address / Aadhaar # / ID-photo; login is password, not OTP. → add profile fields, keep password (Q3).</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="M">M</span></span></div>
       <div class="feat" data-status="present"><span class="fid">A8</span><div class="fmain"><div class="ftitle">Create shifts (24 / 12 / 8 hr)</div><div class="fgap">Shift templates present; app also has cycles, swaps and attendance — beyond the sheet.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>

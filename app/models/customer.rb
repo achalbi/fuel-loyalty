@@ -6,6 +6,14 @@ class Customer < ApplicationRecord
   has_many :transactions, dependent: :restrict_with_exception
   has_many :points_ledgers, dependent: :destroy
   has_many :vehicles, -> { order(:vehicle_number) }, dependent: :destroy
+  has_many :customer_contacts, dependent: :destroy
+  belongs_to :primary_contact, class_name: "CustomerContact", optional: true
+  accepts_nested_attributes_for :customer_contacts, allow_destroy: true, reject_if: :all_blank
+
+  # E4 — account-type segmentation (OTP = fleet/credit account, drive-in = walk-in
+  # cash, credit = credit account). Backfilled to drive_in for existing rows.
+  CUSTOMER_TYPES = { drive_in: "drive_in", otp: "otp", credit: "credit" }.freeze
+  enum :customer_type, CUSTOMER_TYPES, default: :drive_in
 
   # Customers who recorded a transaction within the given time range (E2 dashboard
   # drill-through). Uses a subquery so it composes with joins + distinct scopes.

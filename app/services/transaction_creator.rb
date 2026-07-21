@@ -5,12 +5,14 @@ class TransactionCreator
     new(...).call
   end
 
-  def initialize(user:, fuel_amount:, vehicle_id:, fuel_pump_nozzle_id: nil, fuel_pump_id: nil, lookup_mode: "phone", phone_number: nil, vehicle_number: nil, payment_mode: "cash")
+  def initialize(user:, vehicle_id:, fuel_amount: nil, litres: nil, discount_amount: 0, fuel_pump_nozzle_id: nil, fuel_pump_id: nil, lookup_mode: "phone", phone_number: nil, vehicle_number: nil, payment_mode: "cash")
     @user = user
     @lookup_mode = lookup_mode
     @phone_number = phone_number
     @vehicle_number = vehicle_number
     @fuel_amount = fuel_amount
+    @litres = litres
+    @discount_amount = discount_amount
     @vehicle_id = vehicle_id
     @fuel_pump_id = fuel_pump_id
     @fuel_pump_nozzle_id = fuel_pump_nozzle_id
@@ -23,10 +25,18 @@ class TransactionCreator
       fuel_pump, fuel_pump_nozzle = resolve_fuel_pump_and_nozzle!(vehicle)
       validated_payment_mode = resolve_payment_mode!
 
+      amount = resolve_amount!(vehicle)
+
       transaction = customer.transactions.create!(
         user: user,
         vehicle: vehicle,
-        fuel_amount: fuel_amount,
+        fuel_amount: amount[:net],
+        litres: amount[:litres],
+        selling_price_snapshot: amount[:snapshot],
+        gross_amount: amount[:gross],
+        discount_amount: amount[:discount],
+        amount_source: amount[:source],
+        product: amount[:product],
         payment_mode: validated_payment_mode,
         fuel_pump: fuel_pump,
         fuel_pump_nozzle: fuel_pump_nozzle
@@ -35,7 +45,7 @@ class TransactionCreator
       if rewards_paused
         points = 0
       else
-        points = PointsCalculator.call(fuel_amount, fuel_type: vehicle.fuel_type, vehicle_kind: vehicle.vehicle_kind)
+        points = PointsCalculator.call(amount[:net], fuel_type: vehicle.fuel_type, vehicle_kind: vehicle.vehicle_kind, litres: amount[:litres])
 
         customer.points_ledgers.create!(
           fuel_transaction: transaction,
@@ -51,6 +61,41 @@ class TransactionCreator
   private
 
   attr_reader :fuel_amount, :fuel_pump_id, :fuel_pump_nozzle_id, :lookup_mode, :payment_mode, :phone_number, :user, :vehicle_id, :vehicle_number
+
+  # Litres are the source of truth (LOCKED Q1): when litres are given, ₹ is
+  # derived from the catalog selling price; otherwise fall back to a typed ₹
+  # amount (legacy/admin). Returns the columns to persist on the transaction.
+  def resolve_amount!(vehicle)
+    if @litres.present?
+      litres = BigDecimal(@litres.to_s)
+      invalid!("Litres must be greater than zero.") unless litres.positive?
+
+      snapshot = FuelPricing.current_price(vehicle.fuel_type)
+      invalid!("No selling price is configured for #{FuelType.label_for(vehicle.fuel_type)}. Set it in Products.") if snapshot.blank?
+      snapshot = BigDecimal(snapshot.to_s)
+
+      gross = (litres * snapshot).round(2)
+      discount = BigDecimal((@discount_amount.presence || 0).to_s)
+      invalid!("Discount cannot be negative.") if discount.negative?
+      net = gross - discount
+      invalid!("Discount cannot exceed the fuel amount.") if net <= 0
+
+      {
+        litres: litres, snapshot: snapshot, gross: gross, discount: discount, net: net,
+        source: :derived, product: Product.active.fuel.find_by(fuel_type_code: vehicle.fuel_type)
+      }
+    else
+      invalid!("Fuel amount must be greater than zero.") if @fuel_amount.blank? || BigDecimal(@fuel_amount.to_s) <= 0
+      net = BigDecimal(@fuel_amount.to_s)
+      { litres: nil, snapshot: nil, gross: net, discount: BigDecimal("0"), net: net, source: :manual_amount, product: nil }
+    end
+  end
+
+  def invalid!(message)
+    record = Transaction.new
+    record.errors.add(:base, message)
+    raise ActiveRecord::RecordInvalid, record
+  end
 
   def resolve_customer_and_vehicle!
     if vehicle_lookup?

@@ -4,7 +4,9 @@ Source: `AceFuels_Requirement.xlsx` (7 sheets) vs. the current app
 (Rails backend + PWA views, and the native **Android** app under `android/`).
 Generated 2026-07-21.
 
-**Score: 41 atomic features assessed — 16 present ✅ · 6 partial 🟡 · 19 absent ❌.**
+**Score: 41 atomic features assessed — 17 present ✅ · 6 partial 🟡 · 18 absent ❌.**
+
+> **Phase 1 in progress:** ✅ **A5 Product Catalog** shipped (all surfaces — priced catalog + admin CRUD, 14 rows seeded, tested).
 
 > **Phase 0 complete ✅ (2026-07-21):** shipped on all surfaces, tested — **C4 global pause** · **S-PAUSE** · **fuel types → MS/HSD** · **S-MYPUMP** · **A10 admin pump assignment** · **E2 dashboard drill-through**. Next: Phase 1 foundations (Product Catalog, litres model, customer expansion, push-token linkage).
 
@@ -41,9 +43,10 @@ Generated 2026-07-21.
 
 ## 3. Comparison matrix
 
-### ✅ Present (16) — usable today
+### ✅ Present (17) — usable today
 | ID | Feature | Note |
 |---|---|---|
+| A5 | Product catalog (fuel + lubes/AdBlue, MRP, selling price, batch) | ✅ **Shipped (Phase 1)** — priced `products` model (categories, fuel-type linkage, `Product.fuel_price_for`), 14 rows seeded, admin CRUD web + API + Android. The settlement pricing source. Stock ledger deferred to Phase 2 (D2/D8) |
 | C4 | Pause rewards globally | ✅ **Shipped (Phase 0)** — global "Pause All Rewards" switch on reward settings zeroes accrual for everyone; per-customer pause still applies on top |
 | E2 | Dashboard → customers by period | ✅ **Shipped (Phase 0)** — "View customers" drill-through (web + Android) opens a period-scoped customer list via `Customer.transacted_between` |
 | A10 | Assign operator to a pump | ✅ **Shipped (Phase 0)** — admin "Assign Pump" flow (web + API + Android) reusing `update_pump_assignment`; staff self-service removed |
@@ -71,7 +74,7 @@ Generated 2026-07-21.
 | F3 | Push for offers + loyalty bonus | FCM broadcast + scheduled push work, but sends are **untargeted broadcasts**, there's **no offer object** to attach, and **nothing auto-pushes** a loyalty-bonus milestone |
 | G1 | Visualize per-pump data + edit past days | Transactions list is **view-only** (no edit), and has **no per-pump filter**. "Edit current/past days" not implemented |
 
-### ❌ Absent (19) — not built
+### ❌ Absent (18) — not built
 **Daily Settlement (the biggest single gap — 9 features, all missing):**
 | ID | Feature |
 |---|---|
@@ -89,7 +92,6 @@ Generated 2026-07-21.
 **Catalog, CRM, campaigns, reports, notifications, staff constraints:**
 | ID | Feature |
 |---|---|
-| A5 | **Product catalog** with MRP + selling price incl. lubricants/AdBlue + batch (**keystone**) |
 | E1 | Reports daily/weekly/monthly/**yearly** per vehicle/transporter/driver (litres, discount, gifts) |
 | E4 | Customer-type view: **OTP(Fleet) / Drive-in / Credit** |
 | E5 | Contact tracking + probability of conversion |

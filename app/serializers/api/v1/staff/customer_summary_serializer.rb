@@ -8,6 +8,8 @@ module Api
             id: customer.id,
             name: customer.display_name,
             phone_number: customer.phone_number,
+            customer_type: customer.customer_type,
+            transport_name: customer.transport_name,
             active: customer.active?,
             rewards_paused: customer.rewards_paused?,
             total_points: customer.total_points,

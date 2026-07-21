@@ -141,11 +141,16 @@ module Staff
         :vehicle_number,
         :fuel_type,
         :vehicle_kind,
+        :customer_type,
+        :transport_name,
+        :approx_vehicle_count,
+        :info_note,
         :commercial_company_name,
         :commercial_contact_name,
         :commercial_contact_phone_number,
         :commercial_address,
-        :commercial_notes
+        :commercial_notes,
+        customer_contacts_attributes: %i[id role name phone_number contacted notes active _destroy]
       )
     end
 

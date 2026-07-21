@@ -65,6 +65,7 @@ import com.acefuel.loyalty.ui.admin.AdminShell
 import com.acefuel.loyalty.ui.admin.attendance.AdminAttendanceScreen
 import com.acefuel.loyalty.ui.admin.cycles.AdminCyclesScreen
 import com.acefuel.loyalty.ui.admin.fueltypes.AdminFuelTypesScreen
+import com.acefuel.loyalty.ui.admin.products.AdminProductsScreen
 import com.acefuel.loyalty.ui.admin.pumps.AdminPumpsScreen
 import com.acefuel.loyalty.ui.admin.rewardrates.AdminRewardRatesScreen
 import com.acefuel.loyalty.ui.admin.schedules.AdminSchedulesScreen
@@ -412,6 +413,7 @@ fun AppRoot(container: ServiceContainer) {
                 composable(AdminRoutes.USERS) { AdminUsersScreen(onBack = back) }
                 composable(AdminRoutes.FUEL_TYPES) { AdminFuelTypesScreen(onBack = back) }
                 composable(AdminRoutes.VEHICLE_TYPES) { AdminVehicleTypesScreen(onBack = back) }
+                composable(AdminRoutes.PRODUCTS) { AdminProductsScreen(onBack = back) }
                 composable(AdminRoutes.PUMPS) { AdminPumpsScreen(onBack = back) }
                 composable(AdminRoutes.REWARD_RATES) { AdminRewardRatesScreen(onBack = back) }
                 composable(AdminRoutes.THEME) { AdminThemeScreen(onBack = back) }

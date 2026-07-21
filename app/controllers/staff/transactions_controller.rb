@@ -108,7 +108,7 @@ module Staff
     private
 
     def transaction_params
-      params.require(:transaction).permit(:lookup_mode, :phone_number, :vehicle_number, :vehicle_id, :fuel_amount, :fuel_pump_id, :fuel_pump_nozzle_id, :payment_mode)
+      params.require(:transaction).permit(:lookup_mode, :phone_number, :vehicle_number, :vehicle_id, :fuel_amount, :litres, :discount_amount, :fuel_pump_id, :fuel_pump_nozzle_id, :payment_mode)
     end
 
     def assign_prefill_values

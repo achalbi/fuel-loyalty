@@ -322,6 +322,56 @@ class TransactionCreatorTest < ActiveSupport::TestCase
     assert_includes error.record.errors.full_messages, "Fuel pump must be selected from active pumps"
   end
 
+  test "derives fuel_amount from litres and the catalog selling price" do
+    Product.create!(name: "MS", category: "fuel", fuel_type_code: "petrol", pack_unit: "litre", mrp: 100, selling_price: 100)
+    user = User.create!(name: "Staff Litres", username: "staff_litres", phone_number: "9017770001", password: "password123", password_confirmation: "password123", role: :staff)
+    petrol_nozzle, = assign_pump_to_user(user)
+    customer = Customer.create!(name: "Litre Larry", phone_number: "9876500900")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN30AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    result = TransactionCreator.call(
+      user: user, phone_number: customer.phone_number,
+      litres: 10, vehicle_id: vehicle.id, fuel_pump_nozzle_id: petrol_nozzle.id
+    )
+
+    txn = result.transaction
+    assert_equal BigDecimal("10"), txn.litres
+    assert_equal BigDecimal("100"), txn.selling_price_snapshot
+    assert_equal BigDecimal("1000"), txn.gross_amount
+    assert_equal BigDecimal("1000"), txn.fuel_amount
+    assert txn.source_derived?
+  end
+
+  test "a per-visit discount reduces the net fuel amount on the litres path" do
+    Product.create!(name: "MS", category: "fuel", fuel_type_code: "petrol", pack_unit: "litre", mrp: 100, selling_price: 100)
+    user = User.create!(name: "Staff Disc", username: "staff_disc", phone_number: "9017770002", password: "password123", password_confirmation: "password123", role: :staff)
+    petrol_nozzle, = assign_pump_to_user(user)
+    customer = Customer.create!(name: "Disc Dan", phone_number: "9876500901")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN31AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    result = TransactionCreator.call(
+      user: user, phone_number: customer.phone_number,
+      litres: 10, discount_amount: 50, vehicle_id: vehicle.id, fuel_pump_nozzle_id: petrol_nozzle.id
+    )
+
+    assert_equal BigDecimal("1000"), result.transaction.gross_amount
+    assert_equal BigDecimal("50"), result.transaction.discount_amount
+    assert_equal BigDecimal("950"), result.transaction.fuel_amount
+  end
+
+  test "litres with no configured fuel price is rejected" do
+    user = User.create!(name: "Staff NoPrice", username: "staff_noprice", phone_number: "9017770003", password: "password123", password_confirmation: "password123", role: :staff)
+    petrol_nozzle, = assign_pump_to_user(user)
+    customer = Customer.create!(name: "NoPrice Ned", phone_number: "9876500902")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN32AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      TransactionCreator.call(user: user, phone_number: customer.phone_number, litres: 10, vehicle_id: vehicle.id, fuel_pump_nozzle_id: petrol_nozzle.id)
+    end
+
+    assert_match(/selling price is configured/i, error.message)
+  end
+
   private
 
   def assign_pump_to_user(user)

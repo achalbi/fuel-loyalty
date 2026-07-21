@@ -1,0 +1,76 @@
+<% autofocus = local_assigns.fetch(:autofocus, false) %>
+<% cancel_path = local_assigns[:cancel_path] %>
+<% fuel_type_options = FuelType.active_options %>
+
+<%= form_with model: [:admin, product], class: "vstack gap-3" do |form| %>
+  <% if product.errors.any? %>
+    <div class="alert alert-danger"><%= product.errors.full_messages.to_sentence %></div>
+  <% end %>
+
+  <div>
+    <%= form.label :name, "Product Name", class: "form-label" %>
+    <%= form.text_field :name, class: "form-control", required: true, autofocus: autofocus, placeholder: "e.g. AdBlue" %>
+  </div>
+
+  <div>
+    <%= form.label :category, class: "form-label" %>
+    <%= form.select :category, options_for_select(Product::CATEGORIES.map { |category| [category.humanize, category] }, product.category), {}, class: "form-select", required: true %>
+    <div class="form-text">Fuel products price nozzles; lubricants / oils / additives are sold by pack.</div>
+  </div>
+
+  <div>
+    <%= form.label :fuel_type_code, "Fuel Type (fuel products only)", class: "form-label" %>
+    <%= form.select :fuel_type_code, options_for_select(fuel_type_options, product.fuel_type_code), { include_blank: "— None —" }, class: "form-select" %>
+    <div class="form-text">Required for a fuel product; leave blank otherwise. Its selling price prices the matching nozzles.</div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col">
+      <%= form.label :pack_size, "Pack Size", class: "form-label" %>
+      <%= form.number_field :pack_size, class: "form-control", step: "0.001", min: 0, placeholder: "e.g. 20" %>
+    </div>
+    <div class="col">
+      <%= form.label :pack_unit, "Unit", class: "form-label" %>
+      <%= form.text_field :pack_unit, class: "form-control", placeholder: "ml / L / litre" %>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col">
+      <%= form.label :mrp, "MRP (Rs.)", class: "form-label" %>
+      <%= form.number_field :mrp, class: "form-control", step: "0.01", min: 0 %>
+    </div>
+    <div class="col">
+      <%= form.label :selling_price, "Selling Price (Rs.)", class: "form-label" %>
+      <%= form.number_field :selling_price, class: "form-control", step: "0.01", min: 0 %>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col">
+      <%= form.label :batch, "Batch", class: "form-label" %>
+      <%= form.text_field :batch, class: "form-control", placeholder: "Optional" %>
+    </div>
+    <div class="col">
+      <%= form.label :sl_num, "Sl. No.", class: "form-label" %>
+      <%= form.number_field :sl_num, class: "form-control", min: 0, placeholder: "Order" %>
+    </div>
+  </div>
+
+  <div class="form-check form-switch reward-rate-toggle">
+    <%= form.check_box :track_stock, class: "form-check-input" %>
+    <%= form.label :track_stock, "Track stock", class: "form-check-label reward-rate-toggle__label" %>
+  </div>
+
+  <div class="form-check form-switch reward-rate-toggle">
+    <%= form.check_box :active, class: "form-check-input" %>
+    <%= form.label :active, "Show in app", class: "form-check-label reward-rate-toggle__label" %>
+  </div>
+
+  <div class="d-flex gap-2">
+    <%= form.submit submit_label, class: "btn btn-primary" %>
+    <% if cancel_path.present? %>
+      <%= link_to "Cancel", cancel_path, class: "btn btn-outline-secondary" %>
+    <% end %>
+  </div>
+<% end %>

@@ -1,6 +1,10 @@
 class RewardSetting < ApplicationRecord
   DEFAULT_MINIMUM_REDEEMABLE_POINTS = 100
   DEFAULT_RUPEES_PER_REWARD_UNIT = 100
+  DEFAULT_LITRES_PER_REWARD_UNIT = 10
+
+  # Rewards can accrue per ₹ (existing) or per litre (LOCKED Q1 litres path).
+  enum :reward_basis, { by_rupees: 0, by_litres: 1 }, default: :by_rupees
 
   before_validation :normalize_cash_value_per_point
   before_validation :normalize_minimum_redeemable_points

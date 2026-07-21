@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_21_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -80,15 +80,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_130000) do
     t.index ["stale"], name: "index_attendance_runs_on_stale"
   end
 
+  create_table "customer_contacts", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.boolean "contacted", default: false, null: false
+    t.datetime "contacted_at"
+    t.datetime "created_at", null: false
+    t.bigint "customer_id", null: false
+    t.string "name"
+    t.text "notes"
+    t.string "phone_number"
+    t.string "role", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id", "phone_number"], name: "index_customer_contacts_on_customer_and_phone", unique: true, where: "(phone_number IS NOT NULL)"
+    t.index ["customer_id", "role"], name: "index_customer_contacts_on_customer_id_and_role"
+    t.index ["customer_id"], name: "index_customer_contacts_on_customer_id"
+  end
+
   create_table "customers", force: :cascade do |t|
     t.boolean "active", default: true, null: false
+    t.integer "approx_vehicle_count"
     t.datetime "created_at", null: false
+    t.string "customer_type", default: "drive_in", null: false
+    t.text "info_note"
     t.string "name"
     t.string "phone_number", null: false
+    t.bigint "primary_contact_id"
     t.boolean "rewards_paused", default: false, null: false
+    t.string "transport_name"
     t.datetime "updated_at", null: false
     t.string "vehicle_number"
+    t.index ["customer_type"], name: "index_customers_on_customer_type"
     t.index ["phone_number"], name: "index_customers_on_phone_number", unique: true
+    t.index ["primary_contact_id"], name: "index_customers_on_primary_contact_id"
   end
 
   create_table "fuel_pump_nozzles", force: :cascade do |t|
@@ -159,6 +182,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_130000) do
     t.index ["transaction_id"], name: "index_points_ledgers_on_transaction_id"
   end
 
+  create_table "products", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "batch"
+    t.string "category", null: false
+    t.datetime "created_at", null: false
+    t.string "fuel_type_code"
+    t.string "hsn_code"
+    t.decimal "mrp", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "name", null: false
+    t.decimal "pack_size", precision: 10, scale: 3
+    t.string "pack_unit"
+    t.decimal "selling_price", precision: 10, scale: 2, default: "0.0", null: false
+    t.integer "sl_num"
+    t.boolean "track_stock", default: true, null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_products_on_active"
+    t.index ["category"], name: "index_products_on_category"
+    t.index ["fuel_type_code"], name: "index_products_on_active_fuel_type", unique: true, where: "(((category)::text = 'fuel'::text) AND active)"
+    t.index ["fuel_type_code"], name: "index_products_on_fuel_type_code"
+    t.index ["sl_num"], name: "index_products_on_sl_num"
+  end
+
   create_table "push_subscriptions", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -175,8 +220,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_130000) do
   create_table "reward_settings", force: :cascade do |t|
     t.decimal "cash_value_per_point", precision: 10, scale: 2
     t.datetime "created_at", null: false
+    t.decimal "litres_per_reward_unit", precision: 6, scale: 2, default: "10.0", null: false
     t.integer "minimum_redeemable_points"
     t.boolean "nozzle_feature_enabled", default: true, null: false
+    t.integer "reward_basis", default: 0, null: false
     t.boolean "rewards_paused", default: false, null: false
     t.integer "rupees_per_reward_unit", default: 100, null: false
     t.datetime "updated_at", null: false
@@ -275,18 +322,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_130000) do
   end
 
   create_table "transactions", force: :cascade do |t|
+    t.integer "amount_source", default: 0, null: false
     t.datetime "created_at", null: false
     t.bigint "customer_id", null: false
+    t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0", null: false
     t.decimal "fuel_amount", precision: 10, scale: 2, null: false
     t.bigint "fuel_pump_id"
     t.bigint "fuel_pump_nozzle_id"
+    t.decimal "gross_amount", precision: 10, scale: 2
+    t.decimal "litres", precision: 9, scale: 3
     t.string "payment_mode", default: "cash", null: false
+    t.bigint "product_id"
+    t.decimal "selling_price_snapshot", precision: 8, scale: 2
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.bigint "vehicle_id"
     t.index ["customer_id"], name: "index_transactions_on_customer_id"
     t.index ["fuel_pump_id"], name: "index_transactions_on_fuel_pump_id"
     t.index ["fuel_pump_nozzle_id"], name: "index_transactions_on_fuel_pump_nozzle_id"
+    t.index ["product_id"], name: "index_transactions_on_product_id"
     t.index ["user_id"], name: "index_transactions_on_user_id"
     t.index ["vehicle_id"], name: "index_transactions_on_vehicle_id"
   end
@@ -384,10 +438,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_130000) do
   add_foreign_key "attendance_entry_changes", "users", column: "changed_by_id"
   add_foreign_key "attendance_runs", "shift_templates"
   add_foreign_key "attendance_runs", "users", column: "recorded_by_id"
+  add_foreign_key "customer_contacts", "customers", on_delete: :cascade
+  add_foreign_key "customers", "customer_contacts", column: "primary_contact_id", on_delete: :nullify
   add_foreign_key "fuel_pump_nozzles", "fuel_pumps"
   add_foreign_key "fuel_pump_nozzles", "fuel_types", column: "fuel_type_code", primary_key: "code"
   add_foreign_key "points_ledgers", "customers"
   add_foreign_key "points_ledgers", "transactions"
+  add_foreign_key "products", "fuel_types", column: "fuel_type_code", primary_key: "code"
   add_foreign_key "shift_assignments", "shift_cycles"
   add_foreign_key "shift_assignments", "shift_templates"
   add_foreign_key "shift_assignments", "users"
@@ -401,6 +458,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_130000) do
   add_foreign_key "transactions", "customers"
   add_foreign_key "transactions", "fuel_pump_nozzles"
   add_foreign_key "transactions", "fuel_pumps"
+  add_foreign_key "transactions", "products"
   add_foreign_key "transactions", "users"
   add_foreign_key "transactions", "vehicles"
   add_foreign_key "user_pump_nozzle_assignments", "fuel_pump_nozzles"

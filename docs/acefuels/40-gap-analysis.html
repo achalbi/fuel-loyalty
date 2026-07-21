@@ -117,8 +117,9 @@ a:hover{text-decoration:underline}
 <p>Source: <code>AceFuels_Requirement.xlsx</code> (7 sheets) vs. the current app
 (Rails backend + PWA views, and the native <strong>Android</strong> app under <code>android/</code>).
 Generated 2026-07-21.</p>
-<p><strong>Score: 41 atomic features assessed — 16 present ✅ · 6 partial 🟡 · 19 absent ❌.</strong></p>
+<p><strong>Score: 41 atomic features assessed — 17 present ✅ · 6 partial 🟡 · 18 absent ❌.</strong></p>
 <blockquote>
+<p><strong>Phase 1 in progress:</strong> ✅ <strong>A5 Product Catalog</strong> shipped (all surfaces — priced catalog + admin CRUD, 14 rows seeded, tested).</p>
 <p><strong>Phase 0 complete ✅ (2026-07-21):</strong> shipped on all surfaces, tested — <strong>C4 global pause</strong> · <strong>S-PAUSE</strong> · <strong>fuel types → MS/HSD</strong> · <strong>S-MYPUMP</strong> · <strong>A10 admin pump assignment</strong> · <strong>E2 dashboard drill-through</strong>. Next: Phase 1 foundations (Product Catalog, litres model, customer expansion, push-token linkage).</p>
 <p>Every verdict below was cross-checked against the code (file:line evidence held
 in the audit run). Where the app does something <em>differently</em> than the sheet, it
@@ -180,7 +181,7 @@ is called out rather than glossed as "done".</p>
 </table></div>
 <hr />
 <h2 id="3-comparison-matrix">3. Comparison matrix</h2>
-<h3 id="present-16-usable-today">✅ Present (16) — usable today</h3>
+<h3 id="present-17-usable-today">✅ Present (17) — usable today</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -190,6 +191,11 @@ is called out rather than glossed as "done".</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>A5</td>
+<td>Product catalog (fuel + lubes/AdBlue, MRP, selling price, batch)</td>
+<td>✅ <strong>Shipped (Phase 1)</strong> — priced <code>products</code> model (categories, fuel-type linkage, <code>Product.fuel_price_for</code>), 14 rows seeded, admin CRUD web + API + Android. The settlement pricing source. Stock ledger deferred to Phase 2 (D2/D8)</td>
+</tr>
 <tr>
 <td>C4</td>
 <td>Pause rewards globally</td>
@@ -314,7 +320,7 @@ is called out rather than glossed as "done".</p>
 </tr>
 </tbody>
 </table></div>
-<h3 id="absent-19-not-built">❌ Absent (19) — not built</h3>
+<h3 id="absent-18-not-built">❌ Absent (18) — not built</h3>
 <p><strong>Daily Settlement (the biggest single gap — 9 features, all missing):</strong>
 | ID | Feature |
 |---|---|
@@ -331,7 +337,6 @@ is called out rather than glossed as "done".</p>
 <p><strong>Catalog, CRM, campaigns, reports, notifications, staff constraints:</strong>
 | ID | Feature |
 |---|---|
-| A5 | <strong>Product catalog</strong> with MRP + selling price incl. lubricants/AdBlue + batch (<strong>keystone</strong>) |
 | E1 | Reports daily/weekly/monthly/<strong>yearly</strong> per vehicle/transporter/driver (litres, discount, gifts) |
 | E4 | Customer-type view: <strong>OTP(Fleet) / Drive-in / Credit</strong> |
 | E5 | Contact tracking + probability of conversion |

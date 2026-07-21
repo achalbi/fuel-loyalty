@@ -61,4 +61,22 @@ class CustomerTest < ActiveSupport::TestCase
     assert_includes ids, recent.id
     assert_not_includes ids, stale.id
   end
+
+  test "customer_type defaults to drive_in and accepts otp / credit" do
+    customer = Customer.create!(name: "Fleet", phone_number: "9811110001")
+    assert customer.drive_in?
+
+    customer.update!(customer_type: "otp")
+    assert customer.otp?
+  end
+
+  test "customer_contacts capture a role and the contacted marker" do
+    customer = Customer.create!(name: "Owner", phone_number: "9811110002")
+    contact = customer.customer_contacts.create!(role: "driver", name: "Ravi", phone_number: "9812345678", contacted: true)
+
+    assert contact.contacted?
+    assert_not_nil contact.contacted_at
+    assert_equal "Driver", contact.display_role
+    assert_equal contact, customer.customer_contacts.find_by(role: "driver")
+  end
 end

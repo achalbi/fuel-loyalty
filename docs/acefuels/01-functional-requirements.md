@@ -50,7 +50,7 @@ requirements only — it does **not** propose designs, schemas, or implementatio
 | A2 | Set up nozzles | Admin / PumpsNozzlesProductsSetup | Admin defines nozzles that belong to pumps. | • Admin can add one or more nozzles under a given pump.<br>• Each nozzle has a stable identifier/sequence (e.g. N1–N8).<br>• A nozzle cannot exist without a parent pump.<br>• Seed layout is reproducible: P1[N1 HSD, N2 HSD] P2[N3 HSD, N4 MS] P3[N5 HSD, N6 HSD, N7 MS, N8 MS]. | Present |
 | A3 | Assign nozzles to pumps | Admin / PumpsNozzlesProductsSetup | Every nozzle is bound to exactly one pump. | • Each nozzle resolves to exactly one pump.<br>• Listing a pump shows its nozzles.<br>• The pump→nozzle map matches the seed layout in A2. | Present |
 | A4 | Assign product (MS/HSD) per nozzle | Admin / PumpsNozzlesProductsSetup | Each nozzle dispenses a defined fuel product. | • Admin can set a nozzle's fuel product to MS or HSD.<br>• The nozzle's fuel product is displayed wherever the nozzle is selected (capture, settlement).<br>• Fuel-type list is at minimum {MS, HSD} and is admin-editable. | Present |
-| A5 | Product catalog (fuel + lubes + AdBlue) | PumpsNozzlesProductsSetup | Master list of every sellable product with pricing and batch, spanning fuels, lubricants/oils, and AdBlue. | • Admin can create/edit a product with: name, batch, MRP, and selling price.<br>• Catalog covers fuels (HSD, MS) and lube/oil/AdBlue lines: 2T (20/40/60 ml, 500 ml), 10W30 800 ml, Milex Petrol (5/40 ml), Milex Diesel (10/50 ml), AdBlue (5L/10L/20L).<br>• Selling price for a product is retrievable by other features (settlement pricing, ₹ derivation).<br>• A product can be listed/searched and deactivated without losing historical references. | Absent |
+| A5 | Product catalog (fuel + lubes + AdBlue) | PumpsNozzlesProductsSetup | Master list of every sellable product with pricing and batch, spanning fuels, lubricants/oils, and AdBlue. | • Admin can create/edit a product with: name, batch, MRP, and selling price.<br>• Catalog covers fuels (HSD, MS) and lube/oil/AdBlue lines: 2T (20/40/60 ml, 500 ml), 10W30 800 ml, Milex Petrol (5/40 ml), Milex Diesel (10/50 ml), AdBlue (5L/10L/20L).<br>• Selling price for a product is retrievable by other features (settlement pricing, ₹ derivation).<br>• A product can be listed/searched and deactivated without losing historical references. | ✅ Present |
 | A6 | Vehicle types | Admin | Admin maintains the vehicle-type taxonomy used for rewards and reporting. | • The six defaults exist: 2W, 3W, LMV (Car), LCV, MCV, HCV.<br>• Admin can create/edit/deactivate a vehicle type.<br>• A vehicle type carries its own reward configuration (see C2). | Present |
 
 ---
@@ -150,8 +150,8 @@ requirements only — it does **not** propose designs, schemas, or implementatio
 
 | Status | Count | IDs |
 |---|---|---|
-| Present | 16 | A1, A2, A3, A4, A6, A8, A9, A10, C1, C2, C3, C4, C5, E2, S-PAUSE, S-MYPUMP |
+| Present | 17 | A1, A2, A3, A4, A5, A6, A8, A9, A10, C1, C2, C3, C4, C5, E2, S-PAUSE, S-MYPUMP |
 | Partial | 6 | A7, B1, B2, E3, F3, G1 |
-| Absent | 19 | A5, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, E1, E4, E5, E6, E7, F1, F2, F4 |
+| Absent | 18 | D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, E1, E4, E5, E6, E7, F1, F2, F4 |
 
-Total: **41 features** — 16 Present, 6 Partial, 19 Absent. *(**Phase 0 complete**: C4, S-PAUSE, MS/HSD rename, S-MYPUMP, A10, E2 all shipped on every surface.)*
+Total: **41 features** — 17 Present, 6 Partial, 18 Absent. *(Phase 0 complete; Phase 1: **A5 Product Catalog** shipped on every surface.)*

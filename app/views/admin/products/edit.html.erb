@@ -1,0 +1,18 @@
+<% content_for :title, "Edit Product" %>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h3 mb-3">Edit Product</h1>
+        <p class="text-muted">Update the name, category, prices, batch, and availability for this product.</p>
+
+        <%= render "form",
+          product: @product,
+          submit_label: "Save Product",
+          cancel_path: admin_products_path,
+          autofocus: true %>
+      </div>
+    </div>
+  </div>
+</div>

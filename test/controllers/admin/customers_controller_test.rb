@@ -354,5 +354,21 @@ module Admin
       assert_match "Recent Rita", response.body
       assert_no_match(/Stale Sam/, response.body)
     end
+
+    test "admin can set a customer's account type and filter the list by it" do
+      sign_in users(:one)
+      fleet = Customer.create!(name: "Fleet Fred", phone_number: "9811120001", customer_type: "otp")
+      Customer.create!(name: "Walkin Will", phone_number: "9811120002")
+
+      patch admin_customer_path(fleet), params: { customer: { name: "Fleet Fred", phone_number: fleet.phone_number, customer_type: "credit" } }
+      assert_redirected_to admin_customer_path(fleet)
+      assert fleet.reload.credit?
+
+      fleet.update!(customer_type: "otp")
+      get admin_customers_path(type: "otp")
+      assert_response :success
+      assert_match "Fleet Fred", response.body
+      assert_no_match(/Walkin Will/, response.body)
+    end
   end
 end

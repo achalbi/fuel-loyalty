@@ -4,6 +4,8 @@
 
 Introduce a first-class, priced **Product** entity that is the single source of truth for everything the outlet sells — fuels (HSD, MS), lubricants/oils (2T, 10W30, Milex), and additives (AdBlue) — each with MRP, selling price, batch, pack size/unit, and category. Fuel products are linked to fuel types (and therefore to nozzles) so that meter readings can be **derived into ₹ using the catalog selling price** (per LOCKED Q1: litres/readings are the source of truth). The same entity carries daily **opening/closing stock and stock-received** so lubes and fuel inventory can be reconciled at settlement. This is the **keystone** feature: without a priced catalog, Daily Settlement (D1/D2/D6), per-nozzle auto-pricing (A4→D1), reports in litres/₹ (E1), and campaign/gift fulfilment (F1) cannot be built.
 
+> **Implementation status (2026-07-22):** ✅ **Catalog shipped on all surfaces** — `products` table + `Product` model (category enum fuel/lubricant/oil/additive, fuel-type linkage, `selling_price ≤ mrp` rule, single-active-fuel-per-type, `Product.fuel_price_for`), 14 rows seeded via migration, admin CRUD on the web (`Admin::ProductsController` + views + nav link), JSON API (`/api/v1/admin/products` + `/catalog`), and the native **Android admin Products screen** (`ui/admin/products/*` + a "Products" tile in admin Settings). `ProductPolicy` + serializer. Covered by model + web + API tests; Android compiles. **Deferred to Phase 2 (D2/D8):** the **stock ledger** (`product_stock_entries`).
+
 ## Requirements covered
 
 | ID | One-line |

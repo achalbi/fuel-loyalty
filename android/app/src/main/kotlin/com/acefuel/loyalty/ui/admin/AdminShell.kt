@@ -165,6 +165,7 @@ fun AdminShell(
                         onRewardRates = { onOpen(AdminRoutes.REWARD_RATES) },
                         onFuelTypes = { onOpen(AdminRoutes.FUEL_TYPES) },
                         onVehicleTypes = { onOpen(AdminRoutes.VEHICLE_TYPES) },
+                        onProducts = { onOpen(AdminRoutes.PRODUCTS) },
                         onPumps = { onOpen(AdminRoutes.PUMPS) },
                         onNotifications = { onOpen(AdminRoutes.SCHEDULES) },
                         onTheme = { onOpen(AdminRoutes.THEME) },
@@ -190,6 +191,7 @@ object AdminRoutes {
     const val USERS = "admin_users"
     const val FUEL_TYPES = "admin_fueltypes"
     const val VEHICLE_TYPES = "admin_vehicletypes"
+    const val PRODUCTS = "admin_products"
     const val PUMPS = "admin_pumps"
     const val REWARD_RATES = "admin_rewardrates"
     const val THEME = "admin_theme"

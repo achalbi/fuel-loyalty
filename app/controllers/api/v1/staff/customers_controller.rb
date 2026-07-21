@@ -11,7 +11,8 @@ module Api
           range = ::Admin::Dashboard::OverviewReport.period_range(
             preset: params[:preset], start_date: params[:start_date], end_date: params[:end_date]
           )
-          customers = customer_scope(params[:q].to_s.strip, range)
+          customer_type = Customer.customer_types.key?(params[:type].to_s) ? params[:type].to_s : nil
+          customers = customer_scope(params[:q].to_s.strip, range, customer_type)
           render json: { customers: customers.map { |c| CustomerSummarySerializer.call(c) } }, status: :ok
         end
 
@@ -162,7 +163,7 @@ module Api
           render json: CustomerProfileSerializer.call(customer.reload, RewardSetting.current), status: :ok
         end
 
-        def customer_scope(query, range = nil)
+        def customer_scope(query, range = nil, customer_type = nil)
           base = Customer.left_joins(:points_ledgers).includes(:vehicles)
                          .select("customers.*, COALESCE(SUM(points_ledgers.points), 0) AS total_points_sum")
                          .group("customers.id")
@@ -170,6 +171,8 @@ module Api
           # transacted in it and relax the blank-query top-3 cap so the drilled-in
           # list actually shows the period's customers.
           base = base.where(id: Transaction.where(created_at: range).select(:customer_id)) if range
+          # E4: filter by account type (OTP/drive_in/credit).
+          base = base.where(customer_type: customer_type) if customer_type
 
           if query.blank?
             base.order(Arel.sql("COALESCE(SUM(points_ledgers.points), 0) DESC, customers.created_at DESC"))

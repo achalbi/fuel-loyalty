@@ -41,6 +41,25 @@
       </div>
     </div>
 
+    <div>
+      <%= form.label :customer_type, "Account Type", class: "form-label" %>
+      <%= form.select :customer_type,
+        options_for_select([["Drive-in (walk-in cash)", "drive_in"], ["OTP / Fleet", "otp"], ["Credit account", "credit"]], customer.customer_type),
+        {}, class: "form-select" %>
+      <div class="form-text">How this customer is billed / treated — drives dashboard segmentation.</div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col">
+        <%= form.label :transport_name, "Transport / Fleet Name", class: "form-label" %>
+        <%= form.text_field :transport_name, class: "form-control", placeholder: "Optional" %>
+      </div>
+      <div class="col">
+        <%= form.label :approx_vehicle_count, "Approx. Vehicles", class: "form-label" %>
+        <%= form.number_field :approx_vehicle_count, class: "form-control", min: 0, placeholder: "Optional" %>
+      </div>
+    </div>
+
     <% if include_vehicle_fields %>
       <div class="<%= "d-none" if lock_vehicle_fields %>" data-registration-editable-group="vehicle_number">
         <%= form.label :vehicle_number, "Initial Vehicle Number", class: "form-label" %>

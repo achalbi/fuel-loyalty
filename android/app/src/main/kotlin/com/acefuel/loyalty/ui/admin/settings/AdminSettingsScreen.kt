@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.EvStation
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
@@ -62,6 +63,7 @@ fun AdminSettingsScreen(
     onRewardRates: () -> Unit,
     onFuelTypes: () -> Unit,
     onVehicleTypes: () -> Unit,
+    onProducts: () -> Unit,
     onPumps: () -> Unit,
     onNotifications: () -> Unit,
     onTheme: () -> Unit,
@@ -130,6 +132,13 @@ fun AdminSettingsScreen(
             leadingIcon = Icons.Filled.DirectionsCar,
             leadingTint = nayara.fuelDiesel,
             onClick = { haptics.tick(); onVehicleTypes() },
+        )
+        NayaraListRow(
+            title = "Products",
+            subtitle = "Priced catalog — fuels, lubricants, additives",
+            leadingIcon = Icons.Filled.Inventory2,
+            leadingTint = nayara.accentDefault,
+            onClick = { haptics.tick(); onProducts() },
         )
 
         SectionHeader("Station")
