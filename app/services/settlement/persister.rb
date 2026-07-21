@@ -8,20 +8,26 @@ module Settlement
 
     def self.call(...) = new(...).call
 
-    def initialize(settlement:, attributes:, actor:)
+    def initialize(settlement:, attributes:, actor:, admin_edit: false, change_reason: nil)
       @settlement = settlement
       @attributes = attributes || {}
       @actor = actor
+      @admin_edit = admin_edit
+      @change_reason = change_reason
     end
 
     def call
       ActiveRecord::Base.transaction do
+        before = @admin_edit ? Differ.snapshot(@settlement) : nil
+
         @settlement.assign_attributes(@attributes)
         @settlement.recorded_by ||= @actor
         snapshot_prices!
         stamp_submission
         @settlement.save!
-        Result.new(settlement: @settlement, change: nil, points_recomputed: false)
+
+        change = @admin_edit ? record_change!(before) : nil
+        Result.new(settlement: @settlement, change: change, points_recomputed: change&.recomputed_points || false)
       end
     end
 
@@ -58,6 +64,19 @@ module Settlement
 
       @settlement.submitted_at ||= Time.current if @settlement.submitted? || @settlement.reconciled?
       @settlement.locked = true if @settlement.reconciled?
+    end
+
+    # D9 — record an audit row for every admin edit; propagate a customer-linked
+    # discount change back to loyalty points (C5) inside this same transaction.
+    def record_change!(before)
+      diffs = Differ.diff(before, Differ.snapshot(@settlement))
+      recomputed = PointsRecomputeService.call(@settlement, diffs)
+      @settlement.audit_changes.create!(
+        changed_by: @actor,
+        change_reason: @change_reason,
+        field_diffs: diffs,
+        recomputed_points: recomputed
+      )
     end
   end
 end

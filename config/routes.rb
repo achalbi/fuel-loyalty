@@ -66,6 +66,10 @@ Rails.application.routes.draw do
         resources :fuel_pumps, only: %i[index create update destroy] do
           patch :feature_settings, on: :collection
         end
+        resources :settlements, only: %i[index show update] do
+          patch :reconcile, on: :member
+          get :summary, on: :collection
+        end
         get "reward_rates", to: "reward_rates#show"
         match "reward_rates", to: "reward_rates#update", via: %i[patch put]
         get "theme_settings", to: "theme_settings#show"
@@ -164,6 +168,9 @@ Rails.application.routes.draw do
       get :transaction_history, on: :member
     end
     resources :transactions, only: :index
+    resources :settlements, only: %i[index show edit update] do
+      patch :reconcile, on: :member
+    end
     resources :points_adjustments, only: %i[new create]
   end
 

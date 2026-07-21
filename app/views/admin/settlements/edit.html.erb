@@ -1,0 +1,21 @@
+<% content_for :title, "Edit Settlement" %>
+<% content_for :head do %>
+  <%= javascript_include_tag "settlement_form", "data-turbo-track": "reload", defer: true %>
+<% end %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Edit settlement <span class="badge text-bg-secondary align-middle"><%= @settlement.status.humanize %></span></h1>
+  <%= link_to "Back", admin_settlement_path(@settlement), class: "btn btn-outline-secondary btn-sm" %>
+</div>
+
+<p class="text-muted">Every change is recorded in the audit trail. Editing a discount line that is linked to a customer visit re-derives that transaction's ₹ and re-awards loyalty points.</p>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <%= render "staff/settlements/form",
+          admin_mode: true,
+          form_url: admin_settlement_path(@settlement),
+          form_method: :patch,
+          cancel_path: admin_settlement_path(@settlement) %>
+  </div>
+</div>

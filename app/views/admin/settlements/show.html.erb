@@ -1,0 +1,89 @@
+<% content_for :title, "Settlement" %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h3 mb-0"><%= @settlement.fuel_pump&.display_name %> · <%= @settlement.business_date %></h1>
+    <span class="badge text-bg-<%= @settlement.reconciled? ? "success" : (@settlement.submitted? ? "primary" : "secondary") %>"><%= @settlement.status.humanize %></span>
+    <span class="text-muted small">FSM: <%= @settlement.fsm_name_snapshot %></span>
+  </div>
+  <div class="d-flex gap-2">
+    <%= link_to "Back", admin_settlements_path, class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "Edit", edit_admin_settlement_path(@settlement), class: "btn btn-primary btn-sm" %>
+    <% unless @settlement.reconciled? %>
+      <%= button_to "Reconcile", reconcile_admin_settlement_path(@settlement), method: :patch,
+            class: "btn btn-success btn-sm", data: { turbo_confirm: "Reconcile and lock this settlement?" } %>
+    <% end %>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <% [["Fuel", @settlement.total_fuel_amount], ["Lubes", @settlement.total_lube_amount],
+      ["Discounts", @settlement.total_discount_amount], ["Credit", @settlement.total_credit_amount],
+      ["Final to settle", @settlement.final_amount_to_settle], ["Counted cash", @settlement.counted_cash_amount],
+      ["Shortage", @settlement.shortage_amount]].each do |label, value| %>
+    <div class="col-6 col-md-3">
+      <div class="card h-100"><div class="card-body py-2">
+        <div class="small text-muted"><%= label %></div>
+        <div class="fw-semibold"><%= number_to_currency(value, unit: "₹") %></div>
+      </div></div>
+    </div>
+  <% end %>
+</div>
+
+<h2 class="h5">Nozzle readings</h2>
+<div class="table-responsive mb-4">
+  <table class="table table-sm">
+    <thead><tr><th>Nozzle</th><th>Fuel</th><th class="text-end">Open</th><th class="text-end">Close</th><th class="text-end">Testing</th><th class="text-end">Net L</th><th class="text-end">₹/L</th><th class="text-end">Amount</th></tr></thead>
+    <tbody>
+      <% @settlement.nozzle_readings.each do |r| %>
+        <tr>
+          <td><%= r.fuel_pump_nozzle&.display_name %></td>
+          <td><%= r.fuel_type_code_snapshot.to_s.upcase %></td>
+          <td class="text-end"><%= r.opening_reading %></td>
+          <td class="text-end"><%= r.closing_reading %></td>
+          <td class="text-end"><%= r.testing_litres %></td>
+          <td class="text-end"><%= r.net_litres_sold %></td>
+          <td class="text-end"><%= number_to_currency(r.unit_price, unit: "₹") %></td>
+          <td class="text-end"><%= number_to_currency(r.amount, unit: "₹") %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<% if @settlement.discount_lines.any? %>
+  <h2 class="h5">Discounts</h2>
+  <ul class="mb-4">
+    <% @settlement.discount_lines.each do |d| %>
+      <li><%= d.transport_name.presence || d.driver_name.presence || "—" %>: <%= d.litres %> L → <%= number_to_currency(d.discount_amount, unit: "₹") %><% if d.visit_entry_id %> <span class="badge text-bg-light">linked</span><% end %></li>
+    <% end %>
+  </ul>
+<% end %>
+
+<h2 class="h5">Audit trail</h2>
+<% if @changes.any? %>
+  <div class="vstack gap-2 mb-4">
+    <% @changes.each do |change| %>
+      <div class="card">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between">
+            <strong><%= change.change_reason %></strong>
+            <span class="text-muted small"><%= change.changed_by&.display_name %> · <%= change.created_at&.strftime("%d %b %Y %H:%M") %></span>
+          </div>
+          <% if change.recomputed_points %><span class="badge text-bg-warning">Points recomputed</span><% end %>
+          <ul class="small mb-0 mt-1">
+            <% change.field_diffs.each do |field, (old_value, new_value)| %>
+              <% if old_value.is_a?(Array) || new_value.is_a?(Array) %>
+                <li><%= field.humanize %> lines changed</li>
+              <% else %>
+                <li><%= field.humanize %>: <span class="text-muted"><%= old_value.presence || "—" %></span> → <strong><%= new_value.presence || "—" %></strong></li>
+              <% end %>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <p class="text-muted">No edits recorded.</p>
+<% end %>

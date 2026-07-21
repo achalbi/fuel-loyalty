@@ -1,10 +1,13 @@
-<%# D1–D10 shift-end settlement form. Live totals are JS feedback only; the
-    server recomputes every derived ₹ on submit (settlement_form.js). %>
-<%= form_with model: @settlement,
-      url: (@settlement.persisted? ? staff_settlement_path(@settlement) : staff_settlements_path),
-      method: (@settlement.persisted? ? :patch : :post),
-      data: { settlement_form: true },
-      class: "vstack gap-4" do |form| %>
+<%# D1–D10 shift-end settlement form, shared by the staff capture flow and the
+    admin edit console. Live totals are JS feedback only; the server recomputes
+    every derived ₹ on submit (settlement_form.js). Locals: form_url, form_method,
+    cancel_path, admin_mode (adds a required change-reason + single Save). %>
+<% admin_mode = local_assigns.fetch(:admin_mode, false) %>
+<% form_url = local_assigns.fetch(:form_url, @settlement.persisted? ? staff_settlement_path(@settlement) : staff_settlements_path) %>
+<% form_method = local_assigns.fetch(:form_method, @settlement.persisted? ? :patch : :post) %>
+<% cancel_path = local_assigns.fetch(:cancel_path, staff_settlements_path) %>
+<%= form_with model: @settlement, url: form_url, method: form_method,
+      data: { settlement_form: true }, class: "vstack gap-4" do |form| %>
 
   <% if @settlement.errors.any? %>
     <div class="alert alert-danger"><%= @settlement.errors.full_messages.to_sentence %></div>
@@ -256,9 +259,21 @@
     <%= form.text_area :notes, rows: 2, class: "form-control" %>
   </div>
 
+  <% if admin_mode %>
+    <div>
+      <%= label_tag :change_reason, "Reason for change", class: "form-label" %>
+      <%= text_field_tag :change_reason, params[:change_reason], class: "form-control", required: true,
+            placeholder: "Required — recorded in the audit trail" %>
+    </div>
+  <% end %>
+
   <div class="d-flex gap-2 sticky-bottom bg-body py-2 border-top">
-    <%= form.button "Save draft", type: :submit, name: "settlement[status]", value: "draft", class: "btn btn-outline-secondary" %>
-    <%= form.button "Submit settlement", type: :submit, name: "settlement[status]", value: "submitted", class: "btn btn-primary" %>
-    <%= link_to "Cancel", staff_settlements_path, class: "btn btn-link ms-auto" %>
+    <% if admin_mode %>
+      <%= form.submit "Save changes", class: "btn btn-primary" %>
+    <% else %>
+      <%= form.button "Save draft", type: :submit, name: "settlement[status]", value: "draft", class: "btn btn-outline-secondary" %>
+      <%= form.button "Submit settlement", type: :submit, name: "settlement[status]", value: "submitted", class: "btn btn-primary" %>
+    <% end %>
+    <%= link_to "Cancel", cancel_path, class: "btn btn-link ms-auto" %>
   </div>
 <% end %>
