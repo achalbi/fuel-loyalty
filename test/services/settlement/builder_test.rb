@@ -1,0 +1,58 @@
+require "test_helper"
+
+module Settlement
+  class BuilderTest < ActiveSupport::TestCase
+    setup do
+      @pump = fuel_pumps(:one)
+      @petrol = fuel_pump_nozzles(:one)
+      @staff = users(:two)
+      @staff.update!(fuel_pump_id: @pump.id)
+      Product.create!(name: "MS", category: "fuel", fuel_type_code: "petrol", pack_unit: "litre", mrp: 110, selling_price: 105.5)
+      Product.create!(name: "HSD", category: "fuel", fuel_type_code: "diesel", pack_unit: "litre", mrp: 90, selling_price: 90)
+      @lube = Product.create!(name: "10W30", category: "lubricant", pack_size: 1, pack_unit: "L", mrp: 500, selling_price: 500)
+    end
+
+    test "auto-pops opening readings, snapshots catalog price, and pulls same-day discounts" do
+      DailySettlement.create!(
+        fuel_pump: @pump, business_date: Date.new(2026, 7, 20), recorded_by: @staff, status: "submitted",
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 5000, closing_reading: 5500, unit_price: 100 }]
+      )
+      VisitEntry.create!(
+        user: @staff, fuel_pump: @pump, entry_date: Date.new(2026, 7, 21),
+        vehicle_number: "TN01AA1111", litres: 40, discount_amount: 120, transport_name: "NL Roadways", driver_name: "Rao"
+      )
+      VisitEntry.create!(
+        user: @staff, fuel_pump: @pump, entry_date: Date.new(2026, 7, 21),
+        vehicle_number: "TN01AA1112", litres: 10, discount_amount: 0
+      ) # no discount → not pulled
+
+      result = Builder.call(user: @staff, business_date: "2026-07-21")
+
+      petrol_row = result.settlement.nozzle_readings.find { |r| r.fuel_pump_nozzle_id == @petrol.id }
+      assert_equal BigDecimal("5500"), petrol_row.opening_reading
+      assert_equal "prior_settlement", petrol_row.opening_source
+      assert_equal BigDecimal("105.5"), petrol_row.unit_price
+
+      diesel_row = result.settlement.nozzle_readings.find { |r| r.fuel_pump_nozzle_id == fuel_pump_nozzles(:two).id }
+      assert_nil diesel_row.opening_reading
+      assert_equal "manual", diesel_row.opening_source
+
+      assert_equal 1, result.settlement.discount_lines.size
+      assert_equal "NL Roadways", result.settlement.discount_lines.first.transport_name
+      assert_equal BigDecimal("120"), result.settlement.discount_lines.first.discount_amount
+
+      assert_includes result.lube_products.map(&:id), @lube.id
+      assert_equal SettlementCashDenomination::DENOMINATIONS, result.denominations
+      assert_nil result.existing
+    end
+
+    test "reports an existing settlement for the pump/date/shift" do
+      existing = DailySettlement.create!(
+        fuel_pump: @pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff,
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1, closing_reading: 2, unit_price: 100 }]
+      )
+      result = Builder.call(user: @staff, fuel_pump_id: @pump.id, business_date: "2026-07-21")
+      assert_equal existing.id, result.existing.id
+    end
+  end
+end

@@ -1,0 +1,96 @@
+module Settlement
+  # Builds a pre-filled (unsaved) settlement draft for a pump/date/shift:
+  # active nozzles with yesterday's closing auto-popped as today's opening
+  # (business rule 1) and the catalog selling price snapshotted, plus the
+  # same-day B2 discount lines (D3), the lube picklist (D2), and the cash
+  # denomination grid (D7). Returns the option lists the "new" API/UI needs.
+  class Builder
+    Result = Struct.new(
+      :settlement, :fuel_pump, :lube_products, :denominations, :existing,
+      keyword_init: true
+    )
+
+    def self.call(...) = new(...).call
+
+    def initialize(user:, fuel_pump_id: nil, business_date: nil, shift_template_id: nil)
+      @user = user
+      @fuel_pump = resolve_pump(fuel_pump_id)
+      @business_date = parse_date(business_date)
+      @shift_template_id = shift_template_id.presence
+    end
+
+    def call
+      settlement = DailySettlement.new(
+        fuel_pump: @fuel_pump,
+        business_date: @business_date,
+        shift_template_id: @shift_template_id,
+        recorded_by: @user,
+        fsm_name_snapshot: @user&.display_name
+      )
+
+      if @fuel_pump
+        build_nozzle_readings(settlement)
+        build_discount_lines(settlement)
+      end
+
+      Result.new(
+        settlement: settlement,
+        fuel_pump: @fuel_pump,
+        lube_products: lube_products,
+        denominations: SettlementCashDenomination::DENOMINATIONS,
+        existing: existing_settlement
+      )
+    end
+
+    private
+
+    def resolve_pump(fuel_pump_id)
+      pump = FuelPump.active.find_by(id: fuel_pump_id) if fuel_pump_id.present?
+      pump || @user&.transaction_fuel_pump
+    end
+
+    def parse_date(value)
+      return Date.current if value.blank?
+
+      Date.parse(value.to_s)
+    rescue ArgumentError, TypeError
+      Date.current
+    end
+
+    def existing_settlement
+      return nil if @fuel_pump.nil?
+
+      DailySettlement.find_by(
+        fuel_pump: @fuel_pump,
+        business_date: @business_date,
+        shift_template_id: @shift_template_id
+      )
+    end
+
+    def build_nozzle_readings(settlement)
+      @fuel_pump.nozzles.active.ordered.each do |nozzle|
+        prior = DailySettlement.prior_closing_reading(nozzle.id, @business_date)
+        settlement.nozzle_readings.build(
+          fuel_pump_nozzle: nozzle,
+          fuel_type_code_snapshot: nozzle.fuel_type_code,
+          opening_reading: prior,
+          opening_source: prior.present? ? "prior_settlement" : "manual",
+          unit_price: FuelPricing.current_price(nozzle.fuel_type_code)
+        )
+      end
+    end
+
+    # D3 — same-day captures for this pump that promised a discount.
+    def build_discount_lines(settlement)
+      VisitEntry
+        .for_pump_day(@fuel_pump, @business_date)
+        .where("discount_amount > 0")
+        .order(:created_at)
+        .each { |entry| settlement.discount_lines << SettlementDiscountLine.from_visit_entry(entry) }
+    end
+
+    def lube_products
+      Product.active.where.not(category: Product::FUEL_CATEGORY).ordered.to_a
+    end
+  end
+end
