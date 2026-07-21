@@ -18,6 +18,8 @@ import com.acefuel.loyalty.core.network.dto.RedemptionResponse
 import com.acefuel.loyalty.core.network.dto.RefreshRequest
 import com.acefuel.loyalty.core.network.dto.RegisterCustomerEnvelope
 import com.acefuel.loyalty.core.network.dto.RegisterCustomerResponse
+import com.acefuel.loyalty.core.network.dto.VisitEntryCreateResponse
+import com.acefuel.loyalty.core.network.dto.VisitEntryEnvelope
 import com.acefuel.loyalty.core.network.dto.StaffCustomerDto
 import com.acefuel.loyalty.core.network.dto.ThemeDto
 import com.acefuel.loyalty.core.network.dto.TransactionCreateEnvelope
@@ -76,6 +78,10 @@ interface AceFuelApi {
 
     @GET("api/v1/staff/customers/{id}/ledger")
     suspend fun staffCustomerLedger(@Path("id") id: Long, @Query("page") page: Int): LedgerPageDto
+
+    // B2 — FSM per-visit capture.
+    @POST("api/v1/staff/visit_entries")
+    suspend fun createVisitEntry(@Body body: VisitEntryEnvelope): VisitEntryCreateResponse
 
     @PATCH("api/v1/staff/customers/{id}/pause_rewards")
     suspend fun pauseRewards(@Path("id") id: Long): CustomerProfileDto

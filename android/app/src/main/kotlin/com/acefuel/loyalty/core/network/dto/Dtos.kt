@@ -278,6 +278,49 @@ data class CatalogResponse(
 @Serializable
 data class FuelTypeOptionDto(val code: String, val label: String)
 
+// B2 — FSM per-visit capture. Litres/discount go as strings to preserve the
+// operator's exact decimals; the backend casts them.
+@Serializable
+data class VisitEntryRequest(
+    @SerialName("vehicle_number") val vehicleNumber: String,
+    val litres: String,
+    @SerialName("fuel_pump_id") val fuelPumpId: Long? = null,
+    @SerialName("fuel_type_code") val fuelTypeCode: String? = null,
+    @SerialName("discount_amount") val discountAmount: String? = null,
+    @SerialName("fleet_otp") val fleetOtp: Boolean = false,
+    @SerialName("driver_name") val driverName: String? = null,
+    @SerialName("driver_phone_number") val driverPhoneNumber: String? = null,
+    @SerialName("transport_name") val transportName: String? = null,
+    @SerialName("manager_name") val managerName: String? = null,
+    @SerialName("manager_phone_number") val managerPhoneNumber: String? = null,
+    @SerialName("owner_name") val ownerName: String? = null,
+    @SerialName("owner_phone_number") val ownerPhoneNumber: String? = null,
+    @SerialName("approx_vehicle_count") val approxVehicleCount: Int? = null,
+)
+
+@Serializable
+data class VisitEntryEnvelope(@SerialName("visit_entry") val visitEntry: VisitEntryRequest)
+
+@Serializable
+data class VisitEntryDto(
+    val id: Long,
+    @SerialName("entry_date") val entryDate: String,
+    @SerialName("vehicle_number") val vehicleNumber: String,
+    @SerialName("customer_id") val customerId: Long? = null,
+    @SerialName("customer_name") val customerName: String? = null,
+    val litres: Double,
+    @SerialName("discount_amount") val discountAmount: Double,
+    @SerialName("fleet_otp") val fleetOtp: Boolean = false,
+    @SerialName("fuel_pump") val fuelPump: String? = null,
+)
+
+@Serializable
+data class VisitEntryCreateResponse(
+    @SerialName("visit_entry") val visitEntry: VisitEntryDto,
+    @SerialName("points_earned") val pointsEarned: Int? = null,
+    @SerialName("transaction_id") val transactionId: Long? = null,
+)
+
 @Serializable
 data class VehicleKindOptionDto(
     val code: String,

@@ -669,11 +669,11 @@ a:hover{text-decoration:underline}
 <h3 id="36-get-apiv1adminsettlementsid-patch-apiv1adminsettlementsid-new">3.6 <code>GET /api/v1/admin/settlements/:id</code> / <code>PATCH /api/v1/admin/settlements/:id</code> — <strong>New</strong></h3>
 <p>Auth: admin. Same shapes as 3.3/3.4 but unrestricted by pump; admin may edit past dates (G1 "edit current/past days").</p>
 <hr />
-<h2 id="4-customer-capture-per-visit-entry-b2-new">4. Customer capture — per-visit entry (B2) — <strong>New</strong></h2>
-<p>The FSM <code>CustomerDetailsEntry</code> sheet: captured many times per shift, independent of the loyalty transaction. Feeds §3.1 <code>discount_lines</code>.</p>
-<p><strong>Model note:</strong> <code>customer_entries</code> — <code>business_date</code>, <code>vehicle_number</code>, <code>driver_name</code>, <code>driver_mobile</code>, <code>litres</code>, <code>fuel_pump_id</code>, <code>discount_amount</code>, <code>fleet_otp</code> (bool), <code>transport_name</code>, <code>manager_name</code>, <code>manager_mobile</code>, <code>owner_name</code>, <code>owner_mobile</code>, <code>approx_vehicles</code> (int), <code>user_id</code> (capturing FSM), optional <code>customer_id</code> link.</p>
-<h3 id="41-post-apiv1staffcustomer_entries-new">4.1 <code>POST /api/v1/staff/customer_entries</code> — <strong>New</strong></h3>
-<p>Auth: staff/admin. Body (<code>customer_entry</code>):</p>
+<h2 id="4-customer-capture-per-visit-entry-b2-shipped-2026-07-22">4. Customer capture — per-visit entry (B2) — ✅ <strong>Shipped (2026-07-22)</strong></h2>
+<p>The FSM <code>CustomerDetailsEntry</code>: captured many times per shift, independent of the loyalty transaction. Feeds §3.1 <code>discount_lines</code>. <em>(Shipped as </em><em><code>visit_entries</code></em><em>; <code>entry_date</code> is the shift date and phone columns are <code>*_phone_number</code>.)</em></p>
+<p><strong>Model note:</strong> <code>visit_entries</code> — <code>entry_date</code>, <code>vehicle_number</code>, <code>driver_name</code>, <code>driver_phone_number</code>, <code>litres</code> (decimal, source of truth), <code>fuel_type_code</code>, <code>fuel_pump_id</code>, <code>discount_amount</code>, <code>fleet_otp</code> (bool), <code>transport_name</code>, <code>manager_name</code>, <code>manager_phone_number</code>, <code>owner_name</code>, <code>owner_phone_number</code>, <code>approx_vehicle_count</code> (int), <code>user_id</code> (capturing FSM), nullable <code>customer_id</code>/<code>vehicle_id</code> (anonymous plate), nullable <code>transaction_id</code>.</p>
+<h3 id="41-post-apiv1staffvisit_entries-shipped">4.1 <code>POST /api/v1/staff/visit_entries</code> — ✅ <strong>Shipped</strong></h3>
+<p>Auth: staff/admin. Body (<code>visit_entry</code>) with an optional top-level <code>create_transaction</code> (and <code>fuel_pump_nozzle_id</code> when the nozzle feature is on):</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -685,40 +685,28 @@ a:hover{text-decoration:underline}
 </thead>
 <tbody>
 <tr>
-<td><code>business_date</code></td>
-<td>date</td>
-<td>no</td>
-<td>default today</td>
-</tr>
-<tr>
 <td><code>vehicle_number</code></td>
 <td>string</td>
 <td>yes</td>
 <td>normalized server-side</td>
 </tr>
 <tr>
-<td><code>driver_name</code></td>
-<td>string</td>
-<td>no</td>
-<td></td>
-</tr>
-<tr>
-<td><code>driver_mobile</code></td>
-<td>string</td>
-<td>no</td>
-<td>10-digit</td>
-</tr>
-<tr>
 <td><code>litres</code></td>
-<td>number</td>
+<td>number/string</td>
 <td>yes</td>
-<td></td>
+<td><code>&gt; 0</code>; decimal(10,3)</td>
 </tr>
 <tr>
 <td><code>fuel_pump_id</code></td>
 <td>int</td>
 <td>no</td>
-<td>defaults to FSM's My Pump; overridable</td>
+<td>defaults to the caller's My Pump; overridable (must be active)</td>
+</tr>
+<tr>
+<td><code>fuel_type_code</code></td>
+<td>string</td>
+<td>no</td>
+<td>for later pricing</td>
 </tr>
 <tr>
 <td><code>discount_amount</code></td>
@@ -733,43 +721,57 @@ a:hover{text-decoration:underline}
 <td>default false</td>
 </tr>
 <tr>
+<td><code>driver_name</code> / <code>driver_phone_number</code></td>
+<td>string</td>
+<td>no</td>
+<td>phone 10-digit</td>
+</tr>
+<tr>
 <td><code>transport_name</code></td>
 <td>string</td>
 <td>no</td>
 <td></td>
 </tr>
 <tr>
-<td><code>manager_name</code> / <code>manager_mobile</code></td>
+<td><code>manager_name</code> / <code>manager_phone_number</code></td>
 <td>string</td>
 <td>no</td>
 <td></td>
 </tr>
 <tr>
-<td><code>owner_name</code> / <code>owner_mobile</code></td>
+<td><code>owner_name</code> / <code>owner_phone_number</code></td>
 <td>string</td>
 <td>no</td>
 <td></td>
 </tr>
 <tr>
-<td><code>approx_vehicles</code></td>
+<td><code>approx_vehicle_count</code></td>
 <td>int</td>
 <td>no</td>
 <td></td>
 </tr>
+<tr>
+<td><code>entry_date</code></td>
+<td>date</td>
+<td>no</td>
+<td>default today</td>
+</tr>
 </tbody>
 </table></div>
+<p>The backend resolves the customer/vehicle from the plate, upserts the driver/manager/owner contacts, and (when <code>create_transaction=true</code> with a resolved customer + vehicle) links a <code>transaction_id</code> via <code>TransactionCreator</code>.</p>
 <p>Response <code>201</code>:</p>
-<pre><code class="language-json">{ &quot;customer_entry&quot;: { &quot;id&quot;: 55, &quot;business_date&quot;: &quot;2026-07-21&quot;, &quot;vehicle_number&quot;: &quot;NL01AE2471&quot;,
-  &quot;driver_name&quot;: &quot;Ravi&quot;, &quot;driver_mobile&quot;: &quot;9800000000&quot;, &quot;litres&quot;: 136.0, &quot;fuel_pump_id&quot;: 3,
+<pre><code class="language-json">{ &quot;visit_entry&quot;: { &quot;id&quot;: 55, &quot;entry_date&quot;: &quot;2026-07-21&quot;, &quot;vehicle_number&quot;: &quot;NL01AE2471&quot;,
+  &quot;customer_id&quot;: 42, &quot;customer_name&quot;: &quot;Ravi&quot;, &quot;vehicle_id&quot;: 88, &quot;fuel_pump_id&quot;: 3, &quot;fuel_pump&quot;: &quot;Pump 3&quot;,
+  &quot;driver_name&quot;: &quot;Ravi&quot;, &quot;driver_phone_number&quot;: &quot;9800000000&quot;, &quot;litres&quot;: 136.0, &quot;fuel_type_code&quot;: &quot;hsd&quot;,
   &quot;discount_amount&quot;: 272.0, &quot;fleet_otp&quot;: true, &quot;transport_name&quot;: &quot;ABC Logistics&quot;,
-  &quot;manager_name&quot;: null, &quot;owner_name&quot;: null, &quot;approx_vehicles&quot;: 12,
-  &quot;created_at&quot;: &quot;2026-07-21T14:00:00Z&quot; } }
+  &quot;approx_vehicle_count&quot;: 12, &quot;transaction_id&quot;: null, &quot;created_at&quot;: &quot;2026-07-21T14:00:00Z&quot; },
+  &quot;points_earned&quot;: null, &quot;transaction_id&quot;: null }
 </code></pre>
-<p>Errors: <code>422 invalid_vehicle</code>, <code>422 validation_failed</code>.</p>
-<h3 id="42-get-apiv1staffcustomer_entries-new">4.2 <code>GET /api/v1/staff/customer_entries</code> — <strong>New</strong></h3>
-<p>Auth: staff/admin. Query: <code>date</code> (default today), <code>fuel_pump_id</code>, <code>vehicle_number</code>, <code>page</code>. Paginated <code>customer_entries</code> envelope (rows as 4.1). Used to review the day and to seed settlement discounts.</p>
-<h3 id="43-patch-apiv1staffcustomer_entriesid-delete-id-new">4.3 <code>PATCH /api/v1/staff/customer_entries/:id</code> / <code>DELETE …/:id</code> — <strong>New</strong></h3>
-<p>Auth: staff/admin (own captures; admin any). Standard update/<code>204</code>. Errors <code>404</code>, <code>422</code>.</p>
+<p>Errors: <code>422 validation_failed</code> (missing vehicle number, non-positive litres, no resolvable pump).</p>
+<h3 id="42-get-apiv1staffvisit_entriesdatefuel_pump_id-shipped">4.2 <code>GET /api/v1/staff/visit_entries?date=&amp;fuel_pump_id=</code> — ✅ <strong>Shipped</strong></h3>
+<p>Auth: staff/admin. Defaults to the caller's My Pump + today. Response <code>{ visit_entries: [ … ], total, date, fuel_pump_id }</code> — the day-review + settlement-discount pull.</p>
+<h3 id="43-patchdelete-visit_entriesid-planned">4.3 <code>PATCH</code>/<code>DELETE …/visit_entries/:id</code> — planned</h3>
+<p>Admin past-day editing lands with D9/G1 (settlement review/edit).</p>
 <hr />
 <h2 id="5-customer-master-contacts-type-b1-e4-shipped-2026-07-22">5. Customer master — contacts + type (B1, E4) — ✅ <strong>Shipped (2026-07-22)</strong></h2>
 <p>Extends the customer record from "name + single phone (+ commercial contact)" to a <strong><code>customer_contacts</code> child table</strong> (driver / supervisor / owner / manager, each with a phone + a <code>contacted</code> marker + notes), transport master fields, and a <code>customer_type</code> taxonomy. <em>(Implemented as a child table rather than a fixed name/mobile triple, so a customer can carry any number of role contacts.)</em></p>

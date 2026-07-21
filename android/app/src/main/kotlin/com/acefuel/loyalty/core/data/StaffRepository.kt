@@ -23,6 +23,9 @@ import com.acefuel.loyalty.core.network.dto.StaffCustomerDto
 import com.acefuel.loyalty.core.network.dto.TransactionCreateEnvelope
 import com.acefuel.loyalty.core.network.dto.TransactionCreateRequest
 import com.acefuel.loyalty.core.network.dto.TransactionCreateResponse
+import com.acefuel.loyalty.core.network.dto.VisitEntryCreateResponse
+import com.acefuel.loyalty.core.network.dto.VisitEntryEnvelope
+import com.acefuel.loyalty.core.network.dto.VisitEntryRequest
 import com.acefuel.loyalty.core.network.dto.VehicleMatchDto
 import kotlinx.serialization.json.Json
 
@@ -122,4 +125,8 @@ class StaffRepository(
 
     suspend fun createTransaction(request: TransactionCreateRequest): ApiResult<TransactionCreateResponse> =
         apiCall(json) { api.createTransaction(TransactionCreateEnvelope(request)) }
+
+    // B2 — record an FSM per-visit capture.
+    suspend fun createVisitEntry(request: VisitEntryRequest): ApiResult<VisitEntryCreateResponse> =
+        apiCall(json) { api.createVisitEntry(VisitEntryEnvelope(request)) }
 }

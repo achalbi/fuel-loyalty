@@ -60,7 +60,7 @@ requirements only — it does **not** propose designs, schemas, or implementatio
 | ID | Title | Source sheet | Description | Acceptance criteria | Status |
 |---|---|---|---|---|---|
 | B1 | Customer master | Admin | Admin maintains a customer master keyed by vehicle registration, with driver / supervisor / owner contacts and a contacted-by record. | • A customer record holds vehicle registration number and, separately, **driver name+mobile**, **supervisor name+mobile**, and **owner name+mobile**.<br>• A "contacted-by" selector records whether contact is via owner, supervisor, or driver, with an info affordance showing that contact's details.<br>• Admin can create, search, edit, and deactivate a customer.<br>• The record supports a customer **type** (OTP/Fleet, Drive-in, Credit) used by dashboard and campaigns. | Present |
-| B2 | FSM per-visit customer details entry | Staff_FSM / CustomerDetailsEntry | FSM captures a visit record many times per day at the forecourt. | • Form fields: Date (auto-populated, editable), Vehicle#, Driver Name, Driver Mobile, Number of Litres filled, Pump# (defaults to the FSM's pump, overridable), Discount Amount, Fleet/OTP (Yes/No, default No), Transport Name, Manager Name, Manager Mobile, Owner Name, Owner Mobile, Approx Number of Vehicles.<br>• Litres is captured directly; ₹ is derived from catalog selling price (Q1).<br>• A single FSM can submit multiple entries within one shift/day.<br>• Same-day entries are retrievable by pump/date so Daily Settlement can pull discounts (see D3). | Partial |
+| B2 | FSM per-visit customer details entry | Staff_FSM / CustomerDetailsEntry | FSM captures a visit record many times per day at the forecourt. | • Form fields: Date (auto-populated, editable), Vehicle#, Driver Name, Driver Mobile, Number of Litres filled, Pump# (defaults to the FSM's pump, overridable), Discount Amount, Fleet/OTP (Yes/No, default No), Transport Name, Manager Name, Manager Mobile, Owner Name, Owner Mobile, Approx Number of Vehicles.<br>• Litres is captured directly; ₹ is derived from catalog selling price (Q1).<br>• A single FSM can submit multiple entries within one shift/day.<br>• Same-day entries are retrievable by pump/date so Daily Settlement can pull discounts (see D3). | Present |
 
 ---
 
@@ -150,8 +150,8 @@ requirements only — it does **not** propose designs, schemas, or implementatio
 
 | Status | Count | IDs |
 |---|---|---|
-| Present | 19 | A1, A2, A3, A4, A5, A6, A8, A9, A10, B1, C1, C2, C3, C4, C5, E2, E4, S-PAUSE, S-MYPUMP |
-| Partial | 5 | A7, B2, E3, F3, G1 |
+| Present | 20 | A1, A2, A3, A4, A5, A6, A8, A9, A10, B1, B2, C1, C2, C3, C4, C5, E2, E4, S-PAUSE, S-MYPUMP |
+| Partial | 4 | A7, E3, F3, G1 |
 | Absent | 17 | D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, E1, E5, E6, E7, F1, F2, F4 |
 
-Total: **41 features** — 19 Present, 5 Partial, 17 Absent. *(Phase 0 complete; Phase 1: **A5 Product Catalog**, **litres/readings model**, **B1 customer master + contacts**, **E4 customer-type segmentation** shipped.)*
+Total: **41 features** — 20 Present, 4 Partial, 17 Absent. *(Phase 0 complete; Phase 1: **A5 Product Catalog**, **litres/readings model**, **B1 customer master + contacts**, **E4 customer-type segmentation**, **B2 per-visit capture** shipped.)*

@@ -260,7 +260,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Staff_FSM / CustomerDetailsEntry</td>
 <td>FSM captures a visit record many times per day at the forecourt.</td>
 <td>• Form fields: Date (auto-populated, editable), Vehicle#, Driver Name, Driver Mobile, Number of Litres filled, Pump# (defaults to the FSM's pump, overridable), Discount Amount, Fleet/OTP (Yes/No, default No), Transport Name, Manager Name, Manager Mobile, Owner Name, Owner Mobile, Approx Number of Vehicles.<br>• Litres is captured directly; ₹ is derived from catalog selling price (Q1).<br>• A single FSM can submit multiple entries within one shift/day.<br>• Same-day entries are retrievable by pump/date so Daily Settlement can pull discounts (see D3).</td>
-<td>Partial</td>
+<td>Present</td>
 </tr>
 </tbody>
 </table></div>
@@ -653,13 +653,13 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <tbody>
 <tr>
 <td>Present</td>
-<td>19</td>
-<td>A1, A2, A3, A4, A5, A6, A8, A9, A10, B1, C1, C2, C3, C4, C5, E2, E4, S-PAUSE, S-MYPUMP</td>
+<td>20</td>
+<td>A1, A2, A3, A4, A5, A6, A8, A9, A10, B1, B2, C1, C2, C3, C4, C5, E2, E4, S-PAUSE, S-MYPUMP</td>
 </tr>
 <tr>
 <td>Partial</td>
-<td>5</td>
-<td>A7, B2, E3, F3, G1</td>
+<td>4</td>
+<td>A7, E3, F3, G1</td>
 </tr>
 <tr>
 <td>Absent</td>
@@ -668,7 +668,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 </tr>
 </tbody>
 </table></div>
-<p>Total: <strong>41 features</strong> — 19 Present, 5 Partial, 17 Absent. <em>(Phase 0 complete; Phase 1: </em><em>A5 Product Catalog</em><em>, </em><em>litres/readings model</em><em>, </em><em>B1 customer master + contacts</em><em>, </em><em>E4 customer-type segmentation</em><em> shipped.)</em></p>
+<p>Total: <strong>41 features</strong> — 20 Present, 4 Partial, 17 Absent. <em>(Phase 0 complete; Phase 1: </em><em>A5 Product Catalog</em><em>, </em><em>litres/readings model</em><em>, </em><em>B1 customer master + contacts</em><em>, </em><em>E4 customer-type segmentation</em><em>, </em><em>B2 per-visit capture</em><em> shipped.)</em></p>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
   <span class="fnote">Generated from 01-functional-requirements.md &middot; 2026-07-21</span>

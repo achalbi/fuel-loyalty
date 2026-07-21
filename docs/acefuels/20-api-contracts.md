@@ -285,45 +285,48 @@ Auth: admin. Same shapes as 3.3/3.4 but unrestricted by pump; admin may edit pas
 
 ---
 
-## 4. Customer capture — per-visit entry (B2) — **New**
+## 4. Customer capture — per-visit entry (B2) — ✅ **Shipped (2026-07-22)**
 
-The FSM `CustomerDetailsEntry` sheet: captured many times per shift, independent of the loyalty transaction. Feeds §3.1 `discount_lines`.
+The FSM `CustomerDetailsEntry`: captured many times per shift, independent of the loyalty transaction. Feeds §3.1 `discount_lines`. *(Shipped as **`visit_entries`**; `entry_date` is the shift date and phone columns are `*_phone_number`.)*
 
-**Model note:** `customer_entries` — `business_date`, `vehicle_number`, `driver_name`, `driver_mobile`, `litres`, `fuel_pump_id`, `discount_amount`, `fleet_otp` (bool), `transport_name`, `manager_name`, `manager_mobile`, `owner_name`, `owner_mobile`, `approx_vehicles` (int), `user_id` (capturing FSM), optional `customer_id` link.
+**Model note:** `visit_entries` — `entry_date`, `vehicle_number`, `driver_name`, `driver_phone_number`, `litres` (decimal, source of truth), `fuel_type_code`, `fuel_pump_id`, `discount_amount`, `fleet_otp` (bool), `transport_name`, `manager_name`, `manager_phone_number`, `owner_name`, `owner_phone_number`, `approx_vehicle_count` (int), `user_id` (capturing FSM), nullable `customer_id`/`vehicle_id` (anonymous plate), nullable `transaction_id`.
 
-### 4.1 `POST /api/v1/staff/customer_entries` — **New**
-Auth: staff/admin. Body (`customer_entry`):
+### 4.1 `POST /api/v1/staff/visit_entries` — ✅ **Shipped**
+Auth: staff/admin. Body (`visit_entry`) with an optional top-level `create_transaction` (and `fuel_pump_nozzle_id` when the nozzle feature is on):
 
 | field | type | req | notes |
 |---|---|---|---|
-| `business_date` | date | no | default today |
 | `vehicle_number` | string | yes | normalized server-side |
-| `driver_name` | string | no | |
-| `driver_mobile` | string | no | 10-digit |
-| `litres` | number | yes | |
-| `fuel_pump_id` | int | no | defaults to FSM's My Pump; overridable |
+| `litres` | number/string | yes | `> 0`; decimal(10,3) |
+| `fuel_pump_id` | int | no | defaults to the caller's My Pump; overridable (must be active) |
+| `fuel_type_code` | string | no | for later pricing |
 | `discount_amount` | number | no | default 0 |
 | `fleet_otp` | bool | no | default false |
+| `driver_name` / `driver_phone_number` | string | no | phone 10-digit |
 | `transport_name` | string | no | |
-| `manager_name` / `manager_mobile` | string | no | |
-| `owner_name` / `owner_mobile` | string | no | |
-| `approx_vehicles` | int | no | |
+| `manager_name` / `manager_phone_number` | string | no | |
+| `owner_name` / `owner_phone_number` | string | no | |
+| `approx_vehicle_count` | int | no | |
+| `entry_date` | date | no | default today |
+
+The backend resolves the customer/vehicle from the plate, upserts the driver/manager/owner contacts, and (when `create_transaction=true` with a resolved customer + vehicle) links a `transaction_id` via `TransactionCreator`.
 
 Response `201`:
 ```json
-{ "customer_entry": { "id": 55, "business_date": "2026-07-21", "vehicle_number": "NL01AE2471",
-  "driver_name": "Ravi", "driver_mobile": "9800000000", "litres": 136.0, "fuel_pump_id": 3,
+{ "visit_entry": { "id": 55, "entry_date": "2026-07-21", "vehicle_number": "NL01AE2471",
+  "customer_id": 42, "customer_name": "Ravi", "vehicle_id": 88, "fuel_pump_id": 3, "fuel_pump": "Pump 3",
+  "driver_name": "Ravi", "driver_phone_number": "9800000000", "litres": 136.0, "fuel_type_code": "hsd",
   "discount_amount": 272.0, "fleet_otp": true, "transport_name": "ABC Logistics",
-  "manager_name": null, "owner_name": null, "approx_vehicles": 12,
-  "created_at": "2026-07-21T14:00:00Z" } }
+  "approx_vehicle_count": 12, "transaction_id": null, "created_at": "2026-07-21T14:00:00Z" },
+  "points_earned": null, "transaction_id": null }
 ```
-Errors: `422 invalid_vehicle`, `422 validation_failed`.
+Errors: `422 validation_failed` (missing vehicle number, non-positive litres, no resolvable pump).
 
-### 4.2 `GET /api/v1/staff/customer_entries` — **New**
-Auth: staff/admin. Query: `date` (default today), `fuel_pump_id`, `vehicle_number`, `page`. Paginated `customer_entries` envelope (rows as 4.1). Used to review the day and to seed settlement discounts.
+### 4.2 `GET /api/v1/staff/visit_entries?date=&fuel_pump_id=` — ✅ **Shipped**
+Auth: staff/admin. Defaults to the caller's My Pump + today. Response `{ visit_entries: [ … ], total, date, fuel_pump_id }` — the day-review + settlement-discount pull.
 
-### 4.3 `PATCH /api/v1/staff/customer_entries/:id` / `DELETE …/:id` — **New**
-Auth: staff/admin (own captures; admin any). Standard update/`204`. Errors `404`, `422`.
+### 4.3 `PATCH`/`DELETE …/visit_entries/:id` — planned
+Admin past-day editing lands with D9/G1 (settlement review/edit).
 
 ---
 

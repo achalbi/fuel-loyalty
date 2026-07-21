@@ -294,8 +294,8 @@
     <div class="stats">
       <div class="stat total">
         <div class="n">41</div><div class="l">Features assessed</div>
-        <div class="bar" role="img" aria-label="46% present, 12% partial, 42% absent">
-          <i class="p" style="width:46.3%"></i><i class="q" style="width:12.2%"></i><i class="a" style="width:41.5%"></i>
+        <div class="bar" role="img" aria-label="49% present, 10% partial, 41% absent">
+          <i class="p" style="width:48.8%"></i><i class="q" style="width:9.8%"></i><i class="a" style="width:41.5%"></i>
         </div>
         <div class="bar-key">
           <span><i class="dot" style="background:var(--present)"></i>Present</span>
@@ -303,11 +303,11 @@
           <span><i class="dot" style="background:var(--absent)"></i>Absent</span>
         </div>
       </div>
-      <div class="stat present"><div class="n">19</div><div class="l">Present</div></div>
-      <div class="stat partial"><div class="n">5</div><div class="l">Partial</div></div>
+      <div class="stat present"><div class="n">20</div><div class="l">Present</div></div>
+      <div class="stat partial"><div class="n">4</div><div class="l">Partial</div></div>
       <div class="stat absent"><div class="n">17</div><div class="l">Absent</div></div>
     </div>
-    <p class="meta" style="margin-top:18px"><b style="color:var(--present)">Phase 0 complete ✅ · Phase 1 in progress.</b> &nbsp;Phase 1: ✅ <b>A5 Product Catalog</b> · ✅ <b>litres/readings model</b> · ✅ <b>B1 customer master + contacts</b> · ✅ <b>E4 customer-type segmentation</b> (both surfaces, tested — native contact-editing folds into B2). Next: B2 per-visit capture, push-token linkage.</p>
+    <p class="meta" style="margin-top:18px"><b style="color:var(--present)">Phase 0 complete ✅ · Phase 1 nearly done.</b> &nbsp;Phase 1: ✅ <b>A5 Product Catalog</b> · ✅ <b>litres/readings model</b> · ✅ <b>B1 customer master + contacts</b> · ✅ <b>E4 customer-type segmentation</b> · ✅ <b>B2 per-visit capture</b> (visit_entries on both surfaces, tested). Last foundation: push-token ↔ customer linkage, then Phase 2 (Daily Settlement).</p>
   </div>
 </header>
 
@@ -382,7 +382,7 @@
       <h3>Customer capture <span class="rng">B1–B2</span></h3>
       <p class="gsub">Customer master details and the FSM per-visit entry form.</p>
       <div class="feat" data-status="present"><span class="fid">B1</span><div class="fmain"><div class="ftitle">Customer master details</div><div class="fgap">✅ <b>Shipped</b> — account type + transport / approx-vehicle-count fields and a <code style="font-family:var(--mono);font-size:12px">customer_contacts</code> table (driver / supervisor / owner / manager, each with a phone + a <em>contacted-by</em> marker). Web editing (nested form) + display of the contacts and type on both <b>web + Android</b> profile, tested. <em>(Native contact-<b>editing</b> lands with the B2 capture form.)</em></div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
-      <div class="feat" data-status="partial"><span class="fid">B2</span><div class="fmain"><div class="ftitle">FSM per-visit CustomerDetailsEntry</div><div class="fgap">No dedicated form. Only a ₹ transaction (overlaps ~2 of 11 fields). Missing litres, discount, Fleet/OTP flag, transport / manager / owner, approx # of vehicles, editable date.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="L">L</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">B2</span><div class="fmain"><div class="ftitle">FSM per-visit CustomerDetailsEntry</div><div class="fgap">✅ <b>Shipped</b> — a dedicated <code style="font-family:var(--mono);font-size:12px">visit_entries</code> capture (litres as the source of truth, discount, Fleet/OTP, pump defaulting to My Pump &amp; overridable, driver / manager / owner, transport, approx vehicles), distinct from the ₹ transaction. Records anonymously for an unregistered plate, upserts the customer's contacts, and can link a loyalty transaction. Capture form + per-pump/day list on <b>web</b>, a Capture Visit screen on <b>Android</b>, <code style="font-family:var(--mono);font-size:12px">POST/GET /api/v1/staff/visit_entries</code>, tested. <em>(Plate-scanner prefill + admin past-day editing land with the D-series settlement.)</em></div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
     </div>
 
     <div class="fgroup">
