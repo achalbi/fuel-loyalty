@@ -59,7 +59,7 @@ requirements only — it does **not** propose designs, schemas, or implementatio
 
 | ID | Title | Source sheet | Description | Acceptance criteria | Status |
 |---|---|---|---|---|---|
-| B1 | Customer master | Admin | Admin maintains a customer master keyed by vehicle registration, with driver / supervisor / owner contacts and a contacted-by record. | • A customer record holds vehicle registration number and, separately, **driver name+mobile**, **supervisor name+mobile**, and **owner name+mobile**.<br>• A "contacted-by" selector records whether contact is via owner, supervisor, or driver, with an info affordance showing that contact's details.<br>• Admin can create, search, edit, and deactivate a customer.<br>• The record supports a customer **type** (OTP/Fleet, Drive-in, Credit) used by dashboard and campaigns. | Partial |
+| B1 | Customer master | Admin | Admin maintains a customer master keyed by vehicle registration, with driver / supervisor / owner contacts and a contacted-by record. | • A customer record holds vehicle registration number and, separately, **driver name+mobile**, **supervisor name+mobile**, and **owner name+mobile**.<br>• A "contacted-by" selector records whether contact is via owner, supervisor, or driver, with an info affordance showing that contact's details.<br>• Admin can create, search, edit, and deactivate a customer.<br>• The record supports a customer **type** (OTP/Fleet, Drive-in, Credit) used by dashboard and campaigns. | Present |
 | B2 | FSM per-visit customer details entry | Staff_FSM / CustomerDetailsEntry | FSM captures a visit record many times per day at the forecourt. | • Form fields: Date (auto-populated, editable), Vehicle#, Driver Name, Driver Mobile, Number of Litres filled, Pump# (defaults to the FSM's pump, overridable), Discount Amount, Fleet/OTP (Yes/No, default No), Transport Name, Manager Name, Manager Mobile, Owner Name, Owner Mobile, Approx Number of Vehicles.<br>• Litres is captured directly; ₹ is derived from catalog selling price (Q1).<br>• A single FSM can submit multiple entries within one shift/day.<br>• Same-day entries are retrievable by pump/date so Daily Settlement can pull discounts (see D3). | Partial |
 
 ---
@@ -100,7 +100,7 @@ requirements only — it does **not** propose designs, schemas, or implementatio
 | E1 | Reports (periodic, by dimension) | Admin | Daily/weekly/monthly/yearly reports per vehicle, transporter, and driver. | • Reports can be generated for daily, weekly, monthly, and yearly periods.<br>• Reports can be grouped by vehicle, transporter, and driver.<br>• Metrics include litres, discount, and gifts/rewards.<br>• Report output is exportable. | Absent |
 | E2 | Customers by period (dashboard) | Admin | Dashboard buckets customers by today / this week / last 30 days / last month, with drill-through. | • Dashboard shows customer counts for today, this week, last 30 days, and last month.<br>• Each tile/leaderboard entry drills through to the underlying period-filtered customer list.<br>• Counts are consistent with the selected period. | ✅ Present |
 | E3 | Visit cadence per customer | Admin | Per-customer/transporter last-visit and cadence classification (daily/weekly/biweekly). | • Each customer/transporter shows a last-visit date.<br>• The system classifies visit cadence as daily, weekly, or biweekly.<br>• Cadence is derived from actual visit history. | Partial |
-| E4 | Customer-type view | Admin | Dashboard segments customers by type: OTP (Fleet) / Drive-in / Credit. | • Dashboard can filter/segment customers by type OTP/Fleet, Drive-in, and Credit.<br>• Counts per type are shown.<br>• Type is sourced from the customer master (B1). | Absent |
+| E4 | Customer-type view | Admin | Dashboard segments customers by type: OTP (Fleet) / Drive-in / Credit. | • Dashboard can filter/segment customers by type OTP/Fleet, Drive-in, and Credit.<br>• Counts per type are shown.<br>• Type is sourced from the customer master (B1). | Present |
 | E5 | Contact tracking + conversion probability | Admin | Track how many customers were contacted, when last contacted, and a conversion likelihood. | • Dashboard shows contacted count and last-contact date per customer/segment.<br>• A conversion-probability indicator is presented.<br>• Contact data derives from the contacted-by record (B1). | Absent |
 | E6 | Lost-customer / churn detection | Admin | Intelligent detection of customers who have lapsed (e.g. visited last week, not this week). | • The system flags customers who visited in a prior period but not the current one.<br>• Flagged (lost) customers are surfaced as a "reach out" list.<br>• Detection uses visit-cadence history (E3). | Absent |
 | E7 | Customer feedback / rating | Admin | Capture and view customer feedback and ratings. | • A customer feedback/rating can be recorded.<br>• Aggregated or per-customer feedback is viewable in the dashboard.<br>• Feedback is associated with the correct customer. | Absent |
@@ -150,8 +150,8 @@ requirements only — it does **not** propose designs, schemas, or implementatio
 
 | Status | Count | IDs |
 |---|---|---|
-| Present | 17 | A1, A2, A3, A4, A5, A6, A8, A9, A10, C1, C2, C3, C4, C5, E2, S-PAUSE, S-MYPUMP |
-| Partial | 6 | A7, B1, B2, E3, F3, G1 |
-| Absent | 18 | D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, E1, E4, E5, E6, E7, F1, F2, F4 |
+| Present | 19 | A1, A2, A3, A4, A5, A6, A8, A9, A10, B1, C1, C2, C3, C4, C5, E2, E4, S-PAUSE, S-MYPUMP |
+| Partial | 5 | A7, B2, E3, F3, G1 |
+| Absent | 17 | D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, E1, E5, E6, E7, F1, F2, F4 |
 
-Total: **41 features** — 17 Present, 6 Partial, 18 Absent. *(Phase 0 complete; Phase 1: **A5 Product Catalog** shipped on every surface.)*
+Total: **41 features** — 19 Present, 5 Partial, 17 Absent. *(Phase 0 complete; Phase 1: **A5 Product Catalog**, **litres/readings model**, **B1 customer master + contacts**, **E4 customer-type segmentation** shipped.)*

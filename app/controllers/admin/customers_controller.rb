@@ -42,7 +42,7 @@ module Admin
     def update
       @customer = Customer.includes(:vehicles, transactions: %i[user vehicle]).find(params[:id])
       authorize @customer
-      @customer.assign_attributes(customer_params.slice(:name, :phone_number, :customer_type, :transport_name, :approx_vehicle_count, :info_note))
+      @customer.assign_attributes(customer_params.slice(:name, :phone_number, :customer_type, :transport_name, :approx_vehicle_count, :info_note, :customer_contacts_attributes))
       @customer.phone_number = Customer.normalize_phone_number(customer_params[:phone_number])
 
       if @customer.save

@@ -38,6 +38,12 @@
         <div class="customer-details-hero__meta">
           <span class="customer-details-hero__chip"><strong><%= @customer.transactions.size %></strong> visits</span>
           <span class="customer-details-hero__chip"><strong><%= persisted_vehicles.size %></strong> vehicles</span>
+          <% unless @customer.drive_in? %>
+            <span class="customer-details-hero__chip"><%= @customer.customer_type == "otp" ? "OTP / Fleet" : "Credit" %></span>
+          <% end %>
+          <% if @customer.transport_name.present? %>
+            <span class="customer-details-hero__chip">Transport: <strong><%= @customer.transport_name %></strong></span>
+          <% end %>
           <% if @customer.rewards_paused? %>
             <span class="customer-details-hero__chip customer-details-hero__chip--warning">Rewards Paused</span>
           <% end %>
@@ -316,6 +322,53 @@
     </div>
 
     <div class="customer-details-stack">
+
+      <% customer_contacts = @customer.customer_contacts.active.order(:role) %>
+      <div class="card shadow-sm loyalty-result-card customer-details-section">
+        <div class="card-body">
+          <div class="customer-details-section__header customer-details-section__header--with-action">
+            <div>
+              <h2 class="h5 mb-1">Contacts</h2>
+              <p class="text-muted mb-0">Drivers, supervisors and owners linked to this account.</p>
+            </div>
+            <% if can_edit_customer %>
+              <div class="customer-details-section__header-actions">
+                <button
+                  type="button"
+                  class="customer-details-quick-action"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editCustomerModal"
+                  aria-label="Edit contacts"
+                  title="Edit contacts">
+                  <i class="ti ti-pencil" aria-hidden="true"></i>
+                </button>
+              </div>
+            <% end %>
+          </div>
+
+          <% if customer_contacts.any? %>
+            <div class="customer-details-vehicle-list">
+              <% customer_contacts.each do |contact| %>
+                <div class="customer-details-vehicle-row">
+                  <div class="customer-details-vehicle-row__main">
+                    <div class="customer-details-vehicle-row__number">
+                      <%= contact.name.presence || contact.display_role %>
+                      <% if contact.contacted? %>
+                        <i class="ti ti-circle-check-filled text-success" title="Contacted" aria-hidden="true"></i>
+                      <% end %>
+                    </div>
+                    <div class="customer-details-vehicle-row__meta">
+                      <%= contact.display_role %><% if contact.phone_number.present? %> · +91 <%= contact.phone_number %><% end %>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-muted mb-0">No contacts added yet.</p>
+          <% end %>
+        </div>
+      </div>
 
       <div class="card shadow-sm loyalty-result-card customer-details-section">
         <div class="card-body">

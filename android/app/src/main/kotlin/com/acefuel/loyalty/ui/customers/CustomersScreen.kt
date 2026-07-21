@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.filled.PeopleOutline
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -54,6 +56,14 @@ import com.acefuel.loyalty.ui.designsystem.rememberHaptics
 import com.acefuel.loyalty.ui.designsystem.showError
 import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
+
+// E4: account-type filter chips (null value = all accounts).
+private val CUSTOMER_TYPE_FILTERS: List<Pair<String?, String>> = listOf(
+    null to "All",
+    "drive_in" to "Drive-in",
+    "otp" to "OTP / Fleet",
+    "credit" to "Credit",
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,6 +108,24 @@ fun CustomersScreen(
                     vertical = NayaraSpacing.Md,
                 ),
             )
+
+            // E4: account-type filter (server-side ?type=).
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = NayaraSpacing.ScreenMargin),
+                horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm),
+            ) {
+                CUSTOMER_TYPE_FILTERS.forEach { (value, label) ->
+                    FilterChip(
+                        selected = state.typeFilter == value,
+                        onClick = { viewModel.onTypeFilterChange(value) },
+                        label = { Text(label) },
+                    )
+                }
+            }
+            Spacer(Modifier.height(NayaraSpacing.Sm))
 
             NayaraPullToRefresh(
                 isRefreshing = state.refreshing,

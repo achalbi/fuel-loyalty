@@ -10,10 +10,34 @@ module Api
             points_until_redeemable: customer.points_until_redeemable,
             joined_at: customer.created_at.iso8601,
             visits_count: customer.transactions.size,
+            # B1/E4 — account taxonomy + the fleet/transport master fields.
+            customer_type: customer.customer_type,
+            customer_type_label: customer_type_label(customer.customer_type),
+            transport_name: customer.transport_name,
+            approx_vehicle_count: customer.approx_vehicle_count,
+            info_note: customer.info_note,
+            contacts: customer.customer_contacts.active.map { |contact| contact_json(contact) },
             vehicles: customer.vehicles.map { |vehicle| vehicle_json(vehicle) },
             recent_transactions: customer.recent_transactions(3).map { |txn| transaction_json(txn) },
             transactions_count: customer.transactions.size,
           )
+        end
+
+        def self.customer_type_label(customer_type)
+          { "otp" => "OTP / Fleet", "credit" => "Credit", "drive_in" => "Drive-in" }[customer_type.to_s]
+        end
+
+        def self.contact_json(contact)
+          {
+            id: contact.id,
+            role: contact.role,
+            role_label: contact.display_role,
+            name: contact.name,
+            phone_number: contact.phone_number,
+            contacted: contact.contacted?,
+            contacted_at: contact.contacted_at&.iso8601,
+            notes: contact.notes,
+          }
         end
 
         def self.vehicle_json(vehicle)

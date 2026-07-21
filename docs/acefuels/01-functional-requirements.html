@@ -252,7 +252,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Admin maintains a customer master keyed by vehicle registration, with driver / supervisor / owner contacts and a contacted-by record.</td>
 <td>• A customer record holds vehicle registration number and, separately, <strong>driver name+mobile</strong>, <strong>supervisor name+mobile</strong>, and <strong>owner name+mobile</strong>.<br>• A "contacted-by" selector records whether contact is via owner, supervisor, or driver, with an info affordance showing that contact's details.<br>• Admin can create, search, edit, and deactivate a customer.<br>• The record supports a customer <strong>type</strong> (OTP/Fleet, Drive-in, Credit) used by dashboard and campaigns.</td>
-<td>Partial</td>
+<td>Present</td>
 </tr>
 <tr>
 <td>B2</td>
@@ -460,7 +460,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Dashboard segments customers by type: OTP (Fleet) / Drive-in / Credit.</td>
 <td>• Dashboard can filter/segment customers by type OTP/Fleet, Drive-in, and Credit.<br>• Counts per type are shown.<br>• Type is sourced from the customer master (B1).</td>
-<td>Absent</td>
+<td>Present</td>
 </tr>
 <tr>
 <td>E5</td>
@@ -653,22 +653,22 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <tbody>
 <tr>
 <td>Present</td>
-<td>17</td>
-<td>A1, A2, A3, A4, A5, A6, A8, A9, A10, C1, C2, C3, C4, C5, E2, S-PAUSE, S-MYPUMP</td>
+<td>19</td>
+<td>A1, A2, A3, A4, A5, A6, A8, A9, A10, B1, C1, C2, C3, C4, C5, E2, E4, S-PAUSE, S-MYPUMP</td>
 </tr>
 <tr>
 <td>Partial</td>
-<td>6</td>
-<td>A7, B1, B2, E3, F3, G1</td>
+<td>5</td>
+<td>A7, B2, E3, F3, G1</td>
 </tr>
 <tr>
 <td>Absent</td>
-<td>18</td>
-<td>D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, E1, E4, E5, E6, E7, F1, F2, F4</td>
+<td>17</td>
+<td>D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, E1, E5, E6, E7, F1, F2, F4</td>
 </tr>
 </tbody>
 </table></div>
-<p>Total: <strong>41 features</strong> — 17 Present, 6 Partial, 18 Absent. <em>(Phase 0 complete; Phase 1: </em><em>A5 Product Catalog</em><em> shipped on every surface.)</em></p>
+<p>Total: <strong>41 features</strong> — 19 Present, 5 Partial, 17 Absent. <em>(Phase 0 complete; Phase 1: </em><em>A5 Product Catalog</em><em>, </em><em>litres/readings model</em><em>, </em><em>B1 customer master + contacts</em><em>, </em><em>E4 customer-type segmentation</em><em> shipped.)</em></p>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
   <span class="fnote">Generated from 01-functional-requirements.md &middot; 2026-07-21</span>

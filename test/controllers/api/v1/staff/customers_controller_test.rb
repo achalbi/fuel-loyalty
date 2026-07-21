@@ -31,6 +31,40 @@ module Api
           assert_response :ok
           assert_operator response.parsed_body["customers"].size, :<=, 3
         end
+
+        test "index filters by account type (E4)" do
+          otp = Customer.create!(name: "Fleet Fran", phone_number: "9812300021", customer_type: :otp)
+          otp.vehicles.create!(vehicle_number: "TN01ZZ0021", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+          drive = Customer.create!(name: "Walkin Will", phone_number: "9812300022", customer_type: :drive_in)
+          drive.vehicles.create!(vehicle_number: "TN01ZZ0022", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+          get api_v1_staff_customers_path(type: "otp"), headers: auth_headers(users(:two))
+
+          assert_response :ok
+          names = response.parsed_body["customers"].map { |c| c["name"] }
+          assert_includes names, "Fleet Fran"
+          assert_not_includes names, "Walkin Will"
+        end
+
+        test "profile exposes the account type and contacts (B1/E4)" do
+          customer = customers(:one)
+          customer.update!(customer_type: :otp, transport_name: "Ace Transport")
+          customer.customer_contacts.create!(role: "driver", name: "Ravi", phone_number: "9000011122", contacted: true)
+
+          get api_v1_staff_customer_path(customer), headers: auth_headers(users(:two))
+
+          assert_response :ok
+          body = response.parsed_body
+          assert_equal "otp", body["customer_type"]
+          assert_equal "OTP / Fleet", body["customer_type_label"]
+          assert_equal "Ace Transport", body["transport_name"]
+          assert_equal 1, body["contacts"].size
+          contact = body["contacts"].first
+          assert_equal "driver", contact["role"]
+          assert_equal "Driver", contact["role_label"]
+          assert_equal "Ravi", contact["name"]
+          assert contact["contacted"]
+        end
       end
     end
   end

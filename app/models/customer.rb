@@ -8,7 +8,10 @@ class Customer < ApplicationRecord
   has_many :vehicles, -> { order(:vehicle_number) }, dependent: :destroy
   has_many :customer_contacts, dependent: :destroy
   belongs_to :primary_contact, class_name: "CustomerContact", optional: true
-  accepts_nested_attributes_for :customer_contacts, allow_destroy: true, reject_if: :all_blank
+  # A contact row only persists if it carries a name or phone — a role picked on
+  # an otherwise-empty row is treated as an untouched blank and dropped.
+  accepts_nested_attributes_for :customer_contacts, allow_destroy: true,
+    reject_if: ->(attrs) { attrs["name"].blank? && attrs["phone_number"].blank? }
 
   # E4 — account-type segmentation (OTP = fleet/credit account, drive-in = walk-in
   # cash, credit = credit account). Backfilled to drive_in for existing rows.

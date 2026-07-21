@@ -327,27 +327,20 @@ Auth: staff/admin (own captures; admin any). Standard update/`204`. Errors `404`
 
 ---
 
-## 5. Customer master — contacts + type (B1, E4) — **Changed**
+## 5. Customer master — contacts + type (B1, E4) — ✅ **Shipped (2026-07-22)**
 
-Extends the customer record from "name + single phone (+ commercial contact)" to the full driver/supervisor/owner triple, a `contacted_by` marker, and a `customer_type`.
+Extends the customer record from "name + single phone (+ commercial contact)" to a **`customer_contacts` child table** (driver / supervisor / owner / manager, each with a phone + a `contacted` marker + notes), transport master fields, and a `customer_type` taxonomy. *(Implemented as a child table rather than a fixed name/mobile triple, so a customer can carry any number of role contacts.)*
 
-**Model note (added to `customers`):** `driver_name`, `driver_mobile`, `supervisor_name`, `supervisor_mobile`, `owner_name`, `owner_mobile`, `contacted_by` (`owner`|`supervisor`|`driver`|null), `customer_type` (`otp`|`credit`|`drivein`|null — taxonomy *to confirm*).
+**Model note (added to `customers`):** `customer_type` (`drive_in`|`otp`|`credit`, default `drive_in`), `transport_name`, `approx_vehicle_count`, `info_note`, `primary_contact_id`. **New table `customer_contacts`:** `customer_id`, `role` (`driver`|`supervisor`|`owner`|`manager`), `name`, `phone_number`, `contacted` (bool), `contacted_at`, `notes`, `active`.
 
-### 5.1 `POST /api/v1/staff/customers` & `PATCH /api/v1/staff/customers/:id` — **Changed**
-Auth: staff/admin. Body (`customer`) — existing fields plus **new** (all optional):
+### 5.1 `GET /api/v1/staff/customers?type=` — **Changed (E4)**
+Auth: staff/admin. New optional query `type` (`drive_in`|`otp`|`credit`) filters the list server-side; combines with `q` and the E2 period params. `CustomerSummarySerializer` now includes `customer_type` and `transport_name`.
 
-| field | type | notes |
-|---|---|---|
-| `driver_name`, `driver_mobile` | string | |
-| `supervisor_name`, `supervisor_mobile` | string | |
-| `owner_name`, `owner_mobile` | string | |
-| `contacted_by` | enum | `owner`\|`supervisor`\|`driver` |
-| `customer_type` | enum | `otp`\|`credit`\|`drivein` |
+### 5.2 `POST /api/v1/staff/customers` & `PATCH /api/v1/staff/customers/:id`
+Auth: staff/admin. Body (`customer`) — existing fields plus optional `customer_type`, `transport_name`, `approx_vehicle_count`, `info_note`, and nested `customer_contacts_attributes` (`id`, `role`, `name`, `phone_number`, `contacted`, `notes`, `active`, `_destroy`). A contact row persists only if it carries a name or phone. Existing initial-vehicle fields (`vehicle_number`, `fuel_type`, `vehicle_kind`, `commercial_*`) unchanged. *(The nested-contacts editor is live on the **web** customer form; the native contacts write UI folds into B2.)*
 
-Existing initial-vehicle fields (`vehicle_number`, `fuel_type`, `vehicle_kind`, `commercial_*`) unchanged. Response: `CustomerProfileSerializer` extended with the new fields. Errors: existing `422 validation_failed`; `422` for unknown enum values.
-
-### 5.2 `GET /api/v1/staff/customers/:id` & `/lookup` — **Changed**
-Serializers (`CustomerProfileSerializer`, `CustomerLookupSerializer`) gain the contact triple, `contacted_by`, and `customer_type`. No request change.
+### 5.3 `GET /api/v1/staff/customers/:id` — **Changed**
+`CustomerProfileSerializer` gains `customer_type`, `customer_type_label`, `transport_name`, `approx_vehicle_count`, `info_note`, and a `contacts` array (`id`, `role`, `role_label`, `name`, `phone_number`, `contacted`, `contacted_at`, `notes`). No request change. `CustomerLookupSerializer` is unchanged.
 
 ---
 

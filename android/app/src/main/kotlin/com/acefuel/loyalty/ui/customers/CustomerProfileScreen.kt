@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Agriculture
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.LocalShipping
@@ -51,6 +52,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
+import com.acefuel.loyalty.core.network.dto.CustomerContactDto
 import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
 import com.acefuel.loyalty.core.network.dto.LedgerEntryDto
 import com.acefuel.loyalty.core.network.dto.StaffVehicleDto
@@ -169,6 +171,15 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
                             }
                         }
 
+                        item { SectionHeader("Contacts") }
+                        if (profile.contacts.isEmpty()) {
+                            item { EmptyNote("No contacts added yet.") }
+                        } else {
+                            items(profile.contacts, key = { "contact-${it.id}" }) {
+                                ContactCard(it, modifier = Modifier.animateItem())
+                            }
+                        }
+
                         item { SectionHeader("Recent Transactions") }
                         if (profile.recentTransactions.isEmpty()) {
                             item { EmptyNote("No transactions recorded yet.") }
@@ -265,6 +276,10 @@ private fun HeroCard(p: CustomerProfileDto) {
         ) {
             InfoChip("${p.visitsCount} visits")
             InfoChip("${p.vehicles.size} vehicles")
+            // B1/E4 — surface the account taxonomy (drive-in is the default, so
+            // only the notable OTP/Fleet & Credit accounts get a chip).
+            p.customerTypeLabel?.takeIf { p.customerType != null && p.customerType != "drive_in" }?.let { InfoChip(it) }
+            p.transportName?.takeIf { it.isNotBlank() }?.let { InfoChip("Transport: $it") }
             InfoChip("Joined ${formatMonthYear(p.joinedAt)}")
             if (p.rewardsPaused) InfoChip("Rewards Paused")
             p.maxRedeemableCashReward?.let { InfoChip("Cash ₹%.2f".format(it)) }
@@ -377,6 +392,38 @@ private fun VehicleCard(v: StaffVehicleDto, modifier: Modifier = Modifier) {
                 if (v.commercial && !v.commercialContactName.isNullOrBlank()) {
                     Text("Contact: ${v.commercialContactName}", style = MaterialTheme.typography.bodySmall)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContactCard(c: CustomerContactDto, modifier: Modifier = Modifier) {
+    NayaraCard(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(NayaraSpacing.Lg),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xxs),
+            ) {
+                Text(c.name?.ifBlank { null } ?: c.roleLabel, fontWeight = FontWeight.SemiBold)
+                val meta = listOfNotNull(c.roleLabel, c.phoneNumber?.let { "+91 $it" }).joinToString(" · ")
+                if (meta.isNotBlank()) {
+                    Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.nayara.textSecondary)
+                }
+                c.notes?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.nayara.textTertiary)
+                }
+            }
+            if (c.contacted) {
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = "Contacted",
+                    tint = MaterialTheme.nayara.statusSuccessText,
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
     }

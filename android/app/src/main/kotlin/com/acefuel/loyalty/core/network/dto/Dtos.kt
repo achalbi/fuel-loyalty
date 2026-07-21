@@ -171,8 +171,27 @@ data class CustomerProfileDto(
     @SerialName("joined_at") val joinedAt: String,
     @SerialName("visits_count") val visitsCount: Int,
     @SerialName("transactions_count") val transactionsCount: Int,
+    // B1/E4 — account taxonomy + fleet master fields.
+    @SerialName("customer_type") val customerType: String? = null,
+    @SerialName("customer_type_label") val customerTypeLabel: String? = null,
+    @SerialName("transport_name") val transportName: String? = null,
+    @SerialName("approx_vehicle_count") val approxVehicleCount: Int? = null,
+    @SerialName("info_note") val infoNote: String? = null,
+    val contacts: List<CustomerContactDto> = emptyList(),
     val vehicles: List<StaffVehicleDto> = emptyList(),
     @SerialName("recent_transactions") val recentTransactions: List<TransactionSummaryDto> = emptyList(),
+)
+
+@Serializable
+data class CustomerContactDto(
+    val id: Long,
+    val role: String,
+    @SerialName("role_label") val roleLabel: String,
+    val name: String? = null,
+    @SerialName("phone_number") val phoneNumber: String? = null,
+    val contacted: Boolean = false,
+    @SerialName("contacted_at") val contactedAt: String? = null,
+    val notes: String? = null,
 )
 
 @Serializable

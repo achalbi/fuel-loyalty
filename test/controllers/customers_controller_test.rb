@@ -19,6 +19,83 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "9000000011", customers(:one).reload.phone_number
   end
 
+  test "staff can set the account type and transport fields" do
+    sign_in users(:two)
+    customer = customers(:one)
+
+    patch customer_path(customer), params: {
+      customer: {
+        name: customer.name,
+        phone_number: customer.phone_number,
+        customer_type: "otp",
+        transport_name: "Ace Transport",
+        approx_vehicle_count: 12
+      }
+    }
+
+    assert_redirected_to customer_path(customer)
+    customer.reload
+    assert_equal "otp", customer.customer_type
+    assert_equal "Ace Transport", customer.transport_name
+    assert_equal 12, customer.approx_vehicle_count
+  end
+
+  test "staff can add contacts via nested attributes and blanks are dropped" do
+    sign_in users(:two)
+    customer = customers(:one)
+
+    patch customer_path(customer), params: {
+      customer: {
+        name: customer.name,
+        phone_number: customer.phone_number,
+        customer_contacts_attributes: {
+          "0" => { role: "driver", name: "Ravi", phone_number: "9000011122", contacted: "1" },
+          "1" => { role: "owner", name: "", phone_number: "" }
+        }
+      }
+    }
+
+    assert_redirected_to customer_path(customer)
+    contacts = customer.reload.customer_contacts
+    assert_equal 1, contacts.count, "the all-blank owner row should be rejected"
+    contact = contacts.first
+    assert_equal "driver", contact.role
+    assert_equal "Ravi", contact.name
+    assert contact.contacted?
+    assert_not_nil contact.contacted_at
+  end
+
+  test "staff can remove a customer contact via _destroy" do
+    sign_in users(:two)
+    customer = customers(:one)
+    contact = customer.customer_contacts.create!(role: "driver", name: "Ravi", phone_number: "9000011122")
+
+    patch customer_path(customer), params: {
+      customer: {
+        name: customer.name,
+        phone_number: customer.phone_number,
+        customer_contacts_attributes: { "0" => { id: contact.id, _destroy: "1" } }
+      }
+    }
+
+    assert_redirected_to customer_path(customer)
+    assert_equal 0, customer.reload.customer_contacts.count
+  end
+
+  test "staff customer page shows the account type chip and contacts" do
+    sign_in users(:two)
+    customer = customers(:one)
+    customer.update!(customer_type: "otp")
+    customer.customer_contacts.create!(role: "driver", name: "Ravi", phone_number: "9000011122", contacted: true)
+
+    get customer_path(customer)
+
+    assert_response :success
+    assert_select ".customer-details-hero__chip", text: "OTP / Fleet"
+    assert_select ".customer-details-section h2", text: "Contacts"
+    assert_select ".customer-details-vehicle-row__number", text: /Ravi/
+  end
+
   test "staff customer page keeps points ledger collapsed and loads the full ledger inline" do
     sign_in users(:two)
     RewardSetting.current.update!(cash_value_per_point: 0.5)

@@ -18,6 +18,8 @@ data class CustomersUiState(
     val loading: Boolean = false,
     val refreshing: Boolean = false,
     val customers: List<CustomerSummaryDto> = emptyList(),
+    // E4: null = all accounts; otherwise one of drive_in / otp / credit.
+    val typeFilter: String? = null,
     val error: String? = null,
 )
 
@@ -55,13 +57,22 @@ class CustomersViewModel(
 
     fun retry() = search(_state.value.query)
 
+    // E4: switch the account-type filter and reload immediately (no debounce).
+    fun onTypeFilterChange(type: String?) {
+        if (_state.value.typeFilter == type) return
+        _state.update { it.copy(typeFilter = type) }
+        searchJob?.cancel()
+        search(_state.value.query)
+    }
+
     fun consumeError() = _state.update { it.copy(error = null) }
 
     private fun search(query: String, asRefresh: Boolean = false) {
         val epoch = ++searchEpoch
         _state.update { it.copy(loading = !asRefresh, refreshing = asRefresh, error = null) }
+        val type = _state.value.typeFilter
         viewModelScope.launch {
-            val result = repository.customers(query, startDate, endDate)
+            val result = repository.customers(query, startDate, endDate, type)
             if (epoch != searchEpoch) return@launch // superseded by a newer search
             when (result) {
                 is ApiResult.Success ->

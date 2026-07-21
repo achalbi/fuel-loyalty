@@ -40,7 +40,10 @@ class CustomersController < ApplicationController
   private
 
   def customer_params
-    params.require(:customer).permit(:name, :phone_number)
+    params.require(:customer).permit(
+      :name, :phone_number, :customer_type, :transport_name, :approx_vehicle_count, :info_note,
+      customer_contacts_attributes: %i[id role name phone_number contacted notes active _destroy]
+    )
   end
 
   def set_customer

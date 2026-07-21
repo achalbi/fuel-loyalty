@@ -44,9 +44,15 @@ class StaffRepository(
         query: String?,
         startDate: String? = null,
         endDate: String? = null,
+        type: String? = null,
     ): ApiResult<List<CustomerSummaryDto>> =
         apiCall(json) {
-            api.staffCustomers(query?.ifBlank { null }, startDate?.ifBlank { null }, endDate?.ifBlank { null }).customers
+            api.staffCustomers(
+                query?.ifBlank { null },
+                startDate?.ifBlank { null },
+                endDate?.ifBlank { null },
+                type?.ifBlank { null },
+            ).customers
         }
 
     suspend fun customerProfile(id: Long): ApiResult<CustomerProfileDto> =

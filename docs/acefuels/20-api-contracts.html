@@ -771,50 +771,15 @@ a:hover{text-decoration:underline}
 <h3 id="43-patch-apiv1staffcustomer_entriesid-delete-id-new">4.3 <code>PATCH /api/v1/staff/customer_entries/:id</code> / <code>DELETE …/:id</code> — <strong>New</strong></h3>
 <p>Auth: staff/admin (own captures; admin any). Standard update/<code>204</code>. Errors <code>404</code>, <code>422</code>.</p>
 <hr />
-<h2 id="5-customer-master-contacts-type-b1-e4-changed">5. Customer master — contacts + type (B1, E4) — <strong>Changed</strong></h2>
-<p>Extends the customer record from "name + single phone (+ commercial contact)" to the full driver/supervisor/owner triple, a <code>contacted_by</code> marker, and a <code>customer_type</code>.</p>
-<p><strong>Model note (added to <code>customers</code>):</strong> <code>driver_name</code>, <code>driver_mobile</code>, <code>supervisor_name</code>, <code>supervisor_mobile</code>, <code>owner_name</code>, <code>owner_mobile</code>, <code>contacted_by</code> (<code>owner</code>|<code>supervisor</code>|<code>driver</code>|null), <code>customer_type</code> (<code>otp</code>|<code>credit</code>|<code>drivein</code>|null — taxonomy <em>to confirm</em>).</p>
-<h3 id="51-post-apiv1staffcustomers-patch-apiv1staffcustomersid-changed">5.1 <code>POST /api/v1/staff/customers</code> &amp; <code>PATCH /api/v1/staff/customers/:id</code> — <strong>Changed</strong></h3>
-<p>Auth: staff/admin. Body (<code>customer</code>) — existing fields plus <strong>new</strong> (all optional):</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>field</th>
-<th>type</th>
-<th>notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>driver_name</code>, <code>driver_mobile</code></td>
-<td>string</td>
-<td></td>
-</tr>
-<tr>
-<td><code>supervisor_name</code>, <code>supervisor_mobile</code></td>
-<td>string</td>
-<td></td>
-</tr>
-<tr>
-<td><code>owner_name</code>, <code>owner_mobile</code></td>
-<td>string</td>
-<td></td>
-</tr>
-<tr>
-<td><code>contacted_by</code></td>
-<td>enum</td>
-<td><code>owner</code>|<code>supervisor</code>|<code>driver</code></td>
-</tr>
-<tr>
-<td><code>customer_type</code></td>
-<td>enum</td>
-<td><code>otp</code>|<code>credit</code>|<code>drivein</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>Existing initial-vehicle fields (<code>vehicle_number</code>, <code>fuel_type</code>, <code>vehicle_kind</code>, <code>commercial_*</code>) unchanged. Response: <code>CustomerProfileSerializer</code> extended with the new fields. Errors: existing <code>422 validation_failed</code>; <code>422</code> for unknown enum values.</p>
-<h3 id="52-get-apiv1staffcustomersid-lookup-changed">5.2 <code>GET /api/v1/staff/customers/:id</code> &amp; <code>/lookup</code> — <strong>Changed</strong></h3>
-<p>Serializers (<code>CustomerProfileSerializer</code>, <code>CustomerLookupSerializer</code>) gain the contact triple, <code>contacted_by</code>, and <code>customer_type</code>. No request change.</p>
+<h2 id="5-customer-master-contacts-type-b1-e4-shipped-2026-07-22">5. Customer master — contacts + type (B1, E4) — ✅ <strong>Shipped (2026-07-22)</strong></h2>
+<p>Extends the customer record from "name + single phone (+ commercial contact)" to a <strong><code>customer_contacts</code> child table</strong> (driver / supervisor / owner / manager, each with a phone + a <code>contacted</code> marker + notes), transport master fields, and a <code>customer_type</code> taxonomy. <em>(Implemented as a child table rather than a fixed name/mobile triple, so a customer can carry any number of role contacts.)</em></p>
+<p><strong>Model note (added to <code>customers</code>):</strong> <code>customer_type</code> (<code>drive_in</code>|<code>otp</code>|<code>credit</code>, default <code>drive_in</code>), <code>transport_name</code>, <code>approx_vehicle_count</code>, <code>info_note</code>, <code>primary_contact_id</code>. <strong>New table <code>customer_contacts</code>:</strong> <code>customer_id</code>, <code>role</code> (<code>driver</code>|<code>supervisor</code>|<code>owner</code>|<code>manager</code>), <code>name</code>, <code>phone_number</code>, <code>contacted</code> (bool), <code>contacted_at</code>, <code>notes</code>, <code>active</code>.</p>
+<h3 id="51-get-apiv1staffcustomerstype-changed-e4">5.1 <code>GET /api/v1/staff/customers?type=</code> — <strong>Changed (E4)</strong></h3>
+<p>Auth: staff/admin. New optional query <code>type</code> (<code>drive_in</code>|<code>otp</code>|<code>credit</code>) filters the list server-side; combines with <code>q</code> and the E2 period params. <code>CustomerSummarySerializer</code> now includes <code>customer_type</code> and <code>transport_name</code>.</p>
+<h3 id="52-post-apiv1staffcustomers-patch-apiv1staffcustomersid">5.2 <code>POST /api/v1/staff/customers</code> &amp; <code>PATCH /api/v1/staff/customers/:id</code></h3>
+<p>Auth: staff/admin. Body (<code>customer</code>) — existing fields plus optional <code>customer_type</code>, <code>transport_name</code>, <code>approx_vehicle_count</code>, <code>info_note</code>, and nested <code>customer_contacts_attributes</code> (<code>id</code>, <code>role</code>, <code>name</code>, <code>phone_number</code>, <code>contacted</code>, <code>notes</code>, <code>active</code>, <code>_destroy</code>). A contact row persists only if it carries a name or phone. Existing initial-vehicle fields (<code>vehicle_number</code>, <code>fuel_type</code>, <code>vehicle_kind</code>, <code>commercial_*</code>) unchanged. <em>(The nested-contacts editor is live on the </em><em>web</em><em> customer form; the native contacts write UI folds into B2.)</em></p>
+<h3 id="53-get-apiv1staffcustomersid-changed">5.3 <code>GET /api/v1/staff/customers/:id</code> — <strong>Changed</strong></h3>
+<p><code>CustomerProfileSerializer</code> gains <code>customer_type</code>, <code>customer_type_label</code>, <code>transport_name</code>, <code>approx_vehicle_count</code>, <code>info_note</code>, and a <code>contacts</code> array (<code>id</code>, <code>role</code>, <code>role_label</code>, <code>name</code>, <code>phone_number</code>, <code>contacted</code>, <code>contacted_at</code>, <code>notes</code>). No request change. <code>CustomerLookupSerializer</code> is unchanged.</p>
 <hr />
 <h2 id="6-global-reward-pause-c4-changed">6. Global reward pause (C4) — <strong>Changed</strong></h2>
 <p>Adds an outlet-wide pause switch alongside the existing per-customer pause. Belongs to the reward-settings endpoint, not a new route.</p>

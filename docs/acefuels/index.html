@@ -294,8 +294,8 @@
     <div class="stats">
       <div class="stat total">
         <div class="n">41</div><div class="l">Features assessed</div>
-        <div class="bar" role="img" aria-label="41% present, 15% partial, 44% absent">
-          <i class="p" style="width:41.5%"></i><i class="q" style="width:14.6%"></i><i class="a" style="width:43.9%"></i>
+        <div class="bar" role="img" aria-label="46% present, 12% partial, 42% absent">
+          <i class="p" style="width:46.3%"></i><i class="q" style="width:12.2%"></i><i class="a" style="width:41.5%"></i>
         </div>
         <div class="bar-key">
           <span><i class="dot" style="background:var(--present)"></i>Present</span>
@@ -303,11 +303,11 @@
           <span><i class="dot" style="background:var(--absent)"></i>Absent</span>
         </div>
       </div>
-      <div class="stat present"><div class="n">17</div><div class="l">Present</div></div>
-      <div class="stat partial"><div class="n">6</div><div class="l">Partial</div></div>
-      <div class="stat absent"><div class="n">18</div><div class="l">Absent</div></div>
+      <div class="stat present"><div class="n">19</div><div class="l">Present</div></div>
+      <div class="stat partial"><div class="n">5</div><div class="l">Partial</div></div>
+      <div class="stat absent"><div class="n">17</div><div class="l">Absent</div></div>
     </div>
-    <p class="meta" style="margin-top:18px"><b style="color:var(--present)">Phase 0 complete ✅ · Phase 1 in progress.</b> &nbsp;Phase 1: ✅ <b>A5 Product Catalog</b> · ✅ <b>litres/readings model</b> · 🟡 <b>B1/E4 customer type + contacts</b> (backend + web shipped, tested — Android + contact-editing UI pending) shipped. Next: B2 per-visit capture, push-token linkage.</p>
+    <p class="meta" style="margin-top:18px"><b style="color:var(--present)">Phase 0 complete ✅ · Phase 1 in progress.</b> &nbsp;Phase 1: ✅ <b>A5 Product Catalog</b> · ✅ <b>litres/readings model</b> · ✅ <b>B1 customer master + contacts</b> · ✅ <b>E4 customer-type segmentation</b> (both surfaces, tested — native contact-editing folds into B2). Next: B2 per-visit capture, push-token linkage.</p>
   </div>
 </header>
 
@@ -381,7 +381,7 @@
     <div class="fgroup">
       <h3>Customer capture <span class="rng">B1–B2</span></h3>
       <p class="gsub">Customer master details and the FSM per-visit entry form.</p>
-      <div class="feat" data-status="partial"><span class="fid">B1</span><div class="fmain"><div class="ftitle">Customer master details</div><div class="fgap">Have name + one phone (+ a single commercial owner/manager contact). Missing the driver / supervisor / owner name+mobile triple and the "contacted-by" marker + info button.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="M">M</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">B1</span><div class="fmain"><div class="ftitle">Customer master details</div><div class="fgap">✅ <b>Shipped</b> — account type + transport / approx-vehicle-count fields and a <code style="font-family:var(--mono);font-size:12px">customer_contacts</code> table (driver / supervisor / owner / manager, each with a phone + a <em>contacted-by</em> marker). Web editing (nested form) + display of the contacts and type on both <b>web + Android</b> profile, tested. <em>(Native contact-<b>editing</b> lands with the B2 capture form.)</em></div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
       <div class="feat" data-status="partial"><span class="fid">B2</span><div class="fmain"><div class="ftitle">FSM per-visit CustomerDetailsEntry</div><div class="fgap">No dedicated form. Only a ₹ transaction (overlaps ~2 of 11 fields). Missing litres, discount, Fleet/OTP flag, transport / manager / owner, approx # of vehicles, editable date.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="L">L</span></span></div>
     </div>
 
@@ -418,7 +418,7 @@
       <div class="feat" data-status="absent"><span class="fid">E1</span><div class="fmain"><div class="ftitle">Reports (daily → yearly, per vehicle/transporter/driver)</div><div class="fgap">Litres, discount, gifts by four time grains and three grouping dimensions. No reporting subsystem today.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="L">L</span></span></div>
       <div class="feat" data-status="present"><span class="fid">E2</span><div class="fmain"><div class="ftitle">Dashboard → customers by period</div><div class="fgap">✅ <b>Shipped</b> — a "View customers" drill-through on the dashboard (web + Android) opens a customer list scoped to the selected period, via a <code style="font-family:var(--mono);font-size:12px">Customer.transacted_between</code> filter on the customers index (tested).</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
       <div class="feat" data-status="partial"><span class="fid">E3</span><div class="fmain"><div class="ftitle">Visit-frequency cadence</div><div class="fgap">Aggregate visits-distribution chart only. No per-customer last-visit + daily / weekly / biweekly cadence.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="M">M</span></span></div>
-      <div class="feat" data-status="absent"><span class="fid">E4</span><div class="fmain"><div class="ftitle">Customer-type view (OTP/Drive-in/Credit)</div><div class="fgap">No customer_type field or dashboard segment.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="S">S</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">E4</span><div class="fmain"><div class="ftitle">Customer-type view (OTP/Drive-in/Credit)</div><div class="fgap">✅ <b>Shipped</b> — a <code style="font-family:var(--mono);font-size:12px">customer_type</code> enum (drive_in / otp / credit) set on the customer form, with a server-side <code style="font-family:var(--mono);font-size:12px">?type=</code> filter driving the admin list (web) and account-type filter chips + a type badge on the customers list &amp; profile (Android), tested. Full dashboard segments arrive with E1 reports.</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
       <div class="feat" data-status="absent"><span class="fid">E5</span><div class="fmain"><div class="ftitle">Contact tracking + conversion</div><div class="fgap">Contacted count, last-contact, probability of conversion.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
       <div class="feat" data-status="absent"><span class="fid">E6</span><div class="fmain"><div class="ftitle">Churn / lost-customer intelligence</div><div class="fgap">"Came last week, not this week = lost" detection + a reach-out surface.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
       <div class="feat" data-status="absent"><span class="fid">E7</span><div class="fmain"><div class="ftitle">Customer feedback / rating</div><div class="fgap">No capture channel or dashboard surface.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>

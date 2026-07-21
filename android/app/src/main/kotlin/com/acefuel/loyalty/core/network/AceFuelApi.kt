@@ -67,6 +67,8 @@ interface AceFuelApi {
         // customers who transacted in that window.
         @Query("start_date") startDate: String? = null,
         @Query("end_date") endDate: String? = null,
+        // E4: optional account-type filter (drive_in / otp / credit).
+        @Query("type") type: String? = null,
     ): CustomersListResponse
 
     @GET("api/v1/staff/customers/{id}")

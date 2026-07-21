@@ -60,6 +60,47 @@
       </div>
     </div>
 
+    <% if customer.persisted? %>
+      <% blank_contact_rows = [2 - customer.customer_contacts.count(&:new_record?), 0].max %>
+      <% blank_contact_rows.times { customer.customer_contacts.build } %>
+      <fieldset class="customer-form__contacts">
+        <legend class="form-label mb-1">Contacts</legend>
+        <p class="form-text mt-0 mb-2">Drivers, supervisors, owners or managers linked to this account. Leave a row blank to skip it; mark <em>Contacted</em> once you've reached them.</p>
+        <%= form.fields_for :customer_contacts do |contact_form| %>
+          <div class="customer-form__contact-row border rounded p-2 mb-2">
+            <div class="row g-2">
+              <div class="col-12 col-sm-4">
+                <%= contact_form.label :role, "Role", class: "form-label small mb-1" %>
+                <%= contact_form.select :role,
+                  options_for_select(CustomerContact::ROLES.map { |role| [role.humanize, role] }, contact_form.object.role),
+                  { include_blank: "—" }, class: "form-select form-select-sm" %>
+              </div>
+              <div class="col-12 col-sm-4">
+                <%= contact_form.label :name, "Name", class: "form-label small mb-1" %>
+                <%= contact_form.text_field :name, class: "form-control form-control-sm", placeholder: "Optional" %>
+              </div>
+              <div class="col-12 col-sm-4">
+                <%= contact_form.label :phone_number, "Phone", class: "form-label small mb-1" %>
+                <%= contact_form.telephone_field :phone_number, class: "form-control form-control-sm", inputmode: "numeric", maxlength: 10, pattern: "\\d{10}", placeholder: "Optional" %>
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-3 mt-2">
+              <div class="form-check mb-0">
+                <%= contact_form.check_box :contacted, class: "form-check-input" %>
+                <%= contact_form.label :contacted, "Contacted", class: "form-check-label small" %>
+              </div>
+              <% if contact_form.object.persisted? %>
+                <div class="form-check mb-0">
+                  <%= contact_form.check_box :_destroy, class: "form-check-input" %>
+                  <%= contact_form.label :_destroy, "Remove", class: "form-check-label small text-danger" %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </fieldset>
+    <% end %>
+
     <% if include_vehicle_fields %>
       <div class="<%= "d-none" if lock_vehicle_fields %>" data-registration-editable-group="vehicle_number">
         <%= form.label :vehicle_number, "Initial Vehicle Number", class: "form-label" %>
