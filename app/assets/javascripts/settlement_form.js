@@ -4,7 +4,7 @@
 (() => {
   const num = (el) => {
     if (!el) return 0;
-    const raw = el.dataset ? el.value : el.textContent;
+    const raw = el.matches("input, select, textarea") ? el.value : el.textContent;
     const value = parseFloat(raw);
     return Number.isFinite(value) ? value : 0;
   };
