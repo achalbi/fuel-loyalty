@@ -47,6 +47,10 @@ Rails.application.routes.draw do
         post "transactions/recognize_plate", to: "transactions#recognize_plate"
         post "transactions/register_customer", to: "transactions#register_customer"
         resources :visit_entries, only: %i[index create]
+        # Declared before the resource so /settlements/new is not captured as
+        # /settlements/:id (and to avoid Rails' reserved-`new` collection quirk).
+        get "settlements/new", to: "settlements#new", as: :new_settlement
+        resources :settlements, only: %i[index show create update]
       end
 
       namespace :admin do
