@@ -15,8 +15,12 @@
 > a B2 transaction re-derives that transaction's ₹ + earn points atomically), the `Persister`
 > admin_edit path, the admin API (`/api/v1/admin/settlements` + `/:id`, `/reconcile`, `/summary`
 > with cross-pump totals), and the `Admin::SettlementsController` console (cross-pump list/totals,
-> audit-trail panel, Reconcile, edit-with-reason). Still to ship: the **Android admin settlement
-> view** (D9 lockstep) and **E1 reports**. Native decantation (D8 tank dips) inputs are web-only for now.
+> audit-trail panel, Reconcile, edit-with-reason). ✅ **Android admin settlement view shipped**
+> (`ui/admin/settlements` master-detail: cross-pump list + totals card, detail with the D6/D7
+> totals, nozzle readings, audit trail + Reconcile). **➡️ Daily Settlement (D1–D10) COMPLETE
+> on all three surfaces, tested (467 Rails runs green, brakeman clean, Android compiles).**
+> Web-first deferrals: native **decantation** (D8 tank dips) inputs and native admin
+> **line-item editing** (the native admin console covers view + reconcile).
 
 Daily Settlement is the shift-end reconciliation ledger for a fuel outlet. At the end of a shift the FSM (pump operator) picks their pump, and the system shows that pump's nozzles and their fuel. The FSM enters today's meter readings; the app auto-populates yesterday's closing reading from the prior settlement, subtracts testing litres, derives net litres sold, prices each nozzle from the product catalog's selling price, and totals fuel by type. The FSM then records lubricant sales (with opening/closing stock), pulls same-day customer discounts, enters PhonePe POS and Scanner receipts, Fleet/OTP and tank-truck credit lines, and finally reconciles cash by denomination against the computed **Final Amount to Settle**, capturing shortage. Stock received, tank decantation, and a JIO-BP-vs-own rate comparison round out the record. Admins can view and edit any settlement — current or past, per pump or across pumps — with a full audit trail, and any edit that changes derived ₹ recomputes loyalty points. This is the single largest module and the source of truth for litres sold (per LOCKED Q1: readings/litres are canonical; ₹ is derived from catalog selling price).
 
