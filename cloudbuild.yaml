@@ -57,8 +57,8 @@ steps:
           --parallelism=1 \
           --tasks=1 \
           --task-timeout=900s \
-          --set-env-vars=RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,APP_URL=${_APP_URL},MAILER_FROM=${_MAILER_FROM},FIREBASE_API_KEY=${_FIREBASE_API_KEY},FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN},FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},FIREBASE_STORAGE_BUCKET=${_FIREBASE_STORAGE_BUCKET},FIREBASE_MESSAGING_SENDER_ID=${_FIREBASE_MESSAGING_SENDER_ID},FIREBASE_APP_ID=${_FIREBASE_APP_ID},FIREBASE_MEASUREMENT_ID=${_FIREBASE_MEASUREMENT_ID},FIREBASE_WEB_VAPID_KEY=${_FIREBASE_WEB_VAPID_KEY},PLATE_RECOGNIZER_REGION=${_PLATE_RECOGNIZER_REGION},PLATE_RECOGNIZER_API_URL=${_PLATE_RECOGNIZER_API_URL},RELEASE_SHA=$COMMIT_SHA \
-          --set-secrets=SECRET_KEY_BASE=fuel-loyalty-secret-key-base:latest,DATABASE_URL=fuel-loyalty-database-url:latest,ADMIN_NOTIFICATION_API_TOKEN=fuel-loyalty-admin-notification-api-token:latest,PLATE_RECOGNIZER_API_TOKEN=fuel-loyalty-plate-recognizer-api-token:latest \
+          --set-env-vars=RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,APP_URL=${_APP_URL},MAILER_FROM=${_MAILER_FROM},FIREBASE_API_KEY=${_FIREBASE_API_KEY},FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN},FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},FIREBASE_STORAGE_BUCKET=${_FIREBASE_STORAGE_BUCKET},FIREBASE_MESSAGING_SENDER_ID=${_FIREBASE_MESSAGING_SENDER_ID},FIREBASE_APP_ID=${_FIREBASE_APP_ID},FIREBASE_MEASUREMENT_ID=${_FIREBASE_MEASUREMENT_ID},FIREBASE_WEB_VAPID_KEY=${_FIREBASE_WEB_VAPID_KEY},PLATE_RECOGNIZER_REGION=${_PLATE_RECOGNIZER_REGION},PLATE_RECOGNIZER_API_URL=${_PLATE_RECOGNIZER_API_URL},ACTIVE_STORAGE_SERVICE=${_ACTIVE_STORAGE_SERVICE},GCS_PROJECT=${_GCS_PROJECT},GCS_BUCKET=${_GCS_BUCKET},RELEASE_SHA=$COMMIT_SHA \
+          --set-secrets=SECRET_KEY_BASE=fuel-loyalty-secret-key-base:latest,DATABASE_URL=fuel-loyalty-database-url:latest,ADMIN_NOTIFICATION_API_TOKEN=fuel-loyalty-admin-notification-api-token:latest,PLATE_RECOGNIZER_API_TOKEN=fuel-loyalty-plate-recognizer-api-token:latest,AR_ENCRYPTION_PRIMARY_KEY=fuel-loyalty-ar-encryption-primary-key:latest,AR_ENCRYPTION_DETERMINISTIC_KEY=fuel-loyalty-ar-encryption-deterministic-key:latest,AR_ENCRYPTION_KEY_DERIVATION_SALT=fuel-loyalty-ar-encryption-key-derivation-salt:latest \
           --quiet
 
         gcloud run jobs execute ${_SERVICE_NAME}-migrate \
@@ -84,10 +84,13 @@ steps:
       - --quiet
 
       # Runtime configuration (non-secret env vars)
-      - --set-env-vars=RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,APP_URL=${_APP_URL},MAILER_FROM=${_MAILER_FROM},FIREBASE_API_KEY=${_FIREBASE_API_KEY},FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN},FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},FIREBASE_STORAGE_BUCKET=${_FIREBASE_STORAGE_BUCKET},FIREBASE_MESSAGING_SENDER_ID=${_FIREBASE_MESSAGING_SENDER_ID},FIREBASE_APP_ID=${_FIREBASE_APP_ID},FIREBASE_MEASUREMENT_ID=${_FIREBASE_MEASUREMENT_ID},FIREBASE_WEB_VAPID_KEY=${_FIREBASE_WEB_VAPID_KEY},PLATE_RECOGNIZER_REGION=${_PLATE_RECOGNIZER_REGION},PLATE_RECOGNIZER_API_URL=${_PLATE_RECOGNIZER_API_URL},RELEASE_SHA=$COMMIT_SHA
+      - --set-env-vars=RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,APP_URL=${_APP_URL},MAILER_FROM=${_MAILER_FROM},FIREBASE_API_KEY=${_FIREBASE_API_KEY},FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN},FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},FIREBASE_STORAGE_BUCKET=${_FIREBASE_STORAGE_BUCKET},FIREBASE_MESSAGING_SENDER_ID=${_FIREBASE_MESSAGING_SENDER_ID},FIREBASE_APP_ID=${_FIREBASE_APP_ID},FIREBASE_MEASUREMENT_ID=${_FIREBASE_MEASUREMENT_ID},FIREBASE_WEB_VAPID_KEY=${_FIREBASE_WEB_VAPID_KEY},PLATE_RECOGNIZER_REGION=${_PLATE_RECOGNIZER_REGION},PLATE_RECOGNIZER_API_URL=${_PLATE_RECOGNIZER_API_URL},ACTIVE_STORAGE_SERVICE=${_ACTIVE_STORAGE_SERVICE},GCS_PROJECT=${_GCS_PROJECT},GCS_BUCKET=${_GCS_BUCKET},RELEASE_SHA=$COMMIT_SHA
 
-      # Secrets sourced from Secret Manager (values never appear in this file or build logs)
-      - --set-secrets=SECRET_KEY_BASE=fuel-loyalty-secret-key-base:latest,DATABASE_URL=fuel-loyalty-database-url:latest,ADMIN_NOTIFICATION_API_TOKEN=fuel-loyalty-admin-notification-api-token:latest,PLATE_RECOGNIZER_API_TOKEN=fuel-loyalty-plate-recognizer-api-token:latest
+      # Secrets sourced from Secret Manager (values never appear in this file or build logs).
+      # The AR_ENCRYPTION_* keys back A7 Aadhaar-at-rest — the app FAILS TO BOOT
+      # without them, so create them (scripts/setup-encryption-keys.sh) before the
+      # first deploy that includes the A7 encryption initializer.
+      - --set-secrets=SECRET_KEY_BASE=fuel-loyalty-secret-key-base:latest,DATABASE_URL=fuel-loyalty-database-url:latest,ADMIN_NOTIFICATION_API_TOKEN=fuel-loyalty-admin-notification-api-token:latest,PLATE_RECOGNIZER_API_TOKEN=fuel-loyalty-plate-recognizer-api-token:latest,AR_ENCRYPTION_PRIMARY_KEY=fuel-loyalty-ar-encryption-primary-key:latest,AR_ENCRYPTION_DETERMINISTIC_KEY=fuel-loyalty-ar-encryption-deterministic-key:latest,AR_ENCRYPTION_KEY_DERIVATION_SALT=fuel-loyalty-ar-encryption-key-derivation-salt:latest
 
 
       # Labels (traceability)
@@ -122,6 +125,14 @@ substitutions:
   _FIREBASE_WEB_VAPID_KEY: 'BM7ZYF-Ye-YL6sc9q7Te0wPoB_QMeTKrg_FCS6zoESZnK-3m8hRcT333tC-gC17dx3Yzfo5B-4XYU-NE1WIsVoE'
   _PLATE_RECOGNIZER_REGION: 'in'
   _PLATE_RECOGNIZER_API_URL: 'https://api.platerecognizer.com/v1/plate-reader/'
+
+  # A7 durable KYC storage. Defaults keep uploads on the ephemeral local disk so a
+  # deploy still boots before GCS is provisioned. After running
+  # scripts/setup-gcs.sh, flip _ACTIVE_STORAGE_SERVICE to 'google' and set
+  # _GCS_BUCKET so operator KYC images survive Cloud Run restarts.
+  _ACTIVE_STORAGE_SERVICE: 'local'
+  _GCS_PROJECT: 'thoughtbasics'
+  _GCS_BUCKET: 'fuel-loyalty-uploads'
 
   # Secrets (SECRET_KEY_BASE, DATABASE_URL, ADMIN_NOTIFICATION_API_TOKEN,
   # PLATE_RECOGNIZER_API_TOKEN) are NOT stored here. They live in Secret Manager

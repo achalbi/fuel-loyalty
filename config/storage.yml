@@ -14,12 +14,20 @@ local:
 #   region: us-east-1
 #   bucket: your_own_bucket-<%= Rails.env %>
 
-# Remember not to checkin your GCS keyfile to a repository
-# google:
-#   service: GCS
-#   project: your_project
-#   credentials: <%= Rails.root.join("path/to/gcs.keyfile") %>
-#   bucket: your_own_bucket-<%= Rails.env %>
+# A7 — durable KYC image storage in production. On Cloud Run the attached runtime
+# service account supplies Application Default Credentials, so NO keyfile is
+# committed or needed (do not add a `credentials:` line). Enabled by setting
+# ACTIVE_STORAGE_SERVICE=google (see config/environments/production.rb) once the
+# bucket exists and the runtime SA has objectAdmin on it (scripts/setup-gcs.sh).
+google:
+  service: GCS
+  project: <%= ENV["GCS_PROJECT"] %>
+  bucket: <%= ENV["GCS_BUCKET"] %>
+  # ADC (the Cloud Run runtime SA) has NO local private key, so blob URLs must be
+  # signed via the IAM SignBlob API. Without `iam: true` the KYC image redirects
+  # raise SignedUrlUnavailable (HTTP 500). Requires roles/iam.serviceAccountTokenCreator
+  # on the runtime SA — granted by scripts/setup-gcs.sh.
+  iam: true
 
 # mirror:
 #   service: Mirror

@@ -14,9 +14,14 @@
 > gallery** chooser, uploading over multipart (no-image edits stay on JSON); the
 > audited reveal shows the full Aadhaar transiently + opens the signed ID-card URL, and
 > Purge-KYC is wired. Thumbnails render via Coil on the shared authed OkHttp client.
-> **Production prerequisites the operator must provision
-> before release:** durable object storage (**GCS** — production `:local` loses images on
-> Cloud Run restart) and the **AR-encryption keys** in Secret Manager (`bin/rails db:encryption:init`).
+> **Production prerequisites — code + pipeline now wired; operator runs two one-time
+> scripts** (see [`docs/a7-prod-provisioning.md`](../a7-prod-provisioning.md)):
+> `google-cloud-storage` gem + a `:google` ActiveStorage service (Cloud Run ADC, no
+> keyfile) + an `ACTIVE_STORAGE_SERVICE`-driven `production.rb`, and `cloudbuild.yaml`
+> mounting the `AR_ENCRYPTION_*` secrets + `GCS_*` env into the migrate job and service.
+> The operator runs `scripts/setup-encryption-keys.sh` (**mandatory before the Phase-3
+> deploy — the app won't boot without the keys**; the script never overwrites an existing
+> key) and `scripts/setup-gcs.sh` (private bucket), then flips `_ACTIVE_STORAGE_SERVICE=google`.
 
 Extend the operator (staff) user record with the KYC profile the requirement asks for: a profile photo, a postal address, an Aadhaar number, and a photo of the operator's ID card. This is a **profile-fields-only** change per LOCKED DECISION Q3 — it adds data capture and PII handling to the existing user record and admin forms on both the Rails PWA and the native Android app. **Explicit non-goal:** OTP / passwordless login and any SMS/WhatsApp auth provider. Username/mobile + password login (Devise `:database_authenticatable`) is retained unchanged.
 

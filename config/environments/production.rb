@@ -28,7 +28,11 @@ Rails.application.configure do
   # config.asset_host = "http://assets.example.com"
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # A7 — the local disk is EPHEMERAL on Cloud Run (uploads vanish on restart), so
+  # this defaults to :local only so a fresh deploy still boots. Set
+  # ACTIVE_STORAGE_SERVICE=google once the GCS bucket + runtime-SA IAM exist
+  # (scripts/setup-gcs.sh) so operator KYC images survive restarts.
+  config.active_storage.service = ENV.fetch("ACTIVE_STORAGE_SERVICE", "local").to_sym
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true
