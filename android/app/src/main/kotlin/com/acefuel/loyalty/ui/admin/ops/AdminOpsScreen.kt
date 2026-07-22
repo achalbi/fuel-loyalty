@@ -66,6 +66,7 @@ fun AdminOpsScreen(
     onTransactions: () -> Unit,
     onReports: () -> Unit,
     onSettlements: () -> Unit,
+    onCampaigns: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val nayara = MaterialTheme.nayara
@@ -176,6 +177,13 @@ fun AdminOpsScreen(
             leadingIcon = Icons.Filled.AccountBalanceWallet,
             leadingTint = nayara.actionPrimary,
             onClick = { haptics.tick(); onSettlements() },
+        )
+        NayaraListRow(
+            title = "Campaigns",
+            subtitle = "Preview, run, activate or pause offer campaigns",
+            leadingIcon = Icons.Filled.Campaign,
+            leadingTint = nayara.accentDefault,
+            onClick = { haptics.tick(); onCampaigns() },
         )
 
         Spacer(Modifier.height(NayaraSpacing.Xxl))

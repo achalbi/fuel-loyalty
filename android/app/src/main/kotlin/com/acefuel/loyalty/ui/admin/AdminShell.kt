@@ -159,6 +159,7 @@ fun AdminShell(
                         onTransactions = { onOpen(AdminRoutes.TRANSACTIONS) },
                         onReports = { onOpen(AdminRoutes.REPORTS) },
                         onSettlements = { onOpen(AdminRoutes.SETTLEMENTS) },
+                        onCampaigns = { onOpen(AdminRoutes.CAMPAIGNS) },
                     )
 
                     AdminTab.Settings -> AdminSettingsScreen(
@@ -192,6 +193,7 @@ object AdminRoutes {
     const val TRANSACTIONS = "admin_transactions"
     const val REPORTS = "admin_reports"
     const val SETTLEMENTS = "admin_settlements"
+    const val CAMPAIGNS = "admin_campaigns"
     const val USERS = "admin_users"
     const val FUEL_TYPES = "admin_fueltypes"
     const val VEHICLE_TYPES = "admin_vehicletypes"
