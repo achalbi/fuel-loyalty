@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -294,6 +294,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_160000) do
     t.decimal "cash_value_per_point", precision: 10, scale: 2
     t.datetime "created_at", null: false
     t.decimal "litres_per_reward_unit", precision: 6, scale: 2, default: "10.0", null: false
+    t.integer "milestone_step", default: 500, null: false
     t.integer "minimum_redeemable_points"
     t.boolean "nozzle_feature_enabled", default: true, null: false
     t.integer "reward_basis", default: 0, null: false

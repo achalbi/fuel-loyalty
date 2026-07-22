@@ -20,7 +20,7 @@ class TransactionCreator
   end
 
   def call
-    ActiveRecord::Base.transaction do
+    result = ActiveRecord::Base.transaction do
       customer, vehicle = resolve_customer_and_vehicle!
       fuel_pump, fuel_pump_nozzle = resolve_fuel_pump_and_nozzle!(vehicle)
       validated_payment_mode = resolve_payment_mode!
@@ -56,6 +56,15 @@ class TransactionCreator
 
       Result.new(customer: customer, transaction: transaction, points_earned: points, rewards_paused: rewards_paused)
     end
+
+    # F3 — after the ledger row commits, fire an auto loyalty-milestone
+    # notification if this transaction crossed a new points rung. Never let a
+    # notification failure roll back or break the recorded transaction.
+    if result.points_earned.to_i.positive?
+      LoyaltyMilestoneNotifier.call(result.customer)
+    end
+
+    result
   end
 
   private
