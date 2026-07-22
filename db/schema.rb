@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -102,13 +102,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_150000) do
     t.datetime "created_at", null: false
     t.string "customer_type", default: "drive_in", null: false
     t.text "info_note"
+    t.integer "last_milestone_points", default: 0, null: false
     t.string "name"
     t.string "phone_number", null: false
     t.bigint "primary_contact_id"
     t.boolean "rewards_paused", default: false, null: false
+    t.boolean "sms_opt_in", default: false, null: false
     t.string "transport_name"
     t.datetime "updated_at", null: false
     t.string "vehicle_number"
+    t.boolean "whatsapp_opt_in", default: false, null: false
     t.index ["customer_type"], name: "index_customers_on_customer_type"
     t.index ["phone_number"], name: "index_customers_on_phone_number", unique: true
     t.index ["primary_contact_id"], name: "index_customers_on_primary_contact_id"
@@ -183,6 +186,42 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_150000) do
     t.index ["code"], name: "index_fuel_types_on_code", unique: true
   end
 
+  create_table "notification_messages", force: :cascade do |t|
+    t.text "body"
+    t.integer "category", default: 0, null: false
+    t.string "channels", default: "push", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.bigint "notification_schedule_id"
+    t.jsonb "offer_payload", default: {}, null: false
+    t.string "target_customer_type"
+    t.integer "target_type", default: 0, null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category"], name: "index_notification_messages_on_category"
+    t.index ["created_by_id"], name: "index_notification_messages_on_created_by_id"
+    t.index ["notification_schedule_id"], name: "index_notification_messages_on_notification_schedule_id"
+  end
+
+  create_table "notification_recipients", force: :cascade do |t|
+    t.integer "channel", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.bigint "customer_id"
+    t.string "error"
+    t.bigint "notification_message_id", null: false
+    t.string "provider_message_id"
+    t.bigint "push_subscription_id"
+    t.datetime "sent_at"
+    t.integer "status", default: 0, null: false
+    t.string "to_address"
+    t.datetime "updated_at", null: false
+    t.index ["customer_id", "created_at"], name: "index_notification_recipients_on_customer_id_and_created_at"
+    t.index ["customer_id"], name: "index_notification_recipients_on_customer_id"
+    t.index ["notification_message_id"], name: "index_notification_recipients_on_notification_message_id"
+    t.index ["push_subscription_id"], name: "index_notification_recipients_on_push_subscription_id"
+    t.index ["status"], name: "index_notification_recipients_on_status"
+  end
+
   create_table "notification_schedules", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -235,6 +274,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_150000) do
 
   create_table "push_subscriptions", force: :cascade do |t|
     t.boolean "active", default: true, null: false
+    t.datetime "consent_at"
     t.datetime "created_at", null: false
     t.bigint "customer_id"
     t.datetime "last_used_at", null: false
@@ -625,6 +665,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_150000) do
   add_foreign_key "daily_settlements", "users", column: "recorded_by_id", on_delete: :restrict
   add_foreign_key "fuel_pump_nozzles", "fuel_pumps"
   add_foreign_key "fuel_pump_nozzles", "fuel_types", column: "fuel_type_code", primary_key: "code"
+  add_foreign_key "notification_messages", "notification_schedules", on_delete: :nullify
+  add_foreign_key "notification_messages", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "notification_recipients", "customers", on_delete: :nullify
+  add_foreign_key "notification_recipients", "notification_messages", on_delete: :cascade
+  add_foreign_key "notification_recipients", "push_subscriptions", on_delete: :nullify
   add_foreign_key "points_ledgers", "customers"
   add_foreign_key "points_ledgers", "transactions"
   add_foreign_key "products", "fuel_types", column: "fuel_type_code", primary_key: "code"

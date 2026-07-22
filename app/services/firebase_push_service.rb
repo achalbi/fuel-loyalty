@@ -15,6 +15,10 @@ class FirebasePushService
   # the system-tray notification on a valid channel.
   ANDROID_NOTIFICATION_CHANNEL_ID = "fuel_loyalty_broadcast".freeze
 
+  # Single-recipient dispatch outcome (Phase 3 targeted sends). status is one of
+  # :sent / :failed / :invalidated.
+  Outcome = Struct.new(:status, :provider_message_id, :error, keyword_init: true)
+
   Result = Struct.new(:requested, :sent, :failed, :invalidated, :batches, :errors, keyword_init: true) do
     def as_json(*)
       {
@@ -65,7 +69,55 @@ class FirebasePushService
     result
   end
 
+  # Fetch a dispatch access token once so a Dispatcher can reuse it across many
+  # single-recipient deliveries (avoids an OAuth round-trip per recipient).
+  def access_token_for_dispatch
+    validate_configuration!
+    fetch_access_token
+  end
+
+  # Send to a single subscription; returns an Outcome. `data` (e.g. an offer
+  # payload) is merged into the FCM data block. Pass a pre-fetched access_token
+  # to avoid re-fetching per recipient.
+  def deliver_one(subscription:, title:, message:, data: {}, access_token: nil)
+    access_token ||= access_token_for_dispatch
+    endpoint_uri = URI.parse(endpoint)
+
+    Net::HTTP.start(endpoint_uri.host, endpoint_uri.port, use_ssl: true,
+      open_timeout: DEFAULT_TIMEOUT_SECONDS, read_timeout: DEFAULT_TIMEOUT_SECONDS) do |http|
+      request = Net::HTTP::Post.new(endpoint_uri)
+      request["Authorization"] = "Bearer #{access_token}"
+      request["Content-Type"] = "application/json; charset=utf-8"
+      request.body = build_payload(subscription:, title:, message:, data:).to_json
+
+      response = http.request(request)
+      if response.is_a?(Net::HTTPSuccess)
+        subscription.touch_last_used!
+        parsed = parse_json(response.body)
+        return Outcome.new(status: :sent, provider_message_id: parsed.is_a?(Hash) ? parsed["name"] : nil)
+      end
+
+      parsed_error = parse_json(response.body)
+      if invalid_token_error?(parsed_error)
+        subscription.deactivate!
+        return Outcome.new(status: :invalidated, error: error_message_for(parsed_error, response.message))
+      end
+      Outcome.new(status: :failed, error: error_message_for(parsed_error, response.message))
+    end
+  rescue StandardError => error
+    Outcome.new(status: :failed, error: error.message)
+  end
+
   private
+
+  # FCM data values must be strings; JSON-encode nested payloads (the offer).
+  def stringify_data(data)
+    (data || {}).each_with_object({}) do |(key, value), memo|
+      next if value.nil?
+
+      memo[key.to_s] = value.is_a?(String) ? value : value.to_json
+    end
+  end
 
   def validate_configuration!
     return if FirebaseAppConfig.push_delivery_ready?
@@ -121,7 +173,7 @@ class FirebasePushService
     }
   end
 
-  def build_payload(subscription:, title:, message:)
+  def build_payload(subscription:, title:, message:, data: {})
     {
       message: {
         token: subscription.token,
@@ -134,7 +186,7 @@ class FirebasePushService
           message: message,
           link: FirebaseAppConfig.notification_link,
           notification_id: SecureRandom.uuid
-        },
+        }.merge(stringify_data(data)),
         android: {
           priority: "high",
           notification: {

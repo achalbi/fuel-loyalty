@@ -9,6 +9,16 @@ class Customer < ApplicationRecord
   has_many :customer_contacts, dependent: :destroy
   has_many :visit_entries, dependent: :nullify
   has_many :push_subscriptions, dependent: :nullify
+  has_many :notification_recipients, dependent: :nullify
+
+  # Which notification channels this customer can currently be reached on.
+  def reachable_channels
+    channels = []
+    channels << "push" if push_subscriptions.active.exists?
+    channels << "whatsapp" if whatsapp_opt_in? && phone_number.present?
+    channels << "sms" if sms_opt_in? && phone_number.present?
+    channels
+  end
   belongs_to :primary_contact, class_name: "CustomerContact", optional: true
   # A contact row only persists if it carries a name or phone — a role picked on
   # an otherwise-empty row is treated as an untouched blank and dropped.
@@ -22,6 +32,7 @@ class Customer < ApplicationRecord
 
   # Customers who recorded a transaction within the given time range (E2 dashboard
   # drill-through). Uses a subquery so it composes with joins + distinct scopes.
+  scope :active, -> { where(active: true) }
   scope :transacted_between, ->(range) { where(id: Transaction.where(created_at: range).select(:customer_id)) }
 
   before_validation :normalize_phone_number

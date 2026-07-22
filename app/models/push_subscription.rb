@@ -6,8 +6,15 @@ class PushSubscription < ApplicationRecord
   belongs_to :customer, optional: true
   belongs_to :user, optional: true
 
+  has_many :notification_recipients, dependent: :nullify
+
   scope :active, -> { where(active: true) }
   scope :for_customer, ->(customer) { where(customer: customer) }
+
+  # Record the customer's explicit push opt-in (F2 consent gate).
+  def consent!(customer:, timestamp: Time.current)
+    update!(customer: customer, consent_at: consent_at || timestamp, active: true)
+  end
 
   before_validation :normalize_token
   before_validation :normalize_platform
