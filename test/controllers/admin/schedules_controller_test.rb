@@ -2,21 +2,19 @@ require "test_helper"
 
 module Admin
   class SchedulesControllerTest < ActionDispatch::IntegrationTest
-    def with_stubbed_push_service(result)
-      firebase_push_service_singleton = FirebasePushService.singleton_class
-      original_new = firebase_push_service_singleton.instance_method(:new)
-      fake_service = Object.new
-      fake_service.define_singleton_method(:broadcast) do |title:, message:|
-        result
+    # send_now/run route through Notifications::Broadcaster now; stub its class
+    # method to return a known per-channel summary, optionally recording the
+    # kwargs each call received into [calls].
+    def with_stubbed_broadcaster(summary, calls = nil)
+      singleton = Notifications::Broadcaster.singleton_class
+      original = singleton.instance_method(:call)
+      Notifications::Broadcaster.define_singleton_method(:call) do |**kwargs|
+        calls&.push(kwargs)
+        Notifications::Broadcaster::Result.new(message: nil, summary: summary)
       end
-
-      firebase_push_service_singleton.define_method(:new) do |*|
-        fake_service
-      end
-
       yield
     ensure
-      firebase_push_service_singleton.define_method(:new, original_new)
+      singleton.define_method(:call, original)
     end
 
     def with_admin_notification_token(value)
@@ -55,17 +53,8 @@ module Admin
         scheduled_time: "09:00",
         active: true
       )
-      result = FirebasePushService::Result.new(
-        requested: 1,
-        sent: 1,
-        failed: 0,
-        invalidated: 0,
-        batches: 1,
-        errors: []
-      )
-
       travel_to Time.zone.local(2026, 3, 25, 10, 0, 0) do
-        with_stubbed_push_service(result) do
+        with_stubbed_broadcaster({ "push" => { "sent" => 1 } }) do
           post admin_run_schedules_path
         end
       end
@@ -96,6 +85,75 @@ module Admin
       refute schedule.reload.last_sent_at.present?
     end
 
+    test "admin can create a schedule with channels and a customer-type audience" do
+      sign_in users(:one)
+
+      post admin_schedules_path, params: {
+        notification_schedule: {
+          title: "Segment Blast",
+          message: "Credit customers only",
+          frequency: "daily",
+          scheduled_time: "09:00",
+          active: "1",
+          channels: %w[push whatsapp],
+          target_type: "customer_type",
+          target_customer_type: "credit"
+        }
+      }, as: :json
+
+      assert_response :created
+      payload = JSON.parse(response.body)
+      assert_equal %w[push whatsapp], payload["channels"]
+      assert_equal "customer_type", payload["target_type"]
+      assert_equal "credit", payload["target_customer_type"]
+
+      schedule = NotificationSchedule.order(:created_at).last
+      assert_equal "push,whatsapp", schedule.channels
+    end
+
+    test "send_now forwards the schedule's channels and audience to the broadcaster" do
+      sign_in users(:one)
+      schedule = NotificationSchedule.create!(
+        title: "Segment Send",
+        message: "Credit customers only",
+        frequency: "daily",
+        scheduled_time: "09:00",
+        channels: %w[push whatsapp],
+        target_type: "customer_type",
+        target_customer_type: "credit",
+        active: true
+      )
+
+      calls = []
+      with_stubbed_broadcaster({ "push" => { "sent" => 1 } }, calls) do
+        post send_now_admin_schedule_path(schedule), as: :json
+      end
+
+      assert_response :success
+      call = calls.first
+      assert_equal "push,whatsapp", call[:channels]
+      assert_equal "customer_type", call[:target_type]
+      assert_equal "credit", call[:target_customer_type]
+      assert_equal :scheduled, call[:category]
+    end
+
+    test "send_now does not stamp last_sent_at when nothing was delivered" do
+      sign_in users(:one)
+      schedule = NotificationSchedule.create!(
+        title: "Unreachable",
+        message: "No one opted in",
+        frequency: "daily",
+        scheduled_time: "09:00",
+        active: true
+      )
+
+      with_stubbed_broadcaster({ "push" => { "skipped" => 3 } }) do
+        post send_now_admin_schedule_path(schedule)
+      end
+
+      assert_nil schedule.reload.last_sent_at
+    end
+
     test "bearer token can run the scheduler as json" do
       NotificationSchedule.create!(
         title: "Daily Reminder",
@@ -104,18 +162,9 @@ module Admin
         scheduled_time: "09:00",
         active: true
       )
-      result = FirebasePushService::Result.new(
-        requested: 1,
-        sent: 1,
-        failed: 0,
-        invalidated: 0,
-        batches: 1,
-        errors: []
-      )
-
       travel_to Time.zone.local(2026, 3, 25, 10, 0, 0) do
         with_admin_notification_token("push-secret") do
-          with_stubbed_push_service(result) do
+          with_stubbed_broadcaster({ "push" => { "sent" => 1 } }) do
             post admin_run_schedules_path,
                  headers: { "Authorization" => "Bearer push-secret" },
                  as: :json
@@ -140,17 +189,8 @@ module Admin
         scheduled_time: "18:00",
         active: false
       )
-      result = FirebasePushService::Result.new(
-        requested: 2,
-        sent: 2,
-        failed: 0,
-        invalidated: 0,
-        batches: 1,
-        errors: []
-      )
-
       travel_to Time.zone.local(2026, 3, 25, 10, 0, 0) do
-        with_stubbed_push_service(result) do
+        with_stubbed_broadcaster({ "push" => { "sent" => 2 } }) do
           post send_now_admin_schedule_path(schedule)
         end
       end
@@ -158,7 +198,7 @@ module Admin
       assert_redirected_to admin_notifications_path
       follow_redirect!
       assert_match(/Paused Reminder/i, response.body)
-      assert_match(/2 deliveries succeeded, 0 failed\./i, response.body)
+      assert_match(/2 delivered, 0 skipped, 0 failed\./i, response.body)
       assert schedule.reload.last_sent_at.present?
       refute schedule.active?
     end
@@ -172,18 +212,9 @@ module Admin
         day_of_week: 1,
         active: true
       )
-      result = FirebasePushService::Result.new(
-        requested: 1,
-        sent: 1,
-        failed: 0,
-        invalidated: 0,
-        batches: 1,
-        errors: []
-      )
-
       travel_to Time.zone.local(2026, 3, 25, 10, 0, 0) do
         with_admin_notification_token("push-secret") do
-          with_stubbed_push_service(result) do
+          with_stubbed_broadcaster({ "push" => { "sent" => 1 } }) do
             post send_now_admin_schedule_path(schedule),
                  headers: { "Authorization" => "Bearer push-secret" },
                  as: :json
@@ -194,8 +225,7 @@ module Admin
       assert_response :success
       payload = JSON.parse(response.body)
       assert_equal schedule.id, payload.dig("schedule", "id")
-      assert_equal 1, payload.dig("delivery", "sent")
-      assert_equal 0, payload.dig("delivery", "failed")
+      assert_equal 1, payload.dig("delivery", "push", "sent")
     end
 
     test "scheduler endpoint reports when another run is already in progress" do

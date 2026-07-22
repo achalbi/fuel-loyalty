@@ -18,6 +18,10 @@ module Api
             day_of_month: schedule.day_of_month,
             last_sent_at: schedule.last_sent_at&.iso8601,
             active: schedule.active,
+            channels: schedule.channel_list,
+            target_type: schedule.target_type,
+            target_customer_type: schedule.target_customer_type,
+            campaign_id: schedule.campaign_id,
             schedule_summary: schedule.schedule_summary,
           }
         end

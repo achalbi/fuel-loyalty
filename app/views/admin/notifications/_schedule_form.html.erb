@@ -59,6 +59,38 @@
     <p class="small-muted mt-2 mb-0">If the chosen day does not exist in a month, the scheduler sends on that month's last day.</p>
   </div>
 
+  <div class="border rounded-3 p-3">
+    <span class="form-label d-block mb-2">Delivery</span>
+    <div class="row g-2">
+      <div class="col-sm-6">
+        <%= form.label :target_type, "Audience", class: "form-label" %>
+        <%= form.select :target_type,
+              options_for_select([["All customers", "all"], ["By customer type", "customer_type"]], schedule.target_type.presence || "all"),
+              {}, class: "form-select" %>
+      </div>
+      <div class="col-sm-6">
+        <%= form.label :target_customer_type, "Customer type", class: "form-label" %>
+        <%= form.select :target_customer_type,
+              options_for_select(Customer.customer_types.keys.map { |k| [k.humanize, k] }, schedule.target_customer_type),
+              { include_blank: "—" }, class: "form-select" %>
+      </div>
+    </div>
+
+    <div class="mt-2">
+      <span class="form-label d-block">Channels</span>
+      <% selected_channels = schedule.channel_list.presence || ["push"] %>
+      <%# Empty entry so unchecking every box still submits (the model keeps at least push). %>
+      <%= hidden_field_tag "notification_schedule[channels][]", "" %>
+      <% NotificationSchedule::CHANNELS.each do |channel| %>
+        <div class="form-check form-check-inline">
+          <%= check_box_tag "notification_schedule[channels][]", channel, selected_channels.include?(channel), id: "schedule_channel_#{channel}", class: "form-check-input" %>
+          <%= label_tag "schedule_channel_#{channel}", channel.upcase, class: "form-check-label" %>
+        </div>
+      <% end %>
+      <div class="form-text">WhatsApp/SMS reach only opted-in customers and need a configured provider; otherwise they're logged as skipped.</div>
+    </div>
+  </div>
+
   <div class="d-flex justify-content-end">
     <%= form.submit submit_label, class: "btn btn-primary" %>
   </div>

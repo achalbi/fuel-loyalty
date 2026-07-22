@@ -51,8 +51,8 @@ class NotificationScheduleRunner
     nil
   end
 
-  def initialize(push_service: FirebasePushService.new)
-    @push_service = push_service
+  def initialize(broadcaster: Notifications::Broadcaster)
+    @broadcaster = broadcaster
   end
 
   def run(current_time: Time.current)
@@ -90,13 +90,23 @@ class NotificationScheduleRunner
       result.due += 1
 
       begin
-        delivery_result = @push_service.broadcast(title: schedule.title, message: schedule.message)
+        delivery_result = @broadcaster.call(
+          title: schedule.title,
+          body: schedule.message,
+          category: :scheduled,
+          target_type: schedule.target_type,
+          target_customer_type: schedule.target_customer_type,
+          channels: schedule.channels,
+          notification_schedule: schedule,
+          campaign: schedule.campaign,
+          offer_payload: schedule.campaign&.offer_payload || {}
+        )
         schedule.update!(last_sent_at: current_time, active: schedule.frequency == "once" ? false : schedule.active)
         result.sent += 1
         result.details << {
           schedule_id: schedule.id,
           title: schedule.title,
-          result: delivery_result.as_json
+          result: delivery_result.summary
         }
       rescue StandardError => error
         result.failed += 1

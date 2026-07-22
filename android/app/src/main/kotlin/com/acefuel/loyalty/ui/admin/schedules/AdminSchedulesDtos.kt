@@ -30,6 +30,11 @@ data class ScheduleDto(
     @SerialName("day_of_month") val dayOfMonth: Int? = null,
     @SerialName("last_sent_at") val lastSentAt: String? = null,
     val active: Boolean = true,
+    // F2 — channel + audience targeting (mirrors the ad-hoc send).
+    val channels: List<String> = listOf("push"),
+    @SerialName("target_type") val targetType: String = "all",
+    @SerialName("target_customer_type") val targetCustomerType: String? = null,
+    @SerialName("campaign_id") val campaignId: Long? = null,
     @SerialName("schedule_summary") val scheduleSummary: String? = null,
 )
 
@@ -39,21 +44,15 @@ data class SchedulesListResponse(
     val schedules: List<ScheduleDto> = emptyList(),
 )
 
-/** FirebasePushService result hash. `errors[]` is intentionally omitted (only counts are surfaced). */
-@Serializable
-data class DeliveryResultDto(
-    val requested: Int = 0,
-    val sent: Int = 0,
-    val failed: Int = 0,
-    val invalidated: Int = 0,
-    val batches: Int = 0,
-)
-
-/** POST /admin/schedules/:id/send_now response. */
+/**
+ * POST /admin/schedules/:id/send_now response. Send-now now routes through the
+ * shared Broadcaster, so `delivery` is the per-channel { channel: { status: n } }
+ * summary (same shape as the ad-hoc SendResponse), not the old FCM count hash.
+ */
 @Serializable
 data class SendNowResponse(
     val schedule: ScheduleDto,
-    val delivery: DeliveryResultDto = DeliveryResultDto(),
+    val delivery: Map<String, Map<String, Int>> = emptyMap(),
 )
 
 /** POST /admin/schedules/run — NotificationScheduleRunner::Result (details[] omitted). */
@@ -85,6 +84,11 @@ data class ScheduleRequest(
     @SerialName("day_of_week") val dayOfWeek: Int? = null,
     @SerialName("day_of_month") val dayOfMonth: Int? = null,
     val active: Boolean,
+    // F2 — channel + audience targeting (explicitNulls=false drops nulls).
+    val channels: List<String>? = null,
+    @SerialName("target_type") val targetType: String? = null,
+    @SerialName("target_customer_type") val targetCustomerType: String? = null,
+    @SerialName("campaign_id") val campaignId: Long? = null,
 )
 
 @Serializable

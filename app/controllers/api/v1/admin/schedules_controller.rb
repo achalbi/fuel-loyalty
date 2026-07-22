@@ -47,27 +47,41 @@ module Api
         end
 
         # POST /api/v1/admin/schedules/:id/send_now
-        # Broadcasts this schedule immediately and stamps last_sent_at on success.
+        # Sends this schedule immediately over its configured channels/audience
+        # (via the shared Broadcaster) and stamps last_sent_at.
         def send_now
           schedule = NotificationSchedule.find(params[:id])
-          result = FirebasePushService.new.broadcast(title: schedule.title, message: schedule.message)
-          schedule.update!(last_sent_at: Time.current) if result.sent.to_i.positive?
+          result = broadcast_schedule(schedule)
+          # Only consume the occurrence when something actually delivered.
+          schedule.update!(last_sent_at: Time.current) if delivered?(result.summary)
           render json: {
             schedule: NotificationScheduleSerializer.call(schedule),
-            delivery: result.as_json,
+            delivery: result.summary,
           }, status: :ok
-        rescue FirebaseAppConfig::ConfigurationError => error
-          render_error(status: 422, code: "configuration_error", message: error.message)
         end
 
         private
+
+        def broadcast_schedule(schedule)
+          Notifications::Broadcaster.call(
+            title: schedule.title, body: schedule.message, category: :scheduled,
+            target_type: schedule.target_type, target_customer_type: schedule.target_customer_type,
+            channels: schedule.channels, notification_schedule: schedule, campaign: schedule.campaign,
+            offer_payload: schedule.campaign&.offer_payload || {}, created_by: current_user
+          )
+        end
+
+        def delivered?(summary)
+          (summary || {}).any? { |_channel, by_status| by_status.to_h.fetch("sent", 0).to_i.positive? }
+        end
 
         # Accepts params nested under notification_schedule OR top-level (API-friendly
         # fallback) via the shared resource_params helper.
         def schedule_params
           resource_params(:notification_schedule)
             .permit(:title, :message, :frequency, :scheduled_time, :scheduled_date,
-                    :day_of_week, :day_of_month, :active)
+                    :day_of_week, :day_of_month, :active,
+                    :target_type, :target_customer_type, :campaign_id, channels: [])
         end
       end
     end

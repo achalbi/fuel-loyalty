@@ -157,6 +157,7 @@
                 </div>
                 <p class="mb-2"><%= schedule.message %></p>
                 <p class="small-muted mb-1"><strong>Schedule:</strong> <%= schedule.schedule_summary %></p>
+                <p class="small-muted mb-1"><strong>Delivery:</strong> <%= schedule.channel_list.map(&:upcase).join(", ") %> · <%= schedule.target_type == "customer_type" ? "#{schedule.target_customer_type&.humanize} customers" : "Everyone" %></p>
                 <p class="small-muted mb-0"><strong>Last sent:</strong> <%= schedule.last_sent_at.present? ? l(schedule.last_sent_at, format: :long) : "Never" %></p>
               </div>
 

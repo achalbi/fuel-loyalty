@@ -61,22 +61,27 @@ module Admin
 
     def send_now
       schedule = NotificationSchedule.find(params[:id])
-      result = FirebasePushService.new.broadcast(title: schedule.title, message: schedule.message)
-      schedule.update!(last_sent_at: Time.current) if result.sent.to_i.positive?
+      result = Notifications::Broadcaster.call(
+        title: schedule.title, body: schedule.message, category: :scheduled,
+        target_type: schedule.target_type, target_customer_type: schedule.target_customer_type,
+        channels: schedule.channels, notification_schedule: schedule, campaign: schedule.campaign,
+        offer_payload: schedule.campaign&.offer_payload || {}, created_by: current_user
+      )
+      # Only consume the occurrence when something actually went out — an empty /
+      # all-skipped manual send must not suppress the automatic run.
+      schedule.update!(last_sent_at: Time.current) if delivery_counts(result.summary)[:sent].positive?
 
       respond_to do |format|
         format.json do
           render json: {
             schedule: serialize_schedule(schedule),
-            delivery: result.as_json
+            delivery: result.summary
           }, status: :ok
         end
         format.html do
           redirect_to admin_notifications_path, **schedule_send_now_flash_for(schedule, result)
         end
       end
-    rescue FirebaseAppConfig::ConfigurationError => error
-      respond_with_broadcast_error(message: error.message, status: :unprocessable_entity)
     end
 
     private
@@ -90,7 +95,11 @@ module Admin
         :scheduled_date,
         :day_of_week,
         :day_of_month,
-        :active
+        :active,
+        :target_type,
+        :target_customer_type,
+        :campaign_id,
+        channels: []
       )
     end
 
@@ -105,8 +114,12 @@ module Admin
         "day_of_week",
         "day_of_month",
         "last_sent_at",
-        "active"
+        "active",
+        "target_type",
+        "target_customer_type",
+        "campaign_id"
       ).merge(
+        "channels" => schedule.channel_list,
         "schedule_summary" => schedule.schedule_summary
       )
     end
@@ -134,27 +147,36 @@ module Admin
     end
 
     def schedule_send_now_notice_for(schedule, result)
-      if result.requested.to_i.zero?
-        return "No active device tokens are registered, so \"#{schedule.title}\" was not sent."
+      counts = delivery_counts(result.summary)
+      if counts[:total].zero?
+        return "No reachable recipients on the selected channels, so \"#{schedule.title}\" was not sent."
       end
 
-      base_message = "Sent \"#{schedule.title}\" now. #{result.sent} deliveries succeeded, #{result.failed} failed."
-      first_error = Array(result.errors).filter_map { |error| error[:error] || error["error"] }.first
-      return base_message if first_error.blank?
-
-      "#{base_message} #{first_error}"
+      "Sent \"#{schedule.title}\" now. #{counts[:sent]} delivered, #{counts[:skipped]} skipped, #{counts[:failed]} failed."
     end
 
     def schedule_send_now_flash_for(schedule, result)
-      flash_key = result.requested.to_i.zero? || result.failed.to_i.positive? ? :alert : :notice
+      counts = delivery_counts(result.summary)
+      flash_key = counts[:total].zero? || counts[:failed].positive? ? :alert : :notice
       { flash_key => schedule_send_now_notice_for(schedule, result) }
     end
 
-    def respond_with_broadcast_error(message:, status:)
-      respond_to do |format|
-        format.json { render json: { error: message }, status: status }
-        format.html { redirect_to admin_notifications_path, alert: message }
+    # Flatten a Broadcaster per-channel summary ({channel => {status => n}}) into
+    # sent/skipped/failed/total tallies for flash copy. Statuses are the
+    # NotificationRecipient enum (sent/failed/invalidated/skipped); invalidated
+    # (dead tokens) folds into failed, matching NotificationDeliveriesController
+    # and the Android summarizer.
+    def delivery_counts(summary)
+      totals = Hash.new(0)
+      (summary || {}).each_value do |by_status|
+        by_status.each { |status, count| totals[status.to_s] += count.to_i }
       end
+      {
+        sent: totals["sent"],
+        skipped: totals["skipped"],
+        failed: totals["failed"] + totals["invalidated"],
+        total: totals.values.sum
+      }
     end
 
     def respond_with_schedule_errors(schedule:, edit: false, status:)

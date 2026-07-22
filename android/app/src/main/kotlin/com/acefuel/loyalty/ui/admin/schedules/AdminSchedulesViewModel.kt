@@ -20,6 +20,10 @@ data class ScheduleForm(
     val dayOfWeek: Int = 1, // Sunday=0 … Saturday=6, only for "weekly"
     val dayOfMonth: String = "1", // 1..31, only for "monthly"
     val active: Boolean = true,
+    // F2 — channel + audience targeting (mirrors the ad-hoc send controls).
+    val channels: List<String> = listOf("push"),
+    val targetType: String = "all",
+    val customerType: String = "otp",
 )
 
 data class AdminSchedulesUiState(
@@ -162,7 +166,7 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         rowActionId = null,
-                        successMessage = deliverySummary(result.data.delivery),
+                        successMessage = summarizeDelivery(result.data.delivery),
                         schedules = it.schedules.map { s -> if (s.id == id) result.data.schedule else s },
                     )
                 }
@@ -226,6 +230,9 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
                     dayOfWeek = schedule.dayOfWeek ?: 1,
                     dayOfMonth = (schedule.dayOfMonth ?: 1).toString(),
                     active = schedule.active,
+                    channels = schedule.channels.ifEmpty { listOf("push") },
+                    targetType = schedule.targetType.ifBlank { "all" },
+                    customerType = schedule.targetCustomerType ?: "otp",
                 ),
             )
         }
@@ -256,6 +263,14 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
     fun onFormDayOfWeek(v: Int) = updateForm(null) { it.copy(dayOfWeek = v) }
     fun onFormDayOfMonth(v: String) = updateForm("day_of_month") { it.copy(dayOfMonth = v) }
     fun onFormActive(v: Boolean) = updateForm(null) { it.copy(active = v) }
+
+    fun toggleFormChannel(channel: String) = updateForm(null) {
+        val next = if (it.channels.contains(channel)) it.channels - channel else it.channels + channel
+        it.copy(channels = next.ifEmpty { listOf("push") })
+    }
+
+    fun onFormTargetType(v: String) = updateForm(null) { it.copy(targetType = v) }
+    fun onFormCustomerType(v: String) = updateForm(null) { it.copy(customerType = v) }
 
     /** Applies [block] and clears the field's own validation error (if [key] is set). */
     private inline fun updateForm(key: String?, block: (ScheduleForm) -> ScheduleForm) =
@@ -297,6 +312,9 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
             dayOfWeek = if (f.frequency == "weekly") f.dayOfWeek else null,
             dayOfMonth = if (f.frequency == "monthly") f.dayOfMonth.toIntOrNull() else null,
             active = f.active,
+            channels = f.channels,
+            targetType = f.targetType,
+            targetCustomerType = if (f.targetType == "customer_type") f.customerType else null,
         )
 
         _state.update { it.copy(saving = true, formError = null, formFieldErrors = emptyMap()) }
@@ -343,10 +361,13 @@ private fun ApiResult.Error.friendly(): String =
         message
     }
 
-// F2 — summarize the per-channel { channel: { status: n } } delivery map.
-private fun sendSummary(r: SendResponse): String {
+private fun sendSummary(r: SendResponse): String = summarizeDelivery(r.delivery)
+
+// F2 — summarize the per-channel { channel: { status: n } } delivery map (shared
+// by the ad-hoc send and per-schedule send-now, which now both use the Broadcaster).
+private fun summarizeDelivery(delivery: Map<String, Map<String, Int>>): String {
     val totals = mutableMapOf<String, Int>()
-    r.delivery.values.forEach { byStatus -> byStatus.forEach { (status, n) -> totals[status] = (totals[status] ?: 0) + n } }
+    delivery.values.forEach { byStatus -> byStatus.forEach { (status, n) -> totals[status] = (totals[status] ?: 0) + n } }
     val total = totals.values.sum()
     if (total == 0) return "No reachable recipients for that audience/channel."
     val sent = totals["sent"] ?: 0
@@ -355,19 +376,8 @@ private fun sendSummary(r: SendResponse): String {
     return "Sent $sent · skipped $skipped · failed $failed."
 }
 
-private fun deliverySummary(d: DeliveryResultDto): String = when {
-    d.requested == 0 -> "No active device tokens are registered, so nothing was sent."
-    else -> buildString {
-        append("Sent to ${d.sent} of ${d.requested} device${plural(d.requested)}.")
-        if (d.failed > 0) append(" ${d.failed} failed.")
-        if (d.invalidated > 0) append(" ${d.invalidated} stale token${plural(d.invalidated)} removed.")
-    }
-}
-
 private fun runSummary(r: RunResultDto): String = when {
     r.skipped -> r.message ?: "Another scheduler run is already in progress."
     r.due == 0 -> "No schedules were due right now. Checked ${r.checked}."
     else -> "${r.sent} sent, ${r.failed} failed (of ${r.due} due, ${r.checked} checked)."
 }
-
-private fun plural(n: Int): String = if (n == 1) "" else "s"

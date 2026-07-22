@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_180003) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -310,6 +310,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_180003) do
 
   create_table "notification_schedules", force: :cascade do |t|
     t.boolean "active", default: true, null: false
+    t.bigint "campaign_id"
+    t.string "channels", default: "push", null: false
     t.datetime "created_at", null: false
     t.integer "day_of_month"
     t.integer "day_of_week"
@@ -318,9 +320,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_180003) do
     t.text "message", null: false
     t.date "scheduled_date"
     t.string "scheduled_time", null: false
+    t.string "target_customer_type"
+    t.string "target_type", default: "all", null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_notification_schedules_on_active"
+    t.index ["campaign_id"], name: "index_notification_schedules_on_campaign_id"
     t.index ["frequency"], name: "index_notification_schedules_on_frequency"
   end
 
@@ -779,6 +784,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_180003) do
   add_foreign_key "notification_recipients", "customers", on_delete: :nullify
   add_foreign_key "notification_recipients", "notification_messages", on_delete: :cascade
   add_foreign_key "notification_recipients", "push_subscriptions", on_delete: :nullify
+  add_foreign_key "notification_schedules", "campaigns", on_delete: :nullify
   add_foreign_key "pii_access_logs", "users", column: "actor_user_id", on_delete: :cascade
   add_foreign_key "pii_access_logs", "users", column: "target_user_id", on_delete: :cascade
   add_foreign_key "points_ledgers", "customers"

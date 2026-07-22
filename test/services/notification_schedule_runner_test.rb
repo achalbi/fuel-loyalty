@@ -1,17 +1,19 @@
 require "test_helper"
 
 class NotificationScheduleRunnerTest < ActiveSupport::TestCase
-  FakePushService = Struct.new(:calls) do
-    def broadcast(title:, message:)
-      calls << { title:, message: }
-      FirebasePushService::Result.new(
-        requested: 1,
-        sent: 1,
-        failed: 0,
-        invalidated: 0,
-        batches: 1,
-        errors: []
-      )
+  # Records the Broadcaster calls the runner makes (the runner now routes through
+  # Notifications::Broadcaster instead of FirebasePushService#broadcast).
+  class FakeBroadcaster
+    Result = Struct.new(:message, :summary, keyword_init: true)
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def call(**kwargs)
+      @calls << kwargs
+      Result.new(message: nil, summary: { "push" => { "sent" => 1 } })
     end
   end
 
@@ -75,7 +77,7 @@ class NotificationScheduleRunnerTest < ActiveSupport::TestCase
   end
 
   test "run sends due schedules and disables one-time schedules after success" do
-    push_service = FakePushService.new([])
+    broadcaster = FakeBroadcaster.new
     schedule = NotificationSchedule.create!(
       title: "One Time Alert",
       message: "Today only",
@@ -86,7 +88,7 @@ class NotificationScheduleRunnerTest < ActiveSupport::TestCase
     )
 
     travel_to Time.zone.local(2026, 3, 25, 10, 15, 0) do
-      result = NotificationScheduleRunner.new(push_service: push_service).run(current_time: Time.current)
+      result = NotificationScheduleRunner.new(broadcaster: broadcaster).run(current_time: Time.current)
 
       assert_equal 1, result.checked
       assert_equal 1, result.due
@@ -94,7 +96,15 @@ class NotificationScheduleRunnerTest < ActiveSupport::TestCase
       assert_equal 0, result.failed
       assert result.acquired
       refute result.skipped
-      assert_equal [{ title: "One Time Alert", message: "Today only" }], push_service.calls
+
+      assert_equal 1, broadcaster.calls.length
+      call = broadcaster.calls.first
+      assert_equal "One Time Alert", call[:title]
+      assert_equal "Today only", call[:body]
+      assert_equal :scheduled, call[:category]
+      assert_equal "push", call[:channels]
+      assert_equal "all", call[:target_type]
+      assert_equal schedule, call[:notification_schedule]
 
       schedule.reload
       refute schedule.active?
@@ -102,8 +112,54 @@ class NotificationScheduleRunnerTest < ActiveSupport::TestCase
     end
   end
 
+  test "run routes the schedule's channels and audience through the broadcaster" do
+    broadcaster = FakeBroadcaster.new
+    NotificationSchedule.create!(
+      title: "Segment Blast",
+      message: "Credit customers only",
+      frequency: "daily",
+      scheduled_time: "09:00",
+      channels: %w[push whatsapp],
+      target_type: "customer_type",
+      target_customer_type: "credit",
+      active: true
+    )
+
+    travel_to Time.zone.local(2026, 3, 25, 10, 0, 0) do
+      NotificationScheduleRunner.new(broadcaster: broadcaster).run(current_time: Time.current)
+    end
+
+    call = broadcaster.calls.first
+    assert_equal "push,whatsapp", call[:channels]
+    assert_equal "customer_type", call[:target_type]
+    assert_equal "credit", call[:target_customer_type]
+  end
+
+  test "run with the real broadcaster logs a scheduled NotificationMessage linked to the schedule" do
+    schedule = NotificationSchedule.create!(
+      title: "Logged Daily",
+      message: "Persisted send",
+      frequency: "daily",
+      scheduled_time: "09:00",
+      channels: %w[push sms],
+      active: true
+    )
+
+    travel_to Time.zone.local(2026, 3, 25, 10, 0, 0) do
+      assert_difference -> { NotificationMessage.count }, 1 do
+        NotificationScheduleRunner.new.run(current_time: Time.current)
+      end
+    end
+
+    message = NotificationMessage.order(:created_at).last
+    assert_equal schedule.id, message.notification_schedule_id
+    assert_equal "scheduled", message.category
+    assert_equal %w[push sms], message.channel_list
+    assert_equal "all", message.target_type
+  end
+
   test "run skips when another scheduler execution holds the lease" do
-    push_service = FakePushService.new([])
+    broadcaster = FakeBroadcaster.new
     SchedulerLease.create!(
       key: NotificationScheduleRunner::LEASE_KEY,
       running: true,
@@ -112,17 +168,17 @@ class NotificationScheduleRunnerTest < ActiveSupport::TestCase
       last_heartbeat_at: Time.current
     )
 
-    result = NotificationScheduleRunner.new(push_service: push_service).run(current_time: Time.current)
+    result = NotificationScheduleRunner.new(broadcaster: broadcaster).run(current_time: Time.current)
 
     assert_equal 0, result.checked
     assert_equal 0, result.sent
     refute result.acquired
     assert result.skipped
-    assert_equal [], push_service.calls
+    assert_equal [], broadcaster.calls
   end
 
   test "run can recover a stale scheduler lease" do
-    push_service = FakePushService.new([])
+    broadcaster = FakeBroadcaster.new
     schedule = NotificationSchedule.create!(
       title: "Recovered Daily Alert",
       message: "Recovered",
@@ -139,12 +195,13 @@ class NotificationScheduleRunnerTest < ActiveSupport::TestCase
         last_heartbeat_at: 20.minutes.ago
       )
 
-      result = NotificationScheduleRunner.new(push_service: push_service).run(current_time: Time.current)
+      result = NotificationScheduleRunner.new(broadcaster: broadcaster).run(current_time: Time.current)
 
       assert result.acquired
       refute result.skipped
       assert_equal 1, result.sent
-      assert_equal [{ title: "Recovered Daily Alert", message: "Recovered" }], push_service.calls
+      assert_equal 1, broadcaster.calls.length
+      assert_equal "Recovered Daily Alert", broadcaster.calls.first[:title]
 
       schedule.reload
       assert_in_delta Time.current.to_i, schedule.last_sent_at.to_i, 5

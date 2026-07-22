@@ -386,6 +386,11 @@ private fun ScheduleRow(
                 Text("Schedule: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.nayara.textTertiary)
             }
             Text(
+                "Delivery: ${scheduleDeliveryLabel(schedule)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.nayara.textTertiary,
+            )
+            Text(
                 "Last sent: ${schedule.lastSentAt?.let(::formatDateTime) ?: "Never"}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.nayara.textTertiary,
@@ -537,6 +542,15 @@ private fun ScheduleFormContent(
             )
         }
 
+        Text("Channels", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.nayara.textSecondary)
+        ChipRow(listOf("push", "whatsapp", "sms"), f.channels) { vm.toggleFormChannel(it) }
+
+        Text("Audience", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.nayara.textSecondary)
+        ChipRow(listOf("all", "customer_type"), listOf(f.targetType)) { vm.onFormTargetType(it) }
+        if (f.targetType == "customer_type") {
+            ChipRow(listOf("otp", "credit", "drive_in"), listOf(f.customerType)) { vm.onFormCustomerType(it) }
+        }
+
         state.formError?.let { InlineErrorCard(it) }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -630,3 +644,15 @@ private fun formatDateTime(iso: String): String = runCatching {
     java.time.OffsetDateTime.parse(iso)
         .format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy · hh:mm a"))
 }.getOrDefault(iso)
+
+/** "PUSH, WHATSAPP · Everyone" — the schedule's channels + audience at a glance. */
+private fun scheduleDeliveryLabel(schedule: ScheduleDto): String {
+    val channels = schedule.channels.ifEmpty { listOf("push") }.joinToString(", ") { it.uppercase() }
+    val audience = if (schedule.targetType == "customer_type") {
+        val type = schedule.targetCustomerType?.replace('_', ' ')?.replaceFirstChar { it.uppercase() }
+        "${type ?: "Segment"} customers"
+    } else {
+        "Everyone"
+    }
+    return "$channels · $audience"
+}
