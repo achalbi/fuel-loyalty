@@ -40,19 +40,25 @@ module Admin
 
       def recency_delta
         days = @cadence.days_since_last_visit.to_i
-        gap = @cadence.median_gap_days
 
-        if gap.to_i.positive?
-          ratio = days.to_f / gap
+        # Only trust a gap-based rhythm once the cadence is actually established
+        # (>= MIN_VISITS visits). Below that, Cadence reports class "new" and its
+        # median is a single coincidental gap — scoring off it would contradict the
+        # "new" label, so fall back to raw recency.
+        if established_cadence?
+          ratio = days.to_f / @cadence.median_gap_days
           return 15 if ratio <= 1.0   # on schedule or early
           return 0 if ratio <= 2.0    # slipping
           -25                          # long overdue
         else
-          # No established cadence — judge on raw recency.
           return 10 if days <= 14
           return 0 if days <= 45
           -15
         end
+      end
+
+      def established_cadence?
+        @cadence.median_gap_days.to_i.positive? && @cadence.visit_count.to_i >= Cadence::MIN_VISITS
       end
     end
   end

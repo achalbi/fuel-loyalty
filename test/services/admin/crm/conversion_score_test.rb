@@ -35,6 +35,21 @@ module Admin
         assert_equal base - 20, dropped
       end
 
+      test "a two-visit customer is scored on raw recency, not a single coincidental gap" do
+        # 2 visits 80 days apart, last one 2 days ago. The old code trusted the
+        # lone 80-day gap as a cadence (ratio 0.025 → +15). It must instead use raw
+        # recency (days<=14 → +10): base 50 + freq 2 + recency 10 = 62, NOT 67.
+        cadence = cadence_for([Date.new(2026, 5, 1), Date.new(2026, 7, 20)])
+        assert_equal "new", cadence.cadence_class
+        assert_equal 62, ConversionScore.call(cadence: cadence)
+      end
+
+      test "a two-visit customer long unseen is penalised via raw recency" do
+        # 2 visits, last one ~100 days ago → raw recency days>45 → -15.
+        cadence = cadence_for([Date.new(2026, 4, 1), Date.new(2026, 4, 6)])
+        assert_equal 37, ConversionScore.call(cadence: cadence) # 50 + 2 - 15
+      end
+
       test "score clamps between 0 and 100" do
         dates = (1..30).map { |d| Date.new(2026, 7, 1) + d } # very frequent → high freq
         high = ConversionScore.call(cadence: cadence_for(dates), last_outcome: "converted")

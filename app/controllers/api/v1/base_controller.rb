@@ -16,6 +16,7 @@ module Api
       rescue_from Pundit::NotAuthorizedError, with: :render_forbidden
       rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
       rescue_from ActiveRecord::RecordInvalid, with: :render_record_invalid
+      rescue_from ActiveRecord::RecordNotUnique, with: :render_record_not_unique
       rescue_from ActiveRecord::DeleteRestrictionError, with: :render_delete_restricted
       rescue_from ActionController::ParameterMissing, with: :render_parameter_missing
 
@@ -84,6 +85,13 @@ module Api
       def render_delete_restricted(_error)
         render_error(status: :conflict, code: "delete_restricted",
                      message: "This record cannot be removed because related history exists.")
+      end
+
+      # A unique-index violation that slipped past a model uniqueness validation
+      # (a concurrent insert racing the same key) — a conflict, not a 500.
+      def render_record_not_unique(_error)
+        render_error(status: :conflict, code: "already_exists",
+                     message: "That record already exists.")
       end
 
       # Service objects (PointsRedeemer, TransactionCreator, …) and models raise

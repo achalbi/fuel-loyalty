@@ -18,6 +18,12 @@ class CustomerFeedback < ApplicationRecord
   # One feedback per rated artifact (mirrors the partial unique indexes).
   validates :transaction_id, uniqueness: true, allow_nil: true
   validates :visit_entry_id, uniqueness: true, allow_nil: true
+  # A linked transaction/visit must EXIST and belong to the same customer. Without
+  # this, a client could point feedback at another customer's transaction — both
+  # misattributing it and (via the global per-transaction unique index) permanently
+  # blocking that customer's own feedback for it. Also turns a bogus id into a 422
+  # instead of a DB-level InvalidForeignKey 500.
+  validate :linked_records_belong_to_customer
 
   scope :recent_first, -> { order(created_at: :desc, id: :desc) }
 
@@ -29,5 +35,23 @@ class CustomerFeedback < ApplicationRecord
 
   def normalize_source
     self.source = source.to_s.strip.downcase.presence || "staff"
+  end
+
+  def linked_records_belong_to_customer
+    if transaction_id.present?
+      if fuel_transaction.nil?
+        errors.add(:transaction_id, "does not exist")
+      elsif fuel_transaction.customer_id != customer_id
+        errors.add(:transaction_id, "must belong to the same customer")
+      end
+    end
+
+    if visit_entry_id.present?
+      if visit_entry.nil?
+        errors.add(:visit_entry_id, "does not exist")
+      elsif visit_entry.customer_id != customer_id
+        errors.add(:visit_entry_id, "must belong to the same customer")
+      end
+    end
   end
 end
