@@ -114,6 +114,30 @@ a:hover{text-decoration:underline}
 </div></div>
 <article class="doc">
 <h1 id="a7-operator-profile-kyc-fields-photo-address-aadhaar-id-card-photo">A7 — Operator Profile / KYC Fields (Photo, Address, Aadhaar, ID-card Photo)</h1>
+<blockquote>
+<p><strong>Build status (Phase 3, 2026-07-22):</strong> ✅ <strong>Backend + API + web + Android shipped, tested.</strong>
+ActiveStorage installed; <code>User</code> has <code>profile_photo</code>/<code>id_card_photo</code> attachments
+(type+size validated); <code>users</code> += <code>address</code> + Aadhaar (<strong>Active Record Encryption</strong>
+at rest, <strong>Verhoeff</strong> checksum, masked <code>XXXX-XXXX-1234</code> via <code>aadhaar_last4</code>). PII:
+masked-by-default serializer, an admin-only <strong>audited</strong> reveal (<code>GET /api/v1/admin/users/:id/kyc_reveal</code>
++ web <code>reveal_aadhaar</code>, both writing a <code>pii_access_logs</code> row), an authenticated
+ID-card view/redirect, a Purge-KYC action, and Aadhaar/image log-filtering. Multipart
+create/update on web + API; a blank Aadhaar on edit keeps the stored value. Login is
+unchanged (Q3 — no OTP). The <strong>Android</strong> admin Users sheet now captures Address +
+Aadhaar (12-digit, checksum server-verified) and adds Profile/ID-card photos via a
+<strong>Take photo</strong> (camera, runtime-permission-gated + FileProvider) <strong>or Choose from
+gallery</strong> chooser, uploading over multipart (no-image edits stay on JSON); the
+audited reveal shows the full Aadhaar transiently + opens the signed ID-card URL, and
+Purge-KYC is wired. Thumbnails render via Coil on the shared authed OkHttp client.
+<strong>Production prerequisites — code + pipeline now wired; operator runs two one-time
+scripts</strong> (see <a href="../a7-prod-provisioning.md"><code>docs/a7-prod-provisioning.md</code></a>):
+<code>google-cloud-storage</code> gem + a <code>:google</code> ActiveStorage service (Cloud Run ADC, no
+keyfile) + an <code>ACTIVE_STORAGE_SERVICE</code>-driven <code>production.rb</code>, and <code>cloudbuild.yaml</code>
+mounting the <code>AR_ENCRYPTION_*</code> secrets + <code>GCS_*</code> env into the migrate job and service.
+The operator runs <code>scripts/setup-encryption-keys.sh</code> (<strong>mandatory before the Phase-3
+deploy — the app won't boot without the keys</strong>; the script never overwrites an existing
+key) and <code>scripts/setup-gcs.sh</code> (private bucket), then flips <code>_ACTIVE_STORAGE_SERVICE=google</code>.</p>
+</blockquote>
 <p>Extend the operator (staff) user record with the KYC profile the requirement asks for: a profile photo, a postal address, an Aadhaar number, and a photo of the operator's ID card. This is a <strong>profile-fields-only</strong> change per LOCKED DECISION Q3 — it adds data capture and PII handling to the existing user record and admin forms on both the Rails PWA and the native Android app. <strong>Explicit non-goal:</strong> OTP / passwordless login and any SMS/WhatsApp auth provider. Username/mobile + password login (Devise <code>:database_authenticatable</code>) is retained unchanged.</p>
 <h2 id="requirements-covered">Requirements covered</h2>
 <div class="table-wrap"><table>
@@ -342,7 +366,7 @@ has_one_attached :id_card_photo      # Aadhaar/ID card scan — HIGH sensitivity
 <li>[ ] Aadhaar is stored as ciphertext (verified by inspecting the raw column) and only decrypts through <code>aadhaar_number</code>.</li>
 <li>[ ] Aadhaar with a bad Verhoeff checksum or non-12-digit input is rejected with a 422 field error on both web and API.</li>
 <li>[ ] Web operator form (<code>_form.html.erb</code>) is <code>multipart</code>, shows Address, Aadhaar (masked on edit), Profile Photo, and ID-card Photo inputs, and saves them.</li>
-<li>[ ] Android create/edit sheet captures Address, Aadhaar, Profile Photo, and ID-card Photo and uploads via multipart; a no-image edit still works over JSON.</li>
+<li>[x] Android create/edit sheet captures Address, Aadhaar, Profile Photo, and ID-card Photo and uploads via multipart; a no-image edit still works over JSON.</li>
 <li>[ ] Default list/detail responses (web + API) show only <code>aadhaar_masked</code> (<code>XXXX-XXXX-1234</code>) and a profile-photo URL — never the full Aadhaar or raw ID-card URL.</li>
 <li>[ ] <code>GET /api/v1/admin/users/:id/kyc_reveal</code> returns the full Aadhaar and a short-TTL signed ID-card URL <strong>only</strong> to admins and writes a PII-access audit event; non-admins get 403.</li>
 <li>[ ] ID-card image is never served via a permanent public URL; it is reachable only through the authenticated redirect (web) or signed reveal URL (API).</li>
@@ -352,7 +376,7 @@ has_one_attached :id_card_photo      # Aadhaar/ID card scan — HIGH sensitivity
 </ul>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
-  <span class="fnote">Generated from 17-spec-operator-kyc.md &middot; 2026-07-21</span>
+  <span class="fnote">Generated from 17-spec-operator-kyc.md &middot; 2026-07-22</span>
 </div>
 </article>
 <script>
