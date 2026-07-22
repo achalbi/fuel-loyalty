@@ -130,7 +130,7 @@ substitutions:
   # deploy still boots before GCS is provisioned. After running
   # scripts/setup-gcs.sh, flip _ACTIVE_STORAGE_SERVICE to 'google' and set
   # _GCS_BUCKET so operator KYC images survive Cloud Run restarts.
-  _ACTIVE_STORAGE_SERVICE: 'local'
+  _ACTIVE_STORAGE_SERVICE: 'google'
   _GCS_PROJECT: 'thoughtbasics'
   _GCS_BUCKET: 'fuel-loyalty-uploads'
 
