@@ -1,0 +1,88 @@
+<% content_for :title, @campaign.name %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h3 mb-0"><%= @campaign.name %></h1>
+    <span class="badge text-bg-<%= @campaign.active? ? "success" : (@campaign.paused? ? "warning" : "secondary") %>"><%= @campaign.status.humanize %></span>
+    <span class="text-muted"><%= @campaign.offer_headline %></span>
+  </div>
+  <div class="d-flex gap-2">
+    <%= link_to "Back", admin_campaigns_path, class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "Edit", edit_admin_campaign_path(@campaign), class: "btn btn-primary btn-sm" %>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6">Rule</h2>
+      <p class="mb-1"><strong>Threshold:</strong>
+        <%= "₹#{@campaign.min_purchase_amount.to_i}" if @campaign.min_purchase_amount %>
+        <%= "#{@campaign.min_purchase_litres} L" if @campaign.min_purchase_litres %>
+        over <%= @campaign.period.humanize.downcase %><%= " (#{@campaign.period_days} days)" if @campaign.period_rolling_days? %>
+      </p>
+      <p class="mb-1"><strong>Audience:</strong> <%= @campaign.target_type.humanize %><%= " · #{@campaign.target_customer_type.humanize}" if @campaign.target_customer_type.present? %>
+        <%= " · #{@campaign.campaign_targets.size} customer(s)" if @campaign.target_individual? || @campaign.target_selected? %></p>
+      <p class="mb-0"><strong>Channels:</strong> <%= @campaign.channel_list.map(&:upcase).join(", ") %></p>
+    </div></div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6">Actions</h2>
+      <div class="d-flex flex-wrap gap-2">
+        <%= button_to "Preview", preview_admin_campaign_path(@campaign), method: :post, class: "btn btn-outline-secondary btn-sm" %>
+        <%= button_to "Run now", run_admin_campaign_path(@campaign), method: :post, class: "btn btn-primary btn-sm",
+              data: { turbo_confirm: "Run this campaign — grant rewards and send offers now?" } %>
+        <% if @campaign.active? %>
+          <%= button_to "Pause", pause_admin_campaign_path(@campaign), method: :patch, class: "btn btn-outline-warning btn-sm" %>
+        <% else %>
+          <%= button_to "Activate", activate_admin_campaign_path(@campaign), method: :patch, class: "btn btn-outline-success btn-sm" %>
+        <% end %>
+        <%= button_to "Delete", admin_campaign_path(@campaign), method: :delete, class: "btn btn-outline-danger btn-sm",
+              data: { turbo_confirm: "Delete this campaign?" } %>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<% if @preview %>
+  <div class="card mb-4">
+    <div class="card-body">
+      <h2 class="h6">Preview — <%= @preview.qualifying_count %> customer(s) currently qualify</h2>
+      <p class="small text-muted">Reachable now:
+        <% @preview.reachable.each do |channel, count| %><span class="badge text-bg-light border me-1"><%= channel.upcase %>: <%= count %></span><% end %>
+      </p>
+      <% if @preview.sample.any? %>
+        <ul class="mb-0 small">
+          <% @preview.sample.each do |row| %>
+            <li><%= row[:name] %> — ₹<%= row[:aggregated_amount].to_i %><%= ", #{row[:aggregated_litres]} L" if row[:aggregated_litres].to_f.positive? %></li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<h2 class="h5">Qualifications</h2>
+<% qualifications = @campaign.campaign_qualifications.includes(:customer).order(created_at: :desc).limit(50) %>
+<% if qualifications.any? %>
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <thead><tr><th>Customer</th><th>Window</th><th class="text-end">₹</th><th class="text-end">Litres</th><th>Rewarded</th><th>Notified</th></tr></thead>
+      <tbody>
+        <% qualifications.each do |q| %>
+          <tr>
+            <td><%= q.customer&.display_name %></td>
+            <td class="small"><%= q.period_start %> → <%= q.period_end %></td>
+            <td class="text-end"><%= number_to_currency(q.aggregated_amount, unit: "₹") %></td>
+            <td class="text-end"><%= q.aggregated_litres %></td>
+            <td><%= q.reward_granted_at ? "✓" : "—" %></td>
+            <td><%= q.notified_at ? "✓" : "—" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <p class="text-muted">No qualifications yet — run the campaign or preview it.</p>
+<% end %>

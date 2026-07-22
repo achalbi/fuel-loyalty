@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -78,6 +78,62 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_170000) do
     t.index ["shift_template_id", "starts_at"], name: "index_attendance_runs_on_shift_and_starts_at"
     t.index ["shift_template_id"], name: "index_attendance_runs_on_shift_template_id"
     t.index ["stale"], name: "index_attendance_runs_on_stale"
+  end
+
+  create_table "campaign_qualifications", force: :cascade do |t|
+    t.decimal "aggregated_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "aggregated_litres", precision: 12, scale: 3
+    t.bigint "campaign_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "customer_id", null: false
+    t.datetime "notified_at"
+    t.date "period_end", null: false
+    t.date "period_start", null: false
+    t.datetime "qualified_at"
+    t.datetime "reward_granted_at"
+    t.bigint "reward_points_ledger_id"
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id", "customer_id", "period_start"], name: "index_campaign_qualifications_unique", unique: true
+    t.index ["campaign_id"], name: "index_campaign_qualifications_on_campaign_id"
+    t.index ["customer_id"], name: "index_campaign_qualifications_on_customer_id"
+    t.index ["reward_points_ledger_id"], name: "index_campaign_qualifications_on_reward_points_ledger_id"
+  end
+
+  create_table "campaign_targets", force: :cascade do |t|
+    t.bigint "campaign_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "customer_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id", "customer_id"], name: "index_campaign_targets_on_campaign_id_and_customer_id", unique: true
+    t.index ["campaign_id"], name: "index_campaign_targets_on_campaign_id"
+    t.index ["customer_id"], name: "index_campaign_targets_on_customer_id"
+  end
+
+  create_table "campaigns", force: :cascade do |t|
+    t.integer "bonus_points"
+    t.string "channels", default: "push", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.text "description"
+    t.decimal "discount_amount", precision: 10, scale: 2
+    t.decimal "discount_percent", precision: 5, scale: 2
+    t.datetime "ends_at"
+    t.string "gift_description"
+    t.decimal "min_purchase_amount", precision: 10, scale: 2
+    t.decimal "min_purchase_litres", precision: 10, scale: 3
+    t.string "name", null: false
+    t.integer "period", default: 0, null: false
+    t.integer "period_days"
+    t.integer "reward_kind", default: 0, null: false
+    t.datetime "starts_at"
+    t.integer "status", default: 0, null: false
+    t.string "target_customer_type"
+    t.integer "target_type", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.date "window_end"
+    t.date "window_start"
+    t.index ["created_by_id"], name: "index_campaigns_on_created_by_id"
+    t.index ["status"], name: "index_campaigns_on_status"
   end
 
   create_table "customer_contacts", force: :cascade do |t|
@@ -188,6 +244,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_170000) do
 
   create_table "notification_messages", force: :cascade do |t|
     t.text "body"
+    t.bigint "campaign_id"
     t.integer "category", default: 0, null: false
     t.string "channels", default: "push", null: false
     t.datetime "created_at", null: false
@@ -198,6 +255,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_170000) do
     t.integer "target_type", default: 0, null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_notification_messages_on_campaign_id"
     t.index ["category"], name: "index_notification_messages_on_category"
     t.index ["created_by_id"], name: "index_notification_messages_on_created_by_id"
     t.index ["notification_schedule_id"], name: "index_notification_messages_on_notification_schedule_id"
@@ -659,6 +717,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_170000) do
   add_foreign_key "attendance_entry_changes", "users", column: "changed_by_id"
   add_foreign_key "attendance_runs", "shift_templates"
   add_foreign_key "attendance_runs", "users", column: "recorded_by_id"
+  add_foreign_key "campaign_qualifications", "campaigns", on_delete: :cascade
+  add_foreign_key "campaign_qualifications", "customers", on_delete: :cascade
+  add_foreign_key "campaign_qualifications", "points_ledgers", column: "reward_points_ledger_id", on_delete: :nullify
+  add_foreign_key "campaign_targets", "campaigns", on_delete: :cascade
+  add_foreign_key "campaign_targets", "customers", on_delete: :cascade
+  add_foreign_key "campaigns", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "customer_contacts", "customers", on_delete: :cascade
   add_foreign_key "customers", "customer_contacts", column: "primary_contact_id", on_delete: :nullify
   add_foreign_key "daily_settlements", "fuel_pumps", on_delete: :restrict
@@ -666,6 +730,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_170000) do
   add_foreign_key "daily_settlements", "users", column: "recorded_by_id", on_delete: :restrict
   add_foreign_key "fuel_pump_nozzles", "fuel_pumps"
   add_foreign_key "fuel_pump_nozzles", "fuel_types", column: "fuel_type_code", primary_key: "code"
+  add_foreign_key "notification_messages", "campaigns", on_delete: :nullify
   add_foreign_key "notification_messages", "notification_schedules", on_delete: :nullify
   add_foreign_key "notification_messages", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "notification_recipients", "customers", on_delete: :nullify

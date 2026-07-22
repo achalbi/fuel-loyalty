@@ -9,9 +9,11 @@ module Notifications
     def self.call(...) = new(...).call
 
     def initialize(title:, body:, category: :broadcast, target_type: "all", target_customer_type: nil,
-                   customer_ids: nil, channels: "push", created_by: nil, offer_payload: {}, notification_schedule: nil)
+                   customer_ids: nil, channels: "push", created_by: nil, offer_payload: {},
+                   notification_schedule: nil, campaign: nil)
       @title = title
       @body = body
+      @campaign = campaign
       @category = NotificationMessage.categories.key?(category.to_s) ? category.to_s : "broadcast"
       target = target_type.to_s.presence || "all"
       @target_type = NotificationMessage.target_types.key?(target) ? target : "all"
@@ -28,7 +30,7 @@ module Notifications
         title: @title, body: @body, category: @category,
         target_type: @target_type, target_customer_type: @target_customer_type.presence,
         channels: normalized_channels, created_by: @created_by, offer_payload: @offer_payload,
-        notification_schedule: @notification_schedule
+        notification_schedule: @notification_schedule, campaign: @campaign
       )
       audience = AudienceResolver.call(
         target_type: @target_type, target_customer_type: @target_customer_type, customer_ids: @customer_ids

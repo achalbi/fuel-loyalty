@@ -102,6 +102,14 @@ Rails.application.routes.draw do
         post "notifications/send", to: "notifications#deliver"
         get "notifications", to: "notifications#index"
         get "notifications/:id/recipients", to: "notifications#recipients"
+        resources :campaigns, only: %i[index show create update destroy] do
+          member do
+            post :preview
+            post :run
+            patch :activate
+            patch :pause
+          end
+        end
       end
     end
   end
@@ -172,6 +180,14 @@ Rails.application.routes.draw do
     end
     resources :transactions, only: :index
     resources :reports, only: :index
+    resources :campaigns do
+      member do
+        post :preview
+        post :run
+        patch :activate
+        patch :pause
+      end
+    end
     resources :settlements, only: %i[index show edit update] do
       patch :reconcile, on: :member
     end

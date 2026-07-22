@@ -5,6 +5,7 @@ class NotificationMessage < ApplicationRecord
   CHANNELS = %w[push whatsapp sms].freeze
 
   belongs_to :notification_schedule, optional: true
+  belongs_to :campaign, optional: true
   belongs_to :created_by, class_name: "User", optional: true
   has_many :notification_recipients, dependent: :destroy, inverse_of: :notification_message
 

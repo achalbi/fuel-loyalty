@@ -176,6 +176,7 @@
             <li><%= link_to admin_attendance_runs_path, class: "nav-link #{'active' if controller_path == 'admin/attendance_runs'}" do %><i class="ti ti-calendar-check"></i><span class="nav-text">Attendance</span><% end %></li>
             <li class="px-4 pt-4 pb-2"><small class="nav-section-label">App Management</small></li>
             <li><%= link_to admin_notifications_path, class: "nav-link #{'active' if current_page?(admin_notifications_path)}" do %><i class="ti ti-bell-ringing"></i><span class="nav-text">Notifications</span><% end %></li>
+            <li><%= link_to admin_campaigns_path, class: "nav-link #{'active' if controller_path == 'admin/campaigns'}" do %><i class="ti ti-speakerphone"></i><span class="nav-text">Campaigns</span><% end %></li>
             <li><%= link_to admin_theme_settings_path, class: "nav-link #{'active' if current_page?(admin_theme_settings_path)}" do %><i class="ti ti-palette"></i><span class="nav-text">Theme</span><% end %></li>
           <% else %>
             <li class="px-4 py-2"><small class="nav-section-label">Operations</small></li>

@@ -1,0 +1,83 @@
+<%= form_with model: @campaign, url: (@campaign.persisted? ? admin_campaign_path(@campaign) : admin_campaigns_path),
+      method: (@campaign.persisted? ? :patch : :post), class: "vstack gap-3" do |form| %>
+  <% if @campaign.errors.any? %>
+    <div class="alert alert-danger"><%= @campaign.errors.full_messages.to_sentence %></div>
+  <% end %>
+
+  <div class="row g-3">
+    <div class="col-md-8">
+      <%= form.label :name, class: "form-label" %>
+      <%= form.text_field :name, class: "form-control", required: true %>
+    </div>
+    <div class="col-md-4">
+      <%= form.label :reward_kind, "Reward", class: "form-label" %>
+      <%= form.select :reward_kind, options_for_select(Campaign.reward_kinds.keys.map { |k| [k.humanize, k] }, @campaign.reward_kind), {}, class: "form-select" %>
+    </div>
+  </div>
+
+  <div>
+    <%= form.label :description, class: "form-label" %>
+    <%= form.text_area :description, rows: 2, class: "form-control" %>
+  </div>
+
+  <fieldset class="border rounded p-3">
+    <legend class="form-label float-none w-auto px-1 mb-0">Reward details</legend>
+    <div class="row g-3">
+      <div class="col-md-4"><%= form.label :discount_amount, "Discount ₹", class: "form-label small" %><%= form.number_field :discount_amount, step: "0.01", class: "form-control" %></div>
+      <div class="col-md-4"><%= form.label :discount_percent, "Discount %", class: "form-label small" %><%= form.number_field :discount_percent, step: "0.01", class: "form-control" %></div>
+      <div class="col-md-4"><%= form.label :bonus_points, "Bonus points", class: "form-label small" %><%= form.number_field :bonus_points, class: "form-control" %></div>
+      <div class="col-12"><%= form.label :gift_description, "Gift", class: "form-label small" %><%= form.text_field :gift_description, class: "form-control", placeholder: "e.g. free 1L coolant" %></div>
+    </div>
+    <div class="form-text">Fill only the field matching the reward kind (discount = amount or percent; gift = description; bonus points = points).</div>
+  </fieldset>
+
+  <fieldset class="border rounded p-3">
+    <legend class="form-label float-none w-auto px-1 mb-0">Threshold &amp; period</legend>
+    <div class="row g-3">
+      <div class="col-md-3"><%= form.label :min_purchase_amount, "Min ₹", class: "form-label small" %><%= form.number_field :min_purchase_amount, step: "0.01", class: "form-control" %></div>
+      <div class="col-md-3"><%= form.label :min_purchase_litres, "Min litres", class: "form-label small" %><%= form.number_field :min_purchase_litres, step: "0.001", class: "form-control" %></div>
+      <div class="col-md-3">
+        <%= form.label :period, class: "form-label small" %>
+        <%= form.select :period, options_for_select(Campaign.periods.keys.map { |k| [k.humanize, k] }, @campaign.period), {}, class: "form-select" %>
+      </div>
+      <div class="col-md-3"><%= form.label :period_days, "Rolling days", class: "form-label small" %><%= form.number_field :period_days, class: "form-control" %></div>
+      <div class="col-md-3"><%= form.label :window_start, class: "form-label small" %><%= form.date_field :window_start, class: "form-control" %></div>
+      <div class="col-md-3"><%= form.label :window_end, class: "form-label small" %><%= form.date_field :window_end, class: "form-control" %></div>
+    </div>
+  </fieldset>
+
+  <fieldset class="border rounded p-3">
+    <legend class="form-label float-none w-auto px-1 mb-0">Audience &amp; channels</legend>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <%= form.label :target_type, "Target", class: "form-label small" %>
+        <%= form.select :target_type, options_for_select(Campaign.target_types.keys.map { |k| [k.humanize, k] }, @campaign.target_type), {}, class: "form-select" %>
+      </div>
+      <div class="col-md-4">
+        <%= form.label :target_customer_type, "Customer type", class: "form-label small" %>
+        <%= form.select :target_customer_type, options_for_select(@customer_types.map { |t| [t.humanize, t] }, @campaign.target_customer_type), { include_blank: "—" }, class: "form-select" %>
+      </div>
+      <div class="col-md-4">
+        <span class="form-label small d-block">Channels</span>
+        <% %w[push whatsapp sms].each do |channel| %>
+          <div class="form-check form-check-inline">
+            <%= check_box_tag "campaign[channels][]", channel, @campaign.channel_list.include?(channel), id: "campaign_channel_#{channel}", class: "form-check-input" %>
+            <%= label_tag "campaign_channel_#{channel}", channel.upcase, class: "form-check-label" %>
+          </div>
+        <% end %>
+      </div>
+      <div class="col-12">
+        <%= label_tag "campaign[target_customer_ids][]", "Individual / selected customers", class: "form-label small" %>
+        <%= select_tag "campaign[target_customer_ids][]",
+              options_for_select(@customers.map { |c| ["#{c.display_name} · #{c.phone_number}", c.id] }, @campaign.campaign_targets.map(&:customer_id)),
+              multiple: true, class: "form-select", size: 5 %>
+        <div class="form-text">Used only for the Individual / Selected targets.</div>
+      </div>
+    </div>
+  </fieldset>
+
+  <div class="d-flex gap-2">
+    <%= form.submit(@campaign.persisted? ? "Save campaign" : "Create campaign", class: "btn btn-primary") %>
+    <%= link_to "Cancel", (@campaign.persisted? ? admin_campaign_path(@campaign) : admin_campaigns_path), class: "btn btn-link" %>
+  </div>
+<% end %>
