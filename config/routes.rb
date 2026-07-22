@@ -100,6 +100,8 @@ Rails.application.routes.draw do
         end
         post "schedules/run", to: "schedules#run"
         post "notifications/send", to: "notifications#deliver"
+        get "notifications", to: "notifications#index"
+        get "notifications/:id/recipients", to: "notifications#recipients"
       end
     end
   end

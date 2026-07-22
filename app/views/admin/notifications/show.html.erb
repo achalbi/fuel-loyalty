@@ -35,6 +35,32 @@
             <%= form.text_area :message, class: "form-control", rows: 4, maxlength: 240, required: true %>
           </div>
 
+          <div class="row g-2">
+            <div class="col-sm-6">
+              <%= form.label :target_type, "Audience", class: "form-label" %>
+              <%= form.select :target_type,
+                    options_for_select([["All customers", "all"], ["By customer type", "customer_type"]], "all"),
+                    {}, class: "form-select" %>
+            </div>
+            <div class="col-sm-6">
+              <%= form.label :target_customer_type, "Customer type", class: "form-label" %>
+              <%= form.select :target_customer_type,
+                    options_for_select(Customer.customer_types.keys.map { |k| [k.humanize, k] }),
+                    { include_blank: "—" }, class: "form-select" %>
+            </div>
+          </div>
+
+          <div>
+            <span class="form-label d-block">Channels</span>
+            <% %w[push whatsapp sms].each do |channel| %>
+              <div class="form-check form-check-inline">
+                <%= check_box_tag "notification[channels][]", channel, channel == "push", id: "channel_#{channel}", class: "form-check-input" %>
+                <%= label_tag "channel_#{channel}", channel.upcase, class: "form-check-label" %>
+              </div>
+            <% end %>
+            <div class="form-text">WhatsApp/SMS reach only opted-in customers and need a configured provider; otherwise they're logged as skipped.</div>
+          </div>
+
           <div class="d-flex justify-content-end">
             <%= form.submit "Send Notification", class: "btn btn-primary" %>
           </div>
@@ -195,4 +221,34 @@
       </div>
     <% end %>
   </div>
+</div>
+
+<div class="mt-4">
+  <h2 class="h5">Delivery history</h2>
+  <% if @notification_messages.present? %>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr><th>When</th><th>Title</th><th>Category</th><th>Audience</th><th>Channels</th><th class="text-end">Sent</th><th class="text-end">Skipped</th><th class="text-end">Failed</th></tr>
+        </thead>
+        <tbody>
+          <% @notification_messages.each do |message| %>
+            <% by_status = message.notification_recipients.each_with_object(Hash.new(0)) { |r, h| h[r.status] += 1 } %>
+            <tr>
+              <td class="small-muted"><%= l(message.created_at, format: :short) if message.created_at %></td>
+              <td><%= message.title %></td>
+              <td><span class="badge text-bg-light border"><%= message.category.humanize %></span></td>
+              <td><%= message.target_type.humanize %><%= " · #{message.target_customer_type.humanize}" if message.target_customer_type.present? %></td>
+              <td><%= message.channel_list.map(&:upcase).join(", ") %></td>
+              <td class="text-end"><%= by_status["sent"] %></td>
+              <td class="text-end"><%= by_status["skipped"] %></td>
+              <td class="text-end <%= "text-danger" if (by_status["failed"] + by_status["invalidated"]).positive? %>"><%= by_status["failed"] + by_status["invalidated"] %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="small-muted">No notifications sent yet.</p>
+  <% end %>
 </div>

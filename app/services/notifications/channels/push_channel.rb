@@ -23,6 +23,8 @@ module Notifications
         when :invalidated then recipient.mark_failed!(error: outcome.error, invalidated: true)
         else recipient.mark_failed!(error: outcome.error)
         end
+      rescue FirebaseAppConfig::ConfigurationError => error
+        recipient.mark_skipped!(reason: error.message)
       end
 
       private

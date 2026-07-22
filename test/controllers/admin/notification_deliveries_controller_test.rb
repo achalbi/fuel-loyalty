@@ -2,23 +2,6 @@ require "test_helper"
 
 module Admin
   class NotificationDeliveriesControllerTest < ActionDispatch::IntegrationTest
-    def with_stubbed_push_service(result)
-      firebase_push_service_singleton = FirebasePushService.singleton_class
-      original_new = firebase_push_service_singleton.instance_method(:new)
-      fake_service = Object.new
-      fake_service.define_singleton_method(:broadcast) do |title:, message:|
-        result
-      end
-
-      firebase_push_service_singleton.define_method(:new) do |*|
-        fake_service
-      end
-
-      yield
-    ensure
-      firebase_push_service_singleton.define_method(:new, original_new)
-    end
-
     def with_admin_notification_token(value)
       original_value = ENV["ADMIN_NOTIFICATION_API_TOKEN"]
       ENV["ADMIN_NOTIFICATION_API_TOKEN"] = value
@@ -27,52 +10,37 @@ module Admin
       ENV["ADMIN_NOTIFICATION_API_TOKEN"] = original_value
     end
 
-    test "admin can send a notification from the web UI" do
+    test "admin can send a targeted notification from the web UI (logged)" do
       sign_in users(:one)
-      result = FirebasePushService::Result.new(
-        requested: 3,
-        sent: 3,
-        failed: 0,
-        invalidated: 0,
-        batches: 1,
-        errors: []
-      )
+      # A linked, active push token so the send has a recipient to log.
+      PushSubscription.register!(token: "web-tok-1", platform: "web", customer: customers(:one))
 
-      with_stubbed_push_service(result) do
+      assert_difference -> { NotificationMessage.count }, 1 do
         post admin_send_notifications_path, params: {
-          notification: {
-            title: "Fuel Offer",
-            message: "Save more this week"
-          }
+          notification: { title: "Fuel Offer", message: "Save more this week",
+                          channels: ["push"], target_type: "all" },
         }
       end
 
       assert_redirected_to admin_notifications_path
+      message = NotificationMessage.order(:id).last
+      assert_equal "Fuel Offer", message.title
+      assert_equal 1, message.notification_recipients.count # push not configured in test → skipped, still logged
+      assert message.notification_recipients.first.skipped?
     end
 
-    test "bearer token can send a notification as json" do
-      result = FirebasePushService::Result.new(
-        requested: 2,
-        sent: 2,
-        failed: 0,
-        invalidated: 0,
-        batches: 1,
-        errors: []
-      )
-
+    test "bearer token send returns the message id and per-channel delivery" do
       with_admin_notification_token("push-secret") do
-        with_stubbed_push_service(result) do
-          post admin_send_notifications_path,
-               params: { title: "Fuel Offer", message: "Save more this week" },
-               headers: { "Authorization" => "Bearer push-secret" },
-               as: :json
-        end
+        post admin_send_notifications_path,
+             params: { title: "Fuel Offer", message: "Save more this week" },
+             headers: { "Authorization" => "Bearer push-secret" },
+             as: :json
       end
 
       assert_response :success
       payload = JSON.parse(response.body)
-      assert_equal 2, payload["sent"]
-      assert_equal 0, payload["failed"]
+      assert payload["notification_message_id"].present?
+      assert payload.key?("delivery")
     end
 
     test "json request returns validation error when title is missing" do
@@ -84,8 +52,7 @@ module Admin
       end
 
       assert_response :unprocessable_entity
-      payload = JSON.parse(response.body)
-      assert_match(/title/i, payload["error"])
+      assert_match(/title/i, JSON.parse(response.body)["error"])
     end
   end
 end
