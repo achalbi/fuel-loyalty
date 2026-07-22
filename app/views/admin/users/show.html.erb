@@ -49,3 +49,43 @@
     </div>
   </div>
 </div>
+
+<div class="card shadow-sm mt-3">
+  <div class="card-body">
+    <h2 class="h5">Identity (KYC)</h2>
+    <div class="row g-3 align-items-start">
+      <div class="col-auto">
+        <% if @user.profile_photo.attached? %>
+          <%= image_tag url_for(@user.profile_photo.variant(resize_to_limit: [96, 96])), class: "rounded", alt: "Profile photo" %>
+        <% else %>
+          <div class="text-muted small">No photo</div>
+        <% end %>
+      </div>
+      <div class="col">
+        <p class="mb-1"><strong>Address:</strong> <%= @user.address.presence || "Not set" %></p>
+        <p class="mb-1"><strong>Aadhaar:</strong>
+          <% if @revealed_aadhaar.present? %>
+            <span class="font-monospace"><%= @revealed_aadhaar %></span> <span class="badge text-bg-warning">revealed</span>
+          <% elsif @user.aadhaar_present? %>
+            <span class="font-monospace"><%= @user.masked_aadhaar_number %></span>
+            <%= button_to "Reveal", reveal_aadhaar_admin_user_path(@user), method: :post, class: "btn btn-sm btn-outline-secondary ms-1",
+                  form_class: "d-inline-block", data: { turbo_confirm: "Reveal the full Aadhaar? This access is logged." } %>
+          <% else %>
+            <span class="text-muted">Not on file</span>
+          <% end %>
+        </p>
+        <p class="mb-2"><strong>ID card:</strong>
+          <% if @user.id_card_present? %>
+            <%= link_to "View ID card", id_card_photo_admin_user_path(@user), target: "_blank", rel: "noopener", class: "ms-1" %>
+          <% else %>
+            <span class="text-muted">Not on file</span>
+          <% end %>
+        </p>
+        <% if @user.aadhaar_present? || @user.id_card_present? %>
+          <%= button_to "Purge KYC", purge_kyc_admin_user_path(@user), method: :delete, class: "btn btn-sm btn-outline-danger",
+                form_class: "d-inline-block", data: { turbo_confirm: "Purge Aadhaar + ID card for #{@user.display_name}? The account stays." } %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

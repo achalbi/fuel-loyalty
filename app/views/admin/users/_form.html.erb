@@ -1,7 +1,7 @@
 <% modal_context = local_assigns[:context].to_s == "modal" %>
 
 <% form_markup = capture do %>
-  <%= form_with model: user, url: form_url, method: form_method, class: "vstack gap-3" do |form| %>
+  <%= form_with model: user, url: form_url, method: form_method, html: { multipart: true }, class: "vstack gap-3" do |form| %>
     <% if user.errors.any? %>
       <div class="alert alert-danger">
         <%= user.errors.full_messages.to_sentence %>
@@ -31,6 +31,36 @@
       <%= form.label :email, "Email (Optional)", class: "form-label" %>
       <%= form.email_field :email, value: user.explicit_email, class: "form-control", placeholder: "name@example.com", autocomplete: "email" %>
     </div>
+
+    <fieldset class="border rounded p-3">
+      <legend class="form-label float-none w-auto px-1 mb-0">Identity / KYC <span class="text-muted small">(optional)</span></legend>
+      <div class="mb-2">
+        <%= form.label :address, class: "form-label small mb-1" %>
+        <%= form.text_area :address, rows: 2, class: "form-control", placeholder: "Postal address" %>
+      </div>
+      <div class="mb-2">
+        <%= form.label :aadhaar_number, "Aadhaar Number", class: "form-label small mb-1" %>
+        <%= form.text_field :aadhaar_number, value: nil, class: "form-control", inputmode: "numeric",
+              maxlength: 12, pattern: "\\d{12}", autocomplete: "off",
+              placeholder: (user.aadhaar_present? ? "Current: #{user.masked_aadhaar_number} — leave blank to keep" : "12 digits") %>
+      </div>
+      <div class="row g-2">
+        <div class="col-sm-6">
+          <%= form.label :profile_photo, "Profile Photo", class: "form-label small mb-1" %>
+          <%= form.file_field :profile_photo, accept: "image/*", class: "form-control" %>
+          <% if user.profile_photo.attached? %>
+            <%= image_tag url_for(user.profile_photo.variant(resize_to_limit: [80, 80])), class: "mt-2 rounded", alt: "Current photo" %>
+          <% end %>
+        </div>
+        <div class="col-sm-6">
+          <%= form.label :id_card_photo, "ID-card Photo", class: "form-label small mb-1" %>
+          <%= form.file_field :id_card_photo, accept: "image/*", class: "form-control" %>
+          <% if user.persisted? && user.id_card_present? %>
+            <%= link_to "View current ID card", id_card_photo_admin_user_path(user), target: "_blank", rel: "noopener", class: "small d-inline-block mt-2" %>
+          <% end %>
+        </div>
+      </div>
+    </fieldset>
 
     <div>
       <%= form.label :role, class: "form-label" %>

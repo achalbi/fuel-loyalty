@@ -166,7 +166,13 @@ Rails.application.routes.draw do
       patch :invalidate, on: :member
       patch :mark_valid, on: :member
     end
-    resources :users, only: %i[index new create show edit update]
+    resources :users, only: %i[index new create show edit update] do
+      member do
+        post :reveal_aadhaar
+        get :id_card_photo
+        delete :purge_kyc
+      end
+    end
     resources :fuel_types, only: %i[index create edit update destroy]
     resources :fuel_pumps, only: %i[index create edit update destroy] do
       patch :feature_settings, on: :collection
