@@ -340,7 +340,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Staff_FSM / DailySettlement</td>
 <td>At shift end the FSM picks a pump; its nozzles and fuels are shown, and per-nozzle meter figures are entered/derived.</td>
 <td>• Selecting a pump lists its nozzles with their fuel and price (from catalog).<br>• Per nozzle: Today's Reading entered, Yesterday's Reading auto-populated from the prior settlement.<br>• System computes Total Litres, subtracts Testing Litres to give Net Litres Sold, and computes Amount = Net Litres × Price.<br>• FSM name is recorded on the settlement.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>D2</td>
@@ -348,7 +348,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Staff_FSM / DailySettlement</td>
 <td>Lube/oil/AdBlue sales and stock are captured in settlement.</td>
 <td>• Each catalog lube product is selectable via checkbox.<br>• For a selected lube, FSM enters Qty; Amount is computed from catalog price.<br>• Opening Stock and Closing Stock are captured per lube product.<br>• Lube amounts roll into the settlement fuel+lubes subtotal.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>D3</td>
@@ -356,7 +356,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Staff_FSM / DailySettlement</td>
 <td>Same-day discount lines flow from CustomerDetailsEntry into the settlement.</td>
 <td>• Settlement's discount section is populated from same-day CustomerDetailsEntry records for that pump.<br>• Each discount line shows Transport, Litres, Discount Amount, and driver/manager/owner name+mobile.<br>• Total discounts feed the final-settlement calculation (D6).</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>D4</td>
@@ -364,7 +364,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Staff_FSM / DailySettlement</td>
 <td>Digital collections are recorded in settlement.</td>
 <td>• FSM can enter PhonePe POS (machine) Amount.<br>• FSM can enter PhonePe Scanner Amount.<br>• Both reduce the cash to be settled in the final calculation (D6).</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>D5</td>
@@ -372,7 +372,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Staff_FSM / DailySettlement</td>
 <td>Credit dispensed to fleet/OTP accounts and tank-trucks is recorded as credit lines.</td>
 <td>• FSM can add Fleet/OTP credit lines (litres + discount + vehicle reference, e.g. "OTP 136 Lts NL-01/AE-2471").<br>• FSM can add TT (tank-truck) credit lines with litres and discount.<br>• Credit-line totals feed the final-settlement calculation (D6).</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>D6</td>
@@ -380,7 +380,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Staff_FSM / DailySettlement</td>
 <td>The settlement computes the net cash the FSM must hand over.</td>
 <td>• Final Amount = {Fuel Sold + Lubes} − {Discounts + PhonePe POS + PhonePe Scanner + credit lines}.<br>• The computation is shown with its component subtotals.<br>• Recalculates when any contributing input changes.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>D7</td>
@@ -388,7 +388,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Staff_FSM / DailySettlement</td>
 <td>Remaining cash is counted by denomination and reconciled against expected.</td>
 <td>• FSM enters counts for denominations 500/100/50/20/10/5; each row shows qty × value = amount.<br>• Counted cash total is computed.<br>• Shortage per pump = expected (D6) − counted, and is displayed.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>D8</td>
@@ -396,7 +396,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>DailySettlement / DailySettlementSample</td>
 <td>Fuel stock received and tank decantation readings are recorded.</td>
 <td>• FSM can record Stock Received per fuel (MS / HSD).<br>• FSM can record Decantation as tank KL readings.<br>• These entries are attached to the day's settlement for the pump/outlet.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>D9</td>
@@ -404,7 +404,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin / DailySettlement</td>
 <td>Admin can review and correct settlements per pump and across pumps, including past days.</td>
 <td>• Admin can view any settlement by pump and date, and an across-pumps consolidated view.<br>• Admin can edit a submitted settlement, including prior days.<br>• Edits are persisted and reflected in dependent totals/reports.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>D10</td>
@@ -412,7 +412,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>DailySettlementSample</td>
 <td>Own selling price is compared against a competitor benchmark.</td>
 <td>• The system displays own price vs a competitor benchmark (e.g. JIO-BP) per fuel.<br>• The comparison is visible in the settlement/admin context.<br>• Values derive from the product catalog (A5) and a competitor input.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 </tbody>
 </table></div>
@@ -436,7 +436,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Daily/weekly/monthly/yearly reports per vehicle, transporter, and driver.</td>
 <td>• Reports can be generated for daily, weekly, monthly, and yearly periods.<br>• Reports can be grouped by vehicle, transporter, and driver.<br>• Metrics include litres, discount, and gifts/rewards.<br>• Report output is exportable.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>E2</td>
@@ -452,7 +452,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Per-customer/transporter last-visit and cadence classification (daily/weekly/biweekly).</td>
 <td>• Each customer/transporter shows a last-visit date.<br>• The system classifies visit cadence as daily, weekly, or biweekly.<br>• Cadence is derived from actual visit history.</td>
-<td>Partial</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>E4</td>
@@ -468,7 +468,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Track how many customers were contacted, when last contacted, and a conversion likelihood.</td>
 <td>• Dashboard shows contacted count and last-contact date per customer/segment.<br>• A conversion-probability indicator is presented.<br>• Contact data derives from the contacted-by record (B1).</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>E6</td>
@@ -476,7 +476,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Intelligent detection of customers who have lapsed (e.g. visited last week, not this week).</td>
 <td>• The system flags customers who visited in a prior period but not the current one.<br>• Flagged (lost) customers are surfaced as a "reach out" list.<br>• Detection uses visit-cadence history (E3).</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>E7</td>
@@ -484,7 +484,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Capture and view customer feedback and ratings.</td>
 <td>• A customer feedback/rating can be recorded.<br>• Aggregated or per-customer feedback is viewable in the dashboard.<br>• Feedback is associated with the correct customer.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>G1</td>
@@ -516,7 +516,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Admin defines campaigns: a minimum purchase over a period earns discounts/gifts.</td>
 <td>• Admin can create a campaign with a minimum-purchase threshold and a qualifying period.<br>• The reward is expressible as a discount or a gift.<br>• Campaigns can be listed, edited, and deactivated.<br>• Qualification can be evaluated against customer purchase history.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>F2</td>
@@ -524,7 +524,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Campaigns can target an individual customer, a customer-type, or a hand-picked set.</td>
 <td>• A campaign can target one specific customer.<br>• A campaign can target a customer-type (OTP / Credit / Drive-in).<br>• A campaign can target a manually selected set of customers.<br>• The resolved audience is reviewable before send.</td>
-<td>Absent</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>F3</td>
@@ -532,7 +532,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Push notifications for offers and for accumulated loyalty-bonus milestones.</td>
 <td>• The system can push an offer/campaign to a resolved, <strong>targeted</strong> audience.<br>• A loyalty-bonus notification can be sent when a customer's accumulated bonus reaches a milestone.<br>• A push references a concrete offer/campaign object where applicable.</td>
-<td>Partial</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>F4</td>
@@ -540,7 +540,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Offer and loyalty notifications can also be delivered via WhatsApp and SMS.</td>
 <td>• The system can send a notification via WhatsApp.<br>• The system can send a notification via SMS.<br>• Channel selection works alongside the same targeting as push (F2).</td>
-<td>Absent</td>
+<td>Partial</td>
 </tr>
 </tbody>
 </table></div>
@@ -564,7 +564,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <td>Admin</td>
 <td>Admin sets up operator users with identity profile fields; login remains username/mobile + password.</td>
 <td>• Operator record captures Name, <strong>Photo</strong>, <strong>Address</strong>, <strong>Aadhaar number</strong>, and <strong>ID-card photo</strong>.<br>• Login is by username or mobile + password (no OTP — Q3).<br>• Admin can create, edit, deactivate operator users.<br>• Aadhaar/ID images are stored with PII-appropriate handling.</td>
-<td>Partial</td>
+<td>✅ Present</td>
 </tr>
 <tr>
 <td>A10</td>
@@ -653,22 +653,22 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <tbody>
 <tr>
 <td>Present</td>
-<td>20</td>
-<td>A1, A2, A3, A4, A5, A6, A8, A9, A10, B1, B2, C1, C2, C3, C4, C5, E2, E4, S-PAUSE, S-MYPUMP</td>
+<td>39</td>
+<td>A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, B1, B2, C1, C2, C3, C4, C5, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, E1, E2, E3, E4, E5, E6, E7, F1, F2, F3, S-PAUSE, S-MYPUMP</td>
 </tr>
 <tr>
 <td>Partial</td>
-<td>4</td>
-<td>A7, E3, F3, G1</td>
+<td>2</td>
+<td>F4, G1</td>
 </tr>
 <tr>
 <td>Absent</td>
-<td>17</td>
-<td>D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, E1, E5, E6, E7, F1, F2, F4</td>
+<td>0</td>
+<td>—</td>
 </tr>
 </tbody>
 </table></div>
-<p>Total: <strong>41 features</strong> — 20 Present, 4 Partial, 17 Absent. <em>(Phase 0 complete; Phase 1: </em><em>A5 Product Catalog</em><em>, </em><em>litres/readings model</em><em>, </em><em>B1 customer master + contacts</em><em>, </em><em>E4 customer-type segmentation</em><em>, </em><em>B2 per-visit capture</em><em> shipped.)</em></p>
+<p>Total: <strong>41 features</strong> — 39 Present, 2 Partial, 0 Absent. <em>(Phases 0–4 complete. Phase 0: quick wins; Phase 1: A5 catalog, litres/readings, B1 master + contacts, E4 type, B2 capture; Phase 2: D1–D10 settlement + E1 reports; Phase 3: F1 campaigns, F2 targeting, F3 targeted+auto push, A7 operator KYC; Phase 4: E3 cadence, E5 contact-tracking, E6 churn, E7 feedback. </em><em>Remaining: F4</em><em> — live WhatsApp/SMS delivery (channel plumbing, opt-ins and logging exist; a real provider is deferred) — and </em><em>G1</em><em>'s per-pump transaction filter + past-day transaction edit, the transaction-side complement of the settlement audit already shipped with D9.)</em></p>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
   <span class="fnote">Generated from 01-functional-requirements.md &middot; 2026-07-22</span>
