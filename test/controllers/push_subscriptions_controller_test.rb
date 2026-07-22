@@ -50,7 +50,9 @@ class PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     }, as: :json
 
     assert_response :created
-    assert_equal customers(:one).id, PushSubscription.find_by(token: "token-cust").customer_id
+    subscription = PushSubscription.find_by(token: "token-cust")
+    assert_equal customers(:one).id, subscription.customer_id
+    assert_not_nil subscription.consent_at, "linking via phone stamps the push consent"
   end
 
   test "stays anonymous for an unknown phone number" do

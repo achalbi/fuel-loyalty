@@ -49,6 +49,19 @@
       <div class="form-text">How this customer is billed / treated — drives dashboard segmentation.</div>
     </div>
 
+    <div>
+      <span class="form-label d-block mb-1">Marketing opt-ins</span>
+      <div class="form-check form-check-inline">
+        <%= form.check_box :whatsapp_opt_in, class: "form-check-input" %>
+        <%= form.label :whatsapp_opt_in, "WhatsApp offers", class: "form-check-label" %>
+      </div>
+      <div class="form-check form-check-inline">
+        <%= form.check_box :sms_opt_in, class: "form-check-input" %>
+        <%= form.label :sms_opt_in, "SMS offers", class: "form-check-label" %>
+      </div>
+      <div class="form-text">Set only with the customer's consent — campaigns reach these channels only when opted in.</div>
+    </div>
+
     <div class="row g-3">
       <div class="col">
         <%= form.label :transport_name, "Transport / Fleet Name", class: "form-label" %>

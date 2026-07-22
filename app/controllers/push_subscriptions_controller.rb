@@ -23,6 +23,10 @@ class PushSubscriptionsController < ApplicationController
       user: current_user
     )
 
+    # F2 — a customer identifying via their phone on the loyalty PWA is the push
+    # opt-in; stamp consent once so a later anonymous re-register doesn't clear it.
+    subscription.update_column(:consent_at, Time.current) if subscription.customer_id.present? && subscription.consent_at.nil?
+
     render json: {
       id: subscription.id,
       active: subscription.active,

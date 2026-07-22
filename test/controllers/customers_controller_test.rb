@@ -40,6 +40,17 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_equal 12, customer.approx_vehicle_count
   end
 
+  test "staff can set marketing opt-ins" do
+    sign_in users(:two)
+    customer = customers(:one)
+    patch customer_path(customer), params: {
+      customer: { name: customer.name, phone_number: customer.phone_number, whatsapp_opt_in: "1", sms_opt_in: "1" },
+    }
+    customer.reload
+    assert customer.whatsapp_opt_in?
+    assert customer.sms_opt_in?
+  end
+
   test "staff can add contacts via nested attributes and blanks are dropped" do
     sign_in users(:two)
     customer = customers(:one)
