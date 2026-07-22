@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
@@ -30,6 +31,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -87,7 +89,7 @@ private val DAYS_OF_MONTH = (1..31).map { it.toString() }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminSchedulesScreen(onBack: () -> Unit) {
+fun AdminSchedulesScreen(onBack: () -> Unit, onOpenHistory: () -> Unit = {}) {
     val container = LocalContainer.current
     val repo = remember {
         AdminSchedulesRepository(container.retrofit.create(AdminSchedulesApi::class.java), container.json)
@@ -114,7 +116,17 @@ fun AdminSchedulesScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
-        topBar = { NayaraTopBar(title = "Notifications", onBack = onBack) },
+        topBar = {
+            NayaraTopBar(
+                title = "Notifications",
+                onBack = onBack,
+                actions = {
+                    IconButton(onClick = onOpenHistory) {
+                        Icon(Icons.Filled.History, contentDescription = "Delivery history")
+                    }
+                },
+            )
+        },
         snackbarHost = { NayaraSnackbarHost(snackbar) },
     ) { innerPadding ->
         NayaraPullToRefresh(

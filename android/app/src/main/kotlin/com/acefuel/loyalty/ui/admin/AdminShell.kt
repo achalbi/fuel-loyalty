@@ -202,6 +202,7 @@ object AdminRoutes {
     const val REWARD_RATES = "admin_rewardrates"
     const val THEME = "admin_theme"
     const val SCHEDULES = "admin_schedules"
+    const val NOTIFICATIONS_HISTORY = "admin_notifications_history"
     const val STAFF = "admin_staff"
     const val ASSIGN_PUMP = "admin_assign_pump/{id}"
     fun assignPump(id: Long) = "admin_assign_pump/$id"

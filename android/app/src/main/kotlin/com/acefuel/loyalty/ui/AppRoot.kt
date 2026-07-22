@@ -70,6 +70,7 @@ import com.acefuel.loyalty.ui.admin.fueltypes.AdminFuelTypesScreen
 import com.acefuel.loyalty.ui.admin.products.AdminProductsScreen
 import com.acefuel.loyalty.ui.admin.pumps.AdminPumpsScreen
 import com.acefuel.loyalty.ui.admin.rewardrates.AdminRewardRatesScreen
+import com.acefuel.loyalty.ui.admin.notifications.NotificationsHistoryScreen
 import com.acefuel.loyalty.ui.admin.schedules.AdminSchedulesScreen
 import com.acefuel.loyalty.ui.admin.shifts.AdminShiftsScreen
 import com.acefuel.loyalty.ui.admin.staff.AdminStaffScreen
@@ -435,7 +436,15 @@ fun AppRoot(container: ServiceContainer) {
                 composable(AdminRoutes.PUMPS) { AdminPumpsScreen(onBack = back) }
                 composable(AdminRoutes.REWARD_RATES) { AdminRewardRatesScreen(onBack = back) }
                 composable(AdminRoutes.THEME) { AdminThemeScreen(onBack = back) }
-                composable(AdminRoutes.SCHEDULES) { AdminSchedulesScreen(onBack = back) }
+                composable(AdminRoutes.SCHEDULES) {
+                    AdminSchedulesScreen(
+                        onBack = back,
+                        onOpenHistory = { navController.navigate(AdminRoutes.NOTIFICATIONS_HISTORY) },
+                    )
+                }
+                composable(AdminRoutes.NOTIFICATIONS_HISTORY) {
+                    NotificationsHistoryScreen(onBack = back)
+                }
                 composable(AdminRoutes.STAFF) {
                     AdminStaffScreen(
                         onBack = back,
