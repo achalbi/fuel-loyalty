@@ -12,7 +12,7 @@ module Api
             visits_count: customer.transactions.size,
             # B1/E4 — account taxonomy + the fleet/transport master fields.
             customer_type: customer.customer_type,
-            customer_type_label: customer_type_label(customer.customer_type),
+            customer_type_label: customer.customer_type_label,
             whatsapp_opt_in: customer.whatsapp_opt_in,
             sms_opt_in: customer.sms_opt_in,
             transport_name: customer.transport_name,
@@ -23,10 +23,6 @@ module Api
             recent_transactions: customer.recent_transactions(3).map { |txn| transaction_json(txn) },
             transactions_count: customer.transactions.size,
           )
-        end
-
-        def self.customer_type_label(customer_type)
-          { "otp" => "OTP / Fleet", "credit" => "Credit", "drive_in" => "Drive-in" }[customer_type.to_s]
         end
 
         def self.contact_json(contact)

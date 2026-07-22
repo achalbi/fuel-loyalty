@@ -1,0 +1,73 @@
+<% content_for :title, "Reach out" %>
+
+<div class="d-flex justify-content-between align-items-center mb-1">
+  <h1 class="h3 mb-0">Reach out</h1>
+</div>
+<p class="text-muted small mb-3">
+  Customers who visited the previous period
+  (<%= l(@churn[:previous_period][:start_date], format: :long) %> – <%= l(@churn[:previous_period][:end_date], format: :long) %>)
+  but not the current one
+  (<%= l(@churn[:period][:start_date], format: :long) %> – <%= l(@churn[:period][:end_date], format: :long) %>),
+  ranked by conversion probability.
+</p>
+
+<%= form_with url: admin_reach_out_index_path, method: :get, class: "row g-2 align-items-end mb-3" do |f| %>
+  <div class="col-sm-3">
+    <%= f.label :start_date, "Current period from", class: "form-label" %>
+    <%= f.date_field :start_date, value: (params[:start_date].presence || @churn[:period][:start_date]), class: "form-control" %>
+  </div>
+  <div class="col-sm-3">
+    <%= f.label :end_date, "to", class: "form-label" %>
+    <%= f.date_field :end_date, value: (params[:end_date].presence || @churn[:period][:end_date]), class: "form-control" %>
+  </div>
+  <div class="col-sm-2"><%= f.submit "Update", class: "btn btn-primary w-100" %></div>
+<% end %>
+
+<% if @churn[:customers].any? %>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle">
+      <thead>
+        <tr>
+          <th>Customer</th><th>Type</th><th>Last visit</th><th>Cadence</th>
+          <th class="text-end">Days overdue</th><th class="text-end">Conversion</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @churn[:customers].each do |c| %>
+          <tr>
+            <td>
+              <div class="fw-semibold"><%= c[:name] %></div>
+              <div class="text-muted small">+91 <%= c[:phone_number] %></div>
+            </td>
+            <td><span class="badge rounded-pill text-bg-secondary"><%= c[:customer_type_label] %></span></td>
+            <td><%= c[:last_visited_on] ? l(c[:last_visited_on], format: :long) : "—" %></td>
+            <td><%= c[:cadence_label] %></td>
+            <td class="text-end"><%= c[:days_overdue] || "—" %></td>
+            <td class="text-end">
+              <span class="badge rounded-pill <%= c[:conversion_probability] >= 60 ? "text-bg-success" : c[:conversion_probability] >= 30 ? "text-bg-warning" : "text-bg-danger" %>">
+                <%= c[:conversion_probability] %>%
+              </span>
+            </td>
+            <td class="text-end"><%= link_to "Open", admin_customer_path(c[:id]), class: "btn btn-sm btn-outline-primary" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if @churn[:total] > @churn[:per_page] %>
+    <nav class="d-flex justify-content-between align-items-center">
+      <span class="text-muted small">Showing <%= @churn[:customers].size %> of <%= @churn[:total] %></span>
+      <div class="btn-group">
+        <% if @page > 1 %>
+          <%= link_to "Previous", admin_reach_out_index_path(request.query_parameters.merge(page: @page - 1)), class: "btn btn-sm btn-outline-secondary" %>
+        <% end %>
+        <% if @churn[:has_more] %>
+          <%= link_to "Next", admin_reach_out_index_path(request.query_parameters.merge(page: @page + 1)), class: "btn btn-sm btn-outline-secondary" %>
+        <% end %>
+      </div>
+    </nav>
+  <% end %>
+<% else %>
+  <p class="text-muted">No lapsed customers for this period. Everyone who visited last period has returned (or there's no prior-period data to compare).</p>
+<% end %>

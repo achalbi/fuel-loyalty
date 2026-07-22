@@ -1,0 +1,131 @@
+<%# E3/E5/E7 — admin-only CRM panels for the customer console. Rendered from the
+    shared customers/show view only when @crm_insight is present (admin context). %>
+<% insight = @crm_insight %>
+
+<%# ---- E3/E5 Insight card ---- %>
+<div class="card shadow-sm loyalty-result-card customer-details-section">
+  <div class="card-body">
+    <div class="customer-details-section__header">
+      <div>
+        <h2 class="h5 mb-1">CRM Insight</h2>
+        <p class="text-muted mb-0">Visit cadence, recency and conversion likelihood.</p>
+      </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-2 mb-3">
+      <span class="badge rounded-pill text-bg-secondary"><%= insight[:cadence_label] %></span>
+      <% if insight[:is_lost] %>
+        <span class="badge rounded-pill text-bg-danger">Lost — overdue</span>
+      <% end %>
+    </div>
+
+    <div class="mb-3">
+      <div class="d-flex justify-content-between small text-muted mb-1">
+        <span>Conversion probability</span>
+        <strong class="text-body"><%= insight[:conversion_probability] %>%</strong>
+      </div>
+      <div class="progress" role="progressbar" aria-label="Conversion probability"
+           aria-valuenow="<%= insight[:conversion_probability] %>" aria-valuemin="0" aria-valuemax="100" style="height: 8px;">
+        <div class="progress-bar" style="width: <%= insight[:conversion_probability] %>%;"></div>
+      </div>
+    </div>
+
+    <dl class="row mb-0 small">
+      <dt class="col-6 text-muted fw-normal">Visits</dt>
+      <dd class="col-6 text-end mb-1"><%= insight[:visit_count] %></dd>
+      <dt class="col-6 text-muted fw-normal">Last visit</dt>
+      <dd class="col-6 text-end mb-1">
+        <%= insight[:last_visited_on] ? "#{l(insight[:last_visited_on], format: :long)} (#{insight[:days_since_last_visit]}d ago)" : "—" %>
+      </dd>
+      <dt class="col-6 text-muted fw-normal">First seen</dt>
+      <dd class="col-6 text-end mb-1"><%= insight[:first_visited_on] ? l(insight[:first_visited_on], format: :long) : "—" %></dd>
+      <dt class="col-6 text-muted fw-normal">Expected next</dt>
+      <dd class="col-6 text-end mb-0"><%= insight[:expected_next_visit_on] ? l(insight[:expected_next_visit_on], format: :long) : "—" %></dd>
+    </dl>
+  </div>
+</div>
+
+<%# ---- E5 Outreach log card ---- %>
+<div class="card shadow-sm loyalty-result-card customer-details-section">
+  <div class="card-body">
+    <div class="customer-details-section__header customer-details-section__header--with-action">
+      <div>
+        <h2 class="h5 mb-1">Outreach</h2>
+        <p class="text-muted mb-0">
+          <%= @contact_logs.size %> contact<%= "s" unless @contact_logs.size == 1 %> logged<%= insight[:contacts][:last_outcome] ? " · last: #{insight[:contacts][:last_outcome].humanize}" : "" %>.
+        </p>
+      </div>
+      <div class="customer-details-section__header-actions">
+        <button type="button" class="customer-details-quick-action" data-bs-toggle="modal"
+                data-bs-target="#logContactModal" aria-label="Log contact" title="Log contact">+</button>
+      </div>
+    </div>
+
+    <% if @contact_logs.any? %>
+      <div class="customer-details-vehicle-list">
+        <% @contact_logs.first(6).each do |log| %>
+          <div class="customer-details-vehicle-row">
+            <div class="customer-details-vehicle-row__main">
+              <div class="customer-details-vehicle-row__number">
+                <%= log.channel_label %> · <%= log.outcome_label %>
+              </div>
+              <div class="customer-details-vehicle-row__meta">
+                <%= l(log.contacted_at, format: :short) %><% if log.user %> · <%= log.user.display_name %><% end %><% if log.contacted_role.present? %> · <%= log.contacted_role.humanize %><% end %>
+              </div>
+              <% if log.notes.present? %>
+                <div class="customer-details-vehicle-row__commercial"><%= log.notes %></div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-muted mb-0">No outreach logged yet.</p>
+    <% end %>
+  </div>
+</div>
+
+<%# ---- E7 Feedback card ---- %>
+<% avg = @customer_feedbacks.any? ? (@customer_feedbacks.sum(&:rating).to_f / @customer_feedbacks.size).round(1) : nil %>
+<div class="card shadow-sm loyalty-result-card customer-details-section">
+  <div class="card-body">
+    <div class="customer-details-section__header customer-details-section__header--with-action">
+      <div>
+        <h2 class="h5 mb-1">Feedback</h2>
+        <p class="text-muted mb-0">
+          <% if avg %><%= avg %> / 5 average across <%= @customer_feedbacks.size %><% else %>No ratings yet<% end %>.
+        </p>
+      </div>
+      <div class="customer-details-section__header-actions">
+        <button type="button" class="customer-details-quick-action" data-bs-toggle="modal"
+                data-bs-target="#addFeedbackModal" aria-label="Add feedback" title="Add feedback">+</button>
+      </div>
+    </div>
+
+    <% if @customer_feedbacks.any? %>
+      <div class="customer-details-vehicle-list">
+        <% @customer_feedbacks.first(6).each do |feedback| %>
+          <div class="customer-details-vehicle-row">
+            <div class="customer-details-vehicle-row__main">
+              <div class="customer-details-vehicle-row__number">
+                <span aria-label="<%= feedback.rating %> out of 5">
+                  <%= "★" * feedback.rating %><span class="text-muted"><%= "☆" * (5 - feedback.rating) %></span>
+                </span>
+              </div>
+              <div class="customer-details-vehicle-row__meta">
+                <%= feedback.source_label %> · <%= l(feedback.created_at, format: :short) %>
+              </div>
+              <% if feedback.comment.present? %>
+                <div class="customer-details-vehicle-row__commercial"><%= feedback.comment %></div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-muted mb-0">No feedback recorded yet.</p>
+    <% end %>
+  </div>
+</div>
+
+<%= render "admin/customers/crm_modals", customer: @customer, reachable_contacts: @reachable_contacts %>

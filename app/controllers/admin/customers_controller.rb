@@ -164,6 +164,12 @@ module Admin
       @vehicle = Vehicle.new
       @customer_update_path = admin_customer_path(@customer)
       @customer_edit_modal_open = open_edit_modal
+      # E3/E5/E7 CRM panels (admin-only; the shared show view renders them only when
+      # @crm_insight is present, so the staff surface stays unaffected).
+      @crm_insight = ::Admin::Crm::CustomerInsight.new(@customer).to_h
+      @contact_logs = @customer.contact_logs.recent_first.to_a
+      @customer_feedbacks = @customer.customer_feedbacks.recent_first.to_a
+      @reachable_contacts = @customer.customer_contacts.active.order(:role).to_a
     end
 
     def customer_params

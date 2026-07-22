@@ -1,0 +1,76 @@
+<%# E5 Log-contact + E7 Add-feedback modals for the admin customer console. %>
+
+<%# ---- Log contact (E5) ---- %>
+<div class="modal fade customer-details-modal" id="logContactModal" tabindex="-1"
+     aria-labelledby="logContactModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content confirm-modal-content customer-details-modal__content">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h2 class="modal-title h5 mb-1" id="logContactModalLabel">Log contact</h2>
+          <p class="text-muted mb-0 small">Record an outreach attempt for this customer.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <%= form_with url: admin_customer_contact_logs_path(customer), method: :post do |f| %>
+          <div class="mb-3">
+            <%= f.label :channel, "Channel", class: "form-label" %>
+            <%= f.select "contact_log[channel]", ContactLog::CHANNELS.map { |c| [c.humanize, c] }, {}, class: "form-select", required: true %>
+          </div>
+          <div class="mb-3">
+            <%= f.label :outcome, "Outcome", class: "form-label" %>
+            <%= f.select "contact_log[outcome]", ContactLog::OUTCOMES.map { |o| [o.humanize, o] }, {}, class: "form-select", required: true %>
+          </div>
+          <div class="mb-3">
+            <%= f.label :contacted_role, "Role reached (optional)", class: "form-label" %>
+            <%= f.select "contact_log[contacted_role]", CustomerContact::ROLES.map { |r| [r.humanize, r] }, { include_blank: "—" }, class: "form-select" %>
+          </div>
+          <% if reachable_contacts.any? %>
+            <div class="mb-3">
+              <%= f.label :customer_contact_id, "Person (optional)", class: "form-label" %>
+              <%= f.select "contact_log[customer_contact_id]",
+                    reachable_contacts.map { |c| ["#{c.name.presence || c.display_role}#{c.phone_number.present? ? " · #{c.phone_number}" : ""}", c.id] },
+                    { include_blank: "—" }, class: "form-select" %>
+              <div class="form-text">A successful outcome marks this person as contacted.</div>
+            </div>
+          <% end %>
+          <div class="mb-3">
+            <%= f.label :notes, "Notes (optional)", class: "form-label" %>
+            <%= f.text_area "contact_log[notes]", rows: 2, class: "form-control" %>
+          </div>
+          <%= f.submit "Log contact", class: "btn btn-primary w-100" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# ---- Add feedback (E7) ---- %>
+<div class="modal fade customer-details-modal" id="addFeedbackModal" tabindex="-1"
+     aria-labelledby="addFeedbackModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content confirm-modal-content customer-details-modal__content">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h2 class="modal-title h5 mb-1" id="addFeedbackModalLabel">Add feedback</h2>
+          <p class="text-muted mb-0 small">Capture a customer rating and comment.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <%= form_with url: admin_customer_feedbacks_path(customer), method: :post do |f| %>
+          <div class="mb-3">
+            <%= f.label :rating, "Rating", class: "form-label" %>
+            <%= f.select "feedback[rating]", (1..5).map { |n| ["#{n} #{'★' * n}", n] }, { selected: 5 }, class: "form-select", required: true %>
+          </div>
+          <div class="mb-3">
+            <%= f.label :comment, "Comment (optional)", class: "form-label" %>
+            <%= f.text_area "feedback[comment]", rows: 3, class: "form-control" %>
+          </div>
+          <%= f.submit "Save feedback", class: "btn btn-primary w-100" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

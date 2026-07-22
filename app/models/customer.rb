@@ -7,6 +7,8 @@ class Customer < ApplicationRecord
   has_many :points_ledgers, dependent: :destroy
   has_many :vehicles, -> { order(:vehicle_number) }, dependent: :destroy
   has_many :customer_contacts, dependent: :destroy
+  has_many :contact_logs, dependent: :destroy
+  has_many :customer_feedbacks, dependent: :destroy
   has_many :visit_entries, dependent: :nullify
   has_many :push_subscriptions, dependent: :nullify
   has_many :notification_recipients, dependent: :nullify
@@ -28,12 +30,32 @@ class Customer < ApplicationRecord
   # E4 — account-type segmentation (OTP = fleet/credit account, drive-in = walk-in
   # cash, credit = credit account). Backfilled to drive_in for existing rows.
   CUSTOMER_TYPES = { drive_in: "drive_in", otp: "otp", credit: "credit" }.freeze
+  CUSTOMER_TYPE_LABELS = { "drive_in" => "Drive-in", "otp" => "OTP / Fleet", "credit" => "Credit" }.freeze
   enum :customer_type, CUSTOMER_TYPES, default: :drive_in
+
+  def self.customer_type_label_for(code)
+    CUSTOMER_TYPE_LABELS.fetch(code.to_s) { code.to_s.humanize }
+  end
+
+  def customer_type_label
+    self.class.customer_type_label_for(customer_type)
+  end
 
   # Customers who recorded a transaction within the given time range (E2 dashboard
   # drill-through). Uses a subquery so it composes with joins + distinct scopes.
   scope :active, -> { where(active: true) }
   scope :transacted_between, ->(range) { where(id: Transaction.where(created_at: range).select(:customer_id)) }
+
+  # A "visit" is either a loyalty transaction OR a captured visit_entry — unioned
+  # so neither the loyalty-only (drive-in) nor the visit-only (fleet/OTP/credit)
+  # segment is dropped from cadence (E3) and churn (E6). `range` is a Time range
+  # (from OverviewReport.period_range); visit_entries compare on their entry_date.
+  scope :visited_between, ->(range) {
+    txn = Transaction.where(created_at: range).select(:customer_id)
+    visits = VisitEntry.where(entry_date: range.begin.to_date..range.end.to_date)
+                       .where.not(customer_id: nil).select(:customer_id)
+    where(id: txn).or(where(id: visits))
+  }
 
   before_validation :normalize_phone_number
 

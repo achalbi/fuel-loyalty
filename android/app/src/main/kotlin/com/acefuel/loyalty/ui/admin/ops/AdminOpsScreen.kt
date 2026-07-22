@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PhoneForwarded
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Badge
@@ -67,6 +68,7 @@ fun AdminOpsScreen(
     onReports: () -> Unit,
     onSettlements: () -> Unit,
     onCampaigns: () -> Unit,
+    onReachOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val nayara = MaterialTheme.nayara
@@ -184,6 +186,13 @@ fun AdminOpsScreen(
             leadingIcon = Icons.Filled.Campaign,
             leadingTint = nayara.accentDefault,
             onClick = { haptics.tick(); onCampaigns() },
+        )
+        NayaraListRow(
+            title = "Reach out",
+            subtitle = "Overdue customers to follow up, ranked by likelihood",
+            leadingIcon = Icons.AutoMirrored.Filled.PhoneForwarded,
+            leadingTint = nayara.actionPrimary,
+            onClick = { haptics.tick(); onReachOut() },
         )
 
         Spacer(Modifier.height(NayaraSpacing.Xxl))

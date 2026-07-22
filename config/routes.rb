@@ -47,6 +47,10 @@ Rails.application.routes.draw do
         post "transactions/recognize_plate", to: "transactions#recognize_plate"
         post "transactions/register_customer", to: "transactions#register_customer"
         resources :visit_entries, only: %i[index create]
+        # E7 — FSMs can capture a rating at the pump.
+        resources :customers, only: [] do
+          resources :feedbacks, only: %i[index create], controller: "customer_feedbacks"
+        end
         # Declared before the resource so /settlements/new is not captured as
         # /settlements/:id (and to avoid Rails' reserved-`new` collection quirk).
         get "settlements/new", to: "settlements#new", as: :new_settlement
@@ -56,8 +60,16 @@ Rails.application.routes.draw do
       namespace :admin do
         post "points_adjustments", to: "points_adjustments#create"
         get "dashboard", to: "dashboard#data"
+        # E6 — lost-customer / reach-out list.
+        get "dashboard/churn", to: "dashboard#churn"
         get "reports", to: "reports#index"
         get "transactions", to: "transactions#index"
+        # E3/E5/E7 — per-customer CRM: insight, outreach log, feedback.
+        resources :customers, only: [] do
+          member { get :insight }
+          resources :contact_logs, only: %i[index create]
+          resources :feedbacks, only: %i[index create], controller: "customer_feedbacks"
+        end
         resources :users, only: %i[index show create update] do
           member do
             get :kyc_reveal
@@ -189,9 +201,14 @@ Rails.application.routes.draw do
     resources :customers, only: %i[index show new create edit update destroy] do
       get :points_ledger, on: :member
       get :transaction_history, on: :member
+      # E5 outreach log + E7 feedback capture (server-rendered).
+      resources :contact_logs, only: :create
+      resources :feedbacks, only: :create
     end
     resources :transactions, only: :index
     resources :reports, only: :index
+    # E6 — lost-customer / reach-out list.
+    resources :reach_out, only: :index, controller: "reach_out"
     resources :campaigns do
       member do
         post :preview

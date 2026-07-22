@@ -160,6 +160,7 @@ fun AdminShell(
                         onReports = { onOpen(AdminRoutes.REPORTS) },
                         onSettlements = { onOpen(AdminRoutes.SETTLEMENTS) },
                         onCampaigns = { onOpen(AdminRoutes.CAMPAIGNS) },
+                        onReachOut = { onOpen(AdminRoutes.REACH_OUT) },
                     )
 
                     AdminTab.Settings -> AdminSettingsScreen(
@@ -194,6 +195,8 @@ object AdminRoutes {
     const val REPORTS = "admin_reports"
     const val SETTLEMENTS = "admin_settlements"
     const val CAMPAIGNS = "admin_campaigns"
+    // Phase 4 CRM — the churn/reach-out worklist.
+    const val REACH_OUT = "admin_reach_out"
     const val USERS = "admin_users"
     const val FUEL_TYPES = "admin_fueltypes"
     const val VEHICLE_TYPES = "admin_vehicletypes"

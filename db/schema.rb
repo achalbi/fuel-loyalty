@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_200001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -164,6 +164,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_190000) do
     t.index ["status"], name: "index_campaigns_on_status"
   end
 
+  create_table "contact_logs", force: :cascade do |t|
+    t.string "channel", null: false
+    t.datetime "contacted_at", null: false
+    t.string "contacted_role"
+    t.datetime "created_at", null: false
+    t.bigint "customer_contact_id"
+    t.bigint "customer_id", null: false
+    t.text "notes"
+    t.string "outcome", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["customer_contact_id"], name: "index_contact_logs_on_customer_contact_id"
+    t.index ["customer_id", "contacted_at"], name: "index_contact_logs_on_customer_id_and_contacted_at"
+    t.index ["customer_id"], name: "index_contact_logs_on_customer_id"
+    t.index ["user_id"], name: "index_contact_logs_on_user_id"
+  end
+
   create_table "customer_contacts", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.boolean "contacted", default: false, null: false
@@ -178,6 +195,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_190000) do
     t.index ["customer_id", "phone_number"], name: "index_customer_contacts_on_customer_and_phone", unique: true, where: "(phone_number IS NOT NULL)"
     t.index ["customer_id", "role"], name: "index_customer_contacts_on_customer_id_and_role"
     t.index ["customer_id"], name: "index_customer_contacts_on_customer_id"
+  end
+
+  create_table "customer_feedbacks", force: :cascade do |t|
+    t.text "comment"
+    t.datetime "created_at", null: false
+    t.bigint "customer_id", null: false
+    t.integer "rating", null: false
+    t.bigint "recorded_by_user_id"
+    t.string "source", default: "staff", null: false
+    t.bigint "transaction_id"
+    t.datetime "updated_at", null: false
+    t.bigint "visit_entry_id"
+    t.index ["customer_id"], name: "index_customer_feedbacks_on_customer_id"
+    t.index ["recorded_by_user_id"], name: "index_customer_feedbacks_on_recorded_by_user_id"
+    t.index ["transaction_id"], name: "index_customer_feedbacks_on_transaction_id_unique", unique: true, where: "(transaction_id IS NOT NULL)"
+    t.index ["visit_entry_id"], name: "index_customer_feedbacks_on_visit_entry_id_unique", unique: true, where: "(visit_entry_id IS NOT NULL)"
   end
 
   create_table "customers", force: :cascade do |t|
@@ -771,7 +804,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_190000) do
   add_foreign_key "campaign_targets", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_targets", "customers", on_delete: :cascade
   add_foreign_key "campaigns", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "contact_logs", "customer_contacts", on_delete: :nullify
+  add_foreign_key "contact_logs", "customers"
+  add_foreign_key "contact_logs", "users"
   add_foreign_key "customer_contacts", "customers", on_delete: :cascade
+  add_foreign_key "customer_feedbacks", "customers"
+  add_foreign_key "customer_feedbacks", "transactions", on_delete: :nullify
+  add_foreign_key "customer_feedbacks", "users", column: "recorded_by_user_id", on_delete: :nullify
+  add_foreign_key "customer_feedbacks", "visit_entries", on_delete: :nullify
   add_foreign_key "customers", "customer_contacts", column: "primary_contact_id", on_delete: :nullify
   add_foreign_key "daily_settlements", "fuel_pumps", on_delete: :restrict
   add_foreign_key "daily_settlements", "shift_templates", on_delete: :nullify

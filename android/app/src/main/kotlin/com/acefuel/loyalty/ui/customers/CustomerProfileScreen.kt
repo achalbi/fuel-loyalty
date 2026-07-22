@@ -12,25 +12,35 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Agriculture
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
@@ -46,7 +56,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,21 +71,32 @@ import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
 import com.acefuel.loyalty.core.network.dto.LedgerEntryDto
 import com.acefuel.loyalty.core.network.dto.StaffVehicleDto
 import com.acefuel.loyalty.core.network.dto.TransactionSummaryDto
+import com.acefuel.loyalty.ui.admin.crm.ContactLogDto
+import com.acefuel.loyalty.ui.admin.crm.CrmApi
+import com.acefuel.loyalty.ui.admin.crm.CrmRepository
+import com.acefuel.loyalty.ui.admin.crm.CustomerCrmViewModel
+import com.acefuel.loyalty.ui.admin.crm.FeedbackDto
+import com.acefuel.loyalty.ui.admin.crm.InsightDto
 import com.acefuel.loyalty.ui.designsystem.AnimatedCounter
 import com.acefuel.loyalty.ui.designsystem.Avatar
+import com.acefuel.loyalty.ui.designsystem.ChipTone
 import com.acefuel.loyalty.ui.designsystem.ConfirmDialog
 import com.acefuel.loyalty.ui.designsystem.ErrorState
 import com.acefuel.loyalty.ui.designsystem.FuelDot
+import com.acefuel.loyalty.ui.designsystem.NayaraBottomSheet
 import com.acefuel.loyalty.ui.designsystem.NayaraCard
 import com.acefuel.loyalty.ui.designsystem.NayaraPullToRefresh
 import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
 import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
+import com.acefuel.loyalty.ui.designsystem.PickerField
 import com.acefuel.loyalty.ui.designsystem.PlateChip
 import com.acefuel.loyalty.ui.designsystem.SkeletonCard
 import com.acefuel.loyalty.ui.designsystem.SkeletonList
+import com.acefuel.loyalty.ui.designsystem.StatusChip
 import com.acefuel.loyalty.ui.designsystem.rememberHaptics
 import com.acefuel.loyalty.ui.designsystem.showError
 import com.acefuel.loyalty.ui.designsystem.showSuccess
+import com.acefuel.loyalty.ui.theme.NayaraButton
 import com.acefuel.loyalty.ui.theme.NayaraHeroCard
 import com.acefuel.loyalty.ui.theme.NayaraNumerals
 import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
@@ -89,9 +113,28 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
         factory = viewModelFactory { initializer { CustomerProfileViewModel(container.staffRepository, customerId) } },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Phase 4 — additive CRM state (feedback for all, insight + outreach for
+    // admins). Kept in its own VM so the profile VM above stays untouched.
+    val crmViewModel: CustomerCrmViewModel = viewModel(
+        key = "crm-$customerId",
+        factory = viewModelFactory {
+            initializer {
+                CustomerCrmViewModel(
+                    CrmRepository(container.retrofit.create(CrmApi::class.java), container.json),
+                    customerId,
+                    isAdmin,
+                )
+            }
+        },
+    )
+    val crmState by crmViewModel.state.collectAsStateWithLifecycle()
+
     val snackbar = remember { SnackbarHostState() }
     val haptics = rememberHaptics()
     var pendingConfirm by remember { mutableStateOf<ProfileAction?>(null) }
+    var showFeedbackSheet by remember { mutableStateOf(false) }
+    var showContactSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.actionMessage) {
         val message = state.actionMessage ?: return@LaunchedEffect
@@ -104,6 +147,19 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
         haptics.reject()
         snackbar.showError(message)
         viewModel.consumeTransientError()
+    }
+    // Same one-shot snackbar plumbing for the CRM actions.
+    LaunchedEffect(crmState.actionMessage) {
+        val message = crmState.actionMessage ?: return@LaunchedEffect
+        haptics.confirm()
+        snackbar.showSuccess(message)
+        crmViewModel.consumeActionMessage()
+    }
+    LaunchedEffect(crmState.transientError) {
+        val message = crmState.transientError ?: return@LaunchedEffect
+        haptics.reject()
+        snackbar.showError(message)
+        crmViewModel.consumeTransientError()
     }
 
     Scaffold(
@@ -172,6 +228,36 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
                                 onWhatsapp = { viewModel.setWhatsappOptIn(it) },
                                 onSms = { viewModel.setSmsOptIn(it) },
                             )
+                        }
+
+                        // Phase 4 CRM — insight + outreach are admin-only.
+                        if (isAdmin) {
+                            item { SectionHeader("CRM Insight") }
+                            item { InsightCard(crmState.insight, crmState.insightLoading) }
+
+                            item {
+                                SectionHeaderWithAction("Outreach", "Log contact") { showContactSheet = true }
+                            }
+                            if (crmState.contactLogs.isEmpty() && !crmState.insightLoading) {
+                                item { EmptyNote("No outreach logged yet.") }
+                            } else {
+                                items(crmState.contactLogs, key = { "clog-${it.id}" }) {
+                                    ContactLogCard(it, modifier = Modifier.animateItem())
+                                }
+                            }
+                        }
+
+                        // Feedback is visible to staff and admin alike.
+                        item {
+                            SectionHeaderWithAction("Feedback", "Add rating") { showFeedbackSheet = true }
+                        }
+                        item { FeedbackSummaryRow(crmState.avgRating, crmState.feedbackCount) }
+                        if (crmState.feedbacks.isEmpty() && !crmState.feedbackLoading) {
+                            item { EmptyNote("No feedback recorded yet.") }
+                        } else {
+                            items(crmState.feedbacks, key = { "fb-${it.id}" }) {
+                                FeedbackCard(it, modifier = Modifier.animateItem())
+                            }
                         }
 
                         item { SectionHeader("Vehicles (${profile.vehicles.size})") }
@@ -250,6 +336,28 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
                         onDismiss = { pendingConfirm = null },
                     )
                     ProfileAction.OptIn, null -> Unit // opt-in toggles act directly, no confirm
+                }
+
+                if (showFeedbackSheet) {
+                    FeedbackSheet(
+                        submitting = crmState.submittingFeedback,
+                        onDismiss = { showFeedbackSheet = false },
+                        onSubmit = { rating, comment ->
+                            crmViewModel.addFeedback(rating, comment)
+                            showFeedbackSheet = false
+                        },
+                    )
+                }
+                if (showContactSheet) {
+                    LogContactSheet(
+                        contacts = profile.contacts,
+                        submitting = crmState.loggingContact,
+                        onDismiss = { showContactSheet = false },
+                        onSubmit = { channel, outcome, role, contactId, notes ->
+                            crmViewModel.logContact(channel, outcome, role, contactId, notes)
+                            showContactSheet = false
+                        },
+                    )
                 }
             }
         }
@@ -549,3 +657,365 @@ private fun formatMonthYear(iso: String): String = runCatching {
 private fun formatDateTime(iso: String): String = runCatching {
     java.time.OffsetDateTime.parse(iso).format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy · hh:mm a"))
 }.getOrDefault(iso)
+
+// ============================================================================
+// Phase 4 — CRM Insight, Outreach & Feedback sections + their bottom sheets.
+// ============================================================================
+
+private val CRM_CHANNELS = listOf(
+    "call" to "Call",
+    "whatsapp" to "WhatsApp",
+    "sms" to "SMS",
+    "in_person" to "In person",
+)
+
+private val CRM_OUTCOMES = listOf(
+    "converted" to "Converted",
+    "reached" to "Reached",
+    "callback_requested" to "Callback requested",
+    "no_answer" to "No answer",
+    "declined" to "Declined",
+)
+
+/** Section header with a trailing text action (e.g. "Add rating" / "Log contact"). */
+@Composable
+private fun SectionHeaderWithAction(title: String, actionLabel: String, onAction: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = NayaraSpacing.Sm),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.nayara.textSecondary,
+        )
+        TextButton(onClick = onAction) { Text(actionLabel) }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun InsightCard(insight: InsightDto?, loading: Boolean) {
+    NayaraCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(NayaraSpacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm),
+        ) {
+            when {
+                insight == null && loading -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(NayaraSpacing.Md))
+                    Text(
+                        "Loading insight…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.nayara.textSecondary,
+                    )
+                }
+                insight == null -> EmptyNote("Insight isn't available yet.")
+                else -> {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm),
+                        verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xs),
+                    ) {
+                        StatusChip(insight.cadenceLabel, ChipTone.Info, showDot = false)
+                        if (insight.isLost) StatusChip("Lost", ChipTone.Error, showDot = false)
+                    }
+
+                    val fraction = (insight.conversionProbability / 100f).coerceIn(0f, 1f)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            "Conversion probability",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.nayara.textSecondary,
+                        )
+                        Text(
+                            "${insight.conversionProbability}%",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { fraction },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    val daysAgo = insight.daysSinceLastVisit?.let { " · $it days ago" }.orEmpty()
+                    Text(
+                        "Last visit: ${insight.lastVisitedOn ?: "—"}$daysAgo",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.nayara.textSecondary,
+                    )
+                    insight.expectedNextVisitOn?.let {
+                        Text(
+                            "Expected next: $it",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.nayara.textTertiary,
+                        )
+                    }
+                    val gap = insight.medianGapDays?.let { " · typically every $it days" }.orEmpty()
+                    Text(
+                        "${insight.visitCount} visits$gap",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.nayara.textTertiary,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContactLogCard(log: ContactLogDto, modifier: Modifier = Modifier) {
+    NayaraCard(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(NayaraSpacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xxs),
+        ) {
+            Text("${log.channelLabel} · ${log.outcomeLabel}", fontWeight = FontWeight.SemiBold)
+            val who = listOfNotNull(log.loggedBy, log.contactedRole).joinToString(" · ")
+            val meta = listOfNotNull(who.ifBlank { null }, formatDateTime(log.contactedAt)).joinToString(" · ")
+            if (meta.isNotBlank()) {
+                Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.nayara.textSecondary)
+            }
+            log.notes?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.nayara.textTertiary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedbackSummaryRow(avg: Double?, count: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (count > 0 && avg != null) {
+            StarRow(avg.toFloat())
+            Text("%.1f".format(avg), fontWeight = FontWeight.SemiBold)
+            Text(
+                "$count rating${if (count == 1) "" else "s"}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.nayara.textSecondary,
+            )
+        } else {
+            Text(
+                "No ratings yet",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.nayara.textSecondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FeedbackCard(fb: FeedbackDto, modifier: Modifier = Modifier) {
+    NayaraCard(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(NayaraSpacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xxs),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm),
+            ) {
+                StarRow(fb.rating.toFloat(), size = 16.dp)
+                Text(fb.sourceLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.nayara.textTertiary)
+            }
+            fb.comment?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium)
+            }
+            val meta = listOfNotNull(fb.recordedBy, formatDateTime(fb.createdAt)).joinToString(" · ")
+            if (meta.isNotBlank()) {
+                Text(meta, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.nayara.textTertiary)
+            }
+        }
+    }
+}
+
+/** Row of five stars filled to nearest whole from [rating] (0..5). */
+@Composable
+private fun StarRow(rating: Float, size: Dp = 18.dp) {
+    Row {
+        for (i in 1..5) {
+            Icon(
+                imageVector = if (rating >= i - 0.5f) Icons.Filled.Star else Icons.Filled.StarBorder,
+                contentDescription = null,
+                tint = if (rating >= i - 0.5f) MaterialTheme.nayara.rewardCoin else MaterialTheme.nayara.textTertiary,
+                modifier = Modifier.size(size),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FeedbackSheet(
+    submitting: Boolean,
+    onDismiss: () -> Unit,
+    onSubmit: (rating: Int, comment: String) -> Unit,
+) {
+    var rating by remember { mutableStateOf(0) }
+    var comment by remember { mutableStateOf("") }
+    NayaraBottomSheet(
+        onDismissRequest = onDismiss,
+        title = "Add rating",
+        subtitle = "Capture how the customer felt about this visit.",
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().imePadding(),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+        ) {
+            Text("Rating", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.nayara.textSecondary)
+            StarSelector(rating = rating, onRating = { rating = it })
+            OutlinedTextField(
+                value = comment,
+                onValueChange = { comment = it },
+                label = { Text("Comment (optional)") },
+                minLines = 2,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
+                NayaraOutlinedButton(onClick = onDismiss, enabled = !submitting, modifier = Modifier.weight(1f)) {
+                    Text("Cancel")
+                }
+                NayaraButton(
+                    onClick = { onSubmit(rating, comment) },
+                    loading = submitting,
+                    enabled = rating in 1..5,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Save") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StarSelector(rating: Int, onRating: (Int) -> Unit) {
+    Row {
+        for (i in 1..5) {
+            IconButton(onClick = { onRating(i) }) {
+                Icon(
+                    imageVector = if (i <= rating) Icons.Filled.Star else Icons.Filled.StarBorder,
+                    contentDescription = "$i star${if (i == 1) "" else "s"}",
+                    tint = if (i <= rating) MaterialTheme.nayara.rewardCoin else MaterialTheme.nayara.textTertiary,
+                    modifier = Modifier.size(32.dp),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LogContactSheet(
+    contacts: List<CustomerContactDto>,
+    submitting: Boolean,
+    onDismiss: () -> Unit,
+    onSubmit: (channel: String, outcome: String, role: String?, contactId: Long?, notes: String) -> Unit,
+) {
+    var channel by remember { mutableStateOf(CRM_CHANNELS.first().first) }
+    var outcome by remember { mutableStateOf(CRM_OUTCOMES.first().first) }
+    var contactId by remember { mutableStateOf<Long?>(null) }
+    var notes by remember { mutableStateOf("") }
+
+    NayaraBottomSheet(
+        onDismissRequest = onDismiss,
+        title = "Log contact",
+        subtitle = "Record an outreach attempt and how it went.",
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .imePadding(),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+        ) {
+            CrmDropdownField(
+                label = "Channel",
+                selectedLabel = CRM_CHANNELS.first { it.first == channel }.second,
+                options = CRM_CHANNELS,
+                optionLabel = { it.second },
+                onSelect = { channel = it.first },
+            )
+            CrmDropdownField(
+                label = "Outcome",
+                selectedLabel = CRM_OUTCOMES.first { it.first == outcome }.second,
+                options = CRM_OUTCOMES,
+                optionLabel = { it.second },
+                onSelect = { outcome = it.first },
+            )
+            if (contacts.isNotEmpty()) {
+                val options = listOf<CustomerContactDto?>(null) + contacts
+                CrmDropdownField(
+                    label = "Person (optional)",
+                    selectedLabel = contactPersonLabel(contacts.firstOrNull { it.id == contactId }),
+                    options = options,
+                    optionLabel = { contactPersonLabel(it) },
+                    onSelect = { contactId = it?.id },
+                )
+            }
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { notes = it },
+                label = { Text("Notes (optional)") },
+                minLines = 2,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
+                NayaraOutlinedButton(onClick = onDismiss, enabled = !submitting, modifier = Modifier.weight(1f)) {
+                    Text("Cancel")
+                }
+                NayaraButton(
+                    onClick = {
+                        // A chosen person carries its own role through to the API.
+                        val role = contacts.firstOrNull { it.id == contactId }?.role
+                        onSubmit(channel, outcome, role, contactId, notes)
+                    },
+                    loading = submitting,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Save") }
+            }
+        }
+    }
+}
+
+/** "Not specified" for the null slot, else the contact's name (falling back to its role). */
+private fun contactPersonLabel(contact: CustomerContactDto?): String =
+    contact?.let { it.name?.ifBlank { null } ?: it.roleLabel } ?: "Not specified"
+
+@Composable
+private fun <T> CrmDropdownField(
+    label: String,
+    selectedLabel: String,
+    options: List<T>,
+    optionLabel: (T) -> String,
+    onSelect: (T) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var fieldWidthPx by remember { mutableStateOf(0) }
+    val fieldWidth = with(LocalDensity.current) { fieldWidthPx.toDp() }
+    Box(Modifier.fillMaxWidth().onGloballyPositioned { fieldWidthPx = it.size.width }) {
+        PickerField(label = label, value = selectedLabel, onClick = { expanded = true })
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.width(fieldWidth),
+        ) {
+            options.forEach { opt ->
+                DropdownMenuItem(
+                    text = { Text(optionLabel(opt)) },
+                    onClick = {
+                        onSelect(opt)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}

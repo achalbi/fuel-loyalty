@@ -323,6 +323,11 @@
 
     <div class="customer-details-stack">
 
+      <%# E3/E5/E7 — admin CRM panels (only present in the admin controller). %>
+      <% if @crm_insight.present? %>
+        <%= render "admin/customers/crm" %>
+      <% end %>
+
       <% customer_contacts = @customer.customer_contacts.active.order(:role) %>
       <div class="card shadow-sm loyalty-result-card customer-details-section">
         <div class="card-body">

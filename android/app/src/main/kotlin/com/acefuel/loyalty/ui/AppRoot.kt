@@ -76,6 +76,7 @@ import com.acefuel.loyalty.ui.admin.shifts.AdminShiftsScreen
 import com.acefuel.loyalty.ui.admin.staff.AdminStaffScreen
 import com.acefuel.loyalty.ui.admin.theme.AdminThemeScreen
 import com.acefuel.loyalty.ui.admin.campaigns.AdminCampaignsScreen
+import com.acefuel.loyalty.ui.admin.crm.AdminReachOutScreen
 import com.acefuel.loyalty.ui.admin.reports.AdminReportsScreen
 import com.acefuel.loyalty.ui.admin.settlements.AdminSettlementsScreen
 import com.acefuel.loyalty.ui.admin.transactions.AdminTransactionsScreen
@@ -429,6 +430,12 @@ fun AppRoot(container: ServiceContainer) {
                 composable(AdminRoutes.REPORTS) { AdminReportsScreen(onBack = back) }
                 composable(AdminRoutes.SETTLEMENTS) { AdminSettlementsScreen(onBack = back) }
                 composable(AdminRoutes.CAMPAIGNS) { AdminCampaignsScreen(onBack = back) }
+                composable(AdminRoutes.REACH_OUT) {
+                    AdminReachOutScreen(
+                        onBack = back,
+                        onOpenCustomer = { id -> navController.navigate("customer/$id") },
+                    )
+                }
                 composable(AdminRoutes.USERS) { AdminUsersScreen(onBack = back) }
                 composable(AdminRoutes.FUEL_TYPES) { AdminFuelTypesScreen(onBack = back) }
                 composable(AdminRoutes.VEHICLE_TYPES) { AdminVehicleTypesScreen(onBack = back) }
