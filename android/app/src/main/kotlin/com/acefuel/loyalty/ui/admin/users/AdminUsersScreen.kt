@@ -2,6 +2,14 @@
 
 package com.acefuel.loyalty.ui.admin.users
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,16 +22,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
@@ -34,6 +50,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,9 +61,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -80,8 +105,9 @@ import com.acefuel.loyalty.ui.theme.nayara
 @Composable
 fun AdminUsersScreen(onBack: () -> Unit) {
     val container = LocalContainer.current
+    val contentResolver = LocalContext.current.contentResolver
     val repo = remember {
-        UsersRepository(container.retrofit.create(UsersApi::class.java), container.json)
+        UsersRepository(container.retrofit.create(UsersApi::class.java), container.json, contentResolver)
     }
     val vm: UsersViewModel = viewModel(factory = viewModelFactory { initializer { UsersViewModel(repo) } })
     val state by vm.state.collectAsStateWithLifecycle()
@@ -357,6 +383,8 @@ private fun UserFormSheet(state: AdminUsersUiState, vm: UsersViewModel, onCancel
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         )
 
+        KycSection(state = state, vm = vm)
+
         // Role
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Role", style = MaterialTheme.typography.labelLarge)
@@ -450,4 +478,299 @@ private fun FieldError(errors: List<String>?) {
             color = MaterialTheme.colorScheme.error,
         )
     }
+}
+
+// ---------------------------------------------------------------------------
+// A7 — Operator KYC (address, Aadhaar, profile photo, ID-card photo)
+// ---------------------------------------------------------------------------
+
+private enum class KycTarget { Profile, IdCard }
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+private fun KycSection(state: AdminUsersUiState, vm: UsersViewModel) {
+    val context = LocalContext.current
+    val form = state.form
+    val errors = state.fieldErrors
+
+    // Which image the source chooser targets; the camera path also needs the
+    // capture Uri + target held across the async result and the permission grant.
+    var chooserFor by remember { mutableStateOf<KycTarget?>(null) }
+    var pendingTarget by remember { mutableStateOf<KycTarget?>(null) }
+    var captureUri by remember { mutableStateOf<Uri?>(null) }
+    var cameraRequestTarget by remember { mutableStateOf<KycTarget?>(null) }
+
+    fun deliver(target: KycTarget, image: PickedImage) = when (target) {
+        KycTarget.Profile -> vm.onProfilePhotoPicked(image)
+        KycTarget.IdCard -> vm.onIdCardPicked(image)
+    }
+
+    // Gallery: the system photo picker — no runtime permission, mirrors the web's
+    // `accept="image/*"` file input.
+    val imageRequest = remember { PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly) }
+    val galleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        val target = pendingTarget
+        pendingTarget = null
+        if (uri != null && target != null) deliver(target, context.contentResolver.toPickedImage(uri))
+    }
+    val cameraPicker = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        val target = pendingTarget
+        val uri = captureUri
+        pendingTarget = null
+        captureUri = null
+        if (success && target != null && uri != null) deliver(target, context.contentResolver.toPickedImage(uri))
+    }
+
+    fun launchGallery(target: KycTarget) {
+        pendingTarget = target
+        galleryPicker.launch(imageRequest)
+    }
+    fun launchCamera(target: KycTarget) {
+        captureUri = context.newKycCaptureUri()
+        pendingTarget = target
+        cameraPicker.launch(captureUri!!)
+    }
+
+    // The manifest declares CAMERA (for the plate scanner), so the OS requires it
+    // to be granted before ACTION_IMAGE_CAPTURE will open the camera app.
+    val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA) { granted ->
+        val target = cameraRequestTarget
+        cameraRequestTarget = null
+        if (granted && target != null) launchCamera(target)
+    }
+    fun takePhoto(target: KycTarget) {
+        if (cameraPermission.status.isGranted) {
+            launchCamera(target)
+        } else {
+            cameraRequestTarget = target
+            cameraPermission.launchPermissionRequest()
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Identity / KYC", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            "Optional. Aadhaar is encrypted at rest; revealing it is logged.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.nayara.textSecondary,
+        )
+
+        FormField(
+            value = form.address,
+            onValueChange = vm::onAddress,
+            label = "Address",
+            errors = errors["address"],
+            singleLine = false,
+        )
+
+        FormField(
+            value = form.aadhaar,
+            onValueChange = vm::onAadhaar,
+            label = "Aadhaar Number",
+            errors = errors["aadhaar_number"],
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            helper = if (form.aadhaarPresent && state.revealedAadhaar == null) {
+                "Current: ${form.aadhaarMasked ?: "on file"} — leave blank to keep"
+            } else {
+                null
+            },
+        )
+
+        // Reveal the stored Aadhaar (audited). Only for an existing operator.
+        if (state.isEditing && form.aadhaarPresent) {
+            if (state.revealedAadhaar != null) {
+                RevealedAadhaarCard(state.revealedAadhaar!!)
+            } else {
+                NayaraOutlinedButton(onClick = vm::revealKyc, enabled = !state.revealing) {
+                    if (state.revealing) SmallSpinner() else Text("Reveal full Aadhaar (logged)")
+                }
+            }
+            state.revealError?.let { FieldError(listOf(it)) }
+        }
+
+        // Profile photo
+        Text("Profile Photo", style = MaterialTheme.typography.labelLarge)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            KycThumbnail(
+                picked = form.pickedProfilePhoto?.uri,
+                currentUrl = absoluteApiUrl(form.profilePhotoUrl),
+            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                NayaraOutlinedButton(
+                    onClick = { chooserFor = KycTarget.Profile },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (form.pickedProfilePhoto != null || form.profilePhotoUrl != null) "Change photo" else "Add photo")
+                }
+                if (form.pickedProfilePhoto != null) {
+                    Text(
+                        "New photo ready to upload.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.nayara.textSecondary,
+                    )
+                }
+            }
+        }
+        FieldError(errors["profile_photo"])
+
+        // ID-card photo — sensitive, so it's never shown inline; viewing is gated
+        // behind the audited reveal.
+        Text("ID-card Photo", style = MaterialTheme.typography.labelLarge)
+        Text(
+            when {
+                form.pickedIdCard != null -> "New ID card ready to upload."
+                form.idCardPresent -> "ID card on file."
+                else -> "No ID card captured."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.nayara.textSecondary,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            NayaraOutlinedButton(
+                onClick = { chooserFor = KycTarget.IdCard },
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(if (form.pickedIdCard != null || form.idCardPresent) "Replace" else "Capture ID card")
+            }
+            if (form.idCardPresent) {
+                if (state.revealedIdCardUrl != null) {
+                    NayaraButton(
+                        onClick = { openInBrowser(context, state.revealedIdCardUrl) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Open ID card") }
+                } else {
+                    NayaraOutlinedButton(
+                        onClick = vm::revealKyc,
+                        enabled = !state.revealing,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        if (state.revealing) SmallSpinner() else Text("View ID card")
+                    }
+                }
+            }
+        }
+        FieldError(errors["id_card_photo"])
+
+        // Purge — clears Aadhaar + ID card but keeps the account.
+        if (state.isEditing && (form.aadhaarPresent || form.idCardPresent)) {
+            var confirmPurge by remember { mutableStateOf(false) }
+            NayaraOutlinedButton(onClick = { confirmPurge = true }, enabled = !state.purging) {
+                Text("Purge KYC", color = MaterialTheme.colorScheme.error)
+            }
+            if (confirmPurge) {
+                ConfirmDialog(
+                    title = "Purge KYC?",
+                    text = "This clears the Aadhaar and ID-card photo for this operator. The account stays.",
+                    confirmLabel = "Purge",
+                    destructive = true,
+                    onConfirm = {
+                        confirmPurge = false
+                        vm.purgeKyc()
+                    },
+                    onDismiss = { confirmPurge = false },
+                )
+            }
+        }
+    }
+
+    chooserFor?.let { target ->
+        AlertDialog(
+            onDismissRequest = { chooserFor = null },
+            title = { Text("Add photo") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(
+                        onClick = {
+                            chooserFor = null
+                            takePhoto(target)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.PhotoCamera, contentDescription = null)
+                        Spacer(Modifier.size(8.dp))
+                        Text("Take photo", modifier = Modifier.weight(1f))
+                    }
+                    TextButton(
+                        onClick = {
+                            chooserFor = null
+                            launchGallery(target)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null)
+                        Spacer(Modifier.size(8.dp))
+                        Text("Choose from gallery", modifier = Modifier.weight(1f))
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { chooserFor = null }) { Text("Cancel") } },
+        )
+    }
+}
+
+@Composable
+private fun KycThumbnail(picked: Uri?, currentUrl: String?) {
+    val model: Any? = picked ?: currentUrl
+    Box(
+        modifier = Modifier
+            .size(72.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (model != null) {
+            AsyncImage(
+                model = model,
+                contentDescription = "Profile photo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Icon(
+                Icons.Filled.Person,
+                contentDescription = null,
+                tint = MaterialTheme.nayara.textTertiary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RevealedAadhaarCard(value: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Filled.Badge, contentDescription = null, tint = MaterialTheme.nayara.textSecondary)
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium,
+                fontFamily = FontFamily.Monospace,
+            )
+        }
+        Text(
+            "Revealed — this access was logged.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.nayara.textSecondary,
+        )
+    }
+}
+
+@Composable
+private fun SmallSpinner() {
+    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+}
+
+private fun openInBrowser(context: Context, relativeUrl: String?) {
+    val absolute = absoluteApiUrl(relativeUrl) ?: return
+    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(absolute))) }
 }

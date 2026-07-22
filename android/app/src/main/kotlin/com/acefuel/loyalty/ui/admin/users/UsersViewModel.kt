@@ -21,6 +21,17 @@ data class UserForm(
     val active: Boolean = true,
     val password: String = "",
     val passwordConfirmation: String = "",
+    // --- A7 operator KYC ---
+    val address: String = "",
+    // New Aadhaar being entered; blank keeps the stored value (like password).
+    val aadhaar: String = "",
+    val aadhaarMasked: String? = null, // current masked value, display only
+    val aadhaarPresent: Boolean = false,
+    val profilePhotoUrl: String? = null, // current server photo (relative path)
+    val idCardPresent: Boolean = false,
+    // Locally picked replacements, uploaded via multipart on submit.
+    val pickedProfilePhoto: PickedImage? = null,
+    val pickedIdCard: PickedImage? = null,
 )
 
 data class AdminUsersUiState(
@@ -40,6 +51,12 @@ data class AdminUsersUiState(
     val saving: Boolean = false,
     val formError: String? = null, // top-level / base validation message
     val fieldErrors: Map<String, List<String>> = emptyMap(),
+    // --- A7 KYC reveal / purge (transient — never persisted) ---
+    val revealing: Boolean = false,
+    val revealedAadhaar: String? = null,
+    val revealedIdCardUrl: String? = null, // relative path from kyc_reveal
+    val revealError: String? = null,
+    val purging: Boolean = false,
 ) {
     val isEditing: Boolean get() = editingId != null
 
@@ -109,6 +126,11 @@ class UsersViewModel(private val repository: UsersRepository) : ViewModel() {
                 form = UserForm(),
                 formError = null,
                 fieldErrors = emptyMap(),
+                revealing = false,
+                revealedAadhaar = null,
+                revealedIdCardUrl = null,
+                revealError = null,
+                purging = false,
             )
         }
     }
@@ -123,6 +145,11 @@ class UsersViewModel(private val repository: UsersRepository) : ViewModel() {
                 form = user.toForm(),
                 formError = null,
                 fieldErrors = emptyMap(),
+                revealing = false,
+                revealedAadhaar = null,
+                revealedIdCardUrl = null,
+                revealError = null,
+                purging = false,
             )
         }
         viewModelScope.launch {
@@ -150,7 +177,18 @@ class UsersViewModel(private val repository: UsersRepository) : ViewModel() {
     }
 
     fun closeSheet() {
-        _state.update { it.copy(sheetOpen = false, saving = false, formLoading = false) }
+        _state.update {
+            it.copy(
+                sheetOpen = false,
+                saving = false,
+                formLoading = false,
+                // Revealed PII is transient — drop it the moment the sheet closes.
+                revealing = false,
+                revealedAadhaar = null,
+                revealedIdCardUrl = null,
+                revealError = null,
+            )
+        }
     }
 
     // --- Field setters (each clears its own inline error) -------------------
@@ -164,6 +202,19 @@ class UsersViewModel(private val repository: UsersRepository) : ViewModel() {
     fun onPassword(value: String) = editField("password") { it.copy(password = value) }
     fun onPasswordConfirmation(value: String) =
         editField("password_confirmation") { it.copy(passwordConfirmation = value) }
+
+    // --- A7 KYC setters -----------------------------------------------------
+
+    fun onAddress(value: String) = editField("address") { it.copy(address = value) }
+
+    fun onAadhaar(value: String) =
+        editField("aadhaar_number") { it.copy(aadhaar = value.filter(Char::isDigit).take(12)) }
+
+    fun onProfilePhotoPicked(image: PickedImage) =
+        editField("profile_photo") { it.copy(pickedProfilePhoto = image) }
+
+    fun onIdCardPicked(image: PickedImage) =
+        editField("id_card_photo") { it.copy(pickedIdCard = image) }
 
     private fun editField(key: String, transform: (UserForm) -> UserForm) {
         _state.update {
@@ -195,6 +246,10 @@ class UsersViewModel(private val repository: UsersRepository) : ViewModel() {
             if (form.password.isNotBlank() && form.password != form.passwordConfirmation) {
                 put("password_confirmation", listOf("doesn't match Password"))
             }
+            // Aadhaar is optional; the Verhoeff checksum is enforced server-side.
+            if (form.aadhaar.isNotBlank() && form.aadhaar.length != 12) {
+                put("aadhaar_number", listOf("Aadhaar must be 12 digits."))
+            }
         }
         if (clientErrors.isNotEmpty()) {
             _state.update { it.copy(fieldErrors = clientErrors, formError = null) }
@@ -210,15 +265,25 @@ class UsersViewModel(private val repository: UsersRepository) : ViewModel() {
             active = form.active,
             password = form.password.ifBlank { null },
             passwordConfirmation = form.passwordConfirmation.ifBlank { null },
+            address = form.address.trim(),
+            // Blank keeps the stored Aadhaar (parallels the password field).
+            aadhaarNumber = form.aadhaar.trim().ifBlank { null },
         )
 
         _state.update { it.copy(saving = true, formError = null, fieldErrors = emptyMap()) }
         viewModelScope.launch {
             val editingId = current.editingId
-            val result = if (editingId != null) {
-                repository.update(editingId, request)
-            } else {
-                repository.create(request)
+            // Only send multipart when an image was actually picked; a no-image
+            // edit stays on the cheaper JSON path.
+            val profile = form.pickedProfilePhoto
+            val idCard = form.pickedIdCard
+            val hasImages = profile != null || idCard != null
+            val result = when {
+                editingId != null && hasImages ->
+                    repository.updateMultipart(editingId, request, profile, idCard)
+                editingId != null -> repository.update(editingId, request)
+                hasImages -> repository.createMultipart(request, profile, idCard)
+                else -> repository.create(request)
             }
             when (result) {
                 is ApiResult.Success -> {
@@ -249,6 +314,70 @@ class UsersViewModel(private val repository: UsersRepository) : ViewModel() {
             }
         }
     }
+
+    // --- A7 KYC reveal / purge ----------------------------------------------
+
+    /**
+     * Fetch the full Aadhaar + signed ID-card URL for the operator being edited.
+     * The access is audited server-side; the result lives only in transient UI
+     * state and is dropped when the sheet closes.
+     */
+    fun revealKyc() {
+        val id = _state.value.editingId ?: return
+        if (_state.value.revealing) return
+        _state.update { it.copy(revealing = true, revealError = null) }
+        viewModelScope.launch {
+            when (val result = repository.kycReveal(id)) {
+                is ApiResult.Success -> _state.update {
+                    if (it.editingId != id) return@update it
+                    it.copy(
+                        revealing = false,
+                        revealedAadhaar = result.data.aadhaarNumber,
+                        revealedIdCardUrl = result.data.idCardPhotoUrl,
+                    )
+                }
+                is ApiResult.Error -> _state.update {
+                    if (it.editingId == id) it.copy(revealing = false, revealError = result.message) else it
+                }
+                is ApiResult.NetworkError -> _state.update {
+                    if (it.editingId == id) it.copy(revealing = false, revealError = NETWORK_MESSAGE) else it
+                }
+            }
+        }
+    }
+
+    /** Purge Aadhaar + ID-card for the operator being edited (keeps the account). */
+    fun purgeKyc() {
+        val id = _state.value.editingId ?: return
+        if (_state.value.purging) return
+        _state.update { it.copy(purging = true) }
+        viewModelScope.launch {
+            when (val result = repository.purgeKyc(id)) {
+                is ApiResult.Success -> {
+                    _state.update {
+                        if (it.editingId != id) return@update it.copy(purging = false)
+                        it.copy(
+                            purging = false,
+                            revealedAadhaar = null,
+                            revealedIdCardUrl = null,
+                            revealError = null,
+                            successMessage = "KYC purged.",
+                            form = it.form.copy(
+                                aadhaar = "",
+                                aadhaarMasked = result.data.aadhaarMasked,
+                                aadhaarPresent = result.data.aadhaarPresent,
+                                idCardPresent = result.data.idCardPresent,
+                                pickedIdCard = null,
+                            ),
+                        )
+                    }
+                    load()
+                }
+                is ApiResult.Error -> _state.update { it.copy(purging = false, actionError = result.message) }
+                is ApiResult.NetworkError -> _state.update { it.copy(purging = false, actionError = NETWORK_MESSAGE) }
+            }
+        }
+    }
 }
 
 private fun AdminUserDto.toForm() = UserForm(
@@ -260,4 +389,12 @@ private fun AdminUserDto.toForm() = UserForm(
     active = active,
     password = "",
     passwordConfirmation = "",
+    address = address.orEmpty(),
+    aadhaar = "",
+    aadhaarMasked = aadhaarMasked,
+    aadhaarPresent = aadhaarPresent,
+    profilePhotoUrl = profilePhotoUrl,
+    idCardPresent = idCardPresent,
+    pickedProfilePhoto = null,
+    pickedIdCard = null,
 )

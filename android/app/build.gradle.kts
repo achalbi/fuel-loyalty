@@ -109,6 +109,8 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.mlkit.text.recognition)
     implementation(libs.accompanist.permissions)
+    // KYC image thumbnails (operator profile + ID-card previews)
+    implementation(libs.coil.compose)
     // FCM push
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)

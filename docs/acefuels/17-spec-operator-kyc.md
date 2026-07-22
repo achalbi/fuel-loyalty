@@ -1,6 +1,6 @@
 # A7 — Operator Profile / KYC Fields (Photo, Address, Aadhaar, ID-card Photo)
 
-> **Build status (Phase 3, 2026-07-22):** ✅ **Backend + API + web shipped, tested.**
+> **Build status (Phase 3, 2026-07-22):** ✅ **Backend + API + web + Android shipped, tested.**
 > ActiveStorage installed; `User` has `profile_photo`/`id_card_photo` attachments
 > (type+size validated); `users` += `address` + Aadhaar (**Active Record Encryption**
 > at rest, **Verhoeff** checksum, masked `XXXX-XXXX-1234` via `aadhaar_last4`). PII:
@@ -8,8 +8,13 @@
 > + web `reveal_aadhaar`, both writing a `pii_access_logs` row), an authenticated
 > ID-card view/redirect, a Purge-KYC action, and Aadhaar/image log-filtering. Multipart
 > create/update on web + API; a blank Aadhaar on edit keeps the stored value. Login is
-> unchanged (Q3 — no OTP). **Still to ship:** the **Android** KYC capture UI (multipart
-> upload + image picker + reveal). **Production prerequisites the operator must provision
+> unchanged (Q3 — no OTP). The **Android** admin Users sheet now captures Address +
+> Aadhaar (12-digit, checksum server-verified) and adds Profile/ID-card photos via a
+> **Take photo** (camera, runtime-permission-gated + FileProvider) **or Choose from
+> gallery** chooser, uploading over multipart (no-image edits stay on JSON); the
+> audited reveal shows the full Aadhaar transiently + opens the signed ID-card URL, and
+> Purge-KYC is wired. Thumbnails render via Coil on the shared authed OkHttp client.
+> **Production prerequisites the operator must provision
 > before release:** durable object storage (**GCS** — production `:local` loses images on
 > Cloud Run restart) and the **AR-encryption keys** in Secret Manager (`bin/rails db:encryption:init`).
 
@@ -207,7 +212,7 @@ Serializers: `Api::V1::UserSerializer` gains `address, aadhaar_present, aadhaar_
 - [ ] Aadhaar is stored as ciphertext (verified by inspecting the raw column) and only decrypts through `aadhaar_number`.
 - [ ] Aadhaar with a bad Verhoeff checksum or non-12-digit input is rejected with a 422 field error on both web and API.
 - [ ] Web operator form (`_form.html.erb`) is `multipart`, shows Address, Aadhaar (masked on edit), Profile Photo, and ID-card Photo inputs, and saves them.
-- [ ] Android create/edit sheet captures Address, Aadhaar, Profile Photo, and ID-card Photo and uploads via multipart; a no-image edit still works over JSON.
+- [x] Android create/edit sheet captures Address, Aadhaar, Profile Photo, and ID-card Photo and uploads via multipart; a no-image edit still works over JSON.
 - [ ] Default list/detail responses (web + API) show only `aadhaar_masked` (`XXXX-XXXX-1234`) and a profile-photo URL — never the full Aadhaar or raw ID-card URL.
 - [ ] `GET /api/v1/admin/users/:id/kyc_reveal` returns the full Aadhaar and a short-TTL signed ID-card URL **only** to admins and writes a PII-access audit event; non-admins get 403.
 - [ ] ID-card image is never served via a permanent public URL; it is reachable only through the authenticated redirect (web) or signed reveal URL (API).

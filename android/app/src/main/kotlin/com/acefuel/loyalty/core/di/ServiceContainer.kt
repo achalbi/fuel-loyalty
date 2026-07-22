@@ -50,7 +50,9 @@ class ServiceContainer(context: Context) {
         .addInterceptor(logging)
         .build()
 
-    private val okHttpClient = OkHttpClient.Builder()
+    // Exposed so the Coil ImageLoader (KYC thumbnails) reuses the same auth,
+    // logging and connection pool as the JSON API calls.
+    val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(AuthInterceptor(tokenStore))
         .addInterceptor(logging)
         .authenticator(TokenAuthenticator(tokenStore, baseUrl, json, refreshClient))

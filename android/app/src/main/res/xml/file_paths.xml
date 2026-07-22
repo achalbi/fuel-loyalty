@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cache subdir the KYC camera-capture temp files live in. -->
+<paths>
+    <cache-path name="kyc_captures" path="kyc_captures/" />
+</paths>
