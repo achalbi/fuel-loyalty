@@ -294,8 +294,8 @@
     <div class="stats">
       <div class="stat total">
         <div class="n">41</div><div class="l">Features assessed</div>
-        <div class="bar" role="img" aria-label="76% present, 10% partial, 15% absent">
-          <i class="p" style="width:75.6%"></i><i class="q" style="width:9.8%"></i><i class="a" style="width:14.6%"></i>
+        <div class="bar" role="img" aria-label="83% present, 10% partial, 7% absent">
+          <i class="p" style="width:82.9%"></i><i class="q" style="width:9.8%"></i><i class="a" style="width:7.3%"></i>
         </div>
         <div class="bar-key">
           <span><i class="dot" style="background:var(--present)"></i>Present</span>
@@ -303,11 +303,11 @@
           <span><i class="dot" style="background:var(--absent)"></i>Absent</span>
         </div>
       </div>
-      <div class="stat present"><div class="n">31</div><div class="l">Present</div></div>
+      <div class="stat present"><div class="n">34</div><div class="l">Present</div></div>
       <div class="stat partial"><div class="n">4</div><div class="l">Partial</div></div>
-      <div class="stat absent"><div class="n">6</div><div class="l">Absent</div></div>
+      <div class="stat absent"><div class="n">3</div><div class="l">Absent</div></div>
     </div>
-    <p class="meta" style="margin-top:18px"><b style="color:var(--present)">Phases 0, 1 &amp; 2 complete ✅.</b> &nbsp;Phase 2: ✅ <b>Daily Settlement D1–D10</b> (staff capture + admin D9 console: audit trail, reconcile, cross-pump totals, discount-linked points recompute) · ✅ <b>E1 Reports</b> (litres/discount/gifts by vehicle/transporter/driver, day→year, CSV export) — all on <b>web + Android + API</b>, tested. <em>(Web-first slivers: native decantation D8 inputs + native admin settlement line-editing.)</em> Next: <b>Phase 3 — Campaigns / Notifications / Operator KYC</b>.</p>
+    <p class="meta" style="margin-top:18px"><b style="color:var(--present)">Phases 0, 1 &amp; 2 complete ✅ · Phase 3 well underway.</b> &nbsp;Phase 2: ✅ <b>Daily Settlement D1–D10</b> + <b>E1 Reports</b> on <b>web + Android + API</b>. Phase 3 (web + API, tested): ✅ <b>F1 Campaigns</b> (min-purchase-per-period → discount/gift/points, targeted, adversarially reviewed) · ✅ <b>F2 targeting</b> + channel opt-ins · ✅ <b>F3</b> targeted offer push + auto loyalty-milestone. <em>(Remaining: native admin screens for campaigns/notifications, F4 live WhatsApp/SMS provider, A7 KYC.)</em></p>
   </div>
 </header>
 
@@ -428,10 +428,10 @@
     <div class="fgroup">
       <h3>Campaigns &amp; Notifications <span class="rng">F1–F4</span></h3>
       <p class="gsub">Broadcast push works; targeted campaigns and multi-channel messaging do not.</p>
-      <div class="feat" data-status="absent"><span class="fid">F1</span><div class="fmain"><div class="ftitle">Campaign creation</div><div class="fgap">Min-purchase-per-period → discount / gift rules engine. Only a per-vehicle-type reward multiplier exists.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="L">L</span></span></div>
-      <div class="feat" data-status="absent"><span class="fid">F2</span><div class="fmain"><div class="ftitle">Campaign targeting</div><div class="fgap">Address an individual / a customer type / a hand-selected set. Blocked by customer type + token linkage.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="M">M</span></span></div>
-      <div class="feat" data-status="partial"><span class="fid">F3</span><div class="fmain"><div class="ftitle">Push for offers + loyalty bonus</div><div class="fgap">Broadcast + scheduled push work, but sends are untargeted; there's no offer object and nothing auto-pushes a loyalty-bonus milestone.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="M">M</span></span></div>
-      <div class="feat" data-status="absent"><span class="fid">F4</span><div class="fmain"><div class="ftitle">WhatsApp / SMS notifications</div><div class="fgap">New external messaging provider, templates, opt-in and delivery receipts.</div></div><span class="chips"><span class="status absent">Absent</span><span class="effort" data-e="L">L</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">F1</span><div class="fmain"><div class="ftitle">Campaign creation</div><div class="fgap">✅ <b>Shipped (web + API)</b> — <code style="font-family:var(--mono);font-size:12px">campaigns</code> engine: min-purchase-per-period (₹ or litres) → discount / gift / bonus-points, with <code style="font-family:var(--mono);font-size:12px">Campaigns::Evaluator</code>/<code style="font-family:var(--mono);font-size:12px">Runner</code>/<code style="font-family:var(--mono);font-size:12px">Preview</code>, idempotent grants, and preview/run/activate/pause. Hardened by a multi-agent adversarial review (fixed a rolling-window double-grant + network-IO-in-lock). <em>(Native campaigns screen pending.)</em></div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">F2</span><div class="fmain"><div class="ftitle">Campaign targeting</div><div class="fgap">✅ <b>Shipped (web + API)</b> — <code style="font-family:var(--mono);font-size:12px">AudienceResolver</code> targets all / customer-type / individual / a selected set, with per-channel opt-in/token gating; the send form + campaigns bind to it, and customer WhatsApp/SMS opt-ins + push <code style="font-family:var(--mono);font-size:12px">consent_at</code> are captured. <em>(Native targeting UI pending.)</em></div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="present"><span class="fid">F3</span><div class="fmain"><div class="ftitle">Push for offers + loyalty bonus</div><div class="fgap">✅ <b>Shipped</b> — targeted, offer-aware push with a persistent delivery log (<code style="font-family:var(--mono);font-size:12px">notification_messages</code>/<code style="font-family:var(--mono);font-size:12px">notification_recipients</code>), campaign offers carry a structured <code style="font-family:var(--mono);font-size:12px">offer_payload</code>, and <code style="font-family:var(--mono);font-size:12px">LoyaltyMilestoneNotifier</code> auto-pushes one bonus notification per points rung (idempotent).</div></div><span class="chips"><span class="status present">Present</span><span class="effort" data-e="Done">Done</span></span></div>
+      <div class="feat" data-status="partial"><span class="fid">F4</span><div class="fmain"><div class="ftitle">WhatsApp / SMS notifications</div><div class="fgap">🟡 <b>Abstraction shipped</b> — a <code style="font-family:var(--mono);font-size:12px">NotificationChannel</code> interface with WhatsApp/SMS channels (opt-in-gated, per-recipient delivery log) records <code style="font-family:var(--mono);font-size:12px">skipped</code> until a live provider is wired. <b>Live delivery needs the operator's MSG91/Twilio credentials + DLT-registered templates</b> — then implement <code style="font-family:var(--mono);font-size:12px">deliver_via_provider</code>.</div></div><span class="chips"><span class="status partial">Partial</span><span class="effort" data-e="L">L</span></span></div>
     </div>
   </section>
 
