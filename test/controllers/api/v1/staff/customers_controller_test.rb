@@ -65,6 +65,22 @@ module Api
           assert_equal "Ravi", contact["name"]
           assert contact["contacted"]
         end
+
+        test "update sets channel opt-ins and account type (F2)" do
+          customer = customers(:one)
+          patch api_v1_staff_customer_path(customer),
+            params: { customer: { customer_type: "credit", whatsapp_opt_in: true, sms_opt_in: true } },
+            headers: auth_headers(users(:two))
+
+          assert_response :ok
+          body = response.parsed_body
+          assert_equal "credit", body["customer_type"]
+          assert_equal true, body["whatsapp_opt_in"]
+          assert_equal true, body["sms_opt_in"]
+          customer.reload
+          assert customer.whatsapp_opt_in?
+          assert customer.sms_opt_in?
+        end
       end
     end
   end

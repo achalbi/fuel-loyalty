@@ -6,6 +6,8 @@ import com.acefuel.loyalty.core.network.apiCall
 import com.acefuel.loyalty.core.network.dto.CatalogResponse
 import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
 import com.acefuel.loyalty.core.network.dto.CustomerSummaryDto
+import com.acefuel.loyalty.core.network.dto.CustomerUpdateEnvelope
+import com.acefuel.loyalty.core.network.dto.CustomerUpdateRequest
 import com.acefuel.loyalty.core.network.dto.LedgerPageDto
 import com.acefuel.loyalty.core.network.dto.MyPumpDto
 import com.acefuel.loyalty.core.network.dto.MyPumpUpdateEnvelope
@@ -63,6 +65,10 @@ class StaffRepository(
 
     suspend fun customerLedger(id: Long, page: Int): ApiResult<LedgerPageDto> =
         apiCall(json) { api.staffCustomerLedger(id, page) }
+
+    // F2 — update a customer's channel opt-ins (and account type).
+    suspend fun updateCustomer(id: Long, request: CustomerUpdateRequest): ApiResult<CustomerProfileDto> =
+        apiCall(json) { api.staffUpdateCustomer(id, CustomerUpdateEnvelope(request)) }
 
     suspend fun setPaused(id: Long, paused: Boolean): ApiResult<CustomerProfileDto> =
         apiCall(json) { if (paused) api.pauseRewards(id) else api.resumeRewards(id) }

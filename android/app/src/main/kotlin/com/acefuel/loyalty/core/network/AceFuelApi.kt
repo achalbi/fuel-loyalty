@@ -3,6 +3,7 @@ package com.acefuel.loyalty.core.network
 import com.acefuel.loyalty.core.network.dto.AuthResponse
 import com.acefuel.loyalty.core.network.dto.CatalogResponse
 import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
+import com.acefuel.loyalty.core.network.dto.CustomerUpdateEnvelope
 import com.acefuel.loyalty.core.network.dto.CustomersListResponse
 import com.acefuel.loyalty.core.network.dto.LedgerPageDto
 import com.acefuel.loyalty.core.network.dto.LoginRequest
@@ -78,6 +79,10 @@ interface AceFuelApi {
 
     @GET("api/v1/staff/customers/{id}/ledger")
     suspend fun staffCustomerLedger(@Path("id") id: Long, @Query("page") page: Int): LedgerPageDto
+
+    // F2 — edit account type + channel opt-ins.
+    @PATCH("api/v1/staff/customers/{id}")
+    suspend fun staffUpdateCustomer(@Path("id") id: Long, @Body body: CustomerUpdateEnvelope): CustomerProfileDto
 
     // B2 — FSM per-visit capture.
     @POST("api/v1/staff/visit_entries")

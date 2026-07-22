@@ -174,6 +174,8 @@ data class CustomerProfileDto(
     // B1/E4 — account taxonomy + fleet master fields.
     @SerialName("customer_type") val customerType: String? = null,
     @SerialName("customer_type_label") val customerTypeLabel: String? = null,
+    @SerialName("whatsapp_opt_in") val whatsappOptIn: Boolean = false,
+    @SerialName("sms_opt_in") val smsOptIn: Boolean = false,
     @SerialName("transport_name") val transportName: String? = null,
     @SerialName("approx_vehicle_count") val approxVehicleCount: Int? = null,
     @SerialName("info_note") val infoNote: String? = null,
@@ -181,6 +183,17 @@ data class CustomerProfileDto(
     val vehicles: List<StaffVehicleDto> = emptyList(),
     @SerialName("recent_transactions") val recentTransactions: List<TransactionSummaryDto> = emptyList(),
 )
+
+// F2 — staff/admin edit of a customer's account type + channel opt-ins.
+@Serializable
+data class CustomerUpdateRequest(
+    @SerialName("customer_type") val customerType: String? = null,
+    @SerialName("whatsapp_opt_in") val whatsappOptIn: Boolean? = null,
+    @SerialName("sms_opt_in") val smsOptIn: Boolean? = null,
+)
+
+@Serializable
+data class CustomerUpdateEnvelope(val customer: CustomerUpdateRequest)
 
 @Serializable
 data class CustomerContactDto(

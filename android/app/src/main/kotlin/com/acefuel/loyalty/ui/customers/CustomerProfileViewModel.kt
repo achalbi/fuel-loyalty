@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.acefuel.loyalty.core.data.StaffRepository
 import com.acefuel.loyalty.core.network.ApiResult
 import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
+import com.acefuel.loyalty.core.network.dto.CustomerUpdateRequest
 import com.acefuel.loyalty.core.network.dto.LedgerEntryDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class ProfileAction { Pause, Active }
+enum class ProfileAction { Pause, Active, OptIn }
 
 data class ProfileUiState(
     val loading: Boolean = true,
@@ -145,6 +146,21 @@ class CustomerProfileViewModel(
         val deactivating = profile.active
         runAction(ProfileAction.Active, if (deactivating) "Customer marked inactive" else "Customer marked active") {
             repository.setActive(customerId, !profile.active)
+        }
+    }
+
+    // F2 — channel opt-ins (set with the customer's consent).
+    fun setWhatsappOptIn(enabled: Boolean) {
+        _state.value.profile ?: return
+        runAction(ProfileAction.OptIn, if (enabled) "WhatsApp offers on" else "WhatsApp offers off") {
+            repository.updateCustomer(customerId, CustomerUpdateRequest(whatsappOptIn = enabled))
+        }
+    }
+
+    fun setSmsOptIn(enabled: Boolean) {
+        _state.value.profile ?: return
+        runAction(ProfileAction.OptIn, if (enabled) "SMS offers on" else "SMS offers off") {
+            repository.updateCustomer(customerId, CustomerUpdateRequest(smsOptIn = enabled))
         }
     }
 

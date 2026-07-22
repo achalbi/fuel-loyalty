@@ -13,6 +13,8 @@ module Api
             # B1/E4 — account taxonomy + the fleet/transport master fields.
             customer_type: customer.customer_type,
             customer_type_label: customer_type_label(customer.customer_type),
+            whatsapp_opt_in: customer.whatsapp_opt_in,
+            sms_opt_in: customer.sms_opt_in,
             transport_name: customer.transport_name,
             approx_vehicle_count: customer.approx_vehicle_count,
             info_note: customer.info_note,

@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -162,6 +163,17 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
                             )
                         }
 
+                        item { SectionHeader("Marketing opt-ins") }
+                        item {
+                            OptInToggles(
+                                whatsapp = profile.whatsappOptIn,
+                                sms = profile.smsOptIn,
+                                enabled = state.actionInFlight == null,
+                                onWhatsapp = { viewModel.setWhatsappOptIn(it) },
+                                onSms = { viewModel.setSmsOptIn(it) },
+                            )
+                        }
+
                         item { SectionHeader("Vehicles (${profile.vehicles.size})") }
                         if (profile.vehicles.isEmpty()) {
                             item { EmptyNote("No vehicles registered yet.") }
@@ -237,7 +249,7 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
                         },
                         onDismiss = { pendingConfirm = null },
                     )
-                    null -> Unit
+                    ProfileAction.OptIn, null -> Unit // opt-in toggles act directly, no confirm
                 }
             }
         }
@@ -287,6 +299,37 @@ private fun HeroCard(p: CustomerProfileDto) {
         // Extra room below the pills so they don't hug the card's bottom edge
         // (the hero card's own content padding alone reads as too tight here).
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun OptInToggles(
+    whatsapp: Boolean,
+    sms: Boolean,
+    enabled: Boolean,
+    onWhatsapp: (Boolean) -> Unit,
+    onSms: (Boolean) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xs)) {
+        OptInRow("WhatsApp offers", whatsapp, enabled, onWhatsapp)
+        OptInRow("SMS offers", sms, enabled, onSms)
+        Text(
+            "Set only with the customer's consent — offer campaigns reach these channels only when opted in.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun OptInRow(label: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
 }
 

@@ -86,6 +86,9 @@ module Api
           attrs = resource_params(:customer)
           customer.name = attrs[:name] if attrs.key?(:name)
           customer.phone_number = Customer.normalize_phone_number(attrs[:phone_number]) if attrs.key?(:phone_number)
+          customer.customer_type = attrs[:customer_type] if attrs.key?(:customer_type) && Customer.customer_types.key?(attrs[:customer_type].to_s)
+          customer.whatsapp_opt_in = ActiveModel::Type::Boolean.new.cast(attrs[:whatsapp_opt_in]) if attrs.key?(:whatsapp_opt_in)
+          customer.sms_opt_in = ActiveModel::Type::Boolean.new.cast(attrs[:sms_opt_in]) if attrs.key?(:sms_opt_in)
 
           if customer.save
             render json: CustomerProfileSerializer.call(customer.reload, RewardSetting.current), status: :ok
