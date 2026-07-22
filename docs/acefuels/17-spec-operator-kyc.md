@@ -1,5 +1,18 @@
 # A7 — Operator Profile / KYC Fields (Photo, Address, Aadhaar, ID-card Photo)
 
+> **Build status (Phase 3, 2026-07-22):** ✅ **Backend + API + web shipped, tested.**
+> ActiveStorage installed; `User` has `profile_photo`/`id_card_photo` attachments
+> (type+size validated); `users` += `address` + Aadhaar (**Active Record Encryption**
+> at rest, **Verhoeff** checksum, masked `XXXX-XXXX-1234` via `aadhaar_last4`). PII:
+> masked-by-default serializer, an admin-only **audited** reveal (`GET /api/v1/admin/users/:id/kyc_reveal`
+> + web `reveal_aadhaar`, both writing a `pii_access_logs` row), an authenticated
+> ID-card view/redirect, a Purge-KYC action, and Aadhaar/image log-filtering. Multipart
+> create/update on web + API; a blank Aadhaar on edit keeps the stored value. Login is
+> unchanged (Q3 — no OTP). **Still to ship:** the **Android** KYC capture UI (multipart
+> upload + image picker + reveal). **Production prerequisites the operator must provision
+> before release:** durable object storage (**GCS** — production `:local` loses images on
+> Cloud Run restart) and the **AR-encryption keys** in Secret Manager (`bin/rails db:encryption:init`).
+
 Extend the operator (staff) user record with the KYC profile the requirement asks for: a profile photo, a postal address, an Aadhaar number, and a photo of the operator's ID card. This is a **profile-fields-only** change per LOCKED DECISION Q3 — it adds data capture and PII handling to the existing user record and admin forms on both the Rails PWA and the native Android app. **Explicit non-goal:** OTP / passwordless login and any SMS/WhatsApp auth provider. Username/mobile + password login (Devise `:database_authenticatable`) is retained unchanged.
 
 ## Requirements covered
