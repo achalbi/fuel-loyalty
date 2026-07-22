@@ -92,8 +92,20 @@ data class NotificationEnvelope(
     val notification: NotificationRequest,
 )
 
+// F2 — targeted, multi-channel ad-hoc send.
 @Serializable
 data class NotificationRequest(
     val title: String,
     val message: String,
+    val category: String? = null,
+    val channels: List<String> = listOf("push"),
+    @SerialName("target_type") val targetType: String = "all",
+    @SerialName("target_customer_type") val targetCustomerType: String? = null,
+)
+
+/** POST /admin/notifications/send response — { notification_message_id, delivery{channel{status:n}} }. */
+@Serializable
+data class SendResponse(
+    @SerialName("notification_message_id") val notificationMessageId: Long? = null,
+    val delivery: Map<String, Map<String, Int>> = emptyMap(),
 )

@@ -28,9 +28,12 @@ data class AdminSchedulesUiState(
     val loadError: String? = null,
     val schedules: List<ScheduleDto> = emptyList(),
 
-    // Send Now (ad-hoc broadcast)
+    // Send Now (ad-hoc — F2 targeted, multi-channel)
     val sendTitle: String = "",
     val sendMessage: String = "",
+    val sendChannels: List<String> = listOf("push"),
+    val sendTargetType: String = "all",
+    val sendCustomerType: String = "otp",
     val sending: Boolean = false,
 
     // Run Scheduler
@@ -105,6 +108,15 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
 
     fun onSendMessageChange(v: String) = _state.update { it.copy(sendMessage = v.take(MESSAGE_MAX)) }
 
+    fun toggleSendChannel(channel: String) = _state.update {
+        val next = if (it.sendChannels.contains(channel)) it.sendChannels - channel else it.sendChannels + channel
+        it.copy(sendChannels = next.ifEmpty { listOf("push") })
+    }
+
+    fun onSendTargetType(type: String) = _state.update { it.copy(sendTargetType = type) }
+
+    fun onSendCustomerType(type: String) = _state.update { it.copy(sendCustomerType = type) }
+
     fun sendNotification() {
         val s = _state.value
         val title = s.sendTitle.trim()
@@ -113,11 +125,12 @@ class AdminSchedulesViewModel(private val repository: AdminSchedulesRepository) 
             _state.update { it.copy(errorMessage = "Enter a title and a message before sending.") }
             return
         }
+        val customerType = if (s.sendTargetType == "customer_type") s.sendCustomerType else null
         _state.update { it.copy(sending = true) }
         viewModelScope.launch {
-            when (val result = repository.sendNotification(title, message)) {
+            when (val result = repository.sendNotification(title, message, s.sendChannels, s.sendTargetType, customerType)) {
                 is ApiResult.Success -> _state.update {
-                    it.copy(sending = false, successMessage = deliverySummary(result.data), sendTitle = "", sendMessage = "")
+                    it.copy(sending = false, successMessage = sendSummary(result.data), sendTitle = "", sendMessage = "")
                 }
                 is ApiResult.Error -> _state.update { it.copy(sending = false, errorMessage = result.friendly()) }
                 is ApiResult.NetworkError -> _state.update { it.copy(sending = false, errorMessage = NETWORK_ERROR) }
@@ -329,6 +342,18 @@ private fun ApiResult.Error.friendly(): String =
     } else {
         message
     }
+
+// F2 — summarize the per-channel { channel: { status: n } } delivery map.
+private fun sendSummary(r: SendResponse): String {
+    val totals = mutableMapOf<String, Int>()
+    r.delivery.values.forEach { byStatus -> byStatus.forEach { (status, n) -> totals[status] = (totals[status] ?: 0) + n } }
+    val total = totals.values.sum()
+    if (total == 0) return "No reachable recipients for that audience/channel."
+    val sent = totals["sent"] ?: 0
+    val skipped = totals["skipped"] ?: 0
+    val failed = (totals["failed"] ?: 0) + (totals["invalidated"] ?: 0)
+    return "Sent $sent · skipped $skipped · failed $failed."
+}
 
 private fun deliverySummary(d: DeliveryResultDto): String = when {
     d.requested == 0 -> "No active device tokens are registered, so nothing was sent."

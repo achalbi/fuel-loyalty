@@ -76,6 +76,7 @@ import com.acefuel.loyalty.ui.designsystem.showError
 import com.acefuel.loyalty.ui.designsystem.showSuccess
 import com.acefuel.loyalty.ui.theme.NayaraButton
 import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
+import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
 import java.time.LocalDate
 import java.time.LocalTime
@@ -245,7 +246,7 @@ private fun GuardedSheet(
 private fun SendNowCard(state: AdminSchedulesUiState, vm: AdminSchedulesViewModel) {
     SectionCard("Send Now") {
         Text(
-            "Broadcast an instant push to every active device.",
+            "Send an instant notification to a chosen audience over the selected channels.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.nayara.textSecondary,
         )
@@ -265,12 +266,36 @@ private fun SendNowCard(state: AdminSchedulesUiState, vm: AdminSchedulesViewMode
             supportingText = { Text("${state.sendMessage.length}/240") },
             modifier = Modifier.fillMaxWidth(),
         )
+
+        Text("Channels", style = MaterialTheme.typography.labelMedium)
+        ChipRow(listOf("push", "whatsapp", "sms"), state.sendChannels) { vm.toggleSendChannel(it) }
+
+        Text("Audience", style = MaterialTheme.typography.labelMedium)
+        ChipRow(listOf("all", "customer_type"), listOf(state.sendTargetType)) { vm.onSendTargetType(it) }
+        if (state.sendTargetType == "customer_type") {
+            ChipRow(listOf("otp", "credit", "drive_in"), listOf(state.sendCustomerType)) { vm.onSendCustomerType(it) }
+        }
+
         NayaraButton(
             onClick = vm::sendNotification,
             loading = state.sending,
             enabled = state.sendTitle.isNotBlank() && state.sendMessage.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Send Now") }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChipRow(options: List<String>, selected: List<String>, onToggle: (String) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+        options.forEach { option ->
+            FilterChip(
+                selected = selected.contains(option),
+                onClick = { onToggle(option) },
+                label = { Text(option.replace('_', ' ').replaceFirstChar { it.uppercase() }) },
+            )
+        }
     }
 }
 

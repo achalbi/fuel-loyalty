@@ -39,5 +39,5 @@ interface AdminSchedulesApi {
     suspend fun runScheduler(): RunResultDto
 
     @POST("api/v1/admin/notifications/send")
-    suspend fun sendNotification(@Body body: NotificationEnvelope): DeliveryResultDto
+    suspend fun sendNotification(@Body body: NotificationEnvelope): SendResponse
 }

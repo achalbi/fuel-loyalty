@@ -31,6 +31,21 @@ class AdminSchedulesRepository(
     suspend fun runScheduler(): ApiResult<RunResultDto> =
         apiCall(json) { api.runScheduler() }
 
-    suspend fun sendNotification(title: String, message: String): ApiResult<DeliveryResultDto> =
-        apiCall(json) { api.sendNotification(NotificationEnvelope(NotificationRequest(title, message))) }
+    suspend fun sendNotification(
+        title: String,
+        message: String,
+        channels: List<String>,
+        targetType: String,
+        targetCustomerType: String?,
+    ): ApiResult<SendResponse> =
+        apiCall(json) {
+            api.sendNotification(
+                NotificationEnvelope(
+                    NotificationRequest(
+                        title = title, message = message, channels = channels,
+                        targetType = targetType, targetCustomerType = targetCustomerType,
+                    ),
+                ),
+            )
+        }
 }
