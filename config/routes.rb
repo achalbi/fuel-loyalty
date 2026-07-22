@@ -124,6 +124,7 @@ Rails.application.routes.draw do
   get "/loyalty", to: "loyalty#new", as: :new_loyalty
   post "/loyalty", to: "loyalty#create", as: :loyalty
   get "/loyalty/result", to: "loyalty#show", as: :loyalty_result
+  post "/loyalty/opt_in", to: "loyalty#opt_in", as: :loyalty_opt_in
 
   namespace :staff do
     resource :notifications, only: :show, controller: "notifications"

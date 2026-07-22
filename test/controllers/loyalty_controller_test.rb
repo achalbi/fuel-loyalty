@@ -354,6 +354,101 @@ class LoyaltyControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_loyalty_path
   end
 
+  test "opt_in saves whatsapp and sms preferences for the looked-up customer" do
+    customer = customers(:one)
+    customer.update!(whatsapp_opt_in: false, sms_opt_in: false)
+
+    post loyalty_opt_in_path, params: {
+      lookup_token: loyalty_lookup_token_for(customer.phone_number),
+      whatsapp_opt_in: "1",
+      sms_opt_in: "1"
+    }
+
+    assert_response :redirect
+    assert_predicate redirect_query["lookup_token"], :present?
+    customer.reload
+    assert customer.whatsapp_opt_in?
+    assert customer.sms_opt_in?
+
+    follow_redirect!
+    assert_response :success
+    assert_includes response.body, "Your notification preferences were saved."
+  end
+
+  test "opt_in clears preferences when the checkboxes are unchecked" do
+    customer = customers(:one)
+    customer.update!(whatsapp_opt_in: true, sms_opt_in: true)
+
+    post loyalty_opt_in_path, params: { lookup_token: loyalty_lookup_token_for(customer.phone_number) }
+
+    assert_response :redirect
+    customer.reload
+    assert_not customer.whatsapp_opt_in?
+    assert_not customer.sms_opt_in?
+  end
+
+  test "opt_in derives the customer from the signed token, never a phone param" do
+    target = customers(:one)
+    target.update!(whatsapp_opt_in: false)
+    other = Customer.create!(name: "Someone Else", phone_number: "9998887777", whatsapp_opt_in: false)
+
+    post loyalty_opt_in_path, params: {
+      lookup_token: loyalty_lookup_token_for(target.phone_number),
+      phone_number: other.phone_number, # attacker-supplied — must be ignored
+      whatsapp_opt_in: "1"
+    }
+
+    assert_response :redirect
+    assert target.reload.whatsapp_opt_in?, "the token's customer is updated"
+    assert_not other.reload.whatsapp_opt_in?, "an arbitrary phone param must never be honored"
+  end
+
+  test "opt_in with an invalid token changes nothing and redirects to the lookup form" do
+    customer = customers(:one)
+    customer.update!(whatsapp_opt_in: false)
+
+    post loyalty_opt_in_path, params: { lookup_token: "bogus", whatsapp_opt_in: "1" }
+
+    assert_redirected_to new_loyalty_path
+    assert_not customer.reload.whatsapp_opt_in?
+  end
+
+  test "opt_in with an expired token changes nothing and redirects to the lookup form" do
+    customer = customers(:one)
+    token = loyalty_lookup_token_for(customer.phone_number)
+
+    travel LoyaltyLookupToken::EXPIRY + 1.second do
+      post loyalty_opt_in_path, params: { lookup_token: token, whatsapp_opt_in: "1" }
+    end
+
+    assert_redirected_to new_loyalty_path
+    assert_not customer.reload.whatsapp_opt_in?
+  end
+
+  test "result page renders the opt-in card reflecting the current preferences" do
+    customer = customers(:one)
+    customer.update!(whatsapp_opt_in: true, sms_opt_in: false)
+
+    get loyalty_result_path(lookup_token: loyalty_lookup_token_for(customer.phone_number))
+
+    assert_response :success
+    assert_select ".loyalty-optin-card", 1
+    assert_select "form[action='#{loyalty_opt_in_path}'][method='post']", 1
+    assert_select "input#loyalty-optin-whatsapp[checked]", 1
+    assert_select "input#loyalty-optin-sms[checked]", 0
+  end
+
+  test "result page push panel carries the looked-up phone for consent linking" do
+    with_firebase_web_push_env do
+      customer = customers(:one)
+
+      get loyalty_result_path(lookup_token: loyalty_lookup_token_for(customer.phone_number))
+
+      assert_response :success
+      assert_select "[data-push-opt-in-panel][data-push-phone-number='#{customer.phone_number}']", 1
+    end
+  end
+
   private
 
   def loyalty_lookup_token_for(phone_number)

@@ -54,6 +54,17 @@
           diesel: "Diesel",
           cng_lpg: "CNG / LPG"
         }
+      },
+      optin: {
+        title: "Get offers & bonus alerts",
+        description: "Choose how you'd like to hear about offers, bonus points and station updates.",
+        push_title: "Notify me about offers",
+        push_description: "Turn on push notifications on this device to get offers and bonus alerts.",
+        whatsapp: "WhatsApp offers & updates",
+        sms: "SMS offers & updates",
+        save: "Save preferences",
+        saved: "Your notification preferences were saved.",
+        error: "We couldn't save your preferences. Please try again."
       }
     }
   },

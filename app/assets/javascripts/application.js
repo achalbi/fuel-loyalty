@@ -250,7 +250,12 @@
     }
   };
 
-  const savePushSubscription = async (token) => {
+  // A push panel may carry the looked-up customer's phone (loyalty result card).
+  // The phone is passed ONLY on an explicit opt-in tap (see the panel button
+  // handler), never on the silent already-granted re-sync — so merely viewing a
+  // result page can't relink a shared device's existing token to whoever was
+  // just looked up, or stamp their consent, without a deliberate action.
+  const savePushSubscription = async (token, phoneNumber = null) => {
     const settings = pushSettings();
     if (!settings?.subscriptionEndpoint) throw new Error("Push subscription endpoint is not configured.");
 
@@ -264,7 +269,8 @@
       credentials: "same-origin",
       body: JSON.stringify({
         token,
-        platform: detectPushPlatform()
+        platform: detectPushPlatform(),
+        ...(phoneNumber ? { phone_number: phoneNumber } : {})
       })
     });
 
@@ -291,7 +297,7 @@
     return { ok: true };
   };
 
-  const syncPushSubscription = async ({ requestPermission = false } = {}) => {
+  const syncPushSubscription = async ({ requestPermission = false, phoneNumber = null } = {}) => {
     if (!pushNotificationsSupported()) {
       return { ok: false, reason: "unsupported" };
     }
@@ -338,7 +344,7 @@
         return { ok: false, reason: "token_unavailable" };
       }
 
-      await savePushSubscription(token);
+      await savePushSubscription(token, phoneNumber);
       setPushOptOutEnabled(false);
       return { ok: true, token };
     })();
@@ -461,7 +467,12 @@
         setPushPanelState(panel, { busy: true });
 
         try {
-          const result = await syncPushSubscription({ requestPermission: true });
+          // Pass the phone ONLY here (explicit tap), scoped to THIS panel — so the
+          // link/consent is a deliberate act, and never fires on silent re-sync.
+          const result = await syncPushSubscription({
+            requestPermission: true,
+            phoneNumber: panel.dataset.pushPhoneNumber || null
+          });
 
           if (!result.ok && result.permission === "denied") {
             refreshPushPanels();

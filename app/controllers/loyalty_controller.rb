@@ -79,7 +79,41 @@ class LoyaltyController < ApplicationController
     redirect_to loyalty_result_path(loyalty_language_params(lookup_token: LoyaltyLookupToken.generate(@phone_number)))
   end
 
+  # F2 — self-serve WhatsApp/SMS opt-in from the public result card. The phone is
+  # taken ONLY from the signed lookup token (never a client-supplied param), so a
+  # caller can only change consent for the number they just looked up. CSRF stays
+  # on (this is a session form, unlike the cookieless #create shell POST).
+  def opt_in
+    phone_number = LoyaltyLookupToken.verified_phone_number(params[:lookup_token])
+    return redirect_to(new_loyalty_path(loyalty_language_params), alert: lookup_token_alert) if phone_number.blank?
+
+    customer = Customer.find_by(phone_number: phone_number)
+    return redirect_to(new_loyalty_path(loyalty_language_params), alert: t("loyalty.alerts.not_found")) if customer.nil?
+
+    saved = customer.update(
+      whatsapp_opt_in: truthy_param?(:whatsapp_opt_in),
+      sms_opt_in: truthy_param?(:sms_opt_in)
+    )
+
+    # Re-issue a fresh lookup token so the result page the customer lands back on
+    # can render (and rotate) exactly as a normal view would.
+    result_params = loyalty_language_params(lookup_token: LoyaltyLookupToken.generate(phone_number))
+    if saved
+      redirect_to loyalty_result_path(result_params),
+        notice: t("loyalty.optin.saved", default: "Your notification preferences were saved.")
+    else
+      redirect_to loyalty_result_path(result_params),
+        alert: t("loyalty.optin.error", default: "We couldn't save your preferences. Please try again.")
+    end
+  end
+
   private
+
+  # Coerce a checkbox param ("1"/"0"/nil) to a strict boolean (never nil, so the
+  # NOT NULL opt-in columns are always assigned a real value).
+  def truthy_param?(key)
+    ActiveModel::Type::Boolean.new.cast(params[key]) || false
+  end
 
   def lookup_token_alert
     if params[:lookup_token].present?

@@ -12,11 +12,15 @@
 <% permission_pending_help = local_assigns.fetch(:permission_pending_help, t("loyalty.push.permission_pending_help", default: "Tap Enable Notifications whenever you're ready to allow alerts.")) %>
 <% registration_error_help = local_assigns.fetch(:registration_error_help, t("loyalty.push.registration_error_help", default: "We could not complete push registration on this device. Please try again.")) %>
 <% disable_error_help = local_assigns.fetch(:disable_error_help, t("loyalty.push.disable_error_help", default: "We could not turn off notifications on this device right now. Please try again.")) %>
+<%# F2 — when a known customer's phone is supplied (e.g. the loyalty result card),
+    the push registration POST links + consents that customer's subscription. %>
+<% push_phone_number = local_assigns[:phone_number].presence %>
 
 <section
   class="install-app-panel <%= panel_class %>"
   data-push-opt-in-panel
-  data-push-source="<%= source %>"
+  data-push-source="<%= source %>"<% if push_phone_number %>
+  data-push-phone-number="<%= push_phone_number %>"<% end %>
   data-push-enable-button-text="<%= enable_button_text %>"
   data-push-enabled-button-text="<%= enabled_button_text %>"
   data-push-off-button-text="<%= off_button_text %>"

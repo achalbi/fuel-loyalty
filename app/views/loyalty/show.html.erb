@@ -42,6 +42,43 @@
   </div>
 </div>
 
+<div class="card shadow-sm loyalty-result-card loyalty-optin-card">
+  <div class="card-body">
+    <h2 class="h5 mb-1"><%= t("loyalty.optin.title", default: "Get offers & bonus alerts") %></h2>
+    <p class="small-muted mb-3"><%= t("loyalty.optin.description", default: "Choose how you'd like to hear about offers, bonus points and station updates.") %></p>
+
+    <% if firebase_web_push_enabled? %>
+      <%= render "shared/push_opt_in_panel",
+        source: "loyalty_result",
+        title: t("loyalty.optin.push_title", default: "Notify me about offers"),
+        badge_label: t("loyalty.new.optional", default: "Optional"),
+        description: t("loyalty.optin.push_description", default: "Turn on push notifications on this device to get offers and bonus alerts."),
+        enable_button_text: t("loyalty.new.enable_notifications", default: "Enable Notifications"),
+        disable_button_text: t("loyalty.new.disable_notifications", default: "Disable Notifications"),
+        panel_class: "mt-0",
+        phone_number: @customer.phone_number %>
+    <% end %>
+
+    <%= form_with url: loyalty_opt_in_path, method: :post, class: "loyalty-optin-form mt-3" do %>
+      <%= hidden_field_tag :lookup_token, @lookup_token %>
+      <% if I18n.locale.to_s != I18n.default_locale.to_s %>
+        <%= hidden_field_tag :lang, loyalty_language_param %>
+      <% end %>
+
+      <div class="form-check">
+        <%= check_box_tag :whatsapp_opt_in, "1", @customer.whatsapp_opt_in?, class: "form-check-input", id: "loyalty-optin-whatsapp" %>
+        <label class="form-check-label" for="loyalty-optin-whatsapp"><%= t("loyalty.optin.whatsapp", default: "WhatsApp offers & updates") %></label>
+      </div>
+      <div class="form-check">
+        <%= check_box_tag :sms_opt_in, "1", @customer.sms_opt_in?, class: "form-check-input", id: "loyalty-optin-sms" %>
+        <label class="form-check-label" for="loyalty-optin-sms"><%= t("loyalty.optin.sms", default: "SMS offers & updates") %></label>
+      </div>
+
+      <button type="submit" class="btn btn-outline-primary btn-sm mt-3"><%= t("loyalty.optin.save", default: "Save preferences") %></button>
+    <% end %>
+  </div>
+</div>
+
 <div class="card shadow-sm loyalty-result-card">
   <div class="card-body">
     <div class="d-flex justify-content-between align-items-center mb-3 page-header loyalty-activity-header">
