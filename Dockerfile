@@ -37,8 +37,16 @@ COPY . .
 # Safety check (fail fast if dev gems leaked)
 RUN bundle list | grep debug && exit 1 || echo "OK: no debug gem"
 
-# Precompile assets
-RUN SECRET_KEY_BASE=dummy bundle exec rails assets:precompile
+# Precompile assets. Boots the production environment, which runs the A7 AR
+# encryption initializer (ENV.fetch, no fallback) — but Secret Manager secrets
+# are only mounted at Cloud Run runtime, not during the image build. Supply
+# throwaway keys here (same pattern as SECRET_KEY_BASE=dummy); they never touch
+# the DB during precompile, and the real keys arrive at runtime via --set-secrets.
+RUN SECRET_KEY_BASE=dummy \
+    AR_ENCRYPTION_PRIMARY_KEY=dummy_build_primary_key_not_used_at_runtime \
+    AR_ENCRYPTION_DETERMINISTIC_KEY=dummy_build_deterministic_key_not_used_run \
+    AR_ENCRYPTION_KEY_DERIVATION_SALT=dummy_build_key_derivation_salt_not_used \
+    bundle exec rails assets:precompile
 
 
 # ---------- Runtime Stage ----------
