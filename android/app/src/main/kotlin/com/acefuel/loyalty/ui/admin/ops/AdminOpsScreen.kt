@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Campaign
@@ -64,6 +65,7 @@ fun AdminOpsScreen(
     onCycles: () -> Unit,
     onTransactions: () -> Unit,
     onReports: () -> Unit,
+    onSettlements: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val nayara = MaterialTheme.nayara
@@ -167,6 +169,13 @@ fun AdminOpsScreen(
             leadingIcon = Icons.Filled.BarChart,
             leadingTint = nayara.accentDefault,
             onClick = { haptics.tick(); onReports() },
+        )
+        NayaraListRow(
+            title = "Settlements",
+            subtitle = "Review, audit & reconcile per pump and across pumps",
+            leadingIcon = Icons.Filled.AccountBalanceWallet,
+            leadingTint = nayara.actionPrimary,
+            onClick = { haptics.tick(); onSettlements() },
         )
 
         Spacer(Modifier.height(NayaraSpacing.Xxl))
