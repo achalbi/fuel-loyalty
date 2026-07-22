@@ -130,7 +130,7 @@ is called out rather than glossed as "done".</p>
 <ol>
 <li>
 <p><strong>The app is rupees-centric; the spreadsheet is litres-centric.</strong>
-   A transaction stores <code>fuel_amount</code> in <strong>₹</strong>, not litres (<code>docs/native-handoff/02-data-model.md:80</code> says explicitly "₹ amount, not litres"). Rewards accrue per ₹100. The requirement's <strong>Daily Settlement</strong> and <strong>CustomerDetailsEntry</strong> are built on <strong>meter readings → litres → price</strong>. Bridging the two is the single biggest architectural decision (see §5, Q1).</p>
+   A transaction stores <code>fuel_amount</code> in <strong>₹</strong>, not litres (<code>docs/native-handoff/02-data-model.html:80</code> says explicitly "₹ amount, not litres"). Rewards accrue per ₹100. The requirement's <strong>Daily Settlement</strong> and <strong>CustomerDetailsEntry</strong> are built on <strong>meter readings → litres → price</strong>. Bridging the two is the single biggest architectural decision (see §5, Q1).</p>
 </li>
 <li>
 <p><strong>There is no product pricing anywhere.</strong> Fuel types have only <code>code</code>/<code>name</code> — <strong>no MRP, no selling price, no batch, no stock</strong>. There is no representation of lubricants/oils/AdBlue. This "Product Catalog" (Req A5) is the <strong>keystone dependency</strong> — Settlement, Reports and litres-based capture all need it.</p>
@@ -559,7 +559,7 @@ E3 cadence baseline ──────────────────► E6
 - <strong>Domain terms (inferred, please confirm):</strong> OTP = fleet/credit account customers (billed by litres, not "one-time password"); TT = <strong>tank-truck</strong> credit; Drive-in = walk-in cash; Credit = credit-account. Features E4/D5/F2 depend on this taxonomy.</p>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
-  <span class="fnote">Generated from 40-gap-analysis.md &middot; 2026-07-21</span>
+  <span class="fnote">Generated from 40-gap-analysis.md &middot; 2026-07-22</span>
 </div>
 </article>
 <script>
@@ -567,6 +567,38 @@ E3 cadence baseline ──────────────────► E6
 b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
 var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
 document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
 </script>
 
 </body>

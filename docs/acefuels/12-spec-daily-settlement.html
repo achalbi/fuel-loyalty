@@ -114,7 +114,29 @@ a:hover{text-decoration:underline}
 </div></div>
 <article class="doc">
 <h1 id="daily-settlement-d1d10-staff-1-admin-1213">Daily Settlement (D1–D10, Staff-1, Admin-12/13)</h1>
-<blockquote><p><strong>Build status (Phase 2, 2026-07-22):</strong> 🚧 in progress. <strong>Staff surface COMPLETE on all three surfaces</strong> (D1–D8, D10 capture + D6/D7 math), tested: the <code>daily_settlements</code> parent + all 9 child/audit tables and models (nested attributes, <code>allow_destroy</code>, line-level derivation); the <code>Settlement::Builder</code> / <code>Settlement::Calculator</code> / <code>Settlement::Persister</code> / <code>Settlement::FormRows</code> services; the staff JSON API (<code>/api/v1/staff/settlements</code> + <code>/new</code>, <code>/:id</code>) with full/summary/draft serializers and <code>DailySettlementPolicy</code>; the Rails PWA <code>Staff::SettlementsController</code> + sectioned form with <code>settlement_form.js</code> live totals (browser-verified); and the Android <code>ui/settlement</code> area + home quick-action (compiles clean). The B2 source table is <code>visit_entries</code> (the spec's <code>customer_detail_entries</code>); <code>settlement_discount_lines.visit_entry_id</code> references it. <strong>Admin D9 console (API + web) shipped — closes G1:</strong> <code>Settlement::Differ</code> (field-level audit diffs), <code>PointsRecomputeService</code> (an admin discount-line edit linked to a B2 transaction re-derives that transaction's ₹ + earn points atomically), the <code>Persister</code> admin_edit path, the admin API (<code>/api/v1/admin/settlements</code> + <code>/:id</code>, <code>/reconcile</code>, <code>/summary</code> with cross-pump totals), and the <code>Admin::SettlementsController</code> console (cross-pump list/totals, audit-trail panel, Reconcile, edit-with-reason). ✅ <strong>Android admin settlement view shipped</strong> (<code>ui/admin/settlements</code> master-detail: cross-pump list + totals card, detail with the D6/D7 totals, nozzle readings, audit trail + Reconcile). <strong>➡️ Daily Settlement (D1–D10) COMPLETE on all three surfaces, tested (467 Rails runs green, brakeman clean, Android compiles).</strong> Web-first deferrals: native <strong>decantation</strong> (D8 tank dips) inputs and native admin <strong>line-item editing</strong> (the native admin console covers view + reconcile).</p></blockquote>
+<blockquote>
+<p><strong>Build status (Phase 2, 2026-07-22):</strong> 🚧 in progress. <strong>Staff surface COMPLETE on
+all three surfaces</strong> (D1–D8, D10 capture + D6/D7 math), tested: the <code>daily_settlements</code>
+parent + all 9 child/audit tables and models (nested attributes, <code>allow_destroy</code>,
+line-level derivation); the <code>Settlement::Builder</code> / <code>Settlement::Calculator</code> /
+<code>Settlement::Persister</code> / <code>Settlement::FormRows</code> services; the staff JSON API
+(<code>/api/v1/staff/settlements</code> + <code>/new</code>, <code>/:id</code>) with full/summary/draft serializers and
+<code>DailySettlementPolicy</code>; the Rails PWA <code>Staff::SettlementsController</code> + sectioned form
+with <code>settlement_form.js</code> live totals (browser-verified); and the Android
+<code>ui/settlement</code> area + home quick-action (compiles clean). The B2 source table is
+<code>visit_entries</code> (the spec's <code>customer_detail_entries</code>); <code>settlement_discount_lines.visit_entry_id</code>
+references it. <strong>Admin D9 console (API + web) shipped — closes G1:</strong> <code>Settlement::Differ</code>
+(field-level audit diffs), <code>PointsRecomputeService</code> (an admin discount-line edit linked to
+a B2 transaction re-derives that transaction's ₹ + earn points atomically), the <code>Persister</code>
+admin_edit path, the admin API (<code>/api/v1/admin/settlements</code> + <code>/:id</code>, <code>/reconcile</code>, <code>/summary</code>
+with cross-pump totals), and the <code>Admin::SettlementsController</code> console (cross-pump list/totals,
+audit-trail panel, Reconcile, edit-with-reason). ✅ <strong>Android admin settlement view shipped</strong>
+(<code>ui/admin/settlements</code> master-detail: cross-pump list + totals card, detail with the D6/D7
+totals, nozzle readings, audit trail + Reconcile). <strong>➡️ Daily Settlement (D1–D10) COMPLETE
+on all three surfaces, tested (467 Rails runs green, brakeman clean, Android compiles).</strong>
+Web-first deferrals: native <strong>decantation</strong> (D8 tank dips) inputs and native admin
+<strong>line-item editing</strong> (the native admin console covers view + reconcile).</p>
+</blockquote>
 <p>Daily Settlement is the shift-end reconciliation ledger for a fuel outlet. At the end of a shift the FSM (pump operator) picks their pump, and the system shows that pump's nozzles and their fuel. The FSM enters today's meter readings; the app auto-populates yesterday's closing reading from the prior settlement, subtracts testing litres, derives net litres sold, prices each nozzle from the product catalog's selling price, and totals fuel by type. The FSM then records lubricant sales (with opening/closing stock), pulls same-day customer discounts, enters PhonePe POS and Scanner receipts, Fleet/OTP and tank-truck credit lines, and finally reconciles cash by denomination against the computed <strong>Final Amount to Settle</strong>, capturing shortage. Stock received, tank decantation, and a JIO-BP-vs-own rate comparison round out the record. Admins can view and edit any settlement — current or past, per pump or across pumps — with a full audit trail, and any edit that changes derived ₹ recomputes loyalty points. This is the single largest module and the source of truth for litres sold (per LOCKED Q1: readings/litres are canonical; ₹ is derived from catalog selling price).</p>
 <h2 id="requirements-covered">Requirements covered</h2>
 <div class="table-wrap"><table>
@@ -827,17 +849,17 @@ end
 <h2 id="ui">UI</h2>
 <h3 id="rails-pwa">Rails PWA</h3>
 <ul>
-<li><strong>Staff — new area <code>staff/settlements</code></strong> (route added under <code>namespace :staff</code>, sibling of <code>resources :transactions</code> at <code>config/routes.rb:106</code>). A single long "Shift-End Settlement" form, sectioned to match the sheet:
-  1. <strong>Header</strong> — pump selector (defaults to My Pump), business date, shift, FSM name (prefilled).
-  2. <strong>Nozzle readings table</strong> — one row per active nozzle: fuel (read-only), Yesterday (auto-filled, read-only unless first-ever), Today (input), Testing (input), Net Litres (computed, read-only), Price (read-only from catalog), Amount (computed). A per-fuel subtotal row.
-  3. <strong>Lubes</strong> — checkbox list of catalog lube products; ticking reveals Qty, Opening Stock, Closing Stock, Amount (computed).
-  4. <strong>Discounts (pulled)</strong> — read-mostly table of same-day customer entries (transport, litres, discount, driver/manager/owner); FSM may add a manual line.
-  5. <strong>Digital receipts</strong> — PhonePe POS, PhonePe Scanner inputs.
-  6. <strong>Credit lines</strong> — repeatable rows: type (Fleet/OTP or TT), litres, discount, amount, reference.
-  7. <strong>Final Amount to Settle</strong> — live-computed banner (D6 formula shown).
-  8. <strong>Cash</strong> — denomination grid (500/200/100/50/20/10/5 × qty → amount), counted-cash total, live <strong>Shortage</strong> readout (D7).
-  9. <strong>Stock received / Decantation / Rate comparison</strong> — three compact repeatable sections.
-  10. Sticky <strong>Submit</strong> button. All computed fields recalc client-side via Stimulus for feedback; server recomputes on submit.</li>
+<li><strong>Staff — new area <code>staff/settlements</code></strong> (route added under <code>namespace :staff</code>, sibling of <code>resources :transactions</code> at <code>config/routes.rb:106</code>). A single long "Shift-End Settlement" form, sectioned to match the sheet:</li>
+<li><strong>Header</strong> — pump selector (defaults to My Pump), business date, shift, FSM name (prefilled).</li>
+<li><strong>Nozzle readings table</strong> — one row per active nozzle: fuel (read-only), Yesterday (auto-filled, read-only unless first-ever), Today (input), Testing (input), Net Litres (computed, read-only), Price (read-only from catalog), Amount (computed). A per-fuel subtotal row.</li>
+<li><strong>Lubes</strong> — checkbox list of catalog lube products; ticking reveals Qty, Opening Stock, Closing Stock, Amount (computed).</li>
+<li><strong>Discounts (pulled)</strong> — read-mostly table of same-day customer entries (transport, litres, discount, driver/manager/owner); FSM may add a manual line.</li>
+<li><strong>Digital receipts</strong> — PhonePe POS, PhonePe Scanner inputs.</li>
+<li><strong>Credit lines</strong> — repeatable rows: type (Fleet/OTP or TT), litres, discount, amount, reference.</li>
+<li><strong>Final Amount to Settle</strong> — live-computed banner (D6 formula shown).</li>
+<li><strong>Cash</strong> — denomination grid (500/200/100/50/20/10/5 × qty → amount), counted-cash total, live <strong>Shortage</strong> readout (D7).</li>
+<li><strong>Stock received / Decantation / Rate comparison</strong> — three compact repeatable sections.</li>
+<li>Sticky <strong>Submit</strong> button. All computed fields recalc client-side via Stimulus for feedback; server recomputes on submit.</li>
 <li><strong>Admin — extend <code>admin/transactions</code></strong> area (currently index-only, <code>config/routes.rb:147</code>) or add sibling <strong><code>admin/settlements</code></strong>: an index filterable by date/pump/status with a <strong>cross-pump totals</strong> header, a per-settlement detail page reusing the staff form in editable mode with a mandatory <strong>"Reason for change"</strong> field, an <strong>Audit trail</strong> panel listing <code>settlement_changes</code> (who/when/reason/diffs, mirroring the attendance-changes UI), and a <strong>Reconcile</strong> action. Admin-12 "visualize per pump" is a small chart (litres/₹/shortage over a date range) on the pump detail.</li>
 </ul>
 <h3 id="android-compose">Android (Compose)</h3>
@@ -896,7 +918,7 @@ end
 </ul>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
-  <span class="fnote">Generated from 12-spec-daily-settlement.md &middot; 2026-07-21</span>
+  <span class="fnote">Generated from 12-spec-daily-settlement.md &middot; 2026-07-22</span>
 </div>
 </article>
 <script>

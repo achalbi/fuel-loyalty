@@ -407,11 +407,11 @@ spec.</p>
 </thead>
 <tbody>
 <tr>
-<td><strong><code>00-product-overview.md</code></strong> <em>(this file)</em></td>
+<td><strong><code>00-product-overview.html</code></strong> <em>(this file)</em></td>
 <td>Vision, roles, glossary, platform shape, locked decisions, scope. The entry point.</td>
 </tr>
 <tr>
-<td><strong><code>40-gap-analysis.md</code></strong></td>
+<td><strong><code>40-gap-analysis.html</code></strong></td>
 <td>The verified as-built audit: which of the 41 features are Present / Partial / Absent today, and the delta to the requirement.</td>
 </tr>
 </tbody>
@@ -467,7 +467,7 @@ added to the table above.</p>
 </table></div>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
-  <span class="fnote">Generated from 00-product-overview.md &middot; 2026-07-21</span>
+  <span class="fnote">Generated from 00-product-overview.md &middot; 2026-07-22</span>
 </div>
 </article>
 <script>
@@ -475,6 +475,38 @@ added to the table above.</p>
 b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
 var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
 document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
 </script>
 
 </body>

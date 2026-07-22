@@ -124,7 +124,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
   visualize + edit), S-MYPUMP / S-PAUSE (staff-login constraints).</li>
 <li><strong>Status</strong> column reflects the VERIFIED AUDIT STATUS of the current app
   (Rails PWA + JSON API + native Android): <strong>Present</strong> / <strong>Partial</strong> / <strong>Absent</strong>.
-  See <code>40-gap-analysis.md</code> for the evidence behind each verdict.</li>
+  See <code>40-gap-analysis.html</code> for the evidence behind each verdict.</li>
 </ul>
 <h3 id="locked-decisions-that-scope-acceptance-2026-07-21">Locked decisions that scope acceptance (2026-07-21)</h3>
 <ul>
@@ -671,7 +671,7 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 <p>Total: <strong>41 features</strong> — 20 Present, 4 Partial, 17 Absent. <em>(Phase 0 complete; Phase 1: </em><em>A5 Product Catalog</em><em>, </em><em>litres/readings model</em><em>, </em><em>B1 customer master + contacts</em><em>, </em><em>E4 customer-type segmentation</em><em>, </em><em>B2 per-visit capture</em><em> shipped.)</em></p>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
-  <span class="fnote">Generated from 01-functional-requirements.md &middot; 2026-07-21</span>
+  <span class="fnote">Generated from 01-functional-requirements.md &middot; 2026-07-22</span>
 </div>
 </article>
 <script>
@@ -679,6 +679,38 @@ requirements only — it does <strong>not</strong> propose designs, schemas, or 
 b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
 var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
 document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
 </script>
 
 </body>

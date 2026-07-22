@@ -271,12 +271,12 @@ no meter readings, no discount.</strong> Points are derived from the ₹ amount.
 <li><strong>Resolve customer + vehicle</strong> by either phone lookup or vehicle-number lookup
    (<code>resolve_customer_and_vehicle!</code>, lines 54-65); both paths enforce the customer is
    <code>active?</code>.</li>
-<li><strong>Resolve pump + nozzle</strong> (<code>resolve_fuel_pump_and_nozzle!</code>, lines 140-186):
-   - If <code>RewardSetting.nozzle_feature_enabled?</code> (the default), the pump comes from the
+<li><strong>Resolve pump + nozzle</strong> (<code>resolve_fuel_pump_and_nozzle!</code>, lines 140-186):</li>
+<li>If <code>RewardSetting.nozzle_feature_enabled?</code> (the default), the pump comes from the
      operator's <strong>My Pump</strong> assignment (<code>user.transaction_fuel_pump</code>), and the nozzle
      must be one of the operator's assigned nozzles AND its fuel type must match the
-     vehicle's fuel type (lines 143-171).
-   - If the nozzle feature is off, the operator just picks an active pump; no nozzle
+     vehicle's fuel type (lines 143-171).</li>
+<li>If the nozzle feature is off, the operator just picks an active pump; no nozzle
      (<code>resolve_selected_pump!</code>, lines 174-186).</li>
 <li><strong>Create the transaction</strong> with <code>fuel_amount</code> + <code>payment_mode</code> (cash/credit)
    (lines 26-33).</li>
@@ -564,7 +564,7 @@ truth):</p>
 </ul>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
-  <span class="fnote">Generated from 02-current-architecture.md &middot; 2026-07-21</span>
+  <span class="fnote">Generated from 02-current-architecture.md &middot; 2026-07-22</span>
 </div>
 </article>
 <script>
