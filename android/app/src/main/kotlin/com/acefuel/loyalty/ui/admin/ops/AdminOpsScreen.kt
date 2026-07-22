@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material.icons.filled.FactCheck
@@ -62,6 +63,7 @@ fun AdminOpsScreen(
     onShifts: () -> Unit,
     onCycles: () -> Unit,
     onTransactions: () -> Unit,
+    onReports: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val nayara = MaterialTheme.nayara
@@ -158,6 +160,13 @@ fun AdminOpsScreen(
             leadingIcon = Icons.AutoMirrored.Filled.ReceiptLong,
             leadingTint = nayara.actionPrimary,
             onClick = { haptics.tick(); onTransactions() },
+        )
+        NayaraListRow(
+            title = "Reports",
+            subtitle = "Litres, discount & gifts by vehicle / transporter / driver",
+            leadingIcon = Icons.Filled.BarChart,
+            leadingTint = nayara.accentDefault,
+            onClick = { haptics.tick(); onReports() },
         )
 
         Spacer(Modifier.height(NayaraSpacing.Xxl))

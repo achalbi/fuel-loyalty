@@ -56,6 +56,7 @@ Rails.application.routes.draw do
       namespace :admin do
         post "points_adjustments", to: "points_adjustments#create"
         get "dashboard", to: "dashboard#data"
+        get "reports", to: "reports#index"
         get "transactions", to: "transactions#index"
         resources :users, only: %i[index show create update]
         resources :fuel_types, only: %i[index create update destroy]
@@ -168,6 +169,7 @@ Rails.application.routes.draw do
       get :transaction_history, on: :member
     end
     resources :transactions, only: :index
+    resources :reports, only: :index
     resources :settlements, only: %i[index show edit update] do
       patch :reconcile, on: :member
     end

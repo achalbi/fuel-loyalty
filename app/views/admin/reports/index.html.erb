@@ -1,0 +1,75 @@
+<% content_for :title, "Reports" %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Reports</h1>
+  <%= link_to "Download CSV", admin_reports_path(request.query_parameters.merge(format: :csv)), class: "btn btn-outline-primary" %>
+</div>
+
+<%= form_with url: admin_reports_path, method: :get, class: "row g-2 align-items-end mb-3" do |f| %>
+  <div class="col-sm-2">
+    <%= f.label :dimension, "By", class: "form-label" %>
+    <%= f.select :dimension, options_for_select(@dimensions.map { |d| [d.humanize, d] }, @report.dimension), {}, class: "form-select" %>
+  </div>
+  <div class="col-sm-2">
+    <%= f.label :grain, "Grain", class: "form-label" %>
+    <%= f.select :grain, options_for_select(@grains.map { |g| [g.humanize, g] }, @report.grain), {}, class: "form-select" %>
+  </div>
+  <div class="col-sm-2">
+    <%= f.label :start_date, "From", class: "form-label" %>
+    <%= f.date_field :start_date, value: (params[:start_date].presence || @report.date_range.begin), class: "form-control" %>
+  </div>
+  <div class="col-sm-2">
+    <%= f.label :end_date, "To", class: "form-label" %>
+    <%= f.date_field :end_date, value: (params[:end_date].presence || @report.date_range.end), class: "form-control" %>
+  </div>
+  <div class="col-sm-2">
+    <%= f.label :fuel_type, "Fuel", class: "form-label" %>
+    <%= f.select :fuel_type, options_for_select(@fuel_types.map { |t| [t.name, t.code] }, params[:fuel_type]), { include_blank: "All" }, class: "form-select" %>
+  </div>
+  <div class="col-sm-1">
+    <%= f.label :fuel_pump_id, "Pump", class: "form-label" %>
+    <%= f.select :fuel_pump_id, options_for_select(@fuel_pumps.map { |p| [p.display_name, p.id] }, params[:fuel_pump_id]), { include_blank: "All" }, class: "form-select" %>
+  </div>
+  <div class="col-sm-1"><%= f.submit "Run", class: "btn btn-primary w-100" %></div>
+<% end %>
+
+<p class="text-muted small">₹ amounts are derived from litres × catalog selling price (litres are the source of truth). "Gifts" is the ₹ value of reward redemptions. Litres/discount come from per-visit captures.</p>
+
+<% if @report.rows.any? %>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle">
+      <thead>
+        <tr>
+          <th><%= @report.dimension.humanize %></th><th>Period</th>
+          <th class="text-end">Litres</th><th class="text-end">Amount ₹</th>
+          <th class="text-end">Discount ₹</th><th class="text-end">Gifts ₹</th><th class="text-end">Visits</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @report.rows.each do |row| %>
+          <tr>
+            <td><%= row.label %></td>
+            <td><%= row.period %></td>
+            <td class="text-end"><%= number_with_precision(row.litres, precision: 3, strip_insignificant_zeros: true) %></td>
+            <td class="text-end"><%= row.amount ? number_to_currency(row.amount, unit: "₹") : content_tag(:span, "—", class: "text-muted") %></td>
+            <td class="text-end"><%= number_to_currency(row.discount, unit: "₹") %></td>
+            <td class="text-end"><%= number_to_currency(row.gifts, unit: "₹") %></td>
+            <td class="text-end"><%= row.visits %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr class="fw-semibold border-top">
+          <td colspan="2">Total</td>
+          <td class="text-end"><%= number_with_precision(@report.totals[:litres], precision: 3, strip_insignificant_zeros: true) %></td>
+          <td class="text-end"><%= number_to_currency(@report.totals[:amount], unit: "₹") %></td>
+          <td class="text-end"><%= number_to_currency(@report.totals[:discount], unit: "₹") %></td>
+          <td class="text-end"><%= number_to_currency(@report.totals[:gifts], unit: "₹") %></td>
+          <td class="text-end"><%= @report.totals[:visits] %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+<% else %>
+  <p class="text-muted">No captures in this range. Try a wider date range or a different dimension.</p>
+<% end %>
