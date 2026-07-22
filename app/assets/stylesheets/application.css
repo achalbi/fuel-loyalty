@@ -5936,6 +5936,51 @@ html[data-theme="dark"] .admin-transaction-modal__label {
   margin: 0 auto;
 }
 
+.home-header {
+  align-items: flex-end;
+}
+
+.home-header .eyebrow {
+  color: var(--fl-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-grid {
+  align-items: stretch;
+}
+
+.home-lookup-card,
+.home-actions-card {
+  border: 1px solid var(--fl-gray-200);
+  border-radius: 1rem;
+}
+
+.home-lookup-card {
+  background:
+    radial-gradient(circle at top right, rgba(var(--bs-primary-rgb), 0.12), transparent 38%),
+    var(--fl-surface-elevated);
+}
+
+.home-card-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.9rem;
+  color: var(--fl-primary);
+  background: var(--fl-primary-soft);
+  font-size: 1.25rem;
+}
+
+.home-actions-card .btn {
+  min-height: 2.8rem;
+}
+
 .loyalty-lookup-shell {
   padding-top: 0;
   padding-bottom: 3rem;

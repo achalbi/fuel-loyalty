@@ -19,28 +19,7 @@
           <p class="small-muted mb-0"><%= t("loyalty.new.subtitle") %></p>
         </div>
 
-        <%= form_with url: loyalty_path, scope: :loyalty, local: true, class: "vstack gap-3" do |form| %>
-          <%= hidden_field_tag :lang, loyalty_language_param %>
-          <div>
-            <%= form.label :phone_number, t("loyalty.new.phone_number"), class: "form-label" %>
-            <div class="input-group">
-              <span class="input-group-text phone-prefix">+91</span>
-              <%= form.telephone_field :phone_number,
-                value: @phone_number,
-                class: "form-control",
-                placeholder: t("loyalty.new.phone_placeholder"),
-                required: true,
-                inputmode: "numeric",
-                autocomplete: "tel-national",
-                maxlength: 10,
-                pattern: "\\d{10}",
-                title: t("loyalty.new.phone_title"),
-                data: { phone_number_field: true } %>
-            </div>
-          </div>
-
-          <%= form.submit t("loyalty.new.check_points"), class: "btn btn-primary w-100" %>
-        <% end %>
+        <%= render "lookup_form", language_param: loyalty_language_param %>
 
         <section
           class="install-app-panel mt-4"

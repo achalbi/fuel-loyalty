@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -71,6 +73,121 @@ import com.acefuel.loyalty.ui.theme.nayara
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
+/**
+ * Inline loyalty lookup for the authenticated Home screen. It uses the same
+ * repository, validation, offline fallback, and result components as the
+ * public lookup route, but keeps the operator in the Home workflow.
+ */
+@Composable
+fun LoyaltyLookupCard(modifier: Modifier = Modifier) {
+    val container = LocalContainer.current
+    val viewModel: LoyaltyViewModel = viewModel(
+        factory = viewModelFactory { initializer { LoyaltyViewModel(container.loyaltyRepository) } },
+    )
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val haptics = rememberHaptics()
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    var phone by rememberSaveable { mutableStateOf("") }
+
+    fun submitLookup() {
+        if (phone.length == 10) {
+            keyboardController?.hide()
+            viewModel.lookup(phone)
+        }
+    }
+
+    fun clearLookup() {
+        keyboardController?.hide()
+        phone = ""
+        viewModel.reset()
+    }
+
+    val canClear = state is LoyaltyUiState.Success || state is LoyaltyUiState.Error
+
+    LaunchedEffect(state) {
+        when (state) {
+            is LoyaltyUiState.Success -> haptics.confirm()
+            is LoyaltyUiState.Error -> haptics.reject()
+            else -> Unit
+        }
+    }
+
+    NayaraCard(modifier = modifier.fillMaxWidth()) {
+        Column(Modifier.padding(NayaraSpacing.CardPadding)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.nayara.actionPrimary,
+                )
+                Spacer(Modifier.width(NayaraSpacing.Md))
+                Column {
+                    Text(
+                        stringResource(R.string.loyalty_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        stringResource(R.string.loyalty_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.nayara.textSecondary,
+                    )
+                }
+            }
+            Spacer(Modifier.height(NayaraSpacing.Lg))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FormField(
+                    value = phone,
+                    onValueChange = { input ->
+                        val filtered = input.filter(Char::isDigit).take(10)
+                        if (filtered != phone) {
+                            phone = filtered
+                            if (state !is LoyaltyUiState.Idle) viewModel.reset()
+                        }
+                    },
+                    label = stringResource(R.string.loyalty_phone_label),
+                    prefix = { Text("+91 ") },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Search,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = { submitLookup() },
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+
+                if (canClear) {
+                    NayaraButton(
+                        onClick = { clearLookup() },
+                        modifier = Modifier.width(120.dp),
+                    ) {
+                        Text(stringResource(R.string.ds_clear))
+                    }
+                } else {
+                    NayaraButton(
+                        onClick = { submitLookup() },
+                        enabled = phone.length == 10,
+                        loading = state is LoyaltyUiState.Loading,
+                        modifier = Modifier.width(120.dp),
+                    ) {
+                        Text(stringResource(R.string.loyalty_check_points))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(NayaraSpacing.Lg))
+            LookupResultContent(state = state, onRetry = { viewModel.lookup(phone) })
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoyaltyLookupScreen(
@@ -83,8 +200,24 @@ fun LoyaltyLookupScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val haptics = rememberHaptics()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     var phone by rememberSaveable { mutableStateOf("") }
+
+    fun submitLookup() {
+        if (phone.length == 10) {
+            keyboardController?.hide()
+            viewModel.lookup(phone)
+        }
+    }
+
+    fun clearLookup() {
+        keyboardController?.hide()
+        phone = ""
+        viewModel.reset()
+    }
+
+    val canClear = state is LoyaltyUiState.Success || state is LoyaltyUiState.Error
 
     LaunchedEffect(state) {
         when (state) {
@@ -131,72 +264,95 @@ fun LoyaltyLookupScreen(
             )
             Spacer(Modifier.height(NayaraSpacing.Xl))
 
-            FormField(
-                value = phone,
-                onValueChange = { input ->
-                    val filtered = input.filter(Char::isDigit).take(10)
-                    if (filtered != phone) {
-                        phone = filtered
-                        // Editing clears any non-idle state, including an
-                        // in-flight lookup, so a stale response can't land under
-                        // the new number.
-                        if (state !is LoyaltyUiState.Idle) {
-                            viewModel.reset()
-                        }
-                    }
-                },
-                label = stringResource(R.string.loyalty_phone_label),
-                prefix = { Text("+91 ") },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Phone,
-                    imeAction = ImeAction.Search,
-                ),
-                keyboardActions = KeyboardActions(
-                    onSearch = { if (phone.length == 10) viewModel.lookup(phone) },
-                ),
-            )
-            Spacer(Modifier.height(NayaraSpacing.Lg))
-
-            NayaraButton(
-                onClick = { viewModel.lookup(phone) },
-                enabled = phone.length == 10,
-                loading = state is LoyaltyUiState.Loading,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.loyalty_check_points))
+                FormField(
+                    value = phone,
+                    onValueChange = { input ->
+                        val filtered = input.filter(Char::isDigit).take(10)
+                        if (filtered != phone) {
+                            phone = filtered
+                            // Editing clears any non-idle state, including an
+                            // in-flight lookup, so a stale response can't land under
+                            // the new number.
+                            if (state !is LoyaltyUiState.Idle) {
+                                viewModel.reset()
+                            }
+                        }
+                    },
+                    label = stringResource(R.string.loyalty_phone_label),
+                    prefix = { Text("+91 ") },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Search,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = { submitLookup() },
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+
+                if (canClear) {
+                    NayaraButton(
+                        onClick = { clearLookup() },
+                        modifier = Modifier.width(120.dp),
+                    ) {
+                        Text(stringResource(R.string.ds_clear))
+                    }
+                } else {
+                    NayaraButton(
+                        onClick = { submitLookup() },
+                        enabled = phone.length == 10,
+                        loading = state is LoyaltyUiState.Loading,
+                        modifier = Modifier.width(120.dp),
+                    ) {
+                        Text(stringResource(R.string.loyalty_check_points))
+                    }
+                }
             }
 
             Spacer(Modifier.height(NayaraSpacing.Xl))
 
-            AnimatedContent(
-                targetState = state,
-                transitionSpec = {
-                    (fadeIn(tween(NayaraMotion.Base, easing = NayaraMotion.Enter)) +
-                        slideInVertically(tween(NayaraMotion.Base, easing = NayaraMotion.Enter)) { it / 6 })
-                        .togetherWith(fadeOut(tween(NayaraMotion.Fast, easing = NayaraMotion.Exit)))
-                },
-                label = "loyalty-result",
-            ) { s ->
-                when (s) {
-                    is LoyaltyUiState.Loading -> Column(Modifier.fillMaxWidth()) {
-                        SkeletonCard(lines = 2)
-                        Spacer(Modifier.height(NayaraSpacing.Lg))
-                        SkeletonList(count = 3, showAvatar = false)
-                    }
-                    is LoyaltyUiState.Error -> InlineErrorCard(
-                        message = s.message,
-                        onRetry = { viewModel.lookup(phone) },
-                    )
-                    is LoyaltyUiState.Success -> Column(Modifier.fillMaxWidth()) {
-                        if (s.offline) {
-                            OfflineBanner(s.fetchedAtMillis)
-                            Spacer(Modifier.height(NayaraSpacing.Md))
-                        }
-                        LoyaltyResult(s.data)
-                    }
-                    LoyaltyUiState.Idle -> Spacer(Modifier.height(0.dp))
-                }
+            LookupResultContent(state = state, onRetry = { viewModel.lookup(phone) })
+        }
+    }
+}
+
+@Composable
+private fun LookupResultContent(
+    state: LoyaltyUiState,
+    onRetry: () -> Unit,
+) {
+    AnimatedContent(
+        targetState = state,
+        transitionSpec = {
+            (fadeIn(tween(NayaraMotion.Base, easing = NayaraMotion.Enter)) +
+                slideInVertically(tween(NayaraMotion.Base, easing = NayaraMotion.Enter)) { it / 6 })
+                .togetherWith(fadeOut(tween(NayaraMotion.Fast, easing = NayaraMotion.Exit)))
+        },
+        label = "loyalty-result",
+    ) { s ->
+        when (s) {
+            is LoyaltyUiState.Loading -> Column(Modifier.fillMaxWidth()) {
+                SkeletonCard(lines = 2)
+                Spacer(Modifier.height(NayaraSpacing.Lg))
+                SkeletonList(count = 3, showAvatar = false)
             }
+            is LoyaltyUiState.Error -> InlineErrorCard(
+                message = s.message,
+                onRetry = onRetry,
+            )
+            is LoyaltyUiState.Success -> Column(Modifier.fillMaxWidth()) {
+                if (s.offline) {
+                    OfflineBanner(s.fetchedAtMillis)
+                    Spacer(Modifier.height(NayaraSpacing.Md))
+                }
+                LoyaltyResult(s.data)
+            }
+            LoyaltyUiState.Idle -> Spacer(Modifier.height(0.dp))
         }
     }
 }

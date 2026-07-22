@@ -1,0 +1,54 @@
+<% content_for :title, "Home" %>
+
+<div class="page-header home-header">
+  <div class="page-intro mb-0">
+    <p class="eyebrow mb-2">Ace Fuel Loyalty</p>
+    <h1>Home</h1>
+    <p>Welcome back, <%= current_user.display_name %>. Look up a customer or jump into your daily operations.</p>
+  </div>
+</div>
+
+<div class="row g-4 home-grid">
+  <div class="col-xl-7">
+    <section class="card shadow-sm home-lookup-card h-100" aria-labelledby="home-loyalty-lookup-title">
+      <div class="card-body p-4 p-lg-5">
+        <div class="d-flex align-items-start gap-3 mb-4">
+          <div class="home-card-icon" aria-hidden="true">
+            <i class="ti ti-search"></i>
+          </div>
+          <div>
+            <h2 id="home-loyalty-lookup-title" class="h4 mb-1">Loyalty Lookup</h2>
+            <p class="text-muted mb-0">Enter a customer’s mobile number to view their loyalty points and recent visits.</p>
+          </div>
+        </div>
+
+        <%= render "loyalty/lookup_form" %>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-xl-5">
+    <section class="card shadow-sm home-actions-card h-100" aria-labelledby="home-quick-actions-title">
+      <div class="card-body p-4 p-lg-5">
+        <h2 id="home-quick-actions-title" class="h5 mb-3">Quick actions</h2>
+        <div class="d-grid gap-2">
+          <%= link_to new_staff_transaction_path, class: "btn btn-outline-primary text-start" do %>
+            <i class="ti ti-gas-station me-2" aria-hidden="true"></i>New Transaction
+          <% end %>
+          <%= link_to new_staff_visit_entry_path, class: "btn btn-outline-primary text-start" do %>
+            <i class="ti ti-clipboard-list me-2" aria-hidden="true"></i>Capture Visit
+          <% end %>
+          <% if current_user.admin? %>
+            <%= link_to admin_dashboard_path, class: "btn btn-outline-primary text-start" do %>
+              <i class="ti ti-chart-bar me-2" aria-hidden="true"></i>Open Admin Dashboard
+            <% end %>
+          <% else %>
+            <%= link_to staff_customers_path, class: "btn btn-outline-primary text-start" do %>
+              <i class="ti ti-users me-2" aria-hidden="true"></i>View Customers
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,24 @@
+<%= form_with url: loyalty_path, scope: :loyalty, local: true, class: "vstack gap-3" do |form| %>
+  <% if local_assigns[:language_param].present? %>
+    <%= hidden_field_tag :lang, language_param %>
+  <% end %>
+  <div>
+    <%= form.label :phone_number, t("loyalty.new.phone_number"), class: "form-label" %>
+    <div class="input-group">
+      <span class="input-group-text phone-prefix">+91</span>
+      <%= form.telephone_field :phone_number,
+        value: @phone_number,
+        class: "form-control",
+        placeholder: t("loyalty.new.phone_placeholder"),
+        required: true,
+        inputmode: "numeric",
+        autocomplete: "tel-national",
+        maxlength: 10,
+        pattern: "\\d{10}",
+        title: t("loyalty.new.phone_title"),
+        data: { phone_number_field: true } %>
+    </div>
+  </div>
+
+  <%= form.submit t("loyalty.new.check_points"), class: "btn btn-primary w-100" %>
+<% end %>

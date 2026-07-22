@@ -188,16 +188,18 @@ fun AppRoot(container: ServiceContainer) {
                 }
             }
 
-            // Reactive navigation: leave login on success; on logout, return to
-            // the public landing from WHEREVER we are (home, account, admin, a
-            // form…). Keying on LoggedOut (not just !loggedIn) skips the Unknown
-            // session-restore transient at startup. Without covering every
-            // authenticated route, logging out of admin/account just leaves that
-            // screen showing its user==null spinner until you press back.
+            // Reactive navigation: send a fresh login and a restored session to
+            // Home. On logout, return to the public landing from WHEREVER we are
+            // (home, account, admin, a form…). Keying on LoggedOut (not just
+            // !loggedIn) skips the Unknown session-restore transient at startup.
+            // Without covering every authenticated route, logging out of
+            // admin/account just leaves that screen showing its user==null
+            // spinner until you press back.
             LaunchedEffect(authState, currentRoute) {
-                if (loggedIn && currentRoute == Routes.LOGIN) {
+                if (loggedIn && currentRoute in setOf(Routes.LOGIN, Routes.LOYALTY)) {
                     navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.LOYALTY)
+                        popUpTo(Routes.LOYALTY) { inclusive = true }
+                        launchSingleTop = true
                     }
                 } else if (authState is AuthState.LoggedOut &&
                     currentRoute != null &&

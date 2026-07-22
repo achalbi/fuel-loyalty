@@ -53,6 +53,7 @@ import com.acefuel.loyalty.ui.designsystem.Avatar
 import com.acefuel.loyalty.ui.designsystem.StatusChip
 import com.acefuel.loyalty.ui.designsystem.ChipTone
 import com.acefuel.loyalty.ui.designsystem.rememberHaptics
+import com.acefuel.loyalty.ui.loyalty.LoyaltyLookupCard
 import com.acefuel.loyalty.ui.theme.NayaraHeroCard
 import com.acefuel.loyalty.ui.theme.NayaraMotion
 import com.acefuel.loyalty.ui.theme.NayaraPalette
@@ -105,6 +106,8 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xl),
         ) {
             GreetingHero(user)
+
+            LoyaltyLookupCard()
 
             Text(
                 "Quick actions",
