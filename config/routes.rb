@@ -58,7 +58,12 @@ Rails.application.routes.draw do
         get "dashboard", to: "dashboard#data"
         get "reports", to: "reports#index"
         get "transactions", to: "transactions#index"
-        resources :users, only: %i[index show create update]
+        resources :users, only: %i[index show create update] do
+          member do
+            get :kyc_reveal
+            delete :kyc, action: :destroy_kyc
+          end
+        end
         resources :fuel_types, only: %i[index create update destroy]
         resources :vehicle_types, only: %i[index create update destroy]
         resources :products, only: %i[index create update destroy] do

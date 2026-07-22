@@ -5,6 +5,11 @@ class User < ApplicationRecord
   USERNAME_FORMAT = /\A\S+\z/
   INTERNAL_EMAIL_DOMAIN = "users.fuel-loyalty.local"
 
+  # A7 — operator KYC.
+  AADHAAR_FORMAT = /\A\d{12}\z/
+  KYC_IMAGE_TYPES = %w[image/jpeg image/png image/webp].freeze
+  KYC_IMAGE_MAX_BYTES = 8.megabytes
+
   attr_writer :login
 
   enum :role, { admin: 0, staff: 1 }, default: :staff, validate: true
@@ -27,6 +32,17 @@ class User < ApplicationRecord
   has_many :shift_swaps_to, class_name: "ShiftSwap", foreign_key: :to_user_id, dependent: :restrict_with_exception
 
   devise :database_authenticatable, :recoverable, :rememberable, :validatable
+
+  # A7 — Aadhaar encrypted at rest (non-deterministic; never queried by it);
+  # KYC images as ActiveStorage attachments (purged on hard-delete).
+  encrypts :aadhaar_number
+  has_one_attached :profile_photo, dependent: :purge_later
+  has_one_attached :id_card_photo, dependent: :purge_later
+
+  before_validation :normalize_aadhaar_number
+  before_save :sync_aadhaar_last4
+  validate :aadhaar_number_must_be_valid
+  validate :kyc_images_must_be_valid
 
   before_validation :normalize_name
   before_validation :normalize_username
@@ -144,6 +160,26 @@ class User < ApplicationRecord
     deleted_at.present?
   end
 
+  # ---- A7 KYC ----
+  def aadhaar_present?
+    aadhaar_number.present?
+  end
+
+  def masked_aadhaar_number
+    aadhaar_last4.present? ? "XXXX-XXXX-#{aadhaar_last4}" : nil
+  end
+
+  def id_card_present?
+    id_card_photo.attached?
+  end
+
+  # Admin "purge KYC": drop the Aadhaar + ID card while keeping the account
+  # shell. Works on a soft-deleted operator too.
+  def purge_kyc!
+    id_card_photo.purge_later if id_card_photo.attached?
+    update_columns(aadhaar_number: nil, aadhaar_last4: nil) # rubocop:disable Rails/SkipsModelValidations
+  end
+
   def soft_delete!(at: Time.current)
     if admin?
       errors.add(:base, "Only staff accounts can be soft deleted")
@@ -223,6 +259,36 @@ class User < ApplicationRecord
   end
 
   private
+
+  # ---- A7 KYC ----
+  def normalize_aadhaar_number
+    return unless has_attribute?(:aadhaar_number)
+
+    self.aadhaar_number = aadhaar_number.to_s.gsub(/[\s-]/, "").presence
+  end
+
+  def sync_aadhaar_last4
+    return unless has_attribute?(:aadhaar_last4)
+
+    self.aadhaar_last4 = aadhaar_number.present? ? aadhaar_number.last(4) : nil
+  end
+
+  def aadhaar_number_must_be_valid
+    return if aadhaar_number.blank?
+    return if aadhaar_number.match?(AADHAAR_FORMAT) && Verhoeff.valid?(aadhaar_number)
+
+    errors.add(:aadhaar_number, "is not a valid Aadhaar number")
+  end
+
+  def kyc_images_must_be_valid
+    { profile_photo: profile_photo, id_card_photo: id_card_photo }.each do |name, attachment|
+      next unless attachment.attached?
+
+      blob = attachment.blob
+      errors.add(name, "must be a JPEG, PNG or WEBP image") unless KYC_IMAGE_TYPES.include?(blob.content_type)
+      errors.add(name, "must be 8 MB or smaller") if blob.byte_size.to_i > KYC_IMAGE_MAX_BYTES
+    end
+  end
 
   def phone_number_attribute_available?
     self.class.phone_number_attribute_available? && has_attribute?(:phone_number)

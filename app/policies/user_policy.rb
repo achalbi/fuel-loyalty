@@ -19,6 +19,13 @@ class UserPolicy < ApplicationPolicy
     user&.admin? && record.is_a?(User) && record.staff?
   end
 
+  # A7 — revealing the full Aadhaar / ID-card image is admin-only and audited.
+  def view_aadhaar?
+    user&.admin?
+  end
+  alias view_id_card? view_aadhaar?
+  alias purge_kyc? view_aadhaar?
+
   # Self-service pump assignment ("My Pump"). Staff must NOT set their own pump
   # (Staff_FSM requirement S-MYPUMP) — an admin assigns it via the staff form
   # (A10). Kept as admin-only self so the route/page isn't reachable by staff.

@@ -10,9 +10,37 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_180003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.bigint "record_id", null: false
+    t.string "record_type", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.string "content_type"
+    t.datetime "created_at", null: false
+    t.string "filename", null: false
+    t.string "key", null: false
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
 
   create_table "analytics_events", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -294,6 +322,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_180000) do
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_notification_schedules_on_active"
     t.index ["frequency"], name: "index_notification_schedules_on_frequency"
+  end
+
+  create_table "pii_access_logs", force: :cascade do |t|
+    t.bigint "actor_user_id", null: false
+    t.datetime "created_at", null: false
+    t.string "field", null: false
+    t.string "ip"
+    t.bigint "target_user_id", null: false
+    t.index ["actor_user_id"], name: "index_pii_access_logs_on_actor_user_id"
+    t.index ["target_user_id"], name: "index_pii_access_logs_on_target_user_id"
   end
 
   create_table "points_ledgers", force: :cascade do |t|
@@ -604,7 +642,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_180000) do
   end
 
   create_table "users", force: :cascade do |t|
+    t.string "aadhaar_last4", limit: 4
+    t.text "aadhaar_number"
     t.boolean "active", default: true, null: false
+    t.text "address"
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
     t.string "email", default: "", null: false
@@ -707,6 +748,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_180000) do
     t.index ["vehicle_id"], name: "index_visit_entries_on_vehicle_id"
   end
 
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "analytics_events", "users"
   add_foreign_key "attendance_entries", "attendance_runs"
   add_foreign_key "attendance_entries", "users", column: "actual_user_id"
@@ -736,6 +779,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_180000) do
   add_foreign_key "notification_recipients", "customers", on_delete: :nullify
   add_foreign_key "notification_recipients", "notification_messages", on_delete: :cascade
   add_foreign_key "notification_recipients", "push_subscriptions", on_delete: :nullify
+  add_foreign_key "pii_access_logs", "users", column: "actor_user_id", on_delete: :cascade
+  add_foreign_key "pii_access_logs", "users", column: "target_user_id", on_delete: :cascade
   add_foreign_key "points_ledgers", "customers"
   add_foreign_key "points_ledgers", "transactions"
   add_foreign_key "products", "fuel_types", column: "fuel_type_code", primary_key: "code"
