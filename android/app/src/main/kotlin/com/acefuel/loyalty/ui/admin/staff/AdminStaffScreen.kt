@@ -357,13 +357,31 @@ private fun StaffCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                TextButton(onClick = onEdit, enabled = !busy) { Text("Edit profile") }
-                TextButton(onClick = onAssign, enabled = !busy) { Text("Assign Shift") }
-                TextButton(onClick = onAssignPump, enabled = !busy) { Text("Pump") }
-                Spacer(Modifier.weight(1f))
+                TextButton(
+                    onClick = onEdit,
+                    enabled = !busy,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Edit profile", maxLines = 1, softWrap = false) }
+                TextButton(
+                    onClick = onAssign,
+                    enabled = !busy,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Assign Shift", maxLines = 1, softWrap = false) }
+                TextButton(
+                    onClick = onAssignPump,
+                    enabled = !busy,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Pump", maxLines = 1, softWrap = false) }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
                 TextButton(onClick = onDelete, enabled = !busy) {
                     Text(
                         if (busy) "Removing…" else "Delete",
+                        maxLines = 1,
+                        softWrap = false,
                         color = if (busy) MaterialTheme.nayara.textTertiary else MaterialTheme.colorScheme.error,
                     )
                 }

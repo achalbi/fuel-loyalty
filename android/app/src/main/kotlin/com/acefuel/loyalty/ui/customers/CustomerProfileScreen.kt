@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Agriculture
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsBus
@@ -67,10 +68,16 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
 import com.acefuel.loyalty.core.network.dto.CustomerContactDto
+import com.acefuel.loyalty.core.network.dto.CustomerContactUpdateAttributes
 import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
+import com.acefuel.loyalty.core.network.dto.CustomerUpdateRequest
+import com.acefuel.loyalty.core.network.dto.CatalogResponse
+import com.acefuel.loyalty.core.network.dto.FuelTypeOptionDto
 import com.acefuel.loyalty.core.network.dto.LedgerEntryDto
 import com.acefuel.loyalty.core.network.dto.StaffVehicleDto
 import com.acefuel.loyalty.core.network.dto.TransactionSummaryDto
+import com.acefuel.loyalty.core.network.dto.VehicleKindOptionDto
+import com.acefuel.loyalty.core.network.dto.VehicleUpdateRequest
 import com.acefuel.loyalty.ui.admin.crm.ContactLogDto
 import com.acefuel.loyalty.ui.admin.crm.CrmApi
 import com.acefuel.loyalty.ui.admin.crm.CrmRepository
@@ -135,6 +142,12 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
     var pendingConfirm by remember { mutableStateOf<ProfileAction?>(null) }
     var showFeedbackSheet by remember { mutableStateOf(false) }
     var showContactSheet by remember { mutableStateOf(false) }
+    var showCustomerContactSheet by remember { mutableStateOf(false) }
+    var contactBeingEdited by remember { mutableStateOf<CustomerContactDto?>(null) }
+    var showCustomerEditSheet by remember { mutableStateOf(false) }
+    var selectedVehicle by remember { mutableStateOf<StaffVehicleDto?>(null) }
+    var editingVehicle by remember { mutableStateOf<StaffVehicleDto?>(null) }
+    var addingVehicle by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.actionMessage) {
         val message = state.actionMessage ?: return@LaunchedEffect
@@ -230,6 +243,11 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
                             )
                         }
 
+                        item {
+                            SectionHeaderWithAction("Notes", "Edit") { showCustomerEditSheet = true }
+                        }
+                        item { InfoNoteCard(profile.infoNote) }
+
                         // Phase 4 CRM — insight + outreach are admin-only.
                         if (isAdmin) {
                             item { SectionHeader("CRM Insight") }
@@ -260,21 +278,42 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
                             }
                         }
 
-                        item { SectionHeader("Vehicles (${profile.vehicles.size})") }
+                        item {
+                            SectionHeaderWithAction("Vehicles (${profile.vehicles.size})", "Add vehicle") {
+                                addingVehicle = true
+                                viewModel.ensureCatalog()
+                            }
+                        }
                         if (profile.vehicles.isEmpty()) {
                             item { EmptyNote("No vehicles registered yet.") }
                         } else {
                             items(profile.vehicles, key = { "veh-${it.id}" }) {
-                                VehicleCard(it, modifier = Modifier.animateItem())
+                                VehicleCard(
+                                    it,
+                                    onClick = { selectedVehicle = it },
+                                    modifier = Modifier.animateItem(),
+                                )
                             }
                         }
 
-                        item { SectionHeader("Contacts") }
+                        item {
+                            SectionHeaderWithAction("Contacts", "Add contact") {
+                                contactBeingEdited = null
+                                showCustomerContactSheet = true
+                            }
+                        }
                         if (profile.contacts.isEmpty()) {
                             item { EmptyNote("No contacts added yet.") }
                         } else {
                             items(profile.contacts, key = { "contact-${it.id}" }) {
-                                ContactCard(it, modifier = Modifier.animateItem())
+                                ContactCard(
+                                    it,
+                                    onClick = {
+                                        contactBeingEdited = it
+                                        showCustomerContactSheet = true
+                                    },
+                                    modifier = Modifier.animateItem(),
+                                )
                             }
                         }
 
@@ -356,6 +395,71 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
                         onSubmit = { channel, outcome, role, contactId, notes ->
                             crmViewModel.logContact(channel, outcome, role, contactId, notes)
                             showContactSheet = false
+                        },
+                    )
+                }
+                selectedVehicle?.let { vehicle ->
+                    VehicleDetailsSheet(
+                        vehicle = vehicle,
+                        onEdit = {
+                            selectedVehicle = null
+                            editingVehicle = vehicle
+                            viewModel.ensureCatalog()
+                        },
+                        onDismiss = { selectedVehicle = null },
+                    )
+                }
+                editingVehicle?.let { vehicle ->
+                    VehicleEditSheet(
+                        vehicle = vehicle,
+                        catalog = state.catalog,
+                        catalogLoading = state.catalogLoading,
+                        saving = state.vehicleSaving,
+                        onDismiss = { editingVehicle = null },
+                        onSave = { request ->
+                            viewModel.updateVehicle(vehicle.id, request) {
+                                editingVehicle = null
+                            }
+                        },
+                    )
+                }
+                if (addingVehicle) {
+                    VehicleEditSheet(
+                        vehicle = null,
+                        catalog = state.catalog,
+                        catalogLoading = state.catalogLoading,
+                        saving = state.vehicleSaving,
+                        onDismiss = { addingVehicle = false },
+                        onSave = { request ->
+                            viewModel.createVehicle(request) {
+                                addingVehicle = false
+                            }
+                        },
+                    )
+                }
+                if (showCustomerEditSheet) {
+                    CustomerEditSheet(
+                        customer = profile,
+                        saving = state.actionInFlight != null,
+                        onDismiss = { showCustomerEditSheet = false },
+                        onSave = { request ->
+                            viewModel.updateCustomerDetails(request) {
+                                showCustomerEditSheet = false
+                            }
+                        },
+                    )
+                }
+                if (showCustomerContactSheet) {
+                    CustomerContactSheet(
+                        contact = contactBeingEdited,
+                        saving = state.actionInFlight != null,
+                        onDismiss = { showCustomerContactSheet = false },
+                        onSave = { contactAttributes ->
+                            viewModel.updateCustomerDetails(
+                                CustomerUpdateRequest(customerContactsAttributes = listOf(contactAttributes)),
+                            ) {
+                                showCustomerContactSheet = false
+                            }
                         },
                     )
                 }
@@ -501,8 +605,24 @@ private fun EmptyNote(text: String) {
 }
 
 @Composable
-private fun VehicleCard(v: StaffVehicleDto, modifier: Modifier = Modifier) {
-    NayaraCard(modifier = modifier.fillMaxWidth()) {
+private fun InfoNoteCard(note: String?) {
+    NayaraCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            note?.takeIf { it.isNotBlank() } ?: "No notes added yet.",
+            modifier = Modifier.padding(NayaraSpacing.Lg),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (note.isNullOrBlank()) MaterialTheme.nayara.textTertiary else MaterialTheme.nayara.textPrimary,
+        )
+    }
+}
+
+@Composable
+private fun VehicleCard(
+    v: StaffVehicleDto,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    NayaraCard(onClick = onClick, modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(NayaraSpacing.Lg),
             verticalAlignment = Alignment.CenterVertically,
@@ -544,13 +664,454 @@ private fun VehicleCard(v: StaffVehicleDto, modifier: Modifier = Modifier) {
                     Text("Contact: ${v.commercialContactName}", style = MaterialTheme.typography.bodySmall)
                 }
             }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "View vehicle details",
+                tint = MaterialTheme.nayara.textTertiary,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VehicleDetailsSheet(
+    vehicle: StaffVehicleDto,
+    onEdit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    NayaraBottomSheet(
+        onDismissRequest = onDismiss,
+        title = "Vehicle details",
+        subtitle = "Registered vehicle information",
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xs),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = NayaraSpacing.Sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.nayara.bgSurfaceSunken),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        vehicleKindIcon(vehicle),
+                        contentDescription = null,
+                        tint = MaterialTheme.nayara.textSecondary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+                Spacer(Modifier.width(NayaraSpacing.Md))
+                PlateChip(vehicle.vehicleNumber)
+            }
+
+            VehicleDetailRow("Vehicle number", vehicle.vehicleNumber)
+            VehicleDetailRow("Fuel type", vehicle.fuelType ?: vehicle.fuelTypeCode ?: "Not set")
+            VehicleDetailRow("Vehicle type", vehicle.vehicleKind ?: vehicle.vehicleKindCode ?: "Not set")
+            vehicle.displayName?.takeIf { it.isNotBlank() }?.let {
+                VehicleDetailRow("Display name", it)
+            }
+
+            if (vehicle.commercial) {
+                Text(
+                    "Commercial registration",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = NayaraSpacing.Sm),
+                )
+                vehicle.commercialCompanyName?.takeIf { it.isNotBlank() }?.let {
+                    VehicleDetailRow("Company", it)
+                }
+                vehicle.commercialContactName?.takeIf { it.isNotBlank() }?.let {
+                    VehicleDetailRow("Contact", it)
+                }
+                vehicle.commercialContactPhoneNumber?.takeIf { it.isNotBlank() }?.let {
+                    VehicleDetailRow("Contact phone", "+91 $it")
+                }
+                vehicle.commercialAddress?.takeIf { it.isNotBlank() }?.let {
+                    VehicleDetailRow("Address", it)
+                }
+                vehicle.commercialNotes?.takeIf { it.isNotBlank() }?.let {
+                    VehicleDetailRow("Notes", it)
+                }
+            }
+
+            NayaraOutlinedButton(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
+                Text("Edit vehicle")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VehicleEditSheet(
+    vehicle: StaffVehicleDto?,
+    catalog: CatalogResponse?,
+    catalogLoading: Boolean,
+    saving: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (VehicleUpdateRequest) -> Unit,
+) {
+    var form by remember(vehicle?.id ?: 0L) { mutableStateOf(VehicleEditForm.from(vehicle)) }
+    var validationError by remember(vehicle?.id ?: 0L) { mutableStateOf<String?>(null) }
+    val selectedKind = catalog?.vehicleKinds?.firstOrNull { it.code == form.vehicleKind }
+    val isCommercial = selectedKind?.commercial ?: (vehicle?.commercial == true)
+    val fuelLabel = catalog?.fuelTypes?.firstOrNull { it.code == form.fuelType }?.label
+        ?: vehicle?.fuelType
+        ?: form.fuelType
+    val kindLabel = selectedKind?.label ?: vehicle?.vehicleKind ?: form.vehicleKind
+
+    NayaraBottomSheet(
+        onDismissRequest = onDismiss,
+        title = if (vehicle == null) "Add vehicle" else "Edit vehicle",
+        subtitle = if (vehicle == null) "Add another vehicle for this customer." else "Update the registered vehicle details.",
+    ) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+        ) {
+            VehicleEditTextField(
+                value = form.vehicleNumber,
+                label = "Vehicle number",
+                onValueChange = { form = form.copy(vehicleNumber = it) },
+            )
+
+            if (catalog != null) {
+                CrmDropdownField(
+                    label = "Fuel type",
+                    selectedLabel = fuelLabel,
+                    options = catalog.fuelTypes,
+                    optionLabel = FuelTypeOptionDto::label,
+                    onSelect = { form = form.copy(fuelType = it.code) },
+                )
+                CrmDropdownField(
+                    label = "Vehicle type",
+                    selectedLabel = kindLabel,
+                    options = catalog.vehicleKinds,
+                    optionLabel = VehicleKindOptionDto::label,
+                    onSelect = { form = form.copy(vehicleKind = it.code) },
+                )
+            } else {
+                Text(
+                    if (catalogLoading) "Loading fuel and vehicle type options…"
+                    else "Vehicle type options are unavailable. Try again.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.nayara.textSecondary,
+                )
+            }
+
+            if (isCommercial) {
+                Text(
+                    "Commercial registration",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                VehicleEditTextField(
+                    value = form.companyName,
+                    label = "Company name (optional)",
+                    onValueChange = { form = form.copy(companyName = it) },
+                )
+                VehicleEditTextField(
+                    value = form.contactName,
+                    label = "Owner / manager name (optional)",
+                    onValueChange = { form = form.copy(contactName = it) },
+                )
+                VehicleEditTextField(
+                    value = form.contactPhone,
+                    label = "Owner / manager phone (optional)",
+                    onValueChange = { form = form.copy(contactPhone = it) },
+                )
+                VehicleEditTextField(
+                    value = form.address,
+                    label = "Address (optional)",
+                    onValueChange = { form = form.copy(address = it) },
+                )
+                VehicleEditTextField(
+                    value = form.notes,
+                    label = "Notes (optional)",
+                    onValueChange = { form = form.copy(notes = it) },
+                )
+            }
+
+            validationError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
+                NayaraOutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !saving,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Cancel")
+                }
+                NayaraButton(
+                    onClick = {
+                        val error = when {
+                            form.vehicleNumber.isBlank() -> "Vehicle number is required."
+                            form.fuelType.isBlank() -> "Select a fuel type."
+                            form.vehicleKind.isBlank() -> "Select a vehicle type."
+                            else -> null
+                        }
+                        validationError = error
+                        if (error == null) {
+                            onSave(
+                                VehicleUpdateRequest(
+                                    vehicleNumber = form.vehicleNumber,
+                                    fuelType = form.fuelType,
+                                    vehicleKind = form.vehicleKind,
+                                    commercialCompanyName = form.companyName.trim().ifBlank { null },
+                                    commercialContactName = form.contactName.trim().ifBlank { null },
+                                    commercialContactPhoneNumber = form.contactPhone.trim().ifBlank { null },
+                                    commercialAddress = form.address.trim().ifBlank { null },
+                                    commercialNotes = form.notes.trim().ifBlank { null },
+                                ),
+                            )
+                        }
+                    },
+                    enabled = !saving && catalog != null,
+                    loading = saving,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Save")
+                }
+            }
+        }
+    }
+}
+
+private data class VehicleEditForm(
+    val vehicleNumber: String,
+    val fuelType: String,
+    val vehicleKind: String,
+    val companyName: String,
+    val contactName: String,
+    val contactPhone: String,
+    val address: String,
+    val notes: String,
+) {
+    companion object {
+        fun from(vehicle: StaffVehicleDto?) = VehicleEditForm(
+            vehicleNumber = vehicle?.vehicleNumber.orEmpty(),
+            fuelType = vehicle?.fuelTypeCode.orEmpty(),
+            vehicleKind = vehicle?.vehicleKindCode.orEmpty(),
+            companyName = vehicle?.commercialCompanyName.orEmpty(),
+            contactName = vehicle?.commercialContactName.orEmpty(),
+            contactPhone = vehicle?.commercialContactPhoneNumber.orEmpty(),
+            address = vehicle?.commercialAddress.orEmpty(),
+            notes = vehicle?.commercialNotes.orEmpty(),
+        )
+    }
+}
+
+@Composable
+private fun VehicleEditTextField(
+    value: String,
+    label: String,
+    onValueChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomerEditSheet(
+    customer: CustomerProfileDto,
+    saving: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (CustomerUpdateRequest) -> Unit,
+) {
+    var name by remember(customer.id) { mutableStateOf(customer.name.orEmpty()) }
+    var notes by remember(customer.id) { mutableStateOf(customer.infoNote.orEmpty()) }
+
+    NayaraBottomSheet(
+        onDismissRequest = onDismiss,
+        title = "Customer details",
+        subtitle = "Keep outreach information current for the next conversation.",
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name (optional)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { notes = it },
+                label = { Text("Notes") },
+                placeholder = { Text("What was discussed or what to follow up on") },
+                minLines = 4,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
+                NayaraOutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !saving,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Cancel") }
+                NayaraButton(
+                    onClick = {
+                        onSave(CustomerUpdateRequest(name = name.trim(), infoNote = notes.trim()))
+                    },
+                    enabled = !saving,
+                    loading = saving,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Save") }
+            }
+        }
+    }
+}
+
+private val CUSTOMER_CONTACT_ROLES = listOf(
+    "driver" to "Driver",
+    "supervisor" to "Supervisor",
+    "owner" to "Owner",
+    "manager" to "Manager",
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomerContactSheet(
+    contact: CustomerContactDto?,
+    saving: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (CustomerContactUpdateAttributes) -> Unit,
+) {
+    var role by remember(contact?.id ?: 0L) { mutableStateOf(contact?.role ?: "driver") }
+    var name by remember(contact?.id ?: 0L) { mutableStateOf(contact?.name.orEmpty()) }
+    var phone by remember(contact?.id ?: 0L) { mutableStateOf(contact?.phoneNumber.orEmpty()) }
+    var notes by remember(contact?.id ?: 0L) { mutableStateOf(contact?.notes.orEmpty()) }
+    var contacted by remember(contact?.id ?: 0L) { mutableStateOf(contact?.contacted == true) }
+    var validationError by remember(contact?.id ?: 0L) { mutableStateOf<String?>(null) }
+
+    NayaraBottomSheet(
+        onDismissRequest = onDismiss,
+        title = if (contact == null) "Add contact" else "Edit contact",
+        subtitle = "Store the person to approach and notes from your conversations.",
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
+            CrmDropdownField(
+                label = "Role",
+                selectedLabel = CUSTOMER_CONTACT_ROLES.firstOrNull { it.first == role }?.second ?: role,
+                options = CUSTOMER_CONTACT_ROLES,
+                optionLabel = { it.second },
+                onSelect = { role = it.first },
+            )
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name (optional)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = phone,
+                onValueChange = { phone = it.filter(Char::isDigit).take(10) },
+                label = { Text("Phone (optional)") },
+                prefix = { Text("+91 ") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { notes = it },
+                label = { Text("Notes") },
+                placeholder = { Text("Conversation or follow-up notes") },
+                minLines = 3,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Contacted", style = MaterialTheme.typography.bodyMedium)
+                Switch(checked = contacted, onCheckedChange = { contacted = it }, enabled = !saving)
+            }
+            validationError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
+                NayaraOutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !saving,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Cancel") }
+                NayaraButton(
+                    onClick = {
+                        val error = when {
+                            name.isBlank() && phone.isBlank() -> "Enter a contact name or phone number."
+                            phone.isNotBlank() && phone.length != 10 -> "Enter a 10-digit contact phone number."
+                            else -> null
+                        }
+                        validationError = error
+                        if (error == null) {
+                            onSave(
+                                CustomerContactUpdateAttributes(
+                                    id = contact?.id,
+                                    role = role,
+                                    name = name.trim(),
+                                    phoneNumber = phone.trim(),
+                                    contacted = contacted,
+                                    notes = notes.trim(),
+                                ),
+                            )
+                        }
+                    },
+                    enabled = !saving,
+                    loading = saving,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Save") }
+            }
         }
     }
 }
 
 @Composable
-private fun ContactCard(c: CustomerContactDto, modifier: Modifier = Modifier) {
-    NayaraCard(modifier = modifier.fillMaxWidth()) {
+private fun VehicleDetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = NayaraSpacing.Xxs),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.nayara.textTertiary,
+            modifier = Modifier.padding(end = NayaraSpacing.Md),
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+    }
+}
+
+@Composable
+private fun ContactCard(
+    c: CustomerContactDto,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    NayaraCard(onClick = onClick, modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(NayaraSpacing.Lg),
             verticalAlignment = Alignment.CenterVertically,

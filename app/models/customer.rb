@@ -59,7 +59,9 @@ class Customer < ApplicationRecord
 
   before_validation :normalize_phone_number
 
-  validates :name, presence: true
+  # A contact may be added before we know their name; phone number is the
+  # required identity for the outreach/customer directory.
+  validates :name, length: { maximum: 255 }, allow_blank: true
   validates :phone_number, presence: true, uniqueness: true
   validates :phone_number, format: { with: PHONE_NUMBER_FORMAT, message: PHONE_NUMBER_ERROR_MESSAGE }
   # Per-contact uniqueness only checks the DB; this catches two *new* rows with

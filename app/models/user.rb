@@ -240,15 +240,9 @@ class User < ApplicationRecord
     transaction_fuel_pump(on:).present? && transaction_fuel_pump_nozzles(on:).exists?
   end
 
-  # Atomically apply a self-service pump/nozzle assignment from request params.
-  #
-  # Assigning `assigned_fuel_pump_nozzle_ids` on a persisted user writes the
-  # join rows (UserPumpNozzleAssignment) to the DB *immediately* — that's how
-  # has_many :through collection assignment works. So assign + validate + save
-  # must all run inside one transaction: otherwise a rejected update leaves the
-  # join rows already mutated while `fuel_pump_id` stays put, silently
-  # corrupting a previously-ready assignment. On failure we roll the DB back and
-  # keep `errors` so the caller can render them.
+  # Atomically apply a date-specific pump/nozzle override from request params.
+  # The legacy fuel_pump_id and UserPumpNozzleAssignment rows are the protected
+  # default assignment and are intentionally never changed by this method.
   def update_pump_assignment(attrs, on: Date.current, assigned_by: nil)
     assignment_date = normalize_assignment_date(on)
     pump_id = attrs[:fuel_pump_id].presence
@@ -266,14 +260,20 @@ class User < ApplicationRecord
         raise ActiveRecord::Rollback
       end
 
-      # Keep the legacy/default columns in sync for today's assignment so older
-      # records and web clients continue to behave exactly as before.
-      if assignment_date == Date.current
-        assign_attributes(attrs.slice(:fuel_pump_id, :assigned_fuel_pump_nozzle_ids))
-        saved = save_pump_assignment
-      else
-        saved = true
-      end
+      # Daily assignments are overrides only. Never mutate the legacy pump
+      # columns here: they remain the protected default configured by an admin.
+      saved = true
+    end
+    saved
+  end
+
+  # Admin-only default assignment writer. Daily overrides must use
+  # update_pump_assignment so they cannot replace this fallback assignment.
+  def update_default_pump_assignment(attrs)
+    saved = false
+    transaction do
+      assign_attributes(attrs.slice(:fuel_pump_id, :assigned_fuel_pump_nozzle_ids))
+      saved = save_pump_assignment
       raise ActiveRecord::Rollback unless saved
     end
     saved

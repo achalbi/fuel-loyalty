@@ -184,16 +184,56 @@ data class CustomerProfileDto(
     @SerialName("recent_transactions") val recentTransactions: List<TransactionSummaryDto> = emptyList(),
 )
 
-// F2 — staff/admin edit of a customer's account type + channel opt-ins.
+@Serializable
+data class CustomerCreateRequest(
+    val name: String? = null,
+    @SerialName("phone_number") val phoneNumber: String,
+    @SerialName("info_note") val infoNote: String? = null,
+)
+
+@Serializable
+data class CustomerCreateEnvelope(val customer: CustomerCreateRequest)
+
+@Serializable
+data class CustomerContactUpdateAttributes(
+    val id: Long? = null,
+    val role: String,
+    val name: String? = null,
+    @SerialName("phone_number") val phoneNumber: String? = null,
+    val contacted: Boolean = false,
+    val notes: String? = null,
+    @SerialName("_destroy") val destroy: Boolean? = null,
+)
+
+// Staff/admin customer details, channel opt-ins, notes, and contacts.
 @Serializable
 data class CustomerUpdateRequest(
+    val name: String? = null,
+    @SerialName("info_note") val infoNote: String? = null,
     @SerialName("customer_type") val customerType: String? = null,
     @SerialName("whatsapp_opt_in") val whatsappOptIn: Boolean? = null,
     @SerialName("sms_opt_in") val smsOptIn: Boolean? = null,
+    @SerialName("customer_contacts_attributes")
+    val customerContactsAttributes: List<CustomerContactUpdateAttributes>? = null,
 )
 
 @Serializable
 data class CustomerUpdateEnvelope(val customer: CustomerUpdateRequest)
+
+@Serializable
+data class VehicleUpdateRequest(
+    @SerialName("vehicle_number") val vehicleNumber: String,
+    @SerialName("fuel_type") val fuelType: String,
+    @SerialName("vehicle_kind") val vehicleKind: String,
+    @SerialName("commercial_company_name") val commercialCompanyName: String? = null,
+    @SerialName("commercial_contact_name") val commercialContactName: String? = null,
+    @SerialName("commercial_contact_phone_number") val commercialContactPhoneNumber: String? = null,
+    @SerialName("commercial_address") val commercialAddress: String? = null,
+    @SerialName("commercial_notes") val commercialNotes: String? = null,
+)
+
+@Serializable
+data class VehicleUpdateEnvelope(val vehicle: VehicleUpdateRequest)
 
 @Serializable
 data class CustomerContactDto(
@@ -383,6 +423,7 @@ data class VehicleMatchDto(
 
 @Serializable
 data class MyPumpDto(
+    @SerialName("assignment_mode") val assignmentMode: String? = null,
     @SerialName("assignment_date") val assignmentDate: String? = null,
     @SerialName("fuel_pump_id") val fuelPumpId: Long? = null,
     @SerialName("assigned_fuel_pump_nozzle_ids") val assignedNozzleIds: List<Long> = emptyList(),
@@ -410,6 +451,7 @@ data class MyPumpUpdateEnvelope(val user: MyPumpUpdateRequest)
 
 @Serializable
 data class MyPumpUpdateRequest(
+    @SerialName("assignment_mode") val assignmentMode: String? = null,
     @SerialName("assignment_date") val assignmentDate: String? = null,
     @SerialName("fuel_pump_id") val fuelPumpId: Long,
     @SerialName("assigned_fuel_pump_nozzle_ids") val assignedNozzleIds: List<String>,

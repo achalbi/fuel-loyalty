@@ -2,6 +2,7 @@ package com.acefuel.loyalty.core.network
 
 import com.acefuel.loyalty.core.network.dto.AuthResponse
 import com.acefuel.loyalty.core.network.dto.CatalogResponse
+import com.acefuel.loyalty.core.network.dto.CustomerCreateEnvelope
 import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
 import com.acefuel.loyalty.core.network.dto.CustomerUpdateEnvelope
 import com.acefuel.loyalty.core.network.dto.CustomersListResponse
@@ -26,6 +27,7 @@ import com.acefuel.loyalty.core.network.dto.ThemeDto
 import com.acefuel.loyalty.core.network.dto.TransactionCreateEnvelope
 import com.acefuel.loyalty.core.network.dto.TransactionCreateResponse
 import com.acefuel.loyalty.core.network.dto.VehicleLookupResponse
+import com.acefuel.loyalty.core.network.dto.VehicleUpdateEnvelope
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.HTTP
@@ -77,6 +79,9 @@ interface AceFuelApi {
     @GET("api/v1/staff/customers/{id}")
     suspend fun staffCustomerProfile(@Path("id") id: Long): CustomerProfileDto
 
+    @POST("api/v1/staff/customers")
+    suspend fun createStaffCustomer(@Body body: CustomerCreateEnvelope): CustomerProfileDto
+
     @GET("api/v1/staff/customers/{id}/ledger")
     suspend fun staffCustomerLedger(@Path("id") id: Long, @Query("page") page: Int): LedgerPageDto
 
@@ -100,6 +105,19 @@ interface AceFuelApi {
     @PATCH("api/v1/staff/customers/{id}/deactivate")
     suspend fun deactivateCustomer(@Path("id") id: Long): CustomerProfileDto
 
+    @PATCH("api/v1/staff/customers/{customerId}/vehicles/{vehicleId}")
+    suspend fun updateStaffVehicle(
+        @Path("customerId") customerId: Long,
+        @Path("vehicleId") vehicleId: Long,
+        @Body body: VehicleUpdateEnvelope,
+    ): CustomerProfileDto
+
+    @POST("api/v1/staff/customers/{customerId}/vehicles")
+    suspend fun createStaffVehicle(
+        @Path("customerId") customerId: Long,
+        @Body body: VehicleUpdateEnvelope,
+    ): CustomerProfileDto
+
     @POST("api/v1/staff/redemptions")
     suspend fun redeem(@Body body: RedemptionEnvelope): RedemptionResponse
 
@@ -113,7 +131,10 @@ interface AceFuelApi {
     suspend fun createTransaction(@Body body: TransactionCreateEnvelope): TransactionCreateResponse
 
     @GET("api/v1/my_pump")
-    suspend fun myPump(@Query("assignment_date") assignmentDate: String? = null): MyPumpDto
+    suspend fun myPump(
+        @Query("assignment_date") assignmentDate: String? = null,
+        @Query("assignment_mode") assignmentMode: String? = null,
+    ): MyPumpDto
 
     @PATCH("api/v1/my_pump")
     suspend fun updateMyPump(@Body body: MyPumpUpdateEnvelope): MyPumpDto
@@ -123,6 +144,7 @@ interface AceFuelApi {
     suspend fun staffMemberPump(
         @Path("id") id: Long,
         @Query("assignment_date") assignmentDate: String? = null,
+        @Query("assignment_mode") assignmentMode: String? = null,
     ): MyPumpDto
 
     @PATCH("api/v1/admin/staff_members/{id}/pump")

@@ -35,20 +35,26 @@ module Api
           render json: StaffMemberSerializer.call(staff_member), status: :ok
         end
 
-        # GET /api/v1/admin/staff_members/:id/pump — current assignment + pump catalog (A10)
+        # GET /api/v1/admin/staff_members/:id/pump — default or date-specific override + catalog (A10)
         def pump
           staff_member = staff_member_for_pump
           authorize staff_member, :assign_pump?
-          render json: MyPumpSerializer.call(staff_member, on: assignment_date), status: :ok
+          render json: MyPumpSerializer.call(staff_member, on: assignment_date, assignment_mode: assignment_mode), status: :ok
         end
 
-        # PATCH /api/v1/admin/staff_members/:id/pump  { user: { fuel_pump_id, assigned_fuel_pump_nozzle_ids: [] } }
+        # PATCH /api/v1/admin/staff_members/:id/pump  { user: { assignment_mode, assignment_date, fuel_pump_id, assigned_fuel_pump_nozzle_ids: [] } }
         def update_pump
           staff_member = staff_member_for_pump
           authorize staff_member, :assign_pump?
-          if staff_member.update_pump_assignment(pump_assignment_params, on: assignment_date, assigned_by: current_user)
-            render json: MyPumpSerializer.call(staff_member.reload, on: assignment_date)
-              .merge(message: "Pump assignment updated for #{staff_member.name}."), status: :ok
+          saved = if assignment_mode == "default"
+            staff_member.update_default_pump_assignment(pump_assignment_params)
+          else
+            staff_member.update_pump_assignment(pump_assignment_params, on: assignment_date, assigned_by: current_user)
+          end
+
+          if saved
+            render json: MyPumpSerializer.call(staff_member.reload, on: assignment_date, assignment_mode: assignment_mode)
+              .merge(message: "#{assignment_mode == "default" ? "Default pump" : "Daily pump override"} updated for #{staff_member.name}."), status: :ok
           else
             render_error(
               status: 422,
@@ -66,7 +72,15 @@ module Api
         end
 
         def pump_assignment_params
-          resource_params(:user).permit(:fuel_pump_id, :assignment_date, assigned_fuel_pump_nozzle_ids: [])
+          resource_params(:user).permit(:assignment_mode, :fuel_pump_id, :assignment_date, assigned_fuel_pump_nozzle_ids: [])
+        end
+
+        def assignment_mode
+          raw = params[:assignment_mode].presence || resource_params(:user)[:assignment_mode].presence
+          return raw if %w[default override].include?(raw)
+
+          date_requested = params[:assignment_date].presence || resource_params(:user)[:assignment_date].presence
+          date_requested.present? ? "override" : "default"
         end
 
         def assignment_date

@@ -23,8 +23,14 @@
           <%= form_with model: current_user, url: my_pump_path, method: :patch, class: "vstack gap-3", data: { my_pump_form: true } do |form| %>
             <div>
               <%= label_tag :assignment_date, "Assignment Date", class: "form-label" %>
-              <%= date_field_tag :assignment_date, @assignment_date, class: "form-control", required: true %>
-              <div class="form-text">You can set a different pump for another working day.</div>
+              <%= date_field_tag :assignment_date, @assignment_date, class: "form-control", required: true, disabled: current_user.staff? %>
+              <div class="form-text">
+                <% if current_user.staff? %>
+                  Staff self-assignment applies to today only and does not change the default pump.
+                <% else %>
+                  Choose a date to create an override without changing the default pump.
+                <% end %>
+              </div>
             </div>
             <%= render "shared/pump_assignment_fields",
               form: form,
@@ -32,6 +38,7 @@
               assignable_fuel_pumps: @assignable_fuel_pumps,
               assignable_fuel_pump_nozzles: @assignable_fuel_pump_nozzles,
               assignment_date: @assignment_date,
+              assignment_mode: "override",
               daily_pump_assignment: @daily_pump_assignment %>
 
             <div class="d-flex gap-2">

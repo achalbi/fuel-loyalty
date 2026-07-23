@@ -15,8 +15,7 @@ module Staff
       assert_select "#topbar a.btn-icon[href=?][aria-label='Scan Vehicle Plate'][data-turbo='false']", new_staff_transaction_path(plate_scanner: 1), 1
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
       assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
-      # My Pump is admin-only now (S-MYPUMP) — staff no longer see the nav link.
-      assert_select "a.nav-link[href='#{my_pump_path}']", count: 0
+      assert_select "a.nav-link[href='#{my_pump_path}']", count: 1
       assert_select ".user-menu [data-sidebar-mode-switch][aria-label='Show side navbar as icon-only bar']", 1
       assert_select ".page-actions a.btn[href='#{new_staff_transaction_path}']", 0
       assert_select "[data-push-opt-in-panel][data-push-source='staff_notifications']", 1
@@ -34,8 +33,7 @@ module Staff
       assert_select "#topbar a.btn-icon[href=?][aria-label='Scan Vehicle Plate'][data-turbo='false']", new_staff_transaction_path(plate_scanner: 1), 1
       assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
       assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
-      # My Pump is admin-only now (S-MYPUMP) — staff no longer see the nav link.
-      assert_select "a.nav-link[href='#{my_pump_path}']", count: 0
+      assert_select "a.nav-link[href='#{my_pump_path}']", count: 1
       assert_select ".user-menu [data-sidebar-mode-switch][aria-label='Show side navbar as icon-only bar']", 1
       assert_select ".page-actions a.btn[href='#{new_staff_transaction_path}']", 0
       assert_select "[data-push-opt-in-panel]", 0

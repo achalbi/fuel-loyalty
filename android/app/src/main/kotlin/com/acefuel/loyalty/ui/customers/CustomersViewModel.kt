@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.acefuel.loyalty.core.data.StaffRepository
 import com.acefuel.loyalty.core.network.ApiResult
+import com.acefuel.loyalty.core.network.dto.CustomerCreateRequest
+import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
 import com.acefuel.loyalty.core.network.dto.CustomerSummaryDto
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,6 +24,8 @@ data class CustomersUiState(
     // E4: null = all accounts; otherwise one of drive_in / otp / credit.
     val typeFilter: String? = null,
     val error: String? = null,
+    val creating: Boolean = false,
+    val createError: String? = null,
 )
 
 val CustomersUiState.visibleCustomers: List<CustomerSummaryDto>
@@ -74,6 +78,26 @@ class CustomersViewModel(
     }
 
     fun consumeError() = _state.update { it.copy(error = null) }
+
+    fun consumeCreateError() = _state.update { it.copy(createError = null) }
+
+    fun createCustomer(request: CustomerCreateRequest, onSuccess: (CustomerProfileDto) -> Unit) {
+        if (_state.value.creating) return
+        _state.update { it.copy(creating = true, error = null, createError = null) }
+        viewModelScope.launch {
+            when (val result = repository.createCustomer(request)) {
+                is ApiResult.Success -> {
+                    _state.update { it.copy(creating = false, createError = null) }
+                    onSuccess(result.data)
+                    search(_state.value.query)
+                }
+                is ApiResult.Error -> _state.update { it.copy(creating = false, createError = result.message) }
+                is ApiResult.NetworkError -> _state.update {
+                    it.copy(creating = false, createError = "Couldn't reach the server. Try again.")
+                }
+            }
+        }
+    }
 
     private fun search(query: String, asRefresh: Boolean = false) {
         val epoch = ++searchEpoch

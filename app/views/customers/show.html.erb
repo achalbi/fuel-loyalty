@@ -328,6 +328,31 @@
         <%= render "admin/customers/crm" %>
       <% end %>
 
+      <div class="card shadow-sm loyalty-result-card customer-details-section">
+        <div class="card-body">
+          <div class="customer-details-section__header customer-details-section__header--with-action">
+            <div>
+              <h2 class="h5 mb-1">Notes</h2>
+              <p class="text-muted mb-0">Conversation notes and follow-up reminders.</p>
+            </div>
+            <% if can_edit_customer %>
+              <div class="customer-details-section__header-actions">
+                <button
+                  type="button"
+                  class="customer-details-quick-action"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editCustomerModal"
+                  aria-label="Edit notes"
+                  title="Edit notes">
+                  <i class="ti ti-pencil" aria-hidden="true"></i>
+                </button>
+              </div>
+            <% end %>
+          </div>
+          <p class="text-muted mb-0"><%= @customer.info_note.presence || "No notes added yet." %></p>
+        </div>
+      </div>
+
       <% customer_contacts = @customer.customer_contacts.active.order(:role) %>
       <div class="card shadow-sm loyalty-result-card customer-details-section">
         <div class="card-body">
@@ -365,6 +390,9 @@
                     <div class="customer-details-vehicle-row__meta">
                       <%= contact.display_role %><% if contact.phone_number.present? %> · +91 <%= contact.phone_number %><% end %>
                     </div>
+                    <% if contact.notes.present? %>
+                      <div class="customer-details-vehicle-row__commercial"><%= contact.notes %></div>
+                    <% end %>
                   </div>
                 </div>
               <% end %>

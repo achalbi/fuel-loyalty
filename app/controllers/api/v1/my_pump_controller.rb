@@ -4,11 +4,15 @@ module Api
     class MyPumpController < Api::V1::BaseController
       def show
         authorize current_user, :manage_pump?
+        return render_daily_assignment_error unless staff_daily_assignment_date_allowed?
+
         render json: MyPumpSerializer.call(current_user, on: assignment_date), status: :ok
       end
 
       def update
         authorize current_user, :manage_pump?
+        return render_daily_assignment_error unless staff_daily_assignment_date_allowed?
+
         if current_user.update_pump_assignment(my_pump_params, on: assignment_date, assigned_by: current_user)
           render json: MyPumpSerializer.call(current_user.reload, on: assignment_date)
             .merge(message: "My pump updated successfully."), status: :ok
@@ -33,6 +37,15 @@ module Api
         Date.iso8601(raw.to_s)
       rescue ArgumentError, TypeError
         Date.current
+      end
+
+      def staff_daily_assignment_date_allowed?
+        !current_user.staff? || assignment_date == Date.current
+      end
+
+      def render_daily_assignment_error
+        render_error(status: 422, code: "daily_assignment_only",
+                     message: "Staff can only set a daily pump assignment for today.")
       end
     end
   end

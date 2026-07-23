@@ -26,7 +26,7 @@ class UserPolicy < ApplicationPolicy
   alias view_id_card? view_aadhaar?
   alias purge_kyc? view_aadhaar?
 
-  # Staff may self-assign their pump for the selected day. Admins can use the
+  # Staff may self-assign a pump override for today only. Admins can use the
   # same screen for themselves as well as the separate staff-member assignment.
   def manage_pump?
     user&.admin? && record == user || user&.staff? && record == user

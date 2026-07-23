@@ -4,11 +4,14 @@ class MyPumpsController < ApplicationController
 
   def show
     authorize current_user, :manage_pump?
+    return unless staff_daily_assignment_only!
+
     load_form_state
   end
 
   def update
     authorize current_user, :manage_pump?
+    return unless staff_daily_assignment_only!
 
     if current_user.update_pump_assignment(my_pump_params, on: assignment_date, assigned_by: current_user)
       redirect_to my_pump_path(assignment_date: assignment_date), notice: "My pump updated successfully."
@@ -44,5 +47,12 @@ class MyPumpsController < ApplicationController
     Date.iso8601(raw.to_s)
   rescue ArgumentError, TypeError
     Date.current
+  end
+
+  def staff_daily_assignment_only!
+    return true unless current_user.staff? && assignment_date != Date.current
+
+    redirect_to my_pump_path, alert: "Staff can only set a daily pump assignment for today."
+    false
   end
 end

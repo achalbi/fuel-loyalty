@@ -1,6 +1,7 @@
 package com.acefuel.loyalty.ui.mypump
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -75,6 +77,7 @@ fun MyPumpScreen(
     intro: String = "Choose the pump you work on and the nozzles available to you. New " +
         "transactions use this pump and show your nozzles as options.",
     saveLabel: String = "Save My Pump",
+    allowDateSelection: Boolean = staffMemberId != null,
 ) {
     val container = LocalContainer.current
     val viewModel: MyPumpViewModel = viewModel(
@@ -111,12 +114,47 @@ fun MyPumpScreen(
                 color = MaterialTheme.nayara.textSecondary,
             )
             Spacer(Modifier.height(NayaraSpacing.Md))
+            if (staffMemberId != null) {
+                SectionLabel("Assignment type")
+                Spacer(Modifier.height(NayaraSpacing.Sm))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm),
+                ) {
+                    FilterChip(
+                        selected = state.assignmentMode == "default",
+                        onClick = { viewModel.setAssignmentMode("default") },
+                        label = { Text("Default pump") },
+                    )
+                    FilterChip(
+                        selected = state.assignmentMode == "override",
+                        onClick = { viewModel.setAssignmentMode("override") },
+                        label = { Text("Specific-day override") },
+                    )
+                }
+                Spacer(Modifier.height(NayaraSpacing.Md))
+            }
             DateField(
                 label = "Assignment date",
                 value = state.assignmentDate,
                 onChange = viewModel::setAssignmentDate,
                 modifier = Modifier.fillMaxWidth(),
+                enabled = allowDateSelection && state.assignmentMode == "override",
                 placeholder = "Select date",
+            )
+            Text(
+                when {
+                    staffMemberId != null && state.assignmentMode == "default" ->
+                        "Used on days without a specific-day override."
+                    allowDateSelection ->
+                        "The selected date overrides the default pump without changing it."
+                    else ->
+                        "Staff self-assignment applies to today only and does not change the default pump."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.nayara.textSecondary,
             )
             Spacer(Modifier.height(NayaraSpacing.Lg))
 
@@ -157,7 +195,7 @@ private fun PumpForm(
     onSave: () -> Unit,
 ) {
     if (state.saved) {
-        SavedBanner(state.assignmentDate)
+        SavedBanner(state.assignmentDate, state.assignmentMode)
         Spacer(Modifier.height(NayaraSpacing.Lg))
     }
 
@@ -273,13 +311,17 @@ private fun Hint(message: String) {
 }
 
 @Composable
-private fun SavedBanner(date: LocalDate) {
+private fun SavedBanner(date: LocalDate, assignmentMode: String) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.nayara.statusSuccessContainer),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            "Pump assignment saved for ${date.dayOfMonth} ${date.month.name.lowercase().replaceFirstChar(Char::uppercase)} ${date.year}.",
+            if (assignmentMode == "default") {
+                "Default pump assignment saved."
+            } else {
+                "Pump assignment saved for ${date.dayOfMonth} ${date.month.name.lowercase().replaceFirstChar(Char::uppercase)} ${date.year}."
+            },
             Modifier.padding(14.dp),
             color = MaterialTheme.nayara.statusOnSuccessContainer,
             fontWeight = FontWeight.SemiBold,

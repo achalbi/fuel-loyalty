@@ -97,6 +97,43 @@ module Api
           assert customer.whatsapp_opt_in?
           assert customer.sms_opt_in?
         end
+
+        test "creates an outreach customer without a name or vehicle" do
+          assert_difference -> { Customer.count }, 1 do
+            assert_no_difference -> { Vehicle.count } do
+              post api_v1_staff_customers_path,
+                params: { customer: { phone_number: "91234 56789", info_note: "Call next week" } },
+                headers: auth_headers(users(:two))
+            end
+          end
+
+          assert_response :created
+          body = response.parsed_body
+          assert_equal "9123456789", body["phone_number"]
+          assert_equal "Customer", body["name"]
+          assert_equal "Call next week", body["info_note"]
+          assert_empty body["vehicles"]
+        end
+
+        test "updates customer notes and adds a contact" do
+          customer = customers(:one)
+          patch api_v1_staff_customer_path(customer),
+            params: {
+              customer: {
+                info_note: "Discuss fleet pricing",
+                customer_contacts_attributes: [
+                  { role: "manager", name: "Ravi", phone_number: "9000012345", notes: "Call after 5 PM" }
+                ]
+              }
+            },
+            headers: auth_headers(users(:two))
+
+          assert_response :ok
+          body = response.parsed_body
+          assert_equal "Discuss fleet pricing", body["info_note"]
+          assert_equal "Call after 5 PM", body["contacts"].first["notes"]
+          assert_equal "Ravi", customer.reload.customer_contacts.first.name
+        end
       end
     end
   end

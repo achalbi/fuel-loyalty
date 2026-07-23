@@ -1719,10 +1719,25 @@
       const pumpSelect = form.querySelector("[data-my-pump-select]");
       const nozzleGroups = Array.from(form.querySelectorAll("[data-my-pump-nozzle-group]"));
       const emptyState = form.querySelector("[data-my-pump-nozzle-empty-state]");
+      const assignmentModeInputs = Array.from(form.querySelectorAll("[data-pump-assignment-mode]"));
+      const assignmentDateSection = form.querySelector("[data-pump-assignment-date]");
+      const assignmentDateInput = form.querySelector("[name='assignment_date']");
 
       if (!pumpSelect) return;
 
       form.dataset.myPumpBound = "true";
+
+      const syncAssignmentMode = () => {
+        if (!assignmentDateSection) return;
+
+        const mode = assignmentModeInputs.find((input) => input.checked)?.value || "override";
+        const isDefault = mode === "default";
+        assignmentDateSection.classList.toggle("d-none", isDefault);
+        if (assignmentDateInput) assignmentDateInput.disabled = isDefault;
+      };
+
+      assignmentModeInputs.forEach((input) => input.addEventListener("change", syncAssignmentMode));
+      syncAssignmentMode();
 
       form.querySelectorAll("[data-my-pump-nozzle-option]").forEach((option) => {
         option.addEventListener("click", (event) => {

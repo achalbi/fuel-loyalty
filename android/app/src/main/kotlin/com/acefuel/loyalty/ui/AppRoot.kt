@@ -353,7 +353,10 @@ fun AppRoot(container: ServiceContainer) {
                     AdjustPointsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.MY_PUMP) {
-                    MyPumpScreen(onBack = { navController.popBackStack() })
+                    MyPumpScreen(
+                        onBack = { navController.popBackStack() },
+                        allowDateSelection = (authState as? AuthState.LoggedIn)?.user?.role == "admin",
+                    )
                 }
                 composable(Routes.CAPTURE_VISIT) { entry ->
                     val scannedPlate by entry.savedStateHandle
@@ -481,7 +484,7 @@ fun AppRoot(container: ServiceContainer) {
                         onBack = back,
                         staffMemberId = id,
                         title = "Assign Pump",
-                        intro = "Assign this operator's pump and its active nozzles. Every transaction they record will use this pump.",
+                        intro = "Set this operator's default pump or assign a specific-day override. Staff self-assignment remains limited to today.",
                         saveLabel = "Save Pump Assignment",
                     )
                 }
