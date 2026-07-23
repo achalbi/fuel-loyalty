@@ -34,11 +34,11 @@ module Admin
 
       get new_admin_customer_path
       assert_response :success
-      assert_select "input[name='customer[name]'][required]"
-      assert_select "input[name='customer[vehicle_number]'][required]"
-      assert_select "input[type='radio'][name='customer[fuel_type]'][value='petrol'][required]"
+      assert_select "input[name='customer[name]'][required]", 0
+      assert_select "input[name='customer[vehicle_number]'][required]", 0
+      assert_select "input[type='radio'][name='customer[fuel_type]'][value='petrol'][required]", 0
       assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler']", 1
-      assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler'][required]"
+      assert_select "input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler'][required]", 0
       assert_select "select[name='customer[vehicle_kind]']", 0
       assert_select "[data-commercial-vehicle-fields].d-none", 1
       assert_select "input[name='customer[commercial_company_name]']", 1
@@ -93,13 +93,14 @@ module Admin
       assert_response :unprocessable_entity
       assert_select "#addCustomerModal[data-auto-open-modal='true']"
       assert_select "#addCustomerModal .alert.alert-danger"
-      assert_select "#addCustomerModal .alert.alert-danger", text: /Name can't be blank/
+      assert_select "#addCustomerModal .alert.alert-danger", text: /Phone number must be a 10 digit number/
     end
 
-    test "admin add customer requires initial vehicle details" do
+    test "admin can add a phone-only customer without vehicle details" do
       sign_in users(:one)
 
-      assert_no_difference -> { Customer.count } do
+      assert_difference -> { Customer.count }, 1 do
+        assert_no_difference -> { Vehicle.count } do
         post admin_customers_path, params: {
           customer: {
             name: "Suresh",
@@ -109,13 +110,12 @@ module Admin
             vehicle_kind: ""
           }
         }
+        end
       end
 
-      assert_response :unprocessable_entity
-      assert_select "#addCustomerModal[data-auto-open-modal='true']"
-      assert_select "#addCustomerModal .alert.alert-danger", text: /Vehicle number can't be blank/
-      assert_select "#addCustomerModal .alert.alert-danger", text: /Fuel type can't be blank/
-      assert_select "#addCustomerModal .alert.alert-danger", text: /Vehicle kind can't be blank/
+      customer = Customer.find_by!(phone_number: "9123456789")
+      assert_redirected_to admin_customer_path(customer)
+      assert_empty customer.vehicles
     end
 
     test "admin can create a customer with an initial vehicle" do

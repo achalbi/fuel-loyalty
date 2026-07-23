@@ -29,8 +29,8 @@
     <% end %>
 
     <div>
-      <%= form.label :name, class: "form-label" %>
-      <%= form.text_field :name, class: "form-control", required: true, autocomplete: "name" %>
+      <%= form.label :name, "Name (optional)", class: "form-label" %>
+      <%= form.text_field :name, class: "form-control", autocomplete: "name" %>
     </div>
 
     <div>
@@ -73,7 +73,12 @@
       </div>
     </div>
 
-    <% if customer.persisted? %>
+    <div>
+      <%= form.label :info_note, "Notes", class: "form-label" %>
+      <%= form.text_area :info_note, class: "form-control", rows: 3, placeholder: "Notes from conversations or follow-up plans" %>
+    </div>
+
+    <% if customer.persisted? || local_assigns[:include_contacts] %>
       <% blank_contact_rows = [2 - customer.customer_contacts.count(&:new_record?), 0].max %>
       <% blank_contact_rows.times { customer.customer_contacts.build } %>
       <fieldset class="customer-form__contacts">
@@ -114,6 +119,10 @@
                 </div>
               <% end %>
             </div>
+            <%= contact_form.text_area :notes,
+              class: "form-control form-control-sm mt-2",
+              rows: 2,
+              placeholder: "Notes about this contact or conversation" %>
           </div>
         <% end %>
       </fieldset>
@@ -122,8 +131,8 @@
     <% if include_vehicle_fields %>
       <div class="<%= "d-none" if lock_vehicle_fields %>" data-registration-editable-group="vehicle_number">
         <%= form.label :vehicle_number, "Initial Vehicle Number", class: "form-label" %>
-        <%= form.text_field :vehicle_number, class: "form-control", required: true, disabled: lock_vehicle_fields, data: { registration_vehicle_number_field: true } %>
-        <div class="form-text">You can add more vehicles after the customer record is created.</div>
+        <%= form.text_field :vehicle_number, class: "form-control", required: false, disabled: lock_vehicle_fields, data: { registration_vehicle_number_field: true } %>
+        <div class="form-text">Optional. You can add one or more vehicles after the customer record is created.</div>
       </div>
 
       <div class="<%= "d-none" if lock_vehicle_fields %>" data-registration-editable-group="fuel_type">
@@ -135,7 +144,7 @@
           field_id_prefix: "customer_fuel_type",
           errors: customer.errors[:fuel_type],
           hint: "Only active fuel types appear here.",
-          required: true,
+          required: false,
           disabled: lock_vehicle_fields %>
       </div>
 
@@ -150,7 +159,7 @@
           errors: customer.errors[:vehicle_kind],
           hint: "Only active vehicle types appear here.",
           empty_message: "No active vehicle types are available right now.",
-          required: true,
+          required: false,
           disabled: lock_vehicle_fields %>
       </div>
 

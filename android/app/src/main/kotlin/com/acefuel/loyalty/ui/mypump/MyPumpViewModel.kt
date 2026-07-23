@@ -16,6 +16,7 @@ import java.time.LocalDate
 
 data class MyPumpUiState(
     val assignmentDate: LocalDate = LocalDate.now(),
+    val assignmentMode: String = "override",
     val loading: Boolean = true,
     val loadError: String? = null,
     val pumps: List<PumpDto> = emptyList(),
@@ -53,10 +54,15 @@ class MyPumpViewModel(
     fun load() {
         _state.update { it.copy(loading = true, loadError = null) }
         viewModelScope.launch {
+            val mode = _state.value.assignmentMode
             val result = if (staffMemberId != null) {
-                repository.staffMemberPump(staffMemberId, _state.value.assignmentDate.toString())
+                repository.staffMemberPump(
+                    staffMemberId = staffMemberId,
+                    assignmentDate = _state.value.assignmentDate.takeIf { mode == "override" }?.toString(),
+                    assignmentMode = mode,
+                )
             } else {
-                repository.myPump(_state.value.assignmentDate.toString())
+                repository.myPump(_state.value.assignmentDate.toString(), "override")
             }
             when (result) {
                 is ApiResult.Success -> _state.update { it.applyLoaded(result.data) }
@@ -71,6 +77,13 @@ class MyPumpViewModel(
     fun setAssignmentDate(date: LocalDate) {
         if (_state.value.assignmentDate == date) return
         _state.update { it.copy(assignmentDate = date, saved = false) }
+        load()
+    }
+
+    fun setAssignmentMode(mode: String) {
+        if (staffMemberId == null || mode !in setOf("default", "override")) return
+        if (_state.value.assignmentMode == mode) return
+        _state.update { it.copy(assignmentMode = mode, saved = false) }
         load()
     }
 
@@ -99,9 +112,15 @@ class MyPumpViewModel(
         viewModelScope.launch {
             val nozzleIds = s.selectedNozzleIds.toList()
             val result = if (staffMemberId != null) {
-                repository.updateStaffMemberPump(staffMemberId, pumpId, nozzleIds, s.assignmentDate.toString())
+                repository.updateStaffMemberPump(
+                    staffMemberId = staffMemberId,
+                    fuelPumpId = pumpId,
+                    nozzleIds = nozzleIds,
+                    assignmentDate = s.assignmentDate.takeIf { s.assignmentMode == "override" }?.toString(),
+                    assignmentMode = s.assignmentMode,
+                )
             } else {
-                repository.updateMyPump(pumpId, nozzleIds, s.assignmentDate.toString())
+                repository.updateMyPump(pumpId, nozzleIds, s.assignmentDate.toString(), "override")
             }
             when (result) {
                 is ApiResult.Success -> _state.update { it.applyLoaded(result.data).copy(saved = true) }
@@ -131,6 +150,7 @@ class MyPumpViewModel(
             pumps = data.pumps,
             selectedPumpId = selectedPump?.id,
             selectedNozzleIds = validNozzleIds,
+            assignmentMode = data.assignmentMode ?: assignmentMode,
         )
     }
 }

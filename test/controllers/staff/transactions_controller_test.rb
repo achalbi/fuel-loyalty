@@ -38,9 +38,8 @@ module Staff
       assert_select "input#vehicle_transaction_transaction_payment_mode_cash + label[for='vehicle_transaction_transaction_payment_mode_cash']", text: "Cash", count: 1
       assert_select "input#vehicle_transaction_transaction_payment_mode_credit + label[for='vehicle_transaction_transaction_payment_mode_credit']", text: "Credit", count: 1
       assert_select "[data-transaction-nozzle-status]", 2
-      # Staff can't change their pump anymore (S-MYPUMP) — an admin assigns it.
-      assert_select "a.transaction-pump-card__change-link.customer-details-vehicle-row__menu-toggle[href='#{my_pump_path}'][aria-label='Change My Pump']", count: 0
-      assert_select ".transaction-pump-card__change-link .ti.ti-edit", count: 0
+      assert_select "a.transaction-pump-card__change-link.customer-details-vehicle-row__menu-toggle[href='#{my_pump_path}'][aria-label='Change My Pump']", count: 2
+      assert_select ".transaction-pump-card__change-link .ti.ti-edit", count: 2
       assert_select ".transaction-pump-card .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#phone_transaction_pump_hint'][aria-controls='phone_transaction_pump_hint'][aria-label='Show My Pump help']", 1
       assert_select ".transaction-pump-card .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#vehicle_transaction_pump_hint'][aria-controls='vehicle_transaction_pump_hint'][aria-label='Show My Pump help']", 1
       assert_select "#phone_transaction_pump_hint.collapse .transaction-entry-titlebar__hint-card", text: /Your selected pump can be changed by clicking the change icon on top-right/

@@ -104,21 +104,46 @@ module Admin
       assert_response :success
       assert_select "h1", text: "Assign Pump"
       assert_select "form[action='#{pump_admin_staff_member_path(users(:two))}'][data-my-pump-form='true']"
+      assert_select "input[name='assignment_mode'][value='default'][checked]", 1
+      assert_select "input[name='assignment_mode'][value='override']", 1
+      assert_select "input[name='assignment_date'][disabled]", 1
       assert_select "select[name='user[fuel_pump_id]']", 1
     end
 
     test "admin can assign a staff member's pump and nozzles" do
       sign_in users(:one)
+      default_pump_id = users(:two).fuel_pump_id
+      second_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
+      second_nozzle = second_pump.nozzles.first
+      target_date = Date.current + 1.day
+
+      patch pump_admin_staff_member_path(users(:two)), params: {
+        assignment_mode: "override",
+        user: { assignment_date: target_date.iso8601, fuel_pump_id: second_pump.id, assigned_fuel_pump_nozzle_ids: ["", second_nozzle.id] }
+      }
+
+      assert_redirected_to admin_staff_members_path
+      user = users(:two).reload
+      assert_equal default_pump_id, user.fuel_pump_id
+      assert_equal second_pump, user.transaction_fuel_pump(on: target_date)
+      assert_equal [second_nozzle.id], user.pump_assignment_for(on: target_date).assigned_fuel_pump_nozzle_ids
+    end
+
+    test "admin can update a staff member's protected default pump and nozzles" do
+      sign_in users(:one)
       second_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
       second_nozzle = second_pump.nozzles.first
 
       patch pump_admin_staff_member_path(users(:two)), params: {
+        assignment_mode: "default",
         user: { fuel_pump_id: second_pump.id, assigned_fuel_pump_nozzle_ids: ["", second_nozzle.id] }
       }
 
       assert_redirected_to admin_staff_members_path
-      assert_equal second_pump, users(:two).reload.assigned_fuel_pump
-      assert_equal [second_nozzle.id], users(:two).assigned_fuel_pump_nozzle_ids
+      user = users(:two).reload
+      assert_equal second_pump.id, user.fuel_pump_id
+      assert_equal [second_nozzle.id], user.assigned_fuel_pump_nozzle_ids
+      assert_nil user.pump_assignment_for(on: Date.current + 1.day)
     end
 
     test "assigning a pump requires at least one nozzle and leaves the old assignment intact" do
@@ -129,6 +154,7 @@ module Admin
       assert before_nozzles.any?, "fixture must start with an existing assignment"
 
       patch pump_admin_staff_member_path(users(:two)), params: {
+        assignment_mode: "override",
         user: { fuel_pump_id: fuel_pumps(:one).id, assigned_fuel_pump_nozzle_ids: [""] }
       }
 

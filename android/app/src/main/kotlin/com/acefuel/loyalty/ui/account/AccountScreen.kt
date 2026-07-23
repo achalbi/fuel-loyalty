@@ -120,18 +120,16 @@ fun AccountScreen(
             }
         }
 
-        // My Pump self-service is admin-only (S-MYPUMP); staff have their pump
-        // assigned by an admin, so the tile is hidden for them.
-        if (isAdmin) {
-            SectionHeader("Pump")
-            NayaraListRow(
-                title = "My Pump",
-                subtitle = "Choose your pump and its active nozzles",
-                leadingIcon = Icons.Filled.LocalGasStation,
-                leadingTint = nayara.actionPrimary,
-                onClick = { haptics.tick(); onMyPump() },
-            )
-        }
+        // Staff can self-assign the pump and nozzles for each working day;
+        // admins use the same screen for their own assignment.
+        SectionHeader("Pump")
+        NayaraListRow(
+            title = "My Pump",
+            subtitle = "Choose your pump and its active nozzles for today",
+            leadingIcon = Icons.Filled.LocalGasStation,
+            leadingTint = nayara.actionPrimary,
+            onClick = { haptics.tick(); onMyPump() },
+        )
 
         if (isAdmin) {
             SectionHeader("Administration")

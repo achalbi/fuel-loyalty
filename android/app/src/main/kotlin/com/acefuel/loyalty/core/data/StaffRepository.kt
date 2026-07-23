@@ -4,6 +4,8 @@ import com.acefuel.loyalty.core.network.AceFuelApi
 import com.acefuel.loyalty.core.network.ApiResult
 import com.acefuel.loyalty.core.network.apiCall
 import com.acefuel.loyalty.core.network.dto.CatalogResponse
+import com.acefuel.loyalty.core.network.dto.CustomerCreateEnvelope
+import com.acefuel.loyalty.core.network.dto.CustomerCreateRequest
 import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
 import com.acefuel.loyalty.core.network.dto.CustomerSummaryDto
 import com.acefuel.loyalty.core.network.dto.CustomerUpdateEnvelope
@@ -28,6 +30,8 @@ import com.acefuel.loyalty.core.network.dto.TransactionCreateResponse
 import com.acefuel.loyalty.core.network.dto.VisitEntryCreateResponse
 import com.acefuel.loyalty.core.network.dto.VisitEntryEnvelope
 import com.acefuel.loyalty.core.network.dto.VisitEntryRequest
+import com.acefuel.loyalty.core.network.dto.VehicleUpdateEnvelope
+import com.acefuel.loyalty.core.network.dto.VehicleUpdateRequest
 import com.acefuel.loyalty.core.network.dto.VehicleMatchDto
 import kotlinx.serialization.json.Json
 
@@ -63,12 +67,28 @@ class StaffRepository(
     suspend fun customerProfile(id: Long): ApiResult<CustomerProfileDto> =
         apiCall(json) { api.staffCustomerProfile(id) }
 
+    suspend fun createCustomer(request: CustomerCreateRequest): ApiResult<CustomerProfileDto> =
+        apiCall(json) { api.createStaffCustomer(CustomerCreateEnvelope(request)) }
+
     suspend fun customerLedger(id: Long, page: Int): ApiResult<LedgerPageDto> =
         apiCall(json) { api.staffCustomerLedger(id, page) }
 
     // F2 — update a customer's channel opt-ins (and account type).
     suspend fun updateCustomer(id: Long, request: CustomerUpdateRequest): ApiResult<CustomerProfileDto> =
         apiCall(json) { api.staffUpdateCustomer(id, CustomerUpdateEnvelope(request)) }
+
+    suspend fun updateVehicle(
+        customerId: Long,
+        vehicleId: Long,
+        request: VehicleUpdateRequest,
+    ): ApiResult<CustomerProfileDto> =
+        apiCall(json) { api.updateStaffVehicle(customerId, vehicleId, VehicleUpdateEnvelope(request)) }
+
+    suspend fun createVehicle(
+        customerId: Long,
+        request: VehicleUpdateRequest,
+    ): ApiResult<CustomerProfileDto> =
+        apiCall(json) { api.createStaffVehicle(customerId, VehicleUpdateEnvelope(request)) }
 
     suspend fun setPaused(id: Long, paused: Boolean): ApiResult<CustomerProfileDto> =
         apiCall(json) { if (paused) api.pauseRewards(id) else api.resumeRewards(id) }
@@ -91,8 +111,8 @@ class StaffRepository(
     suspend fun registerCustomer(request: RegisterCustomerRequest): ApiResult<RegisterCustomerResponse> =
         apiCall(json) { api.registerCustomer(RegisterCustomerEnvelope(request)) }
 
-    suspend fun myPump(assignmentDate: String? = null): ApiResult<MyPumpDto> =
-        apiCall(json) { api.myPump(assignmentDate) }
+    suspend fun myPump(assignmentDate: String? = null, assignmentMode: String? = null): ApiResult<MyPumpDto> =
+        apiCall(json) { api.myPump(assignmentDate, assignmentMode) }
 
     /**
      * Assign the current staff member's pump + active nozzles. The `""` sentinel
@@ -103,11 +123,13 @@ class StaffRepository(
         fuelPumpId: Long,
         nozzleIds: List<Long>,
         assignmentDate: String? = null,
+        assignmentMode: String? = "override",
     ): ApiResult<MyPumpDto> =
         apiCall(json) {
             api.updateMyPump(
                 MyPumpUpdateEnvelope(
                     MyPumpUpdateRequest(
+                        assignmentMode = assignmentMode,
                         assignmentDate = assignmentDate,
                         fuelPumpId = fuelPumpId,
                         assignedNozzleIds = listOf("") + nozzleIds.map(Long::toString),
@@ -117,8 +139,12 @@ class StaffRepository(
         }
 
     /** Admin: read a staff member's pump assignment + the pump catalog (A10). */
-    suspend fun staffMemberPump(staffMemberId: Long, assignmentDate: String? = null): ApiResult<MyPumpDto> =
-        apiCall(json) { api.staffMemberPump(staffMemberId, assignmentDate) }
+    suspend fun staffMemberPump(
+        staffMemberId: Long,
+        assignmentDate: String? = null,
+        assignmentMode: String? = "default",
+    ): ApiResult<MyPumpDto> =
+        apiCall(json) { api.staffMemberPump(staffMemberId, assignmentDate, assignmentMode) }
 
     /** Admin: assign a staff member's pump + active nozzles (A10). */
     suspend fun updateStaffMemberPump(
@@ -126,12 +152,14 @@ class StaffRepository(
         fuelPumpId: Long,
         nozzleIds: List<Long>,
         assignmentDate: String? = null,
+        assignmentMode: String? = "default",
     ): ApiResult<MyPumpDto> =
         apiCall(json) {
             api.updateStaffMemberPump(
                 staffMemberId,
                 MyPumpUpdateEnvelope(
                     MyPumpUpdateRequest(
+                        assignmentMode = assignmentMode,
                         assignmentDate = assignmentDate,
                         fuelPumpId = fuelPumpId,
                         assignedNozzleIds = listOf("") + nozzleIds.map(Long::toString),

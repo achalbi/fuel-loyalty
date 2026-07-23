@@ -6,7 +6,9 @@ import com.acefuel.loyalty.core.data.StaffRepository
 import com.acefuel.loyalty.core.network.ApiResult
 import com.acefuel.loyalty.core.network.dto.CustomerProfileDto
 import com.acefuel.loyalty.core.network.dto.CustomerUpdateRequest
+import com.acefuel.loyalty.core.network.dto.CatalogResponse
 import com.acefuel.loyalty.core.network.dto.LedgerEntryDto
+import com.acefuel.loyalty.core.network.dto.VehicleUpdateRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +33,9 @@ data class ProfileUiState(
     val ledgerHasMore: Boolean = false,
     val ledgerLoading: Boolean = false,
     val actionInFlight: ProfileAction? = null,
+    val catalog: CatalogResponse? = null,
+    val catalogLoading: Boolean = false,
+    val vehicleSaving: Boolean = false,
 )
 
 class CustomerProfileViewModel(
@@ -164,6 +169,83 @@ class CustomerProfileViewModel(
         }
     }
 
+    fun updateCustomerDetails(request: CustomerUpdateRequest, onSuccess: () -> Unit) {
+        runAction(ProfileAction.OptIn, "Customer details updated", onSuccess) {
+            repository.updateCustomer(customerId, request)
+        }
+    }
+
+    fun ensureCatalog() {
+        val current = _state.value
+        if (current.catalog != null || current.catalogLoading) return
+        _state.update { it.copy(catalogLoading = true) }
+        viewModelScope.launch {
+            when (val result = repository.catalog()) {
+                is ApiResult.Success -> _state.update { it.copy(catalog = result.data, catalogLoading = false) }
+                is ApiResult.Error -> _state.update {
+                    it.copy(catalogLoading = false, transientError = result.message)
+                }
+                is ApiResult.NetworkError -> _state.update {
+                    it.copy(catalogLoading = false, transientError = "Couldn't reach the server. Try again.")
+                }
+            }
+        }
+    }
+
+    fun updateVehicle(
+        vehicleId: Long,
+        request: VehicleUpdateRequest,
+        onSuccess: () -> Unit,
+    ) {
+        if (_state.value.vehicleSaving) return
+        _state.update { it.copy(vehicleSaving = true, transientError = null) }
+        viewModelScope.launch {
+            when (val result = repository.updateVehicle(customerId, vehicleId, request)) {
+                is ApiResult.Success -> {
+                    _state.update {
+                        it.copy(
+                            vehicleSaving = false,
+                            profile = result.data,
+                            actionMessage = "Vehicle details updated",
+                        )
+                    }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _state.update {
+                    it.copy(vehicleSaving = false, transientError = result.message)
+                }
+                is ApiResult.NetworkError -> _state.update {
+                    it.copy(vehicleSaving = false, transientError = "Couldn't reach the server. Try again.")
+                }
+            }
+        }
+    }
+
+    fun createVehicle(request: VehicleUpdateRequest, onSuccess: () -> Unit) {
+        if (_state.value.vehicleSaving) return
+        _state.update { it.copy(vehicleSaving = true, transientError = null) }
+        viewModelScope.launch {
+            when (val result = repository.createVehicle(customerId, request)) {
+                is ApiResult.Success -> {
+                    _state.update {
+                        it.copy(
+                            vehicleSaving = false,
+                            profile = result.data,
+                            actionMessage = "Vehicle added",
+                        )
+                    }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _state.update {
+                    it.copy(vehicleSaving = false, transientError = result.message)
+                }
+                is ApiResult.NetworkError -> _state.update {
+                    it.copy(vehicleSaving = false, transientError = "Couldn't reach the server. Try again.")
+                }
+            }
+        }
+    }
+
     // One-shot consumers so each snackbar fires exactly once.
     fun consumeActionMessage() = _state.update { it.copy(actionMessage = null) }
 
@@ -172,6 +254,7 @@ class CustomerProfileViewModel(
     private fun runAction(
         kind: ProfileAction,
         successMessage: String,
+        onSuccess: () -> Unit = {},
         block: suspend () -> ApiResult<CustomerProfileDto>,
     ) {
         if (_state.value.actionInFlight != null) return
@@ -180,6 +263,7 @@ class CustomerProfileViewModel(
             when (val result = block()) {
                 is ApiResult.Success ->
                     _state.update { it.copy(actionInFlight = null, profile = result.data, actionMessage = successMessage) }
+                        .also { onSuccess() }
                 is ApiResult.Error ->
                     _state.update { it.copy(actionInFlight = null, transientError = result.message) }
                 is ApiResult.NetworkError ->

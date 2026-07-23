@@ -14,7 +14,10 @@ module Staff
       normalized_phone = Customer.normalize_phone_number(customer_params[:phone_number])
       @customer = Customer.new(phone_number: normalized_phone)
       authorize @customer
-      @customer.name = customer_params[:name] if customer_params[:name].present?
+      @customer.assign_attributes(customer_params.slice(
+        :name, :info_note, :customer_type, :transport_name, :approx_vehicle_count,
+        :whatsapp_opt_in, :sms_opt_in, :customer_contacts_attributes,
+      ))
 
       if persist_customer_with_vehicle
         redirect_to customer_path(@customer), notice: "Customer created successfully."
@@ -185,35 +188,34 @@ module Staff
     end
 
     def persist_customer_with_vehicle
-      return false unless initial_vehicle_fields_present?
-
       success = false
 
       Customer.transaction do
-        unless @customer.save && save_vehicle
+        unless @customer.save
           raise ActiveRecord::Rollback
         end
 
+        vehicle_state = initial_vehicle_state
+        if vehicle_state == :partial || (vehicle_state == :complete && !save_vehicle)
+          raise ActiveRecord::Rollback
+        end
         success = true
       end
 
       success
     end
 
-    def initial_vehicle_fields_present?
-      @customer.valid?
+    def initial_vehicle_state
+      values = %i[vehicle_number fuel_type vehicle_kind].map { |field| customer_params[field].presence }
+      return :none if values.all?(&:blank?)
+      return :complete if values.all?(&:present?)
 
-      required_fields = {
-        vehicle_number: customer_params[:vehicle_number],
-        fuel_type: customer_params[:fuel_type],
-        vehicle_kind: customer_params[:vehicle_kind]
-      }
+      %i[vehicle_number fuel_type vehicle_kind].zip(values).each do |field, value|
+        next if value.present?
 
-      required_fields.each do |field, value|
-        @customer.errors.add(field, "can't be blank") if value.blank?
+        @customer.errors.add(field, "can't be blank")
       end
-
-      @customer.errors.none?
+      :partial
     end
 
     def update_status!(active, notice_message)

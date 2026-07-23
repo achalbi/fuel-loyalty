@@ -65,15 +65,20 @@ module Api
         end
 
         # POST /api/v1/staff/customers
-        # { name, phone_number, vehicle_number, fuel_type, vehicle_kind, commercial_* }
-        # Creates the customer + an initial vehicle atomically.
+        # { name?, phone_number, info_note?, vehicle_number?, fuel_type?, vehicle_kind?, commercial_* }
+        # Creates the customer, and creates an initial vehicle only when the
+        # complete vehicle set is supplied. This supports outreach leads that
+        # are known only by phone at first.
         def create
-          attrs = resource_params(:customer)
+          attrs = customer_params
           customer = Customer.new(phone_number: Customer.normalize_phone_number(attrs[:phone_number]))
-          customer.name = attrs[:name] if attrs[:name].present?
+          customer.assign_attributes(attrs.slice(
+            :name, :info_note, :customer_type, :transport_name, :approx_vehicle_count,
+            :whatsapp_opt_in, :sms_opt_in, :customer_contacts_attributes,
+          ))
           authorize customer, :create?
 
-          if persist_customer_with_vehicle(customer)
+          if persist_customer(customer, attrs)
             render json: CustomerProfileSerializer.call(customer.reload, RewardSetting.current), status: :created
           else
             render_validation_error(customer)
@@ -84,12 +89,16 @@ module Api
         def update
           customer = Customer.find(params[:id])
           authorize customer, :update?
-          attrs = resource_params(:customer)
+          attrs = customer_params
           customer.name = attrs[:name] if attrs.key?(:name)
           customer.phone_number = Customer.normalize_phone_number(attrs[:phone_number]) if attrs.key?(:phone_number)
           customer.customer_type = attrs[:customer_type] if attrs.key?(:customer_type) && Customer.customer_types.key?(attrs[:customer_type].to_s)
           customer.whatsapp_opt_in = ActiveModel::Type::Boolean.new.cast(attrs[:whatsapp_opt_in]) if attrs.key?(:whatsapp_opt_in)
           customer.sms_opt_in = ActiveModel::Type::Boolean.new.cast(attrs[:sms_opt_in]) if attrs.key?(:sms_opt_in)
+          customer.info_note = attrs[:info_note] if attrs.key?(:info_note)
+          customer.transport_name = attrs[:transport_name] if attrs.key?(:transport_name)
+          customer.approx_vehicle_count = attrs[:approx_vehicle_count] if attrs.key?(:approx_vehicle_count)
+          customer.customer_contacts_attributes = attrs[:customer_contacts_attributes] if attrs.key?(:customer_contacts_attributes)
 
           if customer.save
             render json: CustomerProfileSerializer.call(customer.reload, RewardSetting.current), status: :ok
@@ -111,29 +120,47 @@ module Api
                        details: record.errors.messages)
         end
 
-        def persist_customer_with_vehicle(customer)
-          return false unless initial_vehicle_fields_present?(customer)
-
+        def persist_customer(customer, attrs)
           success = false
           Customer.transaction do
-            raise ActiveRecord::Rollback unless customer.save && save_initial_vehicle(customer)
+            unless customer.save
+              raise ActiveRecord::Rollback
+            end
+
+            vehicle_state = initial_vehicle_state(customer, attrs)
+            if vehicle_state == :partial || (vehicle_state == :complete && !save_initial_vehicle(customer, attrs))
+              raise ActiveRecord::Rollback
+            end
             success = true
           end
           success
         end
 
-        # Requires vehicle_number/fuel_type/vehicle_kind (name/phone enforced by the model).
-        def initial_vehicle_fields_present?(customer)
-          attrs = resource_params(:customer)
-          customer.valid?
-          %i[vehicle_number fuel_type vehicle_kind].each do |field|
-            customer.errors.add(field, "can't be blank") if attrs[field].blank?
-          end
-          customer.errors.none?
+        def customer_params
+          resource_params(:customer).permit(
+            :name, :phone_number, :info_note, :customer_type, :transport_name,
+            :approx_vehicle_count, :whatsapp_opt_in, :sms_opt_in,
+            :vehicle_number, :fuel_type, :vehicle_kind,
+            :commercial_company_name, :commercial_contact_name,
+            :commercial_contact_phone_number, :commercial_address, :commercial_notes,
+            customer_contacts_attributes: %i[id role name phone_number contacted notes active _destroy],
+          )
         end
 
-        def save_initial_vehicle(customer)
-          attrs = resource_params(:customer)
+        def initial_vehicle_state(customer, attrs)
+          values = %i[vehicle_number fuel_type vehicle_kind].map { |field| attrs[field].presence }
+          return :none if values.all?(&:blank?)
+          return :complete if values.all?(&:present?)
+
+          %i[vehicle_number fuel_type vehicle_kind].zip(values).each do |field, value|
+            next if value.present?
+
+            customer.errors.add(field, "can't be blank")
+          end
+          :partial
+        end
+
+        def save_initial_vehicle(customer, attrs)
           normalized = Vehicle.normalize_vehicle_number(attrs[:vehicle_number])
           vehicle = customer.vehicles.find_or_initialize_by(vehicle_number: normalized)
           return vehicle if vehicle.persisted?

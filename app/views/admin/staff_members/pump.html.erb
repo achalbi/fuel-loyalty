@@ -6,7 +6,7 @@
       <div class="card-body">
         <div class="mb-3">
           <h1 class="h3 mb-1">Assign Pump</h1>
-          <p class="text-muted mb-0">Assign <strong><%= @staff_member.name %></strong> to a pump and its active nozzles for a specific day.</p>
+          <p class="text-muted mb-0">Assign <strong><%= @staff_member.name %></strong> a protected default pump or a date-specific override.</p>
         </div>
 
         <% if @assignable_fuel_pumps.empty? %>
@@ -15,10 +15,25 @@
           </div>
         <% else %>
           <%= form_with model: @staff_member, url: pump_admin_staff_member_path(@staff_member), method: :patch, class: "vstack gap-3", data: { my_pump_form: true } do |form| %>
-            <div>
+            <fieldset class="border rounded-3 p-3">
+              <legend class="float-none w-auto px-2 fs-6 mb-2">Assignment type</legend>
+              <div class="d-flex flex-wrap gap-3">
+                <div class="form-check">
+                  <%= radio_button_tag :assignment_mode, "default", @assignment_mode == "default", class: "form-check-input", data: { pump_assignment_mode: true } %>
+                  <%= label_tag "assignment_mode_default", "Default pump", class: "form-check-label" %>
+                  <div class="form-text">Used on days without an override.</div>
+                </div>
+                <div class="form-check">
+                  <%= radio_button_tag :assignment_mode, "override", @assignment_mode == "override", class: "form-check-input", data: { pump_assignment_mode: true } %>
+                  <%= label_tag "assignment_mode_override", "Specific-day override", class: "form-check-label" %>
+                  <div class="form-text">Overrides the default only for one day.</div>
+                </div>
+              </div>
+            </fieldset>
+
+            <div data-pump-assignment-date <%= "class=d-none" if @assignment_mode == "default" %>>
               <%= label_tag :assignment_date, "Assignment Date", class: "form-label" %>
-              <%= date_field_tag :assignment_date, @assignment_date, class: "form-control", required: true %>
-              <div class="form-text">The operator can have a different pump assignment on another day.</div>
+              <%= date_field_tag :assignment_date, @assignment_date, class: "form-control", required: true, disabled: @assignment_mode == "default" %>
             </div>
             <%= render "shared/pump_assignment_fields",
               form: form,
@@ -26,6 +41,7 @@
               assignable_fuel_pumps: @assignable_fuel_pumps,
               assignable_fuel_pump_nozzles: @assignable_fuel_pump_nozzles,
               assignment_date: @assignment_date,
+              assignment_mode: @assignment_mode,
               daily_pump_assignment: @daily_pump_assignment %>
 
             <div class="d-flex gap-2">

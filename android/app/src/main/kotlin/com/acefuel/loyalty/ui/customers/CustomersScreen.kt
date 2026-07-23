@@ -24,13 +24,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,12 +44,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
+import com.acefuel.loyalty.core.network.dto.CustomerCreateRequest
 import com.acefuel.loyalty.core.network.dto.CustomerSummaryDto
 import com.acefuel.loyalty.ui.designsystem.ActiveChip
 import com.acefuel.loyalty.ui.designsystem.Avatar
 import com.acefuel.loyalty.ui.designsystem.EmptyState
 import com.acefuel.loyalty.ui.designsystem.ErrorState
 import com.acefuel.loyalty.ui.designsystem.NayaraCard
+import com.acefuel.loyalty.ui.designsystem.NayaraBottomSheet
 import com.acefuel.loyalty.ui.designsystem.NayaraPullToRefresh
 import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
 import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
@@ -55,6 +61,8 @@ import com.acefuel.loyalty.ui.designsystem.SkeletonList
 import com.acefuel.loyalty.ui.designsystem.rememberHaptics
 import com.acefuel.loyalty.ui.designsystem.showError
 import com.acefuel.loyalty.ui.theme.NayaraSpacing
+import com.acefuel.loyalty.ui.theme.NayaraButton
+import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
 import com.acefuel.loyalty.ui.theme.nayara
 
 // E4: account-type filter chips (null value = all accounts).
@@ -82,6 +90,7 @@ fun CustomersScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val haptics = rememberHaptics()
+    var showAddCustomer by remember { mutableStateOf(false) }
 
     // Failure with stale results still on screen -> snackbar, keep the list.
     // Failure with nothing to show falls through to the full-area ErrorState.
@@ -95,7 +104,13 @@ fun CustomersScreen(
     }
 
     Scaffold(
-        topBar = { NayaraTopBar(title = "Customers", onBack = onBack) },
+        topBar = {
+            NayaraTopBar(
+                title = "Customers",
+                onBack = onBack,
+                actions = { TextButton(onClick = { showAddCustomer = true }) { Text("Add") } },
+            )
+        },
         snackbarHost = { NayaraSnackbarHost(snackbar) },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -210,6 +225,104 @@ fun CustomersScreen(
                         }
                     }
                 }
+            }
+
+            if (showAddCustomer) {
+                AddCustomerSheet(
+                    creating = state.creating,
+                    error = state.createError,
+                    onDismiss = {
+                        if (!state.creating) {
+                            viewModel.consumeCreateError()
+                            showAddCustomer = false
+                        }
+                    },
+                    onCreate = { request ->
+                        viewModel.createCustomer(request) { customer ->
+                            showAddCustomer = false
+                            onOpenCustomer(customer.id)
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddCustomerSheet(
+    creating: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onCreate: (CustomerCreateRequest) -> Unit,
+) {
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    var validationError by remember { mutableStateOf<String?>(null) }
+
+    NayaraBottomSheet(
+        onDismissRequest = onDismiss,
+        title = "Add customer",
+        subtitle = "Save an outreach lead now. Vehicles and contacts can be added later.",
+    ) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+        ) {
+            OutlinedTextField(
+                value = phone,
+                onValueChange = { phone = it.filter(Char::isDigit).take(10) },
+                label = { Text("Phone number") },
+                prefix = { Text("+91 ") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name (optional)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { notes = it },
+                label = { Text("Notes (optional)") },
+                placeholder = { Text("Conversation notes or follow-up plan") },
+                minLines = 3,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            validationError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
+                NayaraOutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !creating,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Cancel") }
+                NayaraButton(
+                    onClick = {
+                        validationError = if (phone.length != 10) "Enter a 10-digit phone number." else null
+                        if (phone.length == 10) {
+                            onCreate(
+                                CustomerCreateRequest(
+                                    name = name.trim().ifBlank { null },
+                                    phoneNumber = phone,
+                                    infoNote = notes.trim().ifBlank { null },
+                                ),
+                            )
+                        }
+                    },
+                    enabled = !creating,
+                    loading = creating,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Save") }
             }
         }
     }

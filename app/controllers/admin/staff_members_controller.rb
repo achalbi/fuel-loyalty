@@ -39,7 +39,7 @@ module Admin
       redirect_to admin_staff_members_path, alert: @staff_member.errors.full_messages.to_sentence.presence || "Unable to soft delete this staff member."
     end
 
-    # GET /admin/staff_members/:id/pump — admin assigns this operator's pump (A10).
+    # GET /admin/staff_members/:id/pump — admin assigns the operator default or a daily override (A10).
     def pump
       @staff_member = staff_member_for_pump
       authorize @staff_member, :assign_pump?
@@ -51,8 +51,14 @@ module Admin
       @staff_member = staff_member_for_pump
       authorize @staff_member, :assign_pump?
 
-      if @staff_member.update_pump_assignment(pump_assignment_params, on: assignment_date, assigned_by: current_user)
-        redirect_to admin_staff_members_path, notice: "Pump assignment updated for #{@staff_member.name}."
+      saved = if assignment_mode == "default"
+        @staff_member.update_default_pump_assignment(pump_assignment_params)
+      else
+        @staff_member.update_pump_assignment(pump_assignment_params, on: assignment_date, assigned_by: current_user)
+      end
+
+      if saved
+        redirect_to admin_staff_members_path, notice: "#{assignment_mode == "default" ? "Default pump" : "Daily pump override"} updated for #{@staff_member.name}."
       else
         load_pump_form_state
         render :pump, status: :unprocessable_entity
@@ -70,12 +76,21 @@ module Admin
       @assignable_fuel_pump_nozzles = @assignable_fuel_pumps.index_with do |fuel_pump|
         fuel_pump.nozzles.active.ordered.to_a
       end
+      @assignment_mode = assignment_mode
       @assignment_date = assignment_date
-      @daily_pump_assignment = @staff_member.pump_assignment_for(on: @assignment_date)
+      @daily_pump_assignment = @assignment_mode == "override" ? @staff_member.pump_assignment_for(on: @assignment_date) : nil
     end
 
     def pump_assignment_params
       params.require(:user).permit(:fuel_pump_id, :assignment_date, assigned_fuel_pump_nozzle_ids: [])
+    end
+
+    def assignment_mode
+      raw = params[:assignment_mode].presence || params.dig(:user, :assignment_mode).presence
+      return raw if %w[default override].include?(raw)
+
+      date_requested = params[:assignment_date].presence || params.dig(:user, :assignment_date).presence
+      date_requested.present? ? "override" : "default"
     end
 
     def assignment_date

@@ -241,6 +241,26 @@ class UserTest < ActiveSupport::TestCase
     assert_equal [fuel_pump_nozzles(:one)], user.transaction_fuel_pump_nozzles.to_a
   end
 
+  test "daily pump override does not change the protected default assignment" do
+    user = users(:two)
+    default_pump_id = user.fuel_pump_id
+    default_nozzle_ids = user.assigned_fuel_pump_nozzle_ids
+    override_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
+    override_nozzle = override_pump.nozzles.first
+
+    assert user.update_pump_assignment(
+      { fuel_pump_id: override_pump.id, assigned_fuel_pump_nozzle_ids: [override_nozzle.id] },
+      on: Date.current,
+      assigned_by: user,
+    )
+
+    user.reload
+    assert_equal default_pump_id, user.fuel_pump_id
+    assert_equal default_nozzle_ids, user.assigned_fuel_pump_nozzle_ids
+    assert_equal override_pump, user.transaction_fuel_pump
+    assert_equal [override_nozzle], user.transaction_fuel_pump_nozzles.to_a
+  end
+
   test "login and display phone number do not raise when phone number attribute is unavailable" do
     user = User.new(name: "Admin", username: "admin", email: "admin@example.com")
     original_has_attribute = user.method(:has_attribute?)
