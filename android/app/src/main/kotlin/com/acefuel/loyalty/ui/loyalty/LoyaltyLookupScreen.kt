@@ -166,7 +166,7 @@ fun LoyaltyLookupCard(modifier: Modifier = Modifier) {
                 if (canClear) {
                     NayaraButton(
                         onClick = { clearLookup() },
-                        modifier = Modifier.width(120.dp),
+                        modifier = Modifier.width(92.dp),
                     ) {
                         Text(stringResource(R.string.ds_clear))
                     }
@@ -175,7 +175,7 @@ fun LoyaltyLookupCard(modifier: Modifier = Modifier) {
                         onClick = { submitLookup() },
                         enabled = phone.length == 10,
                         loading = state is LoyaltyUiState.Loading,
-                        modifier = Modifier.width(120.dp),
+                        modifier = Modifier.width(92.dp),
                     ) {
                         Text(stringResource(R.string.loyalty_check_points))
                     }
@@ -298,7 +298,7 @@ fun LoyaltyLookupScreen(
                 if (canClear) {
                     NayaraButton(
                         onClick = { clearLookup() },
-                        modifier = Modifier.width(120.dp),
+                        modifier = Modifier.width(92.dp),
                     ) {
                         Text(stringResource(R.string.ds_clear))
                     }
@@ -307,7 +307,7 @@ fun LoyaltyLookupScreen(
                         onClick = { submitLookup() },
                         enabled = phone.length == 10,
                         loading = state is LoyaltyUiState.Loading,
-                        modifier = Modifier.width(120.dp),
+                        modifier = Modifier.width(92.dp),
                     ) {
                         Text(stringResource(R.string.loyalty_check_points))
                     }

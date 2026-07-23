@@ -1679,6 +1679,11 @@
         const row = removeButton.closest("[data-fuel-pump-nozzle-row]");
         if (!row) return;
 
+        if (removeButton.dataset.confirmRemoval === "true" &&
+            !window.confirm(removeButton.dataset.confirmMessage || "Remove this nozzle?")) {
+          return;
+        }
+
         const destroyField = row.querySelector("[data-fuel-pump-nozzle-destroy-field]");
 
         if (row.dataset.persisted === "true" && destroyField) {
@@ -1688,6 +1693,21 @@
         }
 
         row.remove();
+      });
+    });
+  };
+
+  const initializeInlineRemovalConfirmations = () => {
+    document.querySelectorAll("[data-confirm-removal]").forEach((input) => {
+      if (!(input instanceof HTMLInputElement) || input.dataset.confirmRemovalBound === "true") return;
+
+      input.dataset.confirmRemovalBound = "true";
+      input.addEventListener("change", () => {
+        if (!input.checked) return;
+
+        if (!window.confirm(input.dataset.confirmMessage || "Remove this item?")) {
+          input.checked = false;
+        }
       });
     });
   };
@@ -1800,6 +1820,8 @@
   document.addEventListener("DOMContentLoaded", initializeVehicleTypeIconPickers);
   document.addEventListener("turbo:load", initializeFuelPumpForms);
   document.addEventListener("DOMContentLoaded", initializeFuelPumpForms);
+  document.addEventListener("turbo:load", initializeInlineRemovalConfirmations);
+  document.addEventListener("DOMContentLoaded", initializeInlineRemovalConfirmations);
   document.addEventListener("turbo:load", initializeMyPumpForms);
   document.addEventListener("DOMContentLoaded", initializeMyPumpForms);
   document.addEventListener("turbo:load", initializeTopbarPlateScannerToggle);

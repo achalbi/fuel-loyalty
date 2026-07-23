@@ -220,8 +220,8 @@ fun AppRoot(container: ServiceContainer) {
             // slot rather than living two taps deep on Home. Pushing the
             // transaction screen *then* the scanner means popping the scanner
             // lands on the transaction form with the plate already resolved —
-            // the scanner writes to `previousBackStackEntry`, so it has to be
-            // the transaction screen sitting underneath it, not Home.
+            // the scanner writes to `previousBackStackEntry`, so the active form
+            // has to be sitting underneath it, not Home.
             val onScan: () -> Unit = remember(navController) {
                 {
                     navController.navigate(Routes.NEW_TRANSACTION)
@@ -355,8 +355,15 @@ fun AppRoot(container: ServiceContainer) {
                 composable(Routes.MY_PUMP) {
                     MyPumpScreen(onBack = { navController.popBackStack() })
                 }
-                composable(Routes.CAPTURE_VISIT) {
-                    VisitEntryScreen(onBack = { navController.popBackStack() })
+                composable(Routes.CAPTURE_VISIT) { entry ->
+                    val scannedPlate by entry.savedStateHandle
+                        .getStateFlow<String?>("scanned_plate", null)
+                        .collectAsStateWithLifecycle()
+                    VisitEntryScreen(
+                        onBack = { navController.popBackStack() },
+                        onScanPlate = { navController.navigate(Routes.PLATE_SCANNER) },
+                        scannedPlate = scannedPlate,
+                    )
                 }
                 composable(Routes.SETTLEMENT) {
                     SettlementScreen(onBack = { navController.popBackStack() })

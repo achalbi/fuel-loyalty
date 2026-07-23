@@ -332,6 +332,7 @@ private fun CycleEditor(
     onCancel: () -> Unit,
 ) {
     val haptics = rememberHaptics()
+    var pendingStepRemoval by remember { mutableStateOf<StepRow?>(null) }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -370,7 +371,7 @@ private fun CycleEditor(
                     haptics.tick()
                     vm.editorSetStep(row.key, it)
                 },
-                onRemove = { vm.editorRemoveStep(row.key) },
+                onRemove = { pendingStepRemoval = row },
             )
         }
         if (editor.canAddStep) {
@@ -418,6 +419,20 @@ private fun CycleEditor(
                 Text(if (editor.isCreate) "Create Cycle" else "Save Changes")
             }
         }
+    }
+
+    pendingStepRemoval?.let { row ->
+        ConfirmDialog(
+            title = "Remove this step?",
+            text = "The step will be removed from this cycle form.",
+            confirmLabel = "Remove",
+            destructive = true,
+            onConfirm = {
+                pendingStepRemoval = null
+                vm.editorRemoveStep(row.key)
+            },
+            onDismiss = { pendingStepRemoval = null },
+        )
     }
 }
 

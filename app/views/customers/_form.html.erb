@@ -104,7 +104,12 @@
               </div>
               <% if contact_form.object.persisted? %>
                 <div class="form-check mb-0">
-                  <%= contact_form.check_box :_destroy, class: "form-check-input" %>
+                  <%= contact_form.check_box :_destroy,
+                    class: "form-check-input",
+                    data: {
+                      confirm_removal: true,
+                      confirm_message: "Remove this contact when the customer is saved?"
+                    } %>
                   <%= contact_form.label :_destroy, "Remove", class: "form-check-label small text-danger" %>
                 </div>
               <% end %>

@@ -43,7 +43,10 @@ module Admin
       assert_equal 2, fuel_pump.sequence_number
       assert fuel_pump.active?
       assert_equal(
-        [["petrol", 1, true], ["diesel", 2, false]],
+        [
+          [ "petrol", 1, true ],
+          [ "diesel", 2, false ]
+        ],
         fuel_pump.nozzles.order(:sequence_number).pluck(:fuel_type_code, :sequence_number, :active)
       )
     end
@@ -73,9 +76,41 @@ module Admin
       assert_not fuel_pump.reload.active?
       assert_not FuelPumpNozzle.exists?(removed_nozzle.id)
       assert_equal(
-        [[1, "petrol", false], [2, "petrol", true]],
+        [
+          [ 1, "petrol", false ],
+          [ 2, "petrol", true ]
+        ],
         fuel_pump.nozzles.order(:sequence_number).pluck(:sequence_number, :fuel_type_code, :active)
       )
+    end
+
+    test "web pump edit reports a delete restriction when a nozzle has transactions" do
+      sign_in users(:one)
+      fuel_pump = fuel_pumps(:one)
+      retained_nozzle = fuel_pump_nozzles(:one)
+      removed_nozzle = fuel_pump_nozzles(:two)
+      Transaction.create!(
+        customer: customers(:one),
+        user: users(:one),
+        vehicle: vehicles(:one),
+        fuel_pump: fuel_pump,
+        fuel_pump_nozzle: removed_nozzle,
+        fuel_amount: 500,
+      )
+
+      patch admin_fuel_pump_path(fuel_pump), params: {
+        fuel_pump: {
+          active: true,
+          nozzles_attributes: {
+            "0" => { id: retained_nozzle.id, fuel_type_code: retained_nozzle.fuel_type_code, active: "1" },
+            "1" => { id: removed_nozzle.id, _destroy: "1" }
+          }
+        }
+      }
+
+      assert_response :unprocessable_entity
+      assert_match(/cannot be removed while transactions still use it/i, response.body)
+      assert FuelPumpNozzle.exists?(removed_nozzle.id)
     end
 
     test "admin can disable nozzle selection for transactions" do

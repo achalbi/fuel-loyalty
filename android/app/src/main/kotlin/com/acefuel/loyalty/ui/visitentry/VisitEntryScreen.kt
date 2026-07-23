@@ -11,10 +11,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -51,7 +55,11 @@ import com.acefuel.loyalty.ui.theme.nayara
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VisitEntryScreen(onBack: () -> Unit) {
+fun VisitEntryScreen(
+    onBack: () -> Unit,
+    onScanPlate: () -> Unit = {},
+    scannedPlate: String? = null,
+) {
     val container = LocalContainer.current
     val viewModel: VisitEntryViewModel = viewModel(
         factory = viewModelFactory { initializer { VisitEntryViewModel(container.staffRepository) } },
@@ -59,6 +67,12 @@ fun VisitEntryScreen(onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val haptics = rememberHaptics()
+
+    LaunchedEffect(scannedPlate) {
+        if (!scannedPlate.isNullOrBlank()) {
+            viewModel.onVehicleNumber(scannedPlate)
+        }
+    }
 
     LaunchedEffect(state.success) {
         val message = state.success ?: return@LaunchedEffect
@@ -96,6 +110,11 @@ fun VisitEntryScreen(onBack: () -> Unit) {
                 onValueChange = viewModel::onVehicleNumber,
                 label = "Vehicle Number",
                 helper = "A registered plate auto-links the customer.",
+                trailingIcon = {
+                    IconButton(onClick = onScanPlate) {
+                        Icon(Icons.Filled.CameraAlt, contentDescription = "Scan plate")
+                    }
+                },
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Characters,
                     imeAction = ImeAction.Next,

@@ -50,6 +50,12 @@ module Admin
         flash.now[:alert] = @fuel_pump.errors.full_messages.to_sentence
         render :edit, status: :unprocessable_entity
       end
+    rescue ActiveRecord::RecordNotDestroyed => error
+      @fuel_pump = error.record.fuel_pump
+      prepare_fuel_pump_form(@fuel_pump)
+      flash.now[:alert] = error.record.errors.full_messages.to_sentence.presence ||
+        "This nozzle cannot be removed because related history exists."
+      render :edit, status: :unprocessable_entity
     end
 
     def destroy
