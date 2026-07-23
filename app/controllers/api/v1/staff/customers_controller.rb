@@ -5,7 +5,8 @@ module Api
         LEDGER_PER_PAGE = 5
 
         # GET /api/v1/staff/customers?q=
-        # Blank query -> top 3 by points; else name/phone search (limit 50).
+        # Blank query -> the full customer directory; search supports name,
+        # mobile number, and any registered vehicle number.
         def index
           authorize Customer, :lookup?
           range = ::Admin::Dashboard::OverviewReport.period_range(
@@ -167,7 +168,7 @@ module Api
         end
 
         def customer_scope(query, range = nil, customer_type = nil)
-          base = Customer.left_joins(:points_ledgers).includes(:vehicles)
+          base = Customer.left_joins(:points_ledgers, :vehicles).includes(:vehicles)
                          .select("customers.*, COALESCE(SUM(points_ledgers.points), 0) AS total_points_sum")
                          .group("customers.id")
           # E2: when a dashboard period is passed, restrict to customers who
@@ -178,16 +179,21 @@ module Api
           base = base.where(customer_type: customer_type) if customer_type
 
           if query.blank?
-            base.order(Arel.sql("COALESCE(SUM(points_ledgers.points), 0) DESC, customers.created_at DESC"))
-                .limit(range ? 100 : 3)
+            base.order(Arel.sql("LOWER(COALESCE(customers.name, '')) ASC, customers.id ASC"))
+                .limit(range ? 100 : nil)
           else
             escaped = ActiveRecord::Base.sanitize_sql_like(query)
             normalized_phone = Customer.normalize_phone_number(query)
+            vehicle_number = Vehicle.normalize_vehicle_number(query)
             conditions = ["customers.name ILIKE :name"]
             values = { name: "%#{escaped}%" }
             if normalized_phone.present?
               conditions << "customers.phone_number LIKE :phone"
               values[:phone] = "%#{normalized_phone}%"
+            end
+            if vehicle_number.present?
+              conditions << "customers.vehicle_number ILIKE :vehicle OR vehicles.vehicle_number ILIKE :vehicle"
+              values[:vehicle] = "%#{ActiveRecord::Base.sanitize_sql_like(vehicle_number)}%"
             end
             base.where(conditions.join(" OR "), values)
                 .order(Arel.sql("customers.created_at DESC"))

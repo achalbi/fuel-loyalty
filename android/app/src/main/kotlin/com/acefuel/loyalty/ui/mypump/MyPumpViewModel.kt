@@ -12,8 +12,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 data class MyPumpUiState(
+    val assignmentDate: LocalDate = LocalDate.now(),
     val loading: Boolean = true,
     val loadError: String? = null,
     val pumps: List<PumpDto> = emptyList(),
@@ -51,7 +53,11 @@ class MyPumpViewModel(
     fun load() {
         _state.update { it.copy(loading = true, loadError = null) }
         viewModelScope.launch {
-            val result = if (staffMemberId != null) repository.staffMemberPump(staffMemberId) else repository.myPump()
+            val result = if (staffMemberId != null) {
+                repository.staffMemberPump(staffMemberId, _state.value.assignmentDate.toString())
+            } else {
+                repository.myPump(_state.value.assignmentDate.toString())
+            }
             when (result) {
                 is ApiResult.Success -> _state.update { it.applyLoaded(result.data) }
                 is ApiResult.Error -> _state.update { it.copy(loading = false, loadError = result.message) }
@@ -60,6 +66,12 @@ class MyPumpViewModel(
                 }
             }
         }
+    }
+
+    fun setAssignmentDate(date: LocalDate) {
+        if (_state.value.assignmentDate == date) return
+        _state.update { it.copy(assignmentDate = date, saved = false) }
+        load()
     }
 
     fun selectPump(id: Long) {
@@ -87,9 +99,9 @@ class MyPumpViewModel(
         viewModelScope.launch {
             val nozzleIds = s.selectedNozzleIds.toList()
             val result = if (staffMemberId != null) {
-                repository.updateStaffMemberPump(staffMemberId, pumpId, nozzleIds)
+                repository.updateStaffMemberPump(staffMemberId, pumpId, nozzleIds, s.assignmentDate.toString())
             } else {
-                repository.updateMyPump(pumpId, nozzleIds)
+                repository.updateMyPump(pumpId, nozzleIds, s.assignmentDate.toString())
             }
             when (result) {
                 is ApiResult.Success -> _state.update { it.applyLoaded(result.data).copy(saved = true) }

@@ -20,6 +20,9 @@ module Admin
       assert_select ".dashboard-filter-chip", text: "All"
       assert_select ".dashboard-filter-chip", text: "Active"
       assert_select ".dashboard-filter-chip", text: "Inactive"
+      assert_select ".dashboard-filter-chip", text: "Drive-in"
+      assert_select ".dashboard-filter-chip", text: "OTP / Fleet"
+      assert_select ".dashboard-filter-chip", text: "Credit"
       assert_select "#addCustomerModal"
       assert_select ".admin-customers-list"
       assert_select ".admin-customer-item", minimum: 2

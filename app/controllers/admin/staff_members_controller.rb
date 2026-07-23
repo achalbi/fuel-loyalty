@@ -51,7 +51,7 @@ module Admin
       @staff_member = staff_member_for_pump
       authorize @staff_member, :assign_pump?
 
-      if @staff_member.update_pump_assignment(pump_assignment_params)
+      if @staff_member.update_pump_assignment(pump_assignment_params, on: assignment_date, assigned_by: current_user)
         redirect_to admin_staff_members_path, notice: "Pump assignment updated for #{@staff_member.name}."
       else
         load_pump_form_state
@@ -70,10 +70,19 @@ module Admin
       @assignable_fuel_pump_nozzles = @assignable_fuel_pumps.index_with do |fuel_pump|
         fuel_pump.nozzles.active.ordered.to_a
       end
+      @assignment_date = assignment_date
+      @daily_pump_assignment = @staff_member.pump_assignment_for(on: @assignment_date)
     end
 
     def pump_assignment_params
-      params.require(:user).permit(:fuel_pump_id, assigned_fuel_pump_nozzle_ids: [])
+      params.require(:user).permit(:fuel_pump_id, :assignment_date, assigned_fuel_pump_nozzle_ids: [])
+    end
+
+    def assignment_date
+      raw = params[:assignment_date].presence || params.dig(:user, :assignment_date).presence
+      Date.iso8601(raw.to_s)
+    rescue ArgumentError, TypeError
+      Date.current
     end
 
     def staff_members_scope

@@ -26,11 +26,10 @@ class UserPolicy < ApplicationPolicy
   alias view_id_card? view_aadhaar?
   alias purge_kyc? view_aadhaar?
 
-  # Self-service pump assignment ("My Pump"). Staff must NOT set their own pump
-  # (Staff_FSM requirement S-MYPUMP) — an admin assigns it via the staff form
-  # (A10). Kept as admin-only self so the route/page isn't reachable by staff.
+  # Staff may self-assign their pump for the selected day. Admins can use the
+  # same screen for themselves as well as the separate staff-member assignment.
   def manage_pump?
-    user&.admin? && record == user
+    user&.admin? && record == user || user&.staff? && record == user
   end
 
   # Admin assigning a pump/nozzles to another user (A10).

@@ -445,7 +445,12 @@ fun AppRoot(container: ServiceContainer) {
                         onOpenCustomer = { id -> navController.navigate("customer/$id") },
                     )
                 }
-                composable(AdminRoutes.USERS) { AdminUsersScreen(onBack = back) }
+                composable(AdminRoutes.USERS) {
+                    AdminUsersScreen(
+                        onBack = back,
+                        onAssignPump = { id -> navController.navigate(AdminRoutes.assignPump(id)) },
+                    )
+                }
                 composable(AdminRoutes.FUEL_TYPES) { AdminFuelTypesScreen(onBack = back) }
                 composable(AdminRoutes.VEHICLE_TYPES) { AdminVehicleTypesScreen(onBack = back) }
                 composable(AdminRoutes.PRODUCTS) { AdminProductsScreen(onBack = back) }

@@ -39,15 +39,15 @@ module Api
         def pump
           staff_member = staff_member_for_pump
           authorize staff_member, :assign_pump?
-          render json: MyPumpSerializer.call(staff_member), status: :ok
+          render json: MyPumpSerializer.call(staff_member, on: assignment_date), status: :ok
         end
 
         # PATCH /api/v1/admin/staff_members/:id/pump  { user: { fuel_pump_id, assigned_fuel_pump_nozzle_ids: [] } }
         def update_pump
           staff_member = staff_member_for_pump
           authorize staff_member, :assign_pump?
-          if staff_member.update_pump_assignment(pump_assignment_params)
-            render json: MyPumpSerializer.call(staff_member.reload)
+          if staff_member.update_pump_assignment(pump_assignment_params, on: assignment_date, assigned_by: current_user)
+            render json: MyPumpSerializer.call(staff_member.reload, on: assignment_date)
               .merge(message: "Pump assignment updated for #{staff_member.name}."), status: :ok
           else
             render_error(
@@ -66,7 +66,14 @@ module Api
         end
 
         def pump_assignment_params
-          resource_params(:user).permit(:fuel_pump_id, assigned_fuel_pump_nozzle_ids: [])
+          resource_params(:user).permit(:fuel_pump_id, :assignment_date, assigned_fuel_pump_nozzle_ids: [])
+        end
+
+        def assignment_date
+          raw = params[:assignment_date].presence || resource_params(:user)[:assignment_date].presence
+          Date.iso8601(raw.to_s)
+        rescue ArgumentError, TypeError
+          Date.current
         end
 
         def staff_members_scope

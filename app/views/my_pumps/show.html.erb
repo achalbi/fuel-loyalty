@@ -6,7 +6,7 @@
       <div class="card-body">
         <div class="mb-3">
           <h1 class="h3 mb-1">My Pump</h1>
-          <p class="text-muted mb-0">Choose the pump you work on and the nozzles available to you. New transactions will use this pump automatically and show your assigned nozzles as radio options.</p>
+          <p class="text-muted mb-0">Choose the pump and nozzles you will use for a specific day. Transactions recorded on that day use this assignment.</p>
         </div>
 
         <% if @assignable_fuel_pumps.empty? %>
@@ -21,11 +21,18 @@
           </div>
         <% else %>
           <%= form_with model: current_user, url: my_pump_path, method: :patch, class: "vstack gap-3", data: { my_pump_form: true } do |form| %>
+            <div>
+              <%= label_tag :assignment_date, "Assignment Date", class: "form-label" %>
+              <%= date_field_tag :assignment_date, @assignment_date, class: "form-control", required: true %>
+              <div class="form-text">You can set a different pump for another working day.</div>
+            </div>
             <%= render "shared/pump_assignment_fields",
               form: form,
               user: current_user,
               assignable_fuel_pumps: @assignable_fuel_pumps,
-              assignable_fuel_pump_nozzles: @assignable_fuel_pump_nozzles %>
+              assignable_fuel_pump_nozzles: @assignable_fuel_pump_nozzles,
+              assignment_date: @assignment_date,
+              daily_pump_assignment: @daily_pump_assignment %>
 
             <div class="d-flex gap-2">
               <%= form.submit "Save My Pump", class: "btn btn-primary" %>

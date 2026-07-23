@@ -1,6 +1,9 @@
 <%# Shared pump + nozzle picker. Locals: form, user, assignable_fuel_pumps, assignable_fuel_pump_nozzles. %>
-<% selected_pump_id = user.fuel_pump_id.to_s %>
-<% selected_nozzle_ids = user.assigned_fuel_pump_nozzle_ids.map(&:to_s) %>
+<% daily_pump_assignment = local_assigns[:daily_pump_assignment] %>
+<% assignment_date = local_assigns[:assignment_date] %>
+<% use_legacy_assignment = assignment_date.blank? || assignment_date == Date.current %>
+<% selected_pump_id = (daily_pump_assignment&.fuel_pump_id || (user.fuel_pump_id if use_legacy_assignment)).to_s %>
+<% selected_nozzle_ids = (daily_pump_assignment ? daily_pump_assignment.assigned_fuel_pump_nozzle_ids : (user.assigned_fuel_pump_nozzle_ids if use_legacy_assignment)).to_a.map(&:to_s) %>
 <% nozzle_error_messages = user.errors[:assigned_fuel_pump_nozzle_ids].map do |message|
   case message
   when "must include at least one nozzle"
@@ -29,12 +32,12 @@ end %>
       assignable_fuel_pumps.map do |fuel_pump|
         ["#{fuel_pump.display_name}#{fuel_pump.active? ? "" : " (Inactive)"}", fuel_pump.id]
       end,
-      user.fuel_pump_id
+      selected_pump_id
     ),
     { prompt: "Select a pump" },
     class: "form-select",
     data: { my_pump_select: true } %>
-  <div class="form-text">Pick one pump. This becomes the default pump for every transaction this operator records.</div>
+  <div class="form-text">Pick one pump for the selected day. Transactions recorded on that day use this assignment.</div>
 </div>
 
 <div class="my-pump-nozzle-picker">

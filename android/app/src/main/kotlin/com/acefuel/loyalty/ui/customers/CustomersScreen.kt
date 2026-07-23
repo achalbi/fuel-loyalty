@@ -102,7 +102,7 @@ fun CustomersScreen(
             SearchField(
                 value = state.query,
                 onValueChange = viewModel::onQueryChange,
-                placeholder = "Search by name or phone",
+                placeholder = "Search name, mobile, or vehicle",
                 modifier = Modifier.padding(
                     horizontal = NayaraSpacing.ScreenMargin,
                     vertical = NayaraSpacing.Md,
@@ -127,6 +127,34 @@ fun CustomersScreen(
             }
             Spacer(Modifier.height(NayaraSpacing.Sm))
 
+            if (state.customers.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = NayaraSpacing.ScreenMargin),
+                    horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Xs),
+                ) {
+                    FilterChip(
+                        selected = state.letterFilter == null,
+                        onClick = { viewModel.onLetterFilterChange(null) },
+                        label = { Text("All") },
+                    )
+                    state.customers
+                        .mapNotNull { it.name?.trim()?.firstOrNull()?.uppercaseChar() }
+                        .distinct()
+                        .sorted()
+                        .forEach { letter ->
+                            FilterChip(
+                                selected = state.letterFilter == letter,
+                                onClick = { viewModel.onLetterFilterChange(letter) },
+                                label = { Text(letter.toString()) },
+                            )
+                        }
+                }
+                Spacer(Modifier.height(NayaraSpacing.Sm))
+            }
+
             NayaraPullToRefresh(
                 isRefreshing = state.refreshing,
                 onRefresh = viewModel::refresh,
@@ -145,9 +173,9 @@ fun CustomersScreen(
                         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                             ErrorState(state.error!!, onRetry = viewModel::retry)
                         }
-                    state.customers.isEmpty() ->
+                    state.visibleCustomers.isEmpty() ->
                         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            if (state.query.isBlank()) {
+                            if (state.query.isBlank() && state.letterFilter == null) {
                                 EmptyState(
                                     title = "No customers yet",
                                     message = "Customers appear here after their first visit.",
@@ -173,7 +201,7 @@ fun CustomersScreen(
                             bottom = NayaraSpacing.Xxl,
                         ),
                     ) {
-                        items(state.customers, key = { it.id }) { customer ->
+                        items(state.visibleCustomers, key = { it.id }) { customer ->
                             CustomerRow(
                                 customer,
                                 onClick = { onOpenCustomer(customer.id) },

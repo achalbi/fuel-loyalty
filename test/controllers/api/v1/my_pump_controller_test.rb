@@ -13,23 +13,20 @@ module Api
         assert_response :unauthorized
       end
 
-      # Self-service pump assignment is admin-only (S-MYPUMP); staff are forbidden
-      # and must have their pump assigned by an admin (A10).
-      test "staff cannot view my pump" do
+      test "staff can view my pump" do
         get api_v1_my_pump_path, headers: auth_headers(users(:two))
-        assert_response :forbidden
+        assert_response :ok
       end
 
-      test "staff cannot update my pump" do
-        before_pump = users(:two).fuel_pump_id
-
+      test "staff can update my pump for a selected day" do
+        target_date = 1.day.from_now.to_date
         patch api_v1_my_pump_path,
-          params: { user: { fuel_pump_id: fuel_pumps(:one).id, assigned_fuel_pump_nozzle_ids: ["", fuel_pump_nozzles(:one).id] } },
+          params: { user: { assignment_date: target_date.iso8601, fuel_pump_id: fuel_pumps(:one).id, assigned_fuel_pump_nozzle_ids: ["", fuel_pump_nozzles(:one).id] } },
           headers: auth_headers(users(:two)),
           as: :json
 
-        assert_response :forbidden
-        assert_equal before_pump, users(:two).reload.fuel_pump_id
+        assert_response :ok
+        assert_equal target_date, users(:two).reload.pump_assignment_for(on: target_date)&.assigned_on
       end
 
       test "admin can view own my pump assignment and the pump catalog" do

@@ -4,13 +4,13 @@ module Api
     class MyPumpController < Api::V1::BaseController
       def show
         authorize current_user, :manage_pump?
-        render json: MyPumpSerializer.call(current_user), status: :ok
+        render json: MyPumpSerializer.call(current_user, on: assignment_date), status: :ok
       end
 
       def update
         authorize current_user, :manage_pump?
-        if current_user.update_pump_assignment(my_pump_params)
-          render json: MyPumpSerializer.call(current_user.reload)
+        if current_user.update_pump_assignment(my_pump_params, on: assignment_date, assigned_by: current_user)
+          render json: MyPumpSerializer.call(current_user.reload, on: assignment_date)
             .merge(message: "My pump updated successfully."), status: :ok
         else
           render_error(
@@ -25,7 +25,14 @@ module Api
       private
 
       def my_pump_params
-        resource_params(:user).permit(:fuel_pump_id, assigned_fuel_pump_nozzle_ids: [])
+        resource_params(:user).permit(:fuel_pump_id, :assignment_date, assigned_fuel_pump_nozzle_ids: [])
+      end
+
+      def assignment_date
+        raw = params[:assignment_date].presence || resource_params(:user)[:assignment_date].presence
+        Date.iso8601(raw.to_s)
+      rescue ArgumentError, TypeError
+        Date.current
       end
     end
   end

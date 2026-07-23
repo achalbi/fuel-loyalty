@@ -48,6 +48,7 @@ import com.acefuel.loyalty.ui.designsystem.InlineErrorCard
 import com.acefuel.loyalty.ui.designsystem.NayaraCard
 import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
 import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
+import com.acefuel.loyalty.ui.designsystem.DateField
 import com.acefuel.loyalty.ui.designsystem.SkeletonListItem
 import com.acefuel.loyalty.ui.designsystem.rememberHaptics
 import com.acefuel.loyalty.ui.designsystem.showError
@@ -55,6 +56,7 @@ import com.acefuel.loyalty.ui.theme.NayaraButton
 import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 /**
  * My Pump — a staff member assigns the pump they work on and which of its
@@ -108,6 +110,14 @@ fun MyPumpScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.nayara.textSecondary,
             )
+            Spacer(Modifier.height(NayaraSpacing.Md))
+            DateField(
+                label = "Assignment date",
+                value = state.assignmentDate,
+                onChange = viewModel::setAssignmentDate,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = "Select date",
+            )
             Spacer(Modifier.height(NayaraSpacing.Lg))
 
             when {
@@ -147,7 +157,7 @@ private fun PumpForm(
     onSave: () -> Unit,
 ) {
     if (state.saved) {
-        SavedBanner()
+        SavedBanner(state.assignmentDate)
         Spacer(Modifier.height(NayaraSpacing.Lg))
     }
 
@@ -263,13 +273,13 @@ private fun Hint(message: String) {
 }
 
 @Composable
-private fun SavedBanner() {
+private fun SavedBanner(date: LocalDate) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.nayara.statusSuccessContainer),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            "My pump saved. You can now record transactions.",
+            "Pump assignment saved for ${date.dayOfMonth} ${date.month.name.lowercase().replaceFirstChar(Char::uppercase)} ${date.year}.",
             Modifier.padding(14.dp),
             color = MaterialTheme.nayara.statusOnSuccessContainer,
             fontWeight = FontWeight.SemiBold,
