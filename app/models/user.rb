@@ -19,6 +19,7 @@ class User < ApplicationRecord
   belongs_to :assigned_fuel_pump, class_name: "FuelPump", foreign_key: :fuel_pump_id, inverse_of: :assigned_users, optional: true
   has_many :pump_nozzle_assignments, class_name: "UserPumpNozzleAssignment", dependent: :destroy, inverse_of: :user
   has_many :assigned_fuel_pump_nozzles, through: :pump_nozzle_assignments, source: :fuel_pump_nozzle
+  has_many :daily_pump_assignments, class_name: "UserPumpAssignment", dependent: :destroy, inverse_of: :user
   has_many :shift_assignments, dependent: :restrict_with_exception
   has_many :shift_templates, through: :shift_assignments
   has_many :shift_cycles, through: :shift_assignments
@@ -207,23 +208,36 @@ class User < ApplicationRecord
     assignment&.shift_cycle || assignment&.shift_template&.current_shift_cycle(at: on)
   end
 
-  def transaction_fuel_pump
-    pump = assigned_fuel_pump
+  def pump_assignment_for(on: Date.current)
+    daily_pump_assignments.find_by(assigned_on: normalize_assignment_date(on))
+  end
+
+  def transaction_fuel_pump(on: Date.current)
+    assignment_date = normalize_assignment_date(on)
+    daily_assignment = pump_assignment_for(on: assignment_date)
+    pump = if daily_assignment.present?
+      daily_assignment.fuel_pump
+    elsif assignment_date == Date.current
+      assigned_fuel_pump
+    end
     pump if pump&.active?
   end
 
-  def transaction_fuel_pump_nozzles
-    pump = transaction_fuel_pump
+  def transaction_fuel_pump_nozzles(on: Date.current)
+    assignment_date = normalize_assignment_date(on)
+    daily_assignment = pump_assignment_for(on: assignment_date)
+    pump = transaction_fuel_pump(on: assignment_date)
     return FuelPumpNozzle.none unless pump
 
+    selected_ids = daily_assignment ? daily_assignment.assigned_fuel_pump_nozzle_ids : assigned_fuel_pump_nozzle_ids
     FuelPumpNozzle
       .includes(:fuel_type_record)
-      .where(id: assigned_fuel_pump_nozzle_ids, fuel_pump_id: pump.id, active: true)
+      .where(id: selected_ids, fuel_pump_id: pump.id, active: true)
       .ordered
   end
 
-  def transaction_pump_ready?
-    transaction_fuel_pump.present? && transaction_fuel_pump_nozzles.exists?
+  def transaction_pump_ready?(on: Date.current)
+    transaction_fuel_pump(on:).present? && transaction_fuel_pump_nozzles(on:).exists?
   end
 
   # Atomically apply a self-service pump/nozzle assignment from request params.
@@ -235,11 +249,31 @@ class User < ApplicationRecord
   # join rows already mutated while `fuel_pump_id` stays put, silently
   # corrupting a previously-ready assignment. On failure we roll the DB back and
   # keep `errors` so the caller can render them.
-  def update_pump_assignment(attrs)
+  def update_pump_assignment(attrs, on: Date.current, assigned_by: nil)
+    assignment_date = normalize_assignment_date(on)
+    pump_id = attrs[:fuel_pump_id].presence
+    nozzle_ids = Array(attrs[:assigned_fuel_pump_nozzle_ids]).filter_map { |id| Integer(id, exception: false) }.uniq
     saved = false
     transaction do
-      assign_attributes(attrs)
-      saved = save_pump_assignment
+      daily_assignment = daily_pump_assignments.find_or_initialize_by(assigned_on: assignment_date)
+      daily_assignment.assign_attributes(
+        fuel_pump_id: pump_id,
+        assigned_fuel_pump_nozzle_ids: nozzle_ids,
+        assigned_by: assigned_by,
+      )
+      unless daily_assignment.save
+        daily_assignment.errors.each { |error| errors.add(error.attribute, error.message) }
+        raise ActiveRecord::Rollback
+      end
+
+      # Keep the legacy/default columns in sync for today's assignment so older
+      # records and web clients continue to behave exactly as before.
+      if assignment_date == Date.current
+        assign_attributes(attrs.slice(:fuel_pump_id, :assigned_fuel_pump_nozzle_ids))
+        saved = save_pump_assignment
+      else
+        saved = true
+      end
       raise ActiveRecord::Rollback unless saved
     end
     saved
@@ -259,6 +293,14 @@ class User < ApplicationRecord
   end
 
   private
+
+  def normalize_assignment_date(value)
+    return value if value.is_a?(Date)
+
+    Date.iso8601(value.to_s)
+  rescue ArgumentError, TypeError
+    Date.current
+  end
 
   # ---- A7 KYC ----
   def normalize_aadhaar_number

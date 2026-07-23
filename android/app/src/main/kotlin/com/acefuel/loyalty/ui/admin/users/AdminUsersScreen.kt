@@ -66,6 +66,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -103,7 +104,7 @@ import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
 
 @Composable
-fun AdminUsersScreen(onBack: () -> Unit) {
+fun AdminUsersScreen(onBack: () -> Unit, onAssignPump: (Long) -> Unit) {
     val container = LocalContainer.current
     val contentResolver = LocalContext.current.contentResolver
     val repo = remember {
@@ -146,7 +147,7 @@ fun AdminUsersScreen(onBack: () -> Unit) {
             SearchField(
                 value = state.query,
                 onValueChange = vm::onQueryChange,
-                placeholder = "Search by name, username, phone or email",
+                placeholder = "Search users",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
 
@@ -196,6 +197,11 @@ fun AdminUsersScreen(onBack: () -> Unit) {
                                     UserRow(
                                         user = user,
                                         onEdit = { vm.openEdit(user) },
+                                        onAssignPump = if (user.role.equals("staff", ignoreCase = true)) {
+                                            { onAssignPump(user.id) }
+                                        } else {
+                                            null
+                                        },
                                         modifier = Modifier.animateItem(),
                                     )
                                 }
@@ -272,40 +278,77 @@ private fun GuardedSheet(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun UserRow(user: AdminUserDto, onEdit: () -> Unit, modifier: Modifier = Modifier) {
+private fun UserRow(
+    user: AdminUserDto,
+    onEdit: () -> Unit,
+    onAssignPump: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
     NayaraCard(onClick = onEdit, modifier = modifier.fillMaxWidth()) {
-        Row(
+        Column(
             modifier = Modifier.padding(NayaraSpacing.Lg),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
         ) {
-            Avatar(name = user.name ?: user.username)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+            ) {
+                Avatar(name = user.name ?: user.username)
                 Text(
                     user.name ?: user.username ?: "User",
+                    modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    user.phoneNumber?.takeIf { it.isNotBlank() }?.let { "+91 $it" } ?: "Mobile not set",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.nayara.textSecondary,
-                )
-                Text(
-                    user.email?.takeIf { it.isNotBlank() } ?: "Email not set",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.nayara.textTertiary,
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Edit user",
+                    tint = MaterialTheme.nayara.textTertiary,
                 )
             }
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                RoleBadge(user.role)
-                ActiveChip(user.active)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        user.phoneNumber?.takeIf { it.isNotBlank() }?.let { "+91 $it" } ?: "Mobile not set",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.nayara.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        user.email?.takeIf { it.isNotBlank() } ?: "Email not set",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.nayara.textTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    RoleBadge(user.role)
+                    ActiveChip(user.active)
+                }
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.nayara.textTertiary,
-            )
+
+            if (onAssignPump != null) {
+                NayaraOutlinedButton(
+                    onClick = onAssignPump,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Assign Pump") }
+            }
         }
     }
 }

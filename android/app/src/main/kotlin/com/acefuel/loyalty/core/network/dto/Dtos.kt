@@ -383,6 +383,7 @@ data class VehicleMatchDto(
 
 @Serializable
 data class MyPumpDto(
+    @SerialName("assignment_date") val assignmentDate: String? = null,
     @SerialName("fuel_pump_id") val fuelPumpId: Long? = null,
     @SerialName("assigned_fuel_pump_nozzle_ids") val assignedNozzleIds: List<Long> = emptyList(),
     val ready: Boolean = false,
@@ -409,6 +410,7 @@ data class MyPumpUpdateEnvelope(val user: MyPumpUpdateRequest)
 
 @Serializable
 data class MyPumpUpdateRequest(
+    @SerialName("assignment_date") val assignmentDate: String? = null,
     @SerialName("fuel_pump_id") val fuelPumpId: Long,
     @SerialName("assigned_fuel_pump_nozzle_ids") val assignedNozzleIds: List<String>,
 )

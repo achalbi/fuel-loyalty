@@ -113,14 +113,17 @@ interface AceFuelApi {
     suspend fun createTransaction(@Body body: TransactionCreateEnvelope): TransactionCreateResponse
 
     @GET("api/v1/my_pump")
-    suspend fun myPump(): MyPumpDto
+    suspend fun myPump(@Query("assignment_date") assignmentDate: String? = null): MyPumpDto
 
     @PATCH("api/v1/my_pump")
     suspend fun updateMyPump(@Body body: MyPumpUpdateEnvelope): MyPumpDto
 
     // Admin assigns a staff member's pump (A10). Same DTO shape as /my_pump.
     @GET("api/v1/admin/staff_members/{id}/pump")
-    suspend fun staffMemberPump(@Path("id") id: Long): MyPumpDto
+    suspend fun staffMemberPump(
+        @Path("id") id: Long,
+        @Query("assignment_date") assignmentDate: String? = null,
+    ): MyPumpDto
 
     @PATCH("api/v1/admin/staff_members/{id}/pump")
     suspend fun updateStaffMemberPump(@Path("id") id: Long, @Body body: MyPumpUpdateEnvelope): MyPumpDto

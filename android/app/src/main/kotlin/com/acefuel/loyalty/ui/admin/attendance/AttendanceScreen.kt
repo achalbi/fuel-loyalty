@@ -643,8 +643,8 @@ private fun PlannerContent(state: AttendanceUiState, vm: AttendanceViewModel) {
             state.selectedShiftId != null && state.plannerBaseErrors.isEmpty() && state.windowStart != null && state.draftEntries.isEmpty() && !state.plannerLoading ->
                 item(key = "p-no-staff") {
                     EmptyState(
-                        title = "No staff assigned yet",
-                        message = "This shift does not have any active staff assignments for the selected date. Assign staff first, then come back to attendance.",
+                        title = "No active staff found",
+                        message = "There are no active staff accounts available for this attendance run.",
                     )
                 }
             state.selectedShiftId == null && !state.templatesLoading ->

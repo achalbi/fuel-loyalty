@@ -25,11 +25,27 @@ module Api
           assert_not_includes names, "Stale Sam"
         end
 
-        test "index without a period keeps the top-3 default" do
+        test "index without a period returns the full alphabetical directory" do
+          Customer.create!(name: "Alpha Customer", phone_number: "9812300031")
+          Customer.create!(name: "Zebra Customer", phone_number: "9812300032")
+
           get api_v1_staff_customers_path, headers: auth_headers(users(:two))
 
           assert_response :ok
-          assert_operator response.parsed_body["customers"].size, :<=, 3
+          names = response.parsed_body["customers"].map { |c| c["name"] }
+          assert_includes names, "Alpha Customer"
+          assert_includes names, "Zebra Customer"
+          assert_equal names.sort_by(&:downcase), names
+        end
+
+        test "index searches by registered vehicle number" do
+          customer = Customer.create!(name: "Vehicle Search", phone_number: "9812300033")
+          customer.vehicles.create!(vehicle_number: "TN99ZZ1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+          get api_v1_staff_customers_path(q: "TN99ZZ1234"), headers: auth_headers(users(:two))
+
+          assert_response :ok
+          assert_equal ["Vehicle Search"], response.parsed_body["customers"].map { |c| c["name"] }
         end
 
         test "index filters by account type (E4)" do

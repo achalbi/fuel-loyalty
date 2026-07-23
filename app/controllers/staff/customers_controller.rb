@@ -121,6 +121,14 @@ module Staff
         values[:phone] = "%#{normalized_phone}%"
       end
 
+      vehicle_number = Vehicle.normalize_vehicle_number(@query)
+      if vehicle_number.present?
+        conditions << "customers.vehicle_number ILIKE :legacy_vehicle OR vehicles.vehicle_number ILIKE :vehicle"
+        values[:legacy_vehicle] = "%#{ActiveRecord::Base.sanitize_sql_like(vehicle_number)}%"
+        values[:vehicle] = "%#{ActiveRecord::Base.sanitize_sql_like(vehicle_number)}%"
+        scope = scope.left_joins(:vehicles)
+      end
+
       scope.where(conditions.join(" OR "), values).limit(50)
     end
 
@@ -130,8 +138,7 @@ module Staff
         .includes(:vehicles)
         .select("customers.*, COALESCE(SUM(points_ledgers.points), 0) AS total_points_sum")
         .group("customers.id")
-        .order(Arel.sql("COALESCE(SUM(points_ledgers.points), 0) DESC, customers.created_at DESC"))
-        .limit(3)
+        .order(Arel.sql("LOWER(COALESCE(customers.name, '')) ASC, customers.id ASC"))
     end
 
     def customer_params

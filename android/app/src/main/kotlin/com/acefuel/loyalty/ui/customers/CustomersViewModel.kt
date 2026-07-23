@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 
 data class CustomersUiState(
     val query: String = "",
+    val letterFilter: Char? = null,
     val loading: Boolean = false,
     val refreshing: Boolean = false,
     val customers: List<CustomerSummaryDto> = emptyList(),
@@ -22,6 +23,11 @@ data class CustomersUiState(
     val typeFilter: String? = null,
     val error: String? = null,
 )
+
+val CustomersUiState.visibleCustomers: List<CustomerSummaryDto>
+    get() = letterFilter?.let { letter ->
+        customers.filter { it.name?.trim()?.firstOrNull()?.uppercaseChar() == letter }
+    } ?: customers
 
 class CustomersViewModel(
     private val repository: StaffRepository,
@@ -52,6 +58,8 @@ class CustomersViewModel(
             search(query)
         }
     }
+
+    fun onLetterFilterChange(letter: Char?) = _state.update { it.copy(letterFilter = letter) }
 
     fun refresh() = search(_state.value.query, asRefresh = true)
 

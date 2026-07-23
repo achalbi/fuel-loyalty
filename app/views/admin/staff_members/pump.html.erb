@@ -6,7 +6,7 @@
       <div class="card-body">
         <div class="mb-3">
           <h1 class="h3 mb-1">Assign Pump</h1>
-          <p class="text-muted mb-0">Assign <strong><%= @staff_member.name %></strong> to a pump and its active nozzles. This becomes their default pump for every transaction they record.</p>
+          <p class="text-muted mb-0">Assign <strong><%= @staff_member.name %></strong> to a pump and its active nozzles for a specific day.</p>
         </div>
 
         <% if @assignable_fuel_pumps.empty? %>
@@ -15,11 +15,18 @@
           </div>
         <% else %>
           <%= form_with model: @staff_member, url: pump_admin_staff_member_path(@staff_member), method: :patch, class: "vstack gap-3", data: { my_pump_form: true } do |form| %>
+            <div>
+              <%= label_tag :assignment_date, "Assignment Date", class: "form-label" %>
+              <%= date_field_tag :assignment_date, @assignment_date, class: "form-control", required: true %>
+              <div class="form-text">The operator can have a different pump assignment on another day.</div>
+            </div>
             <%= render "shared/pump_assignment_fields",
               form: form,
               user: @staff_member,
               assignable_fuel_pumps: @assignable_fuel_pumps,
-              assignable_fuel_pump_nozzles: @assignable_fuel_pump_nozzles %>
+              assignable_fuel_pump_nozzles: @assignable_fuel_pump_nozzles,
+              assignment_date: @assignment_date,
+              daily_pump_assignment: @daily_pump_assignment %>
 
             <div class="d-flex gap-2">
               <%= form.submit "Save Pump Assignment", class: "btn btn-primary" %>

@@ -91,19 +91,24 @@ class StaffRepository(
     suspend fun registerCustomer(request: RegisterCustomerRequest): ApiResult<RegisterCustomerResponse> =
         apiCall(json) { api.registerCustomer(RegisterCustomerEnvelope(request)) }
 
-    suspend fun myPump(): ApiResult<MyPumpDto> =
-        apiCall(json) { api.myPump() }
+    suspend fun myPump(assignmentDate: String? = null): ApiResult<MyPumpDto> =
+        apiCall(json) { api.myPump(assignmentDate) }
 
     /**
      * Assign the current staff member's pump + active nozzles. The `""` sentinel
      * is prepended so the server sees the ids array as present (see
      * [MyPumpUpdateRequest]); returns the refreshed assignment incl. `ready`.
      */
-    suspend fun updateMyPump(fuelPumpId: Long, nozzleIds: List<Long>): ApiResult<MyPumpDto> =
+    suspend fun updateMyPump(
+        fuelPumpId: Long,
+        nozzleIds: List<Long>,
+        assignmentDate: String? = null,
+    ): ApiResult<MyPumpDto> =
         apiCall(json) {
             api.updateMyPump(
                 MyPumpUpdateEnvelope(
                     MyPumpUpdateRequest(
+                        assignmentDate = assignmentDate,
                         fuelPumpId = fuelPumpId,
                         assignedNozzleIds = listOf("") + nozzleIds.map(Long::toString),
                     ),
@@ -112,16 +117,22 @@ class StaffRepository(
         }
 
     /** Admin: read a staff member's pump assignment + the pump catalog (A10). */
-    suspend fun staffMemberPump(staffMemberId: Long): ApiResult<MyPumpDto> =
-        apiCall(json) { api.staffMemberPump(staffMemberId) }
+    suspend fun staffMemberPump(staffMemberId: Long, assignmentDate: String? = null): ApiResult<MyPumpDto> =
+        apiCall(json) { api.staffMemberPump(staffMemberId, assignmentDate) }
 
     /** Admin: assign a staff member's pump + active nozzles (A10). */
-    suspend fun updateStaffMemberPump(staffMemberId: Long, fuelPumpId: Long, nozzleIds: List<Long>): ApiResult<MyPumpDto> =
+    suspend fun updateStaffMemberPump(
+        staffMemberId: Long,
+        fuelPumpId: Long,
+        nozzleIds: List<Long>,
+        assignmentDate: String? = null,
+    ): ApiResult<MyPumpDto> =
         apiCall(json) {
             api.updateStaffMemberPump(
                 staffMemberId,
                 MyPumpUpdateEnvelope(
                     MyPumpUpdateRequest(
+                        assignmentDate = assignmentDate,
                         fuelPumpId = fuelPumpId,
                         assignedNozzleIds = listOf("") + nozzleIds.map(Long::toString),
                     ),
