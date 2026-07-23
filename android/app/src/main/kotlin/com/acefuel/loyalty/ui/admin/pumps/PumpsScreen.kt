@@ -366,6 +366,7 @@ private fun PumpEditorSheet(
 ) {
     val haptics = rememberHaptics()
     val scroll = rememberScrollState()
+    var pendingNozzleRemoval by remember { mutableStateOf<NozzleFormRow?>(null) }
     val activeOptions = uiState.activeFuelTypes.map { it.code to it.name }
     Column(
         modifier = Modifier
@@ -466,7 +467,7 @@ private fun PumpEditorSheet(
                     haptics.tick()
                     vm.editorSetNozzleActive(row.key, it)
                 },
-                onRemove = { vm.editorRemoveNozzle(row.key) },
+                onRemove = { pendingNozzleRemoval = row },
             )
         }
 
@@ -485,6 +486,24 @@ private fun PumpEditorSheet(
                 modifier = Modifier.weight(1f),
             ) { Text("Save Pump") }
         }
+    }
+
+    pendingNozzleRemoval?.let { row ->
+        ConfirmDialog(
+            title = "Remove this nozzle?",
+            text = if (row.id == null) {
+                "This new nozzle will be discarded from the pump form."
+            } else {
+                "This nozzle will be deleted when you save the pump."
+            },
+            confirmLabel = "Remove",
+            destructive = true,
+            onConfirm = {
+                pendingNozzleRemoval = null
+                vm.editorRemoveNozzle(row.key)
+            },
+            onDismiss = { pendingNozzleRemoval = null },
+        )
     }
 }
 

@@ -17,7 +17,11 @@
       </p>
     </div>
 
-    <button type="button" class="btn btn-outline-danger btn-sm" data-fuel-pump-nozzle-remove>
+    <button type="button"
+            class="btn btn-outline-danger btn-sm"
+            data-fuel-pump-nozzle-remove
+            data-confirm-removal="true"
+            data-confirm-message="<%= nozzle.persisted? ? 'Remove this nozzle? It will be deleted when you save the pump.' : 'Discard this new nozzle?' %>">
       <i class="ti ti-trash me-1" aria-hidden="true"></i>
       <span><%= nozzle.persisted? ? "Remove" : "Discard" %></span>
     </button>
