@@ -221,6 +221,8 @@ Rails.application.routes.draw do
       patch :reconcile, on: :member
     end
     resources :points_adjustments, only: %i[new create]
+    # Web-only destructive maintenance — no API/native counterpart.
+    resource :data_reset, only: %i[show create], controller: "data_resets"
   end
 
   resources :customers, only: %i[show edit update] do
