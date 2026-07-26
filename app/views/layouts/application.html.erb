@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="utf-8">
     <% theme_setting = ThemeSetting.current %>
     <% cache_buster = pwa_cache_buster %>
     <% public_brand_name = controller_path == "loyalty" ? t("loyalty.brand_name", default: "Ace Fuel Loyalty") : "Ace Fuel Loyalty" %>
