@@ -180,6 +180,7 @@
             <li><%= link_to admin_notifications_path, class: "nav-link #{'active' if current_page?(admin_notifications_path)}" do %><i class="ti ti-bell-ringing"></i><span class="nav-text">Notifications</span><% end %></li>
             <li><%= link_to admin_campaigns_path, class: "nav-link #{'active' if controller_path == 'admin/campaigns'}" do %><i class="ti ti-speakerphone"></i><span class="nav-text">Campaigns</span><% end %></li>
             <li><%= link_to admin_theme_settings_path, class: "nav-link #{'active' if current_page?(admin_theme_settings_path)}" do %><i class="ti ti-palette"></i><span class="nav-text">Theme</span><% end %></li>
+            <li><%= link_to admin_data_reset_path, class: "nav-link text-danger #{'active' if controller_path == 'admin/data_resets'}" do %><i class="ti ti-alert-triangle"></i><span class="nav-text">Reset Data</span><% end %></li>
           <% else %>
             <li class="px-4 py-2"><small class="nav-section-label">Operations</small></li>
             <li><%= link_to new_staff_transaction_path, class: "nav-link #{'active' if current_page?(new_staff_transaction_path)}" do %><i class="ti ti-gas-station"></i><span class="nav-text">New Transaction</span><% end %></li>
