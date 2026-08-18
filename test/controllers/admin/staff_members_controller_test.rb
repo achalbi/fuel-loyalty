@@ -129,6 +129,31 @@ module Admin
       assert_equal [second_nozzle.id], user.pump_assignment_for(on: target_date).assigned_fuel_pump_nozzle_ids
     end
 
+    test "admin cannot back-date a staff member's daily pump override" do
+      sign_in users(:one)
+      second_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
+      second_nozzle = second_pump.nozzles.first
+      past_date = Date.current - 1.day
+
+      patch pump_admin_staff_member_path(users(:two)), params: {
+        assignment_mode: "override",
+        user: { assignment_date: past_date.iso8601, fuel_pump_id: second_pump.id, assigned_fuel_pump_nozzle_ids: ["", second_nozzle.id] }
+      }
+
+      assert_response :unprocessable_entity
+      assert_select ".alert.alert-danger", text: /past date/
+      assert_nil users(:two).reload.pump_assignment_for(on: past_date)
+    end
+
+    test "the assign-pump page refuses to open on a past date" do
+      sign_in users(:one)
+
+      get pump_admin_staff_member_path(users(:two), assignment_mode: "override", assignment_date: 1.day.ago.to_date.iso8601)
+
+      assert_redirected_to pump_admin_staff_member_path(users(:two), assignment_mode: "override")
+      assert_equal Admin::StaffMembersController::PAST_OVERRIDE_MESSAGE, flash[:alert]
+    end
+
     test "admin can update a staff member's protected default pump and nozzles" do
       sign_in users(:one)
       second_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])

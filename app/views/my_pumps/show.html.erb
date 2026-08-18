@@ -6,7 +6,7 @@
       <div class="card-body">
         <div class="mb-3">
           <h1 class="h3 mb-1">My Pump</h1>
-          <p class="text-muted mb-0">Choose the pump and nozzles you will use for a specific day. Transactions recorded on that day use this assignment.</p>
+          <p class="text-muted mb-0">Choose the pump and nozzles you are working on today. Transactions you record today use this assignment.</p>
         </div>
 
         <% if @assignable_fuel_pumps.empty? %>
@@ -22,13 +22,14 @@
         <% else %>
           <%= form_with model: current_user, url: my_pump_path, method: :patch, class: "vstack gap-3", data: { my_pump_form: true } do |form| %>
             <div>
-              <%= label_tag :assignment_date, "Assignment Date", class: "form-label" %>
-              <%= date_field_tag :assignment_date, @assignment_date, class: "form-control", required: true, disabled: current_user.staff? %>
+              <span class="form-label d-block mb-1">Assignment Date</span>
+              <p class="form-control-plaintext py-0 mb-0" data-my-pump-assignment-date>
+                <%= l(@assignment_date, format: :long) %> <span class="text-muted">(today)</span>
+              </p>
               <div class="form-text">
-                <% if current_user.staff? %>
-                  Staff self-assignment applies to today only and does not change the default pump.
-                <% else %>
-                  Choose a date to create an override without changing the default pump.
+                My Pump always applies to today and does not change the default pump.
+                <% if current_user.admin? %>
+                  Plan another day from <%= link_to "Staff", admin_staff_members_path %>.
                 <% end %>
               </div>
             </div>

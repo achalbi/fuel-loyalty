@@ -1,5 +1,10 @@
 module Admin
   class StaffMembersController < BaseController
+    # A9/A10 — a day-specific pump override is a forward-looking roster decision.
+    # Back-dating one cannot move already-recorded transactions (they snapshot
+    # their pump at capture), so it silently achieves nothing; refuse it instead.
+    PAST_OVERRIDE_MESSAGE = "A daily pump override cannot be set for a past date.".freeze
+
     def index
       authorize User
       @staff_members = staff_members_scope
@@ -43,6 +48,11 @@ module Admin
     def pump
       @staff_member = staff_member_for_pump
       authorize @staff_member, :assign_pump?
+      if past_override?
+        redirect_to pump_admin_staff_member_path(@staff_member, assignment_mode: "override"), alert: PAST_OVERRIDE_MESSAGE
+        return
+      end
+
       load_pump_form_state
     end
 
@@ -50,6 +60,11 @@ module Admin
     def update_pump
       @staff_member = staff_member_for_pump
       authorize @staff_member, :assign_pump?
+      if past_override?
+        @staff_member.errors.add(:base, PAST_OVERRIDE_MESSAGE)
+        load_pump_form_state
+        return render :pump, status: :unprocessable_entity
+      end
 
       saved = if assignment_mode == "default"
         @staff_member.update_default_pump_assignment(pump_assignment_params)
@@ -98,6 +113,10 @@ module Admin
       Date.iso8601(raw.to_s)
     rescue ArgumentError, TypeError
       Date.current
+    end
+
+    def past_override?
+      assignment_mode == "override" && assignment_date < Date.current
     end
 
     def staff_members_scope

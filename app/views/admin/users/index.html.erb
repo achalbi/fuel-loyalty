@@ -30,6 +30,7 @@
               <div class="admin-user-item__heading">
                 <span class="admin-user-item__name"><%= display_name %></span>
                 <span class="admin-user-item__role <%= user.admin? ? "is-admin" : "is-staff" %>"><%= user.role.titleize %></span>
+                <span class="admin-user-item__status <%= user.active? ? "is-active" : "is-inactive" %>"><%= user.active? ? "Active" : "Inactive" %></span>
               </div>
               <div class="admin-user-item__details">
                 <span class="admin-user-item__phone"><%= user.display_phone_number || "Mobile not set" %></span>

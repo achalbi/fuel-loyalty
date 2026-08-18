@@ -358,6 +358,126 @@ module Admin
       assert_no_match(/Stale Sam/, response.body)
     end
 
+    test "admin can filter customers by how much they have visited, filled, cost and earned" do
+      sign_in users(:one)
+      staff = users(:two)
+      pump = fuel_pumps(:one)
+
+      heavy = Customer.create!(name: "Heavy Hema", phone_number: "9444400001")
+      heavy_vehicle = heavy.vehicles.create!(vehicle_number: "TN44HH0001", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+      3.times do |day|
+        Transaction.create!(customer: heavy, user: staff, vehicle: heavy_vehicle, fuel_amount: 1000,
+                            litres: 40, discount_amount: 30, created_at: Time.zone.local(2026, 7, 10 + day, 9, 0))
+      end
+      2.times { heavy.contact_logs.create!(user: staff, channel: "call", outcome: "reached", contacted_at: 2.days.ago) }
+      heavy.points_ledgers.create!(entry_type: :earn, points: 400)
+
+      light = Customer.create!(name: "Light Latha", phone_number: "9444400002")
+      VisitEntry.create!(customer: light, user: staff, fuel_pump: pump, entry_date: Date.new(2026, 7, 10),
+                         vehicle_number: "TN44LL0001", litres: 5, discount_amount: 1)
+
+      get admin_customers_path
+
+      assert_response :success
+      assert_select ".admin-customers-filter__threshold input[name='min_visits']"
+      assert_select ".admin-customers-filter__threshold input[name='min_litres']"
+      assert_select ".admin-customers-filter__threshold input[name='min_contacts']"
+      assert_select ".admin-customers-filter__threshold input[name='min_discount']"
+      assert_select ".admin-customers-filter__threshold input[name='min_points']"
+      assert_match "Heavy Hema", response.body
+      assert_match "Light Latha", response.body
+
+      { min_visits: 3, min_litres: 100, min_contacts: 2, min_discount: 80, min_points: 300 }.each do |filter, value|
+        get admin_customers_path(filter => value)
+
+        assert_response :success
+        assert_match "Heavy Hema", response.body, "#{filter} should keep the customer above the threshold"
+        assert_no_match(/Light Latha/, response.body, "#{filter} should drop the customer below the threshold")
+      end
+    end
+
+    test "customer rows show the numbers the thresholds filter on" do
+      sign_in users(:one)
+      staff = users(:two)
+      customer = Customer.create!(name: "Shown Shanti", phone_number: "9444400003")
+      vehicle = customer.vehicles.create!(vehicle_number: "TN44SS0001", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+      Transaction.create!(customer: customer, user: staff, vehicle: vehicle, fuel_amount: 1000,
+                          litres: 12.5, discount_amount: 20, created_at: Time.zone.local(2026, 7, 10, 9, 0))
+      customer.points_ledgers.create!(entry_type: :redeem, points: -30, cash_reward_amount: 45)
+
+      get admin_customers_path(q: "Shown")
+
+      assert_response :success
+      assert_select ".admin-customer-item__metrics", text: /1 visit/
+      assert_select ".admin-customer-item__metrics", text: /12\.5 L/
+      assert_select ".admin-customer-item__metrics", text: /₹20\.00 discount/
+      assert_select ".admin-customer-item__metrics", text: /₹45\.00 gifts/
+      assert_select ".admin-customer-item__metrics", text: /0 contacts/
+    end
+
+    test "threshold filters survive the quick-filter chips" do
+      sign_in users(:one)
+
+      get admin_customers_path(min_visits: 2, min_points: 10)
+
+      assert_response :success
+      assert_select "a.dashboard-filter-chip[href*='min_visits=2'][href*='min_points=10']", minimum: 3
+    end
+
+    test "an invalid threshold is ignored rather than emptying the list" do
+      sign_in users(:one)
+
+      get admin_customers_path(min_visits: "-5", min_litres: "not-a-number")
+
+      assert_response :success
+      assert_select ".admin-customer-item", minimum: 2
+      assert_select "a.btn-outline-secondary", text: "Clear", count: 0
+    end
+
+    test "an absurdly large threshold is ignored rather than erroring the page" do
+      sign_in users(:one)
+
+      get admin_customers_path(min_visits: "9223372036854775808", min_points: "99999999999999999999")
+
+      assert_response :success
+      assert_select ".admin-customer-item", minimum: 2
+    end
+
+    test "a customer profile reports discount given and gifts given" do
+      sign_in users(:one)
+      staff = users(:two)
+      customer = Customer.create!(name: "Profile Priya", phone_number: "9444400004")
+      vehicle = customer.vehicles.create!(vehicle_number: "TN44PP0001", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+      Transaction.create!(customer: customer, user: staff, vehicle: vehicle, fuel_amount: 2000,
+                          litres: 18.25, discount_amount: 60, created_at: Time.zone.local(2026, 7, 10, 9, 0))
+      customer.points_ledgers.create!(entry_type: :redeem, points: -40, cash_reward_amount: 90)
+
+      get admin_customer_path(customer)
+
+      assert_response :success
+      assert_select "[data-customer-metrics] [data-metric='litres']", text: /18\.25 L/
+      assert_select "[data-customer-metrics] [data-metric='discount']", text: "₹60.00"
+      assert_select "[data-customer-metrics] [data-metric='gifts']", text: "₹90.00"
+      assert_select "[data-customer-lifetime-metrics]", count: 0
+    end
+
+    test "a period-filtered profile shows the period totals alongside the lifetime ones" do
+      sign_in users(:one)
+      staff = users(:two)
+      customer = Customer.create!(name: "Period Padma", phone_number: "9444400005")
+      vehicle = customer.vehicles.create!(vehicle_number: "TN44QQ0001", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+      Transaction.create!(customer: customer, user: staff, vehicle: vehicle, fuel_amount: 2000,
+                          litres: 10, discount_amount: 25, created_at: Time.current)
+      Transaction.create!(customer: customer, user: staff, vehicle: vehicle, fuel_amount: 2000,
+                          litres: 90, discount_amount: 500, created_at: 60.days.ago)
+
+      get admin_customer_path(customer, preset: "today")
+
+      assert_response :success
+      assert_select "[data-customer-metrics] [data-metric='discount']", text: "₹25.00"
+      assert_select "[data-customer-lifetime-metrics]", text: /₹525\.00 discount/
+    end
+
     test "admin can set a customer's account type and filter the list by it" do
       sign_in users(:one)
       fleet = Customer.create!(name: "Fleet Fred", phone_number: "9811120001", customer_type: "otp")

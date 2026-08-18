@@ -88,7 +88,13 @@ fun HomeScreen(
     val actions = buildList {
         add(QuickAction(Icons.Filled.PointOfSale, "New Transaction", nayara.actionPrimaryContainer, nayara.actionPrimary) { haptics.tick(); onNewTransaction() })
         add(QuickAction(Icons.AutoMirrored.Filled.ListAlt, "Capture Visit", nayara.accentContainer, nayara.accentDefault) { haptics.tick(); onCaptureVisit() })
-        add(QuickAction(Icons.AutoMirrored.Filled.ReceiptLong, "Daily Settlement", nayara.statusInfoContainer, nayara.statusInfo) { haptics.tick(); onDailySettlement() })
+        // A settlement belongs to the FSM who worked the shift (Admin-12), so an
+        // admin does not file one from here — the web console has the
+        // enter-on-behalf-of flow for the case where an FSM cannot. Admins read
+        // and reconcile settlements from Admin > Settlements instead.
+        if (!isAdmin) {
+            add(QuickAction(Icons.AutoMirrored.Filled.ReceiptLong, "Daily Settlement", nayara.statusInfoContainer, nayara.statusInfo) { haptics.tick(); onDailySettlement() })
+        }
         add(QuickAction(Icons.Filled.People, "Customers", nayara.accentContainer, nayara.accentDefault) { haptics.tick(); onCustomers() })
         add(QuickAction(Icons.Filled.Redeem, "Redeem", nayara.rewardPointsContainer, nayara.rewardPointsText) { haptics.tick(); onRedeem() })
         if (isAdmin) {

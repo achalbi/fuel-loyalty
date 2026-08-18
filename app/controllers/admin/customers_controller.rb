@@ -90,25 +90,26 @@ module Admin
         preset: @current_preset, start_date: @current_start_date, end_date: @current_end_date
       )
       @current_customer_type = normalized_customer_type
+      @thresholds = ::Admin::Crm::CustomerMetrics.normalize_thresholds(params)
+      # Built here, not in the view, so every filter chip and clear link carries
+      # the same set forward instead of silently dropping half of it.
+      @period_params = { preset: @current_preset, start_date: @current_start_date, end_date: @current_end_date }.compact_blank
+      @threshold_params = @thresholds.transform_values(&:to_s)
       @customers = filtered_customers
       @customer = form_customer
     end
 
+    def filters_applied?
+      @query.present? || @current_status != "all" || @current_customer_type.present? ||
+        @period_range.present? || @thresholds.any?
+    end
+    helper_method :filters_applied?
+
     def filtered_customers
-      scope = Customer
-        .left_joins(:vehicles)
-        .select(<<~SQL.squish)
-          customers.*,
-          COALESCE(
-            (
-              SELECT SUM(points_ledgers.points)
-              FROM points_ledgers
-              WHERE points_ledgers.customer_id = customers.id
-            ),
-            0
-          ) AS total_points_sum
-        SQL
-        .distinct
+      metrics = ::Admin::Crm::CustomerMetrics.new(period_range: @period_range, thresholds: @thresholds)
+      # The metrics rollups are 1:1 with customers.id, so they survive the
+      # vehicles fan-out + DISTINCT that the search needs.
+      scope = metrics.apply(Customer.left_joins(:vehicles).select("customers.*").distinct)
 
       if @query.present?
         name_query = "%#{ActiveRecord::Base.sanitize_sql_like(@query.downcase)}%"
@@ -142,7 +143,10 @@ module Admin
         scope
       end
 
-      scope = scope.merge(Customer.transacted_between(@period_range)) if @period_range
+      # "Active in this period" means served in it — a fleet/OTP customer with
+      # visit captures but no loyalty transaction counts, matching the visit
+      # definition the metrics above use.
+      scope = scope.where("visit_stats.customer_id IS NOT NULL") if @period_range
       scope = scope.where(customer_type: @current_customer_type) if @current_customer_type
 
       scope.preload(:vehicles).order(created_at: :desc)
@@ -168,8 +172,13 @@ module Admin
       @customer_update_path = admin_customer_path(@customer)
       @customer_edit_modal_open = open_edit_modal
       # E3/E5/E7 CRM panels (admin-only; the shared show view renders them only when
-      # @crm_insight is present, so the staff surface stays unaffected).
-      @crm_insight = ::Admin::Crm::CustomerInsight.new(@customer).to_h
+      # @crm_insight is present, so the staff surface stays unaffected). The period
+      # carried over from the list narrows the commercial totals to the same window
+      # the admin was just looking at.
+      @period_range = ::Admin::Dashboard::OverviewReport.period_range(
+        preset: normalized_preset, start_date: params[:start_date].to_s.presence, end_date: params[:end_date].to_s.presence
+      )
+      @crm_insight = ::Admin::Crm::CustomerInsight.new(@customer, range: @period_range).to_h
       @contact_logs = @customer.contact_logs.recent_first.to_a
       @customer_feedbacks = @customer.customer_feedbacks.recent_first.to_a
       @reachable_contacts = @customer.customer_contacts.active.order(:role).to_a

@@ -27,8 +27,23 @@ data class InsightDto(
     @SerialName("expected_next_visit_on") val expectedNextVisitOn: String? = null,
     @SerialName("is_lost") val isLost: Boolean = false,
     @SerialName("conversion_probability") val conversionProbability: Int = 0,
+    val metrics: CustomerMetricsDto = CustomerMetricsDto(),
+    // Present only when the insight was requested for a period.
+    @SerialName("lifetime_metrics") val lifetimeMetrics: CustomerMetricsDto? = null,
     val contacts: ContactsSummaryDto = ContactsSummaryDto(),
     val feedback: FeedbackSummaryDto = FeedbackSummaryDto(),
+)
+
+// What the customer has taken and cost us: litres filled, discount given, and the
+// rupee value of the gifts (reward redemptions) they redeemed.
+@Serializable
+data class CustomerMetricsDto(
+    val visits: Int = 0,
+    val litres: Double = 0.0,
+    val discount: Double = 0.0,
+    val gifts: Double = 0.0,
+    val contacts: Int = 0,
+    val points: Int = 0,
 )
 
 @Serializable

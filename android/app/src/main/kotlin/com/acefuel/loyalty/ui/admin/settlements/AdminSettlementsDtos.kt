@@ -53,6 +53,8 @@ data class AdminSettlementDto(
 data class SettlementChangeDto(
     val id: Long,
     @SerialName("changed_by") val changedBy: String? = null,
+    // The FSM an admin entered the edit for; null when the admin acted as himself.
+    @SerialName("on_behalf_of") val onBehalfOf: String? = null,
     @SerialName("change_reason") val changeReason: String,
     @SerialName("recomputed_points") val recomputedPoints: Boolean = false,
     @SerialName("field_diffs") val fieldDiffs: JsonObject? = null,

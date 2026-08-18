@@ -1,12 +1,16 @@
 module Admin
   module Crm
     # E3 + E5 — the per-customer CRM profile: visit cadence, recency, a conversion
-    # probability, and rollups of outreach (contact_logs) and feedback. Computed on
-    # read from the visit history; nothing is denormalized on `customers`.
+    # probability, rollups of outreach (contact_logs) and feedback, and the
+    # commercial totals (litres, discount given, gifts given) from CustomerMetrics.
+    # Computed on read from the visit history; nothing is denormalized on
+    # `customers`. `range` narrows the commercial totals to a period; the cadence
+    # fields are always full-history.
     class CustomerInsight
-      def initialize(customer, as_of: Time.current)
+      def initialize(customer, as_of: Time.current, range: nil)
         @customer = customer
         @as_of = as_of
+        @range = range
       end
 
       def cadence
@@ -15,6 +19,17 @@ module Admin
 
       def conversion_probability
         @conversion_probability ||= ConversionScore.call(cadence: cadence, last_outcome: last_contact&.outcome)
+      end
+
+      # Same SQL the admin customers list filters on, so the two can never disagree.
+      def metrics
+        @metrics ||= CustomerMetrics.for(@customer, period_range: @range)
+      end
+
+      def lifetime_metrics
+        return metrics if @range.nil?
+
+        @lifetime_metrics ||= CustomerMetrics.for(@customer)
       end
 
       def to_h
@@ -31,9 +46,13 @@ module Admin
           expected_next_visit_on: c.expected_next_visit_on,
           is_lost: lost?,
           conversion_probability: conversion_probability,
+          metrics: metrics.to_h,
           contacts: contacts_summary,
           feedback: feedback_summary
-        }
+        }.tap do |data|
+          # Only worth carrying when it says something the period totals do not.
+          data[:lifetime_metrics] = lifetime_metrics.to_h if @range
+        end
       end
 
       # Cadence-overdue: past the expected next visit. (The churn *list*, E6, uses a

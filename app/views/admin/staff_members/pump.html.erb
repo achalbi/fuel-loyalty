@@ -33,7 +33,8 @@
 
             <div data-pump-assignment-date <%= "class=d-none" if @assignment_mode == "default" %>>
               <%= label_tag :assignment_date, "Assignment Date", class: "form-label" %>
-              <%= date_field_tag :assignment_date, @assignment_date, class: "form-control", required: true, disabled: @assignment_mode == "default" %>
+              <%= date_field_tag :assignment_date, @assignment_date, class: "form-control", required: true, min: Date.current, disabled: @assignment_mode == "default" %>
+              <div class="form-text">Today or later — a past date cannot change transactions that were already recorded.</div>
             </div>
             <%= render "shared/pump_assignment_fields",
               form: form,
