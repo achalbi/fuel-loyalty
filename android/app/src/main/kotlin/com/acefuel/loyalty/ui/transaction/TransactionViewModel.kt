@@ -69,6 +69,7 @@ data class TxnUiState(
     val myPumpLoading: Boolean = true,
     val myPumpError: String? = null,
     val fuelAmount: String = "",
+    val discountAmount: String = "",
     val paymentMode: String = "cash",
     val selectedNozzleId: Long? = null,
     val creating: Boolean = false,
@@ -133,7 +134,20 @@ data class TxnUiState(
             pumpReady &&
             selectedNozzleId != null &&
             (fuelAmount.toDoubleOrNull() ?: 0.0) > 0.0 &&
+            discountValid &&
             !creating
+
+    /**
+     * A discount is optional; when given it comes off the fuel amount, so it can
+     * be neither negative nor the whole sale. The server enforces the same rule.
+     */
+    val discountValid: Boolean
+        get() {
+            if (discountAmount.isBlank()) return true
+            val discount = discountAmount.toDoubleOrNull() ?: return false
+            val amount = fuelAmount.toDoubleOrNull() ?: return false
+            return discount >= 0.0 && discount < amount
+        }
 }
 
 class TransactionViewModel(private val repository: StaffRepository) : ViewModel() {
@@ -191,9 +205,17 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
         _state.update { it.copy(phoneNumber = value.filter(Char::isDigit).take(10)) }
 
     fun onFuelAmountChange(value: String) = _state.update { current ->
-        // Digits plus at most one decimal point.
+        current.copy(fuelAmount = decimalInput(value))
+    }
+
+    fun onDiscountAmountChange(value: String) = _state.update { current ->
+        current.copy(discountAmount = decimalInput(value))
+    }
+
+    /** Digits plus at most one decimal point. */
+    private fun decimalInput(value: String): String {
         var seenDot = false
-        val cleaned = buildString {
+        return buildString {
             for (c in value) {
                 when {
                     c.isDigit() -> append(c)
@@ -201,7 +223,6 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
                 }
             }
         }
-        current.copy(fuelAmount = cleaned)
     }
 
     fun setPayment(mode: String) = _state.update { it.copy(paymentMode = mode) }
@@ -282,6 +303,7 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
                 vehicleNumber = if (s.lookupMode == MODE_VEHICLE) s.matches.getOrNull(s.selectedMatchIndex ?: -1)?.vehicleNumber else null,
                 vehicleId = vehicle.first,
                 fuelAmount = amount,
+                discountAmount = s.discountAmount.toDoubleOrNull(),
                 fuelPumpNozzleId = s.selectedNozzleId,
                 paymentMode = s.paymentMode,
             )

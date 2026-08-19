@@ -38,9 +38,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
 import com.acefuel.loyalty.ui.designsystem.FormField
+import com.acefuel.loyalty.ui.designsystem.NayaraSegmentedControl
 import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
 import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
-import com.acefuel.loyalty.ui.designsystem.PickerField
 import com.acefuel.loyalty.ui.designsystem.showError
 import com.acefuel.loyalty.ui.designsystem.showSuccess
 import com.acefuel.loyalty.ui.theme.NayaraButton
@@ -49,6 +49,14 @@ import com.acefuel.loyalty.ui.theme.NayaraSpacing
 private fun money(v: Double): String = "₹" + "%,.2f".format(v)
 private val decimalKeyboard = KeyboardOptions(keyboardType = KeyboardType.Decimal)
 private val numberKeyboard = KeyboardOptions(keyboardType = KeyboardType.Number)
+
+// Credit-line types, mirroring SettlementCreditLine::CREDIT_TYPE_LABELS on the
+// server (wire value to display label), in the order staff asked for.
+private val CREDIT_TYPES = listOf(
+    "drive_in" to "Drive-In",
+    "credit" to "Credit",
+    "fleet_otp" to "Fleet/OTP",
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,22 +140,20 @@ fun SettlementScreen(
             FormField(state.phonepePos, viewModel::onPhonepePos, "PhonePe POS ₹", enabled = !state.locked, keyboardOptions = decimalKeyboard)
             FormField(state.phonepeScanner, viewModel::onPhonepeScanner, "PhonePe Scanner ₹", enabled = !state.locked, keyboardOptions = decimalKeyboard)
 
-            SectionHeader("Credit lines (Fleet/OTP & TT)")
+            SectionHeader("Credit lines")
             state.credits.forEachIndexed { i, c ->
+                // Type mirrors the three customer account types (staff feedback
+                // item 9) — a segmented control so all three are one tap away.
+                NayaraSegmentedControl(
+                    options = CREDIT_TYPES.map { it.second },
+                    selectedIndex = CREDIT_TYPES.indexOfFirst { it.first == c.type }.coerceAtLeast(0),
+                    onSelect = { index -> if (!state.locked) viewModel.onCreditType(i, CREDIT_TYPES[index].first) },
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
-                    PickerField(
-                        label = "Type",
-                        value = if (c.type == "tank_truck") "Tank truck" else "Fleet/OTP",
-                        onClick = { if (!state.locked) viewModel.onCreditType(i, if (c.type == "tank_truck") "fleet_otp" else "tank_truck") },
-                        modifier = Modifier.weight(1f),
-                        enabled = !state.locked,
-                    )
                     FormField(c.amount, { viewModel.onCreditAmount(i, it) }, "Amount ₹", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
                     FormField(c.litres, { viewModel.onCreditLitres(i, it) }, "Litres", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
-                    FormField(c.reference, { viewModel.onCreditRef(i, it) }, "Reference", Modifier.weight(1f), enabled = !state.locked)
                 }
+                FormField(c.reference, { viewModel.onCreditRef(i, it) }, "Reference", enabled = !state.locked)
             }
             if (!state.locked) OutlinedButton(onClick = viewModel::addCredit) { Text("Add credit line") }
 

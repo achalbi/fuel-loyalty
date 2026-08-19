@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AceFuels — Product & Engineering Documentation — AceFuels Docs</title>
+<title>Staff feedback — August 2026 — AceFuels Docs</title>
 <style>
 :root{
   --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
@@ -108,154 +108,162 @@ a:hover{text-decoration:underline}
 <body>
 <div class="topbar"><div class="topbar-in">
   <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
-  <span class="crumb">README.md</span>
+  <span class="crumb">50-staff-feedback-2026-08.md</span>
   <span class="spacer"></span>
   <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
 </div></div>
 <article class="doc">
-<h1 id="acefuels-product-engineering-documentation">AceFuels — Product &amp; Engineering Documentation</h1>
-<p>Detailed documentation for the <strong>AceFuels</strong> fuel-station loyalty + operations platform:
-what the <code>AceFuels_Requirement.xlsx</code> spreadsheet asks for, what the app (Rails + PWA +
-native Android) does today, and how to build the gap — as developer-ready specs.</p>
-<p><strong>Status snapshot:</strong> 41 requirement features → <strong>11 present · 9 partial · 21 absent</strong>.</p>
-<h2 id="locked-decisions-2026-07-21">Locked decisions (2026-07-21)</h2>
+<h1 id="staff-feedback-august-2026">Staff feedback — August 2026</h1>
+<p>Thirteen items raised by FSM staff after running the app at the counter. This
+page is the running record of what each item meant in the code and how it was
+resolved, so the fixes stay traceable back to the request that prompted them.</p>
+<p>Items are delivered in three batches: the small, self-contained fixes first,
+then the ones needing new schema, then the New Transaction / Capture Visit
+merge.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>#</th>
-<th>Decision</th>
-<th>Implication</th>
+<th>Item</th>
+<th>Batch</th>
+<th>Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Q1</td>
-<td><strong>Litres = source of truth</strong></td>
-<td>Capture meter readings/litres; derive ₹ from catalog price</td>
+<td>1</td>
+<td>Loyalty Lookup — phone number not cleared after navigating away and back</td>
+<td>1</td>
+<td>✅ Done</td>
 </tr>
 <tr>
-<td>Q2</td>
-<td><strong>Both surfaces in lockstep</strong></td>
-<td>Every feature ships on Rails PWA <strong>and</strong> native Android (+ API)</td>
+<td>2</td>
+<td>Difference between New Transaction and Capture Visit — only one way to capture</td>
+<td>3</td>
+<td>⏳ Planned</td>
 </tr>
 <tr>
-<td>Q3</td>
-<td><strong>Operator KYC = profile fields only</strong></td>
-<td>Add Photo/Address/Aadhaar#/ID-photo; keep password login, <strong>no OTP</strong></td>
-</tr>
-</tbody>
-</table></div>
-<blockquote>
-<p><strong>Open item:</strong> confirm the customer taxonomy — OTP = fleet/credit (litres-billed), TT = tank-truck credit, Drive-in = walk-in cash, Credit = credit account. Features E4/D5/F2 depend on it.</p>
-</blockquote>
-<h2 id="how-to-read-this-set">How to read this set</h2>
-<p>Start at the overview, skim requirements + current architecture for context, then dive into the
-per-area specs. The roadmap tells you what to build in what order.</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>#</th>
-<th>Document</th>
-<th>What it is</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>00</td>
-<td><a href="00-product-overview.html">Product overview</a></td>
-<td>Vision, roles, glossary, decisions, scope</td>
+<td>3</td>
+<td>Only 3 customer types: Drive-In, Credit, Fleet/OTP</td>
+<td>1</td>
+<td>✅ Done</td>
 </tr>
 <tr>
-<td>01</td>
-<td><a href="01-functional-requirements.html">Functional requirements</a></td>
-<td>Every feature ID with acceptance criteria + status</td>
+<td>4</td>
+<td>Only 2 payment types: Cash or Credit</td>
+<td>1</td>
+<td>✅ Already correct</td>
 </tr>
 <tr>
-<td>02</td>
-<td><a href="02-current-architecture.html">Current architecture</a></td>
-<td>As-built map (models, controllers, services, Android), cited</td>
+<td>5</td>
+<td>Settlement date should default to yesterday</td>
+<td>1</td>
+<td>✅ Done</td>
 </tr>
 <tr>
-<td>03</td>
-<td><a href="03-target-data-model.html">Target data model</a></td>
-<td>New/changed tables &amp; columns; consolidated ER diagram</td>
+<td>6</td>
+<td>Daily settlement multiplies if submitted twice; staff can't view the day's settlement report</td>
+<td>2</td>
+<td>⏳ Planned</td>
 </tr>
 <tr>
-<td>—</td>
-<td><strong>Feature specs</strong></td>
-<td>current state → target design → API → UI → acceptance</td>
+<td>7</td>
+<td>Cash counter should include ₹2 and ₹1</td>
+<td>1</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>8</td>
+<td>New Transaction is missing the discount field</td>
+<td>1</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Credit Line type should be the customer type</td>
+<td>1</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>10</td>
-<td><a href="10-spec-product-catalog.html">Product catalog + stock</a></td>
-<td>Priced products (fuel + lubes/AdBlue), MRP, batch, inventory — <strong>keystone</strong></td>
+<td>Free-form digital receipts (PAYTM or any other means) with an amount</td>
+<td>2</td>
+<td>⏳ Planned</td>
 </tr>
 <tr>
 <td>11</td>
-<td><a href="11-spec-litres-readings.html">Litres / readings model</a></td>
-<td>Litres capture, ₹ derivation, reward reconciliation</td>
+<td>Add a discount during settlement calculation if it was missed at capture</td>
+<td>2</td>
+<td>⏳ Planned</td>
 </tr>
 <tr>
 <td>12</td>
-<td><a href="12-spec-daily-settlement.html">Daily settlement</a></td>
-<td>Shift-end reconciliation — the largest module (D1–D10)</td>
+<td>Free-form field for Salary Advance or any other same-day note</td>
+<td>2</td>
+<td>⏳ Planned</td>
 </tr>
 <tr>
 <td>13</td>
-<td><a href="13-spec-customer-crm-capture.html">Customer master + capture</a></td>
-<td>Driver/owner/transport, contacted, customer type, FSM per-visit form</td>
-</tr>
-<tr>
-<td>14</td>
-<td><a href="14-spec-rewards-staff-constraints.html">Rewards + staff constraints</a></td>
-<td>Global pause, admin pump assignment, staff-login corrections — <strong>quick wins</strong></td>
-</tr>
-<tr>
-<td>15</td>
-<td><a href="15-spec-dashboard-reports.html">Dashboard + reports</a></td>
-<td>Drill-through, cadence, customer-type, churn, feedback, reporting</td>
-</tr>
-<tr>
-<td>16</td>
-<td><a href="16-spec-campaigns-notifications.html">Campaigns + notifications</a></td>
-<td>Campaign engine, targeting, push/WhatsApp/SMS, token linkage</td>
-</tr>
-<tr>
-<td>17</td>
-<td><a href="17-spec-operator-kyc.html">Operator KYC</a></td>
-<td>Profile fields, ActiveStorage, PII handling (no OTP)</td>
-</tr>
-<tr>
-<td>20</td>
-<td><a href="20-api-contracts.html">API contracts</a></td>
-<td>All new/changed JSON endpoints for Android</td>
-</tr>
-<tr>
-<td>30</td>
-<td><a href="30-implementation-roadmap.html">Implementation roadmap</a></td>
-<td>Phased plan, dependencies, effort, biggest changes</td>
-</tr>
-<tr>
-<td>40</td>
-<td><a href="40-gap-analysis.html">Gap analysis</a></td>
-<td>The audit companion — full present/partial/absent matrix</td>
-</tr>
-<tr>
-<td>50</td>
-<td><a href="50-staff-feedback-2026-08.html">Staff feedback — Aug 2026</a></td>
-<td>The 13 counter-staff items, what each meant in code, and how it was resolved</td>
+<td>Customer-capture notes should be timestamped, append-only entries</td>
+<td>2</td>
+<td>⏳ Planned</td>
 </tr>
 </tbody>
 </table></div>
-<h2 id="feature-id-map">Feature ID map</h2>
-<p><code>A1–A10</code> setup/users/shifts · <code>B1–B2</code> customer capture · <code>C1–C5</code> rewards ·
-<code>D1–D10</code> daily settlement · <code>E1–E7</code> dashboard/CRM/reports · <code>F1–F4</code> campaigns/notifications ·
-<code>G1</code> per-pump visualize+edit · <code>S-MYPUMP</code> / <code>S-PAUSE</code> staff-login constraints.</p>
-<hr />
-<p><em>Source: <code>AceFuels_Requirement.xlsx</code> (7 sheets). Specs cite <code>file:line</code> against the repo as of 2026-07-21.</em></p>
+<h2 id="batch-1-delivered">Batch 1 — delivered</h2>
+<h3 id="1-loyalty-lookup-clears-itself">1 · Loyalty lookup clears itself</h3>
+<p>The counter device is shared, so a number left in the lookup field is both a
+privacy leak and a mis-scan waiting to happen.</p>
+<ul>
+<li><strong>Android</strong> — <code>LoyaltyLookupCard</code> (Home) and <code>LoyaltyLookupScreen</code> (public)
+  held the typed number in <code>rememberSaveable</code> while the view model held the
+  result, so both survived navigating away. A <code>LifecycleResumeEffect</code> now
+  clears the field and resets the view model as soon as the screen stops being
+  the foreground destination.</li>
+<li><strong>Web</strong> — the lookup input is marked <code>data-clear-on-restore</code> and cleared on
+  <code>turbo:before-cache</code> (so the snapshot Turbo restores from is empty) and on a
+  bfcache <code>pageshow</code>. A value the server deliberately re-rendered — the number
+  that failed validation — is left alone. <code>autocomplete</code> is off.</li>
+</ul>
+<h3 id="3-three-customer-types-named-consistently">3 · Three customer types, named consistently</h3>
+<p>The three types already existed (<code>drive_in / otp / credit</code>); the wording and
+order did not. <code>Customer::CUSTOMER_TYPE_LABELS</code> is now the single source —
+<strong>Drive-In, Credit, Fleet/OTP</strong>, in that order — and every picker, filter chip
+and badge reads from it (<code>Customer.customer_type_options</code> /
+<code>customer_type_label_for</code>) instead of hardcoding a list or calling <code>humanize</code>.
+The Android filter chips mirror the same list.</p>
+<h3 id="4-two-payment-types">4 · Two payment types</h3>
+<p>Already correct on every surface: <code>Transaction#payment_mode</code> is
+<code>{ cash, credit }</code>, and the web radio group and the Android payment options
+offer exactly those two. No change.</p>
+<h3 id="5-settlement-defaults-to-yesterday">5 · Settlement defaults to yesterday</h3>
+<p>Staff record the day's transactions as they happen and settle the next morning,
+so a draft opened with no date now loads <strong>yesterday's</strong> sheet
+(<code>Settlement::Builder.default_business_date</code>). An unparseable date falls back to
+the same default. The pump/date chooser still lets the FSM pick any date, and
+Android picks the default up from the draft API.</p>
+<h3 id="7-2-and-1-in-the-cash-counter">7 · ₹2 and ₹1 in the cash counter</h3>
+<p><code>SettlementCashDenomination::DENOMINATIONS</code> is now
+<code>500, 200, 100, 50, 20, 10, 5, 2, 1</code>. The form grid, the draft API and the
+Android denomination rows all derive from that constant, so one change covers
+all three. Existing settlements gain the two new rows when reopened.</p>
+<h3 id="8-discount-on-new-transaction">8 · Discount on New Transaction</h3>
+<p><code>Transaction#discount_amount</code> existed and was permitted, but no form ever set
+it. Added on the web fuel step and the Android transaction screen, with the
+submit gate refusing a negative discount or one that swallows the sale.</p>
+<p><code>TransactionCreator</code> previously applied a discount only on the litres path; the
+web form captures ₹, so the typed-amount path now treats the figure as the
+gross and takes the discount off it. Points are earned on the net — what the
+customer actually paid.</p>
+<h3 id="9-credit-line-type-is-the-customer-type">9 · Credit line type is the customer type</h3>
+<p><code>SettlementCreditLine#credit_type</code> was <code>fleet_otp / tank_truck</code>. It now mirrors
+the three customer account types. <code>fleet_otp</code> keeps its stored value (<code>0</code>) so
+installed app builds keep posting a value the server accepts; <code>tank_truck</code> (<code>1</code>)
+was migrated to <code>credit</code> (<code>3</code>), which is what a tank-truck credit sale was being
+used to record. The Android type toggle became a three-way segmented control.</p>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
-  <span class="fnote">Generated from README.md &middot; 2026-07-22</span>
+  <span class="fnote">Generated from 50-staff-feedback-2026-08.md &middot; 2026-07-22</span>
 </div>
 </article>
 <script>

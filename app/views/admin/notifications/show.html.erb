@@ -45,7 +45,7 @@
             <div class="col-sm-6">
               <%= form.label :target_customer_type, "Customer type", class: "form-label" %>
               <%= form.select :target_customer_type,
-                    options_for_select(Customer.customer_types.keys.map { |k| [k.humanize, k] }),
+                    options_for_select(Customer.customer_type_options),
                     { include_blank: "—" }, class: "form-select" %>
             </div>
           </div>
@@ -157,7 +157,7 @@
                 </div>
                 <p class="mb-2"><%= schedule.message %></p>
                 <p class="small-muted mb-1"><strong>Schedule:</strong> <%= schedule.schedule_summary %></p>
-                <p class="small-muted mb-1"><strong>Delivery:</strong> <%= schedule.channel_list.map(&:upcase).join(", ") %> · <%= schedule.target_type == "customer_type" ? "#{schedule.target_customer_type&.humanize} customers" : "Everyone" %></p>
+                <p class="small-muted mb-1"><strong>Delivery:</strong> <%= schedule.channel_list.map(&:upcase).join(", ") %> · <%= schedule.target_type == "customer_type" ? "#{Customer.customer_type_label_for(schedule.target_customer_type)} customers" : "Everyone" %></p>
                 <p class="small-muted mb-0"><strong>Last sent:</strong> <%= schedule.last_sent_at.present? ? l(schedule.last_sent_at, format: :long) : "Never" %></p>
               </div>
 
@@ -239,7 +239,7 @@
               <td class="small-muted"><%= l(message.created_at, format: :short) if message.created_at %></td>
               <td><%= message.title %></td>
               <td><span class="badge text-bg-light border"><%= message.category.humanize %></span></td>
-              <td><%= message.target_type.humanize %><%= " · #{message.target_customer_type.humanize}" if message.target_customer_type.present? %></td>
+              <td><%= message.target_type.humanize %><%= " · #{Customer.customer_type_label_for(message.target_customer_type)}" if message.target_customer_type.present? %></td>
               <td><%= message.channel_list.map(&:upcase).join(", ") %></td>
               <td class="text-end"><%= by_status["sent"] %></td>
               <td class="text-end"><%= by_status["skipped"] %></td>

@@ -398,6 +398,24 @@ fun TransactionScreen(
                             }
                         }
                         Spacer(Modifier.height(NayaraSpacing.Md))
+                        // Optional: a counter discount comes off the fuel amount, so
+                        // points are earned on what the customer actually paid.
+                        FormField(
+                            value = state.discountAmount,
+                            onValueChange = viewModel::onDiscountAmountChange,
+                            label = "Discount (optional)",
+                            prefix = { Text("₹ ") },
+                            errors = if (!state.discountValid) listOf("Discount must be less than the fuel amount.") else null,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Done,
+                            ),
+                            keyboardActions = KeyboardActions(onDone = {
+                                dismissKeyboard()
+                                if (state.canSave) showConfirm = true
+                            }),
+                        )
+                        Spacer(Modifier.height(NayaraSpacing.Md))
                         Text("Payment", style = MaterialTheme.typography.labelLarge)
                         Spacer(Modifier.height(NayaraSpacing.Sm))
                         // Compact chip-sized buttons (same footprint as the old chips) but
@@ -450,6 +468,7 @@ fun TransactionScreen(
                     append("Vehicle: ${state.selectedVehicleNumber ?: "—"}")
                     state.selectedFuelTypeLabel?.let { append("\nFuel: $it") }
                     append("\nAmount: ₹${state.fuelAmount}")
+                    state.discountAmount.takeIf { it.isNotBlank() }?.let { append("\nDiscount: ₹$it") }
                     append("\nPayment: ${state.paymentMode.replaceFirstChar(Char::uppercase)}")
                 },
                 confirmLabel = "Save",

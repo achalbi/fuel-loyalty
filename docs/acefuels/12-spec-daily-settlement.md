@@ -135,7 +135,7 @@ Unique index `(fuel_pump_id, business_date, shift_template_id)` so one FSM canno
 | Column | Type | Rationale |
 |---|---|---|
 | `daily_settlement_id` | bigint FK | |
-| `credit_type` | integer enum `fleet_otp / tank_truck` | |
+| `credit_type` | integer enum `fleet_otp:0 / drive_in:2 / credit:3` | Mirrors the three Customer account types (staff feedback item 9). The retired `tank_truck:1` was migrated to `credit`. |
 | `litres` | decimal(12,3) default 0 | e.g. "OTP 136 Lts" |
 | `discount_amount` | decimal(12,2) default 0 | Per-line discount |
 | `amount` | decimal(12,2) default 0 | ₹ value of the credit line, reduces cash to settle |
@@ -147,7 +147,7 @@ Unique index `(fuel_pump_id, business_date, shift_template_id)` so one FSM canno
 | Column | Type | Rationale |
 |---|---|---|
 | `daily_settlement_id` | bigint FK | |
-| `denomination` | integer | 500/200/100/50/20/10/5 |
+| `denomination` | integer | 500/200/100/50/20/10/5/2/1 |
 | `quantity` | integer default 0 | |
 | `amount` | decimal(12,2) | Derived `= denomination × quantity` |
 
@@ -200,7 +200,8 @@ Unique index `(fuel_pump_id, business_date, shift_template_id)` so one FSM canno
 5. **Shortage (D7):** `shortage_amount = final_amount_to_settle − counted_cash_amount`. Positive = cash short; negative = excess. `counted_cash_amount = Σ denomination amounts`.
 6. **Status lifecycle:** `draft` (FSM editing) → `submitted` (FSM done; admin can view) → `reconciled` (admin confirmed; sets `locked=true`). Only admins move to `reconciled`. Only admins edit a `submitted`/`reconciled` settlement; every such edit requires a `change_reason` and writes a `settlement_changes` row.
 7. **Points recompute on edit (D9 ⇄ C5).** Loyalty points accrue from per-customer visits (B2 entries → litres × catalog price → ₹ → `PointsCalculator`). When an admin edit changes a figure that feeds a customer's derived ₹ (a linked discount line's litres/discount, or a re-priced nozzle whose price is the source for that day's B2 entries), `PointsRecomputeService` reverses the affected `points_ledgers` `earn` rows and re-awards using the new derived ₹, inside one DB transaction. The `settlement_changes.recomputed_points` flag records that this happened. Settlements that touch no customer-linked figure skip recompute.
-8. **Cross-pump view (D9/Admin-13):** admin can list/aggregate settlements for a `business_date` across all pumps, summing fuel/lube/discount/credit/cash/shortage.
+8. **Business date defaults to yesterday.** Staff record a day's transactions as they happen and settle the next morning, so a draft opened with no date is yesterday's sheet (`Settlement::Builder.default_business_date`). The FSM can still pick any date in the chooser.
+9. **Cross-pump view (D9/Admin-13):** admin can list/aggregate settlements for a `business_date` across all pumps, summing fuel/lube/discount/credit/cash/shortage.
 
 ```mermaid
 flowchart TD

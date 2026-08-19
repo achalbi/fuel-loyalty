@@ -71,7 +71,7 @@
   <h2 class="h5">Credit lines</h2>
   <ul class="list-unstyled mb-4">
     <% @settlement.credit_lines.each do |c| %>
-      <li><%= c.credit_type.humanize %> · <%= c.litres %> L · <%= number_to_currency(c.amount, unit: "₹") %> <span class="text-muted"><%= c.reference %></span></li>
+      <li><%= c.credit_type_label %> · <%= c.litres %> L · <%= number_to_currency(c.amount, unit: "₹") %> <span class="text-muted"><%= c.reference %></span></li>
     <% end %>
   </ul>
 <% end %>

@@ -359,6 +359,40 @@ class TransactionCreatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("950"), result.transaction.fuel_amount
   end
 
+  test "a discount reduces the net fuel amount on the typed-amount path" do
+    # The web form captures ₹, not litres, so the counter discount has to come
+    # off a typed amount too — points are earned on what the customer paid.
+    user = User.create!(name: "Staff AmtDisc", username: "staff_amt_disc", phone_number: "9017770004", password: "password123", password_confirmation: "password123", role: :staff)
+    petrol_nozzle, = assign_pump_to_user(user)
+    customer = Customer.create!(name: "Amt Dan", phone_number: "9876500903")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN33AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    result = TransactionCreator.call(
+      user: user, phone_number: customer.phone_number,
+      fuel_amount: 1000, discount_amount: 150, vehicle_id: vehicle.id, fuel_pump_nozzle_id: petrol_nozzle.id
+    )
+
+    assert_equal BigDecimal("1000"), result.transaction.gross_amount
+    assert_equal BigDecimal("150"), result.transaction.discount_amount
+    assert_equal BigDecimal("850"), result.transaction.fuel_amount
+  end
+
+  test "a discount that swallows the typed amount is rejected" do
+    user = User.create!(name: "Staff BigDisc", username: "staff_big_disc", phone_number: "9017770005", password: "password123", password_confirmation: "password123", role: :staff)
+    petrol_nozzle, = assign_pump_to_user(user)
+    customer = Customer.create!(name: "Big Dan", phone_number: "9876500904")
+    vehicle = customer.vehicles.create!(vehicle_number: "TN34AB1234", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      TransactionCreator.call(
+        user: user, phone_number: customer.phone_number,
+        fuel_amount: 500, discount_amount: 500, vehicle_id: vehicle.id, fuel_pump_nozzle_id: petrol_nozzle.id
+      )
+    end
+
+    assert_match(/discount cannot exceed/i, error.message)
+  end
+
   test "litres with no configured fuel price is rejected" do
     user = User.create!(name: "Staff NoPrice", username: "staff_noprice", phone_number: "9017770003", password: "password123", password_confirmation: "password123", role: :staff)
     petrol_nozzle, = assign_pump_to_user(user)

@@ -481,6 +481,7 @@ data class TransactionCreateRequest(
     @SerialName("vehicle_number") val vehicleNumber: String? = null,
     @SerialName("vehicle_id") val vehicleId: Long,
     @SerialName("fuel_amount") val fuelAmount: Double,
+    @SerialName("discount_amount") val discountAmount: Double? = null,
     @SerialName("fuel_pump_id") val fuelPumpId: Long? = null,
     @SerialName("fuel_pump_nozzle_id") val fuelPumpNozzleId: Long? = null,
     @SerialName("payment_mode") val paymentMode: String,

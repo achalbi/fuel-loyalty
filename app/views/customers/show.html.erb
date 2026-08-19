@@ -39,7 +39,7 @@
           <span class="customer-details-hero__chip"><strong><%= @customer.transactions.size %></strong> visits</span>
           <span class="customer-details-hero__chip"><strong><%= persisted_vehicles.size %></strong> vehicles</span>
           <% unless @customer.drive_in? %>
-            <span class="customer-details-hero__chip"><%= @customer.customer_type == "otp" ? "OTP / Fleet" : "Credit" %></span>
+            <span class="customer-details-hero__chip"><%= @customer.customer_type_label %></span>
           <% end %>
           <% if @customer.transport_name.present? %>
             <span class="customer-details-hero__chip">Transport: <strong><%= @customer.transport_name %></strong></span>

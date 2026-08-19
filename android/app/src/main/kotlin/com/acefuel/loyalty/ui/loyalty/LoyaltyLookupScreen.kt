@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -101,6 +102,13 @@ fun LoyaltyLookupCard(modifier: Modifier = Modifier) {
         keyboardController?.hide()
         phone = ""
         viewModel.reset()
+    }
+
+    // The counter is shared, so one customer's number must never greet the
+    // next one: wipe the field and any result as soon as the screen stops
+    // being the foreground destination.
+    LifecycleResumeEffect(Unit) {
+        onPauseOrDispose { clearLookup() }
     }
 
     val canClear = state is LoyaltyUiState.Success || state is LoyaltyUiState.Error
@@ -215,6 +223,13 @@ fun LoyaltyLookupScreen(
         keyboardController?.hide()
         phone = ""
         viewModel.reset()
+    }
+
+    // The counter is shared, so one customer's number must never greet the
+    // next one: wipe the field and any result as soon as the screen stops
+    // being the foreground destination.
+    LifecycleResumeEffect(Unit) {
+        onPauseOrDispose { clearLookup() }
     }
 
     val canClear = state is LoyaltyUiState.Success || state is LoyaltyUiState.Error

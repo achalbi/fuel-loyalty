@@ -55,7 +55,7 @@
       </div>
       <div class="col-md-4">
         <%= form.label :target_customer_type, "Customer type", class: "form-label small" %>
-        <%= form.select :target_customer_type, options_for_select(@customer_types.map { |t| [t.humanize, t] }, @campaign.target_customer_type), { include_blank: "—" }, class: "form-select" %>
+        <%= form.select :target_customer_type, options_for_select(@customer_types.map { |t| [Customer.customer_type_label_for(t), t] }, @campaign.target_customer_type), { include_blank: "—" }, class: "form-select" %>
       </div>
       <div class="col-md-4">
         <span class="form-label small d-block">Channels</span>

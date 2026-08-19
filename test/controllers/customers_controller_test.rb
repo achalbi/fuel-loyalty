@@ -122,7 +122,7 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     get customer_path(customer)
 
     assert_response :success
-    assert_select ".customer-details-hero__chip", text: "OTP / Fleet"
+    assert_select ".customer-details-hero__chip", text: "Fleet/OTP"
     assert_select ".customer-details-section h2", text: "Contacts"
     assert_select ".customer-details-vehicle-row__number", text: /Ravi/
   end

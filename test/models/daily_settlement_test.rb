@@ -20,6 +20,21 @@ class DailySettlementTest < ActiveSupport::TestCase
     }.merge(overrides)
   end
 
+  test "credit lines accept the three customer account types" do
+    settlement = DailySettlement.new(base_attrs(
+      credit_lines_attributes: [
+        { credit_type: "drive_in", amount: 100 },
+        { credit_type: "credit", amount: 200 },
+        { credit_type: "fleet_otp", amount: 300 }
+      ]
+    ))
+
+    assert settlement.save, settlement.errors.full_messages.to_sentence
+    assert_equal %w[drive_in credit fleet_otp].sort, settlement.credit_lines.map(&:credit_type).sort
+    assert_equal BigDecimal("600"), settlement.total_credit_amount
+    assert_equal ["Drive-In", "Credit", "Fleet/OTP"], SettlementCreditLine.credit_type_options.map(&:first)
+  end
+
   test "final amount and shortage follow the D6/D7 formulas" do
     settlement = DailySettlement.new(base_attrs(
       phonepe_pos_amount: 2000, phonepe_scanner_amount: 1000,

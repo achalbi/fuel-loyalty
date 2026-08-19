@@ -71,7 +71,7 @@
       <div class="col-sm-6">
         <%= form.label :target_customer_type, "Customer type", class: "form-label" %>
         <%= form.select :target_customer_type,
-              options_for_select(Customer.customer_types.keys.map { |k| [k.humanize, k] }, schedule.target_customer_type),
+              options_for_select(Customer.customer_type_options, schedule.target_customer_type),
               { include_blank: "—" }, class: "form-select" %>
       </div>
     </div>

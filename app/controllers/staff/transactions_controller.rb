@@ -122,6 +122,7 @@ module Staff
       @prefill_vehicle_number = prefill_source[:vehicle_number]
       @prefill_vehicle_id = prefill_source[:vehicle_id]
       @prefill_fuel_amount = prefill_source[:fuel_amount]
+      @prefill_discount_amount = prefill_source[:discount_amount]
       @prefill_fuel_pump_id = prefill_source[:fuel_pump_id]
       @prefill_fuel_pump_nozzle_id = prefill_source[:fuel_pump_nozzle_id]
       @prefill_payment_mode = normalized_payment_mode(prefill_source[:payment_mode])
@@ -192,7 +193,7 @@ module Staff
     end
 
     def transaction_lookup_params
-      params.require(:transaction_lookup).permit(:lookup_mode, :phone_number, :vehicle_number, :fuel_amount, :fuel_pump_id, :fuel_pump_nozzle_id, :payment_mode, :lock_vehicle_details)
+      params.require(:transaction_lookup).permit(:lookup_mode, :phone_number, :vehicle_number, :fuel_amount, :discount_amount, :fuel_pump_id, :fuel_pump_nozzle_id, :payment_mode, :lock_vehicle_details)
     end
 
     def build_registration_customer
@@ -271,6 +272,7 @@ module Staff
 
     def transaction_prefill_for_registered_customer(customer, vehicle)
       fuel_amount = transaction_lookup_params[:fuel_amount]
+      discount_amount = transaction_lookup_params[:discount_amount]
       lookup_mode = normalized_lookup_mode(transaction_lookup_params[:lookup_mode])
       fuel_pump_id = transaction_lookup_params[:fuel_pump_id]
       fuel_pump_nozzle_id = transaction_lookup_params[:fuel_pump_nozzle_id]
@@ -282,6 +284,7 @@ module Staff
           vehicle_number: vehicle.vehicle_number,
           vehicle_id: vehicle.id,
           fuel_amount:,
+          discount_amount:,
           fuel_pump_id:,
           fuel_pump_nozzle_id:,
           payment_mode:
@@ -292,6 +295,7 @@ module Staff
           phone_number: customer.phone_number,
           vehicle_id: vehicle&.id,
           fuel_amount:,
+          discount_amount:,
           fuel_pump_id:,
           fuel_pump_nozzle_id:,
           payment_mode:

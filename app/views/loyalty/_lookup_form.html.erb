@@ -12,11 +12,11 @@
         placeholder: t("loyalty.new.phone_placeholder"),
         required: true,
         inputmode: "numeric",
-        autocomplete: "tel-national",
+        autocomplete: "off",
         maxlength: 10,
         pattern: "\\d{10}",
         title: t("loyalty.new.phone_title"),
-        data: { phone_number_field: true } %>
+        data: { phone_number_field: true, clear_on_restore: true } %>
     </div>
   </div>
 

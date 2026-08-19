@@ -1,7 +1,7 @@
 class SettlementCashDenomination < ApplicationRecord
   # D7 — one row per denomination present in the counted cash. amount = denom ×
   # qty (derived). counted_cash = Σ amount; shortage = final − counted (parent).
-  DENOMINATIONS = [500, 200, 100, 50, 20, 10, 5].freeze
+  DENOMINATIONS = [500, 200, 100, 50, 20, 10, 5, 2, 1].freeze
 
   belongs_to :daily_settlement
 

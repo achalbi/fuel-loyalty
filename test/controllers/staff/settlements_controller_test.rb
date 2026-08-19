@@ -19,7 +19,7 @@ module Staff
       assert_select "form[data-settlement-form]"
       assert_select "tr[data-nozzle-row]", minimum: 2   # petrol + diesel nozzles
       assert_select "tr[data-lube-row]"                 # 10W30
-      assert_select "tr[data-denom-row]", 7             # full denomination grid
+      assert_select "tr[data-denom-row]", 9             # full denomination grid, ₹500 down to ₹1
     end
 
     test "staff can submit a settlement and amounts are derived server-side" do

@@ -836,7 +836,7 @@ FKs: <code>settlement_id</code>→<code>settlements</code>; <code>product_id</co
 <tr>
 <td><code>credit_type</code></td>
 <td>integer, null:false</td>
-<td>enum <code>fleet_otp:0</code>, <code>tt:1</code>, <code>discount:2</code> (discount pulled from same-day CustomerDetailsEntry, D3)</td>
+<td>enum <code>fleet_otp:0</code>, <code>drive_in:2</code>, <code>credit:3</code> — mirrors the Customer account types; <code>tt:1</code> retired and migrated to <code>credit</code></td>
 </tr>
 <tr>
 <td><code>vehicle_number</code></td>
@@ -966,7 +966,7 @@ chosen to keep them for formula readability.)</p>
 <tr>
 <td><code>denomination</code></td>
 <td>integer, null:false</td>
-<td>500/200/100/50/20/10/5</td>
+<td>500/200/100/50/20/10/5/2/1</td>
 </tr>
 <tr>
 <td><code>quantity</code></td>

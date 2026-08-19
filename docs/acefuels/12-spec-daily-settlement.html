@@ -503,8 +503,8 @@ Web-first deferrals: native <strong>decantation</strong> (D8 tank dips) inputs a
 </tr>
 <tr>
 <td><code>credit_type</code></td>
-<td>integer enum <code>fleet_otp / tank_truck</code></td>
-<td></td>
+<td>integer enum <code>fleet_otp:0 / drive_in:2 / credit:3</code></td>
+<td>Mirrors the three Customer account types (staff feedback item 9). The retired <code>tank_truck:1</code> was migrated to <code>credit</code>.</td>
 </tr>
 <tr>
 <td><code>litres</code></td>
@@ -551,7 +551,7 @@ Web-first deferrals: native <strong>decantation</strong> (D8 tank dips) inputs a
 <tr>
 <td><code>denomination</code></td>
 <td>integer</td>
-<td>500/200/100/50/20/10/5</td>
+<td>500/200/100/50/20/10/5/2/1</td>
 </tr>
 <tr>
 <td><code>quantity</code></td>
@@ -718,6 +718,7 @@ Web-first deferrals: native <strong>decantation</strong> (D8 tank dips) inputs a
 <li><strong>Shortage (D7):</strong> <code>shortage_amount = final_amount_to_settle − counted_cash_amount</code>. Positive = cash short; negative = excess. <code>counted_cash_amount = Σ denomination amounts</code>.</li>
 <li><strong>Status lifecycle:</strong> <code>draft</code> (FSM editing) → <code>submitted</code> (FSM done; admin can view) → <code>reconciled</code> (admin confirmed; sets <code>locked=true</code>). Only admins move to <code>reconciled</code>. Only admins edit a <code>submitted</code>/<code>reconciled</code> settlement; every such edit requires a <code>change_reason</code> and writes a <code>settlement_changes</code> row.</li>
 <li><strong>Points recompute on edit (D9 ⇄ C5).</strong> Loyalty points accrue from per-customer visits (B2 entries → litres × catalog price → ₹ → <code>PointsCalculator</code>). When an admin edit changes a figure that feeds a customer's derived ₹ (a linked discount line's litres/discount, or a re-priced nozzle whose price is the source for that day's B2 entries), <code>PointsRecomputeService</code> reverses the affected <code>points_ledgers</code> <code>earn</code> rows and re-awards using the new derived ₹, inside one DB transaction. The <code>settlement_changes.recomputed_points</code> flag records that this happened. Settlements that touch no customer-linked figure skip recompute.</li>
+<li><strong>Business date defaults to yesterday.</strong> Staff record a day's transactions as they happen and settle the next morning, so a draft opened with no date is yesterday's sheet (<code>Settlement::Builder.default_business_date</code>). The FSM can still pick any date in the chooser.</li>
 <li><strong>Cross-pump view (D9/Admin-13):</strong> admin can list/aggregate settlements for a <code>business_date</code> across all pumps, summing fuel/lube/discount/credit/cash/shortage.</li>
 </ol>
 <figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">flowchart TD

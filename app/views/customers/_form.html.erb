@@ -44,7 +44,7 @@
     <div>
       <%= form.label :customer_type, "Account Type", class: "form-label" %>
       <%= form.select :customer_type,
-        options_for_select([["Drive-in (walk-in cash)", "drive_in"], ["OTP / Fleet", "otp"], ["Credit account", "credit"]], customer.customer_type),
+        options_for_select(Customer.customer_type_options, customer.customer_type),
         {}, class: "form-select" %>
       <div class="form-text">How this customer is billed / treated — drives dashboard segmentation.</div>
     </div>

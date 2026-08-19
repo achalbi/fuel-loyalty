@@ -12,6 +12,9 @@ module Settlement
 
     def self.call(...) = new(...).call
 
+    # The business date a settlement defaults to when none was supplied.
+    def self.default_business_date = Date.yesterday
+
     def initialize(user:, fuel_pump_id: nil, business_date: nil, shift_template_id: nil)
       @user = user
       @fuel_pump = resolve_pump(fuel_pump_id)
@@ -49,12 +52,14 @@ module Settlement
       pump || @user&.transaction_fuel_pump
     end
 
+    # Staff record the day's transactions as they happen and settle the next
+    # morning, so an unspecified business date means "yesterday", not today.
     def parse_date(value)
-      return Date.current if value.blank?
+      return self.class.default_business_date if value.blank?
 
       Date.parse(value.to_s)
     rescue ArgumentError, TypeError
-      Date.current
+      self.class.default_business_date
     end
 
     def existing_settlement

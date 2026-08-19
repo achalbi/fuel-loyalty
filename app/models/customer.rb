@@ -30,11 +30,19 @@ class Customer < ApplicationRecord
   # E4 — account-type segmentation (OTP = fleet/credit account, drive-in = walk-in
   # cash, credit = credit account). Backfilled to drive_in for existing rows.
   CUSTOMER_TYPES = { drive_in: "drive_in", otp: "otp", credit: "credit" }.freeze
-  CUSTOMER_TYPE_LABELS = { "drive_in" => "Drive-in", "otp" => "OTP / Fleet", "credit" => "Credit" }.freeze
+  # Wording and display order fixed by FSM staff: Drive-In, Credit, Fleet/OTP.
+  # Every picker, filter chip and badge reads from here so the three types are
+  # named identically on web, API and the app.
+  CUSTOMER_TYPE_LABELS = { "drive_in" => "Drive-In", "credit" => "Credit", "otp" => "Fleet/OTP" }.freeze
   enum :customer_type, CUSTOMER_TYPES, default: :drive_in
 
   def self.customer_type_label_for(code)
     CUSTOMER_TYPE_LABELS.fetch(code.to_s) { code.to_s.humanize }
+  end
+
+  # [label, value] pairs for select/options helpers, in the staff-facing order.
+  def self.customer_type_options
+    CUSTOMER_TYPE_LABELS.map { |code, label| [label, code] }
   end
 
   def customer_type_label

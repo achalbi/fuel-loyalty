@@ -1178,6 +1178,27 @@
     });
   };
 
+  // A lookup field marked transient must never come back pre-filled: the counter
+  // device is shared, so one customer's number lingering after the operator
+  // navigates away and returns is both a privacy leak and a mis-scan waiting to
+  // happen. Clearing on turbo:before-cache (rather than on load) empties the
+  // snapshot Turbo restores from, while leaving a value the server deliberately
+  // re-rendered — e.g. the number that failed validation — untouched. The
+  // `value` attribute goes too, since Turbo caches a clone of the DOM and a
+  // clone carries attributes, not live input properties.
+  const clearTransientInputs = () => {
+    document.querySelectorAll("[data-clear-on-restore]").forEach((input) => {
+      input.value = "";
+      input.removeAttribute("value");
+      syncPhoneNumberValidity(input);
+    });
+  };
+
+  // Browser bfcache (back/forward) restores live input state, bypassing Turbo.
+  const clearTransientInputsOnRestore = (event) => {
+    if (event.persisted) clearTransientInputs();
+  };
+
   const normalizeVehicleKindSelection = (value) => value.toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 
   const initializeCommercialVehicleFields = () => {
@@ -1815,6 +1836,8 @@
   document.addEventListener("DOMContentLoaded", initializeLazyTransactionHistory);
   document.addEventListener("turbo:load", initializePhoneNumberFields);
   document.addEventListener("DOMContentLoaded", initializePhoneNumberFields);
+  document.addEventListener("turbo:before-cache", clearTransientInputs);
+  window.addEventListener("pageshow", clearTransientInputsOnRestore);
   document.addEventListener("turbo:load", initializeCommercialVehicleFields);
   document.addEventListener("DOMContentLoaded", initializeCommercialVehicleFields);
   document.addEventListener("turbo:load", initializeLoyaltyPointsHero);

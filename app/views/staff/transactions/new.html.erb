@@ -362,6 +362,12 @@
                     <%= form.number_field :fuel_amount, value: phone_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true, data: { transaction_step_focus: "fuel-amount" } %>
                   </div>
 
+                  <div>
+                    <%= form.label :discount_amount, "Discount (₹)", class: "form-label" %>
+                    <%= form.number_field :discount_amount, value: phone_tab_active ? @prefill_discount_amount : nil, class: "form-control", step: "0.01", min: 0, placeholder: "0", data: { transaction_discount_amount: true } %>
+                    <div class="form-text">Comes off the fuel amount. Leave blank if none.</div>
+                  </div>
+
                   <%= render "payment_mode_fields",
                     form: form,
                     dom_prefix: "phone_transaction",
@@ -578,6 +584,12 @@
                     <%= form.number_field :fuel_amount, value: vehicle_tab_active ? @prefill_fuel_amount : nil, class: "form-control", step: "0.01", min: 1, required: true, data: { transaction_step_focus: "fuel-amount" } %>
                   </div>
 
+                  <div>
+                    <%= form.label :discount_amount, "Discount (₹)", class: "form-label" %>
+                    <%= form.number_field :discount_amount, value: vehicle_tab_active ? @prefill_discount_amount : nil, class: "form-control", step: "0.01", min: 0, placeholder: "0", data: { transaction_discount_amount: true } %>
+                    <div class="form-text">Comes off the fuel amount. Leave blank if none.</div>
+                  </div>
+
                   <%= render "payment_mode_fields",
                     form: form,
                     dom_prefix: "vehicle_transaction",
@@ -649,6 +661,7 @@
             "transaction_lookup[phone_number]" => @prefill_phone_number,
             "transaction_lookup[vehicle_number]" => @prefill_vehicle_number,
             "transaction_lookup[fuel_amount]" => @prefill_fuel_amount,
+            "transaction_lookup[discount_amount]" => @prefill_discount_amount,
             "transaction_lookup[fuel_pump_id]" => @prefill_fuel_pump_id,
             "transaction_lookup[fuel_pump_nozzle_id]" => @prefill_fuel_pump_nozzle_id,
             "transaction_lookup[payment_mode]" => @prefill_payment_mode,
@@ -717,6 +730,7 @@
       const lookupPhoneField = modalElement.querySelector("[name='transaction_lookup[phone_number]']");
       const lookupVehicleField = modalElement.querySelector("[name='transaction_lookup[vehicle_number]']");
       const lookupFuelAmountField = modalElement.querySelector("[name='transaction_lookup[fuel_amount]']");
+      const lookupDiscountAmountField = modalElement.querySelector("[name='transaction_lookup[discount_amount]']");
       const lookupFuelPumpIdField = modalElement.querySelector("[name='transaction_lookup[fuel_pump_id]']");
       const lookupFuelPumpNozzleField = modalElement.querySelector("[name='transaction_lookup[fuel_pump_nozzle_id]']");
       const lookupPaymentModeField = modalElement.querySelector("[name='transaction_lookup[payment_mode]']");
@@ -931,7 +945,7 @@
         resolveExistingCustomerByPhone({ immediate: true });
       });
 
-      const showNow = ({ lookupMode, phoneNumber = "", vehicleNumber = "", fuelType = "", vehicleKind = "", fuelAmount = "", fuelPumpId = "", fuelPumpNozzleId = "", paymentMode = "cash", lockVehicleDetails = false }) => {
+      const showNow = ({ lookupMode, phoneNumber = "", vehicleNumber = "", fuelType = "", vehicleKind = "", fuelAmount = "", discountAmount = "", fuelPumpId = "", fuelPumpNozzleId = "", paymentMode = "cash", lockVehicleDetails = false }) => {
         form?.reset();
         modalElement.querySelector(".alert.alert-danger")?.remove();
         clearExistingCustomerResolution();
@@ -952,6 +966,7 @@
         if (lookupPhoneField) lookupPhoneField.value = phoneNumber;
         if (lookupVehicleField) lookupVehicleField.value = vehicleNumber;
         if (lookupFuelAmountField) lookupFuelAmountField.value = fuelAmount;
+        if (lookupDiscountAmountField) lookupDiscountAmountField.value = discountAmount;
         if (lookupFuelPumpIdField) lookupFuelPumpIdField.value = fuelPumpId;
         if (lookupFuelPumpNozzleField) lookupFuelPumpNozzleField.value = fuelPumpNozzleId;
         if (lookupPaymentModeField) lookupPaymentModeField.value = paymentMode || "cash";
@@ -1525,9 +1540,19 @@
         };
 
         const selectedVehicle = () => currentCustomer?.vehicles.find((vehicle) => String(vehicle.id) === String(vehicleSelect.value || ""));
+        const discountAmountInput = root.querySelector("input[name='transaction[discount_amount]']");
+        // A discount is optional, but it comes off the fuel amount — so it can
+        // never be negative or swallow the whole sale (the server enforces the
+        // same rule; this just stops the round trip).
         const fuelAmountValid = () => {
           const value = Number.parseFloat(fuelAmountInput?.value || "");
-          return Number.isFinite(value) && value > 0;
+          if (!Number.isFinite(value) || value <= 0) return false;
+
+          const raw = discountAmountInput?.value || "";
+          if (raw === "") return true;
+
+          const discount = Number.parseFloat(raw);
+          return Number.isFinite(discount) && discount >= 0 && discount < value;
         };
         let nozzleController = null;
         let pumpController = null;
@@ -1624,6 +1649,7 @@
                 lookupMode: "phone",
                 phoneNumber,
                 fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || "",
+                discountAmount: root.querySelector("input[name='transaction[discount_amount]']")?.value || "",
                 fuelPumpId: selectedPumpInput()?.value || "",
                 fuelPumpNozzleId: selectedNozzleInput()?.value || "",
                 paymentMode: selectedPaymentMode()
@@ -1725,6 +1751,14 @@
           clearServerErrors();
           syncSubmitState();
         });
+        discountAmountInput?.addEventListener("input", () => {
+          clearServerErrors();
+          syncSubmitState();
+        });
+        discountAmountInput?.addEventListener("change", () => {
+          clearServerErrors();
+          syncSubmitState();
+        });
 
         root.querySelectorAll("[data-transaction-nozzle-input]").forEach((input) => {
           input.addEventListener("change", clearServerErrors);
@@ -1809,13 +1843,24 @@
             (selectedMatch?.vehicle_kind_code || selectedMatch?.vehicle_kind)
           ),
           fuelAmount: root.querySelector("input[name='transaction[fuel_amount]']")?.value || "",
+          discountAmount: root.querySelector("input[name='transaction[discount_amount]']")?.value || "",
           fuelPumpId: selectedPumpInput()?.value || "",
           fuelPumpNozzleId: selectedNozzleInput()?.value || "",
           paymentMode: root.querySelector("input[name='transaction[payment_mode]']:checked")?.value || "cash"
         });
+        const discountAmountInput = root.querySelector("input[name='transaction[discount_amount]']");
+        // A discount is optional, but it comes off the fuel amount — so it can
+        // never be negative or swallow the whole sale (the server enforces the
+        // same rule; this just stops the round trip).
         const fuelAmountValid = () => {
           const value = Number.parseFloat(fuelAmountInput?.value || "");
-          return Number.isFinite(value) && value > 0;
+          if (!Number.isFinite(value) || value <= 0) return false;
+
+          const raw = discountAmountInput?.value || "";
+          if (raw === "") return true;
+
+          const discount = Number.parseFloat(raw);
+          return Number.isFinite(discount) && discount >= 0 && discount < value;
         };
         const fuelSelectionValid = () => pumpMode() === "pump" ? Boolean(selectedPumpInput()) : Boolean(selectedNozzleInput());
         const syncWizardState = () => {
@@ -2052,6 +2097,14 @@
           syncSubmitState();
         });
         fuelAmountInput?.addEventListener("change", () => {
+          clearServerErrors();
+          syncSubmitState();
+        });
+        discountAmountInput?.addEventListener("input", () => {
+          clearServerErrors();
+          syncSubmitState();
+        });
+        discountAmountInput?.addEventListener("change", () => {
           clearServerErrors();
           syncSubmitState();
         });

@@ -19,7 +19,7 @@
               <%= "#{campaign.min_purchase_litres} L" if campaign.min_purchase_litres %>
               <span class="text-muted small">/ <%= campaign.period.humanize.downcase %></span>
             </td>
-            <td><%= campaign.target_type.humanize %><%= " · #{campaign.target_customer_type.humanize}" if campaign.target_customer_type.present? %></td>
+            <td><%= campaign.target_type.humanize %><%= " · #{Customer.customer_type_label_for(campaign.target_customer_type)}" if campaign.target_customer_type.present? %></td>
             <td><span class="badge text-bg-<%= campaign.active? ? "success" : (campaign.paused? ? "warning" : "secondary") %>"><%= campaign.status.humanize %></span></td>
             <td class="text-end"><%= link_to "Manage", admin_campaign_path(campaign), class: "btn btn-sm btn-outline-secondary" %></td>
           </tr>

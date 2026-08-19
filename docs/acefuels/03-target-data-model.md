@@ -260,7 +260,7 @@ FKs: `settlement_id`→`settlements`; `product_id`→`products`.
 |---|---|---|
 | `id` | bigint PK | |
 | `settlement_id` | bigint, null:false | FK → `settlements` |
-| `credit_type` | integer, null:false | enum `fleet_otp:0`, `tt:1`, `discount:2` (discount pulled from same-day CustomerDetailsEntry, D3) |
+| `credit_type` | integer, null:false | enum `fleet_otp:0`, `drive_in:2`, `credit:3` — mirrors the Customer account types; `tt:1` retired and migrated to `credit` |
 | `vehicle_number` | string, null:true | e.g. `NL-01/AE-2471` |
 | `litres` | decimal(10,3), null:true | |
 | `discount_amount` | decimal(10,2), null:false, default:0 | |
@@ -299,7 +299,7 @@ FK: `settlement_id`→`settlements`.
 |---|---|---|
 | `id` | bigint PK | |
 | `settlement_id` | bigint, null:false | FK → `settlements` |
-| `denomination` | integer, null:false | 500/200/100/50/20/10/5 |
+| `denomination` | integer, null:false | 500/200/100/50/20/10/5/2/1 |
 | `quantity` | integer, null:false, default:0 | notes counted |
 | `amount` | integer, null:true | derived = denomination × quantity |
 | `created_at`/`updated_at` | datetime | |
