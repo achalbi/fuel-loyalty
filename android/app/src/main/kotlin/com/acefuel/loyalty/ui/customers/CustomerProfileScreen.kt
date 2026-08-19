@@ -1323,6 +1323,28 @@ private fun InsightCard(insight: InsightDto?, loading: Boolean) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.nayara.textTertiary,
                     )
+                    // What this customer has taken and what they have cost us.
+                    val metrics = insight.metrics
+                    Text(
+                        "%.3f L filled · ₹%.2f discount · ₹%.2f gifts".format(
+                            metrics.litres,
+                            metrics.discount,
+                            metrics.gifts,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.nayara.textTertiary,
+                    )
+                    insight.lifetimeMetrics?.let { lifetime ->
+                        Text(
+                            "Lifetime: %.3f L · ₹%.2f discount · ₹%.2f gifts".format(
+                                lifetime.litres,
+                                lifetime.discount,
+                                lifetime.gifts,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.nayara.textTertiary,
+                        )
+                    }
                 }
             }
         }

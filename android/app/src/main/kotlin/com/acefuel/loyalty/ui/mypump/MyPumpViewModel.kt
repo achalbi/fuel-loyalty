@@ -52,7 +52,16 @@ class MyPumpViewModel(
     }
 
     fun load() {
-        _state.update { it.copy(loading = true, loadError = null) }
+        // Re-read the clock on every load so a screen left open overnight shows
+        // (and saves against) the right day.
+        val today = LocalDate.now()
+        _state.update {
+            if (staffMemberId == null) {
+                it.copy(loading = true, loadError = null, assignmentDate = today)
+            } else {
+                it.copy(loading = true, loadError = null)
+            }
+        }
         viewModelScope.launch {
             val mode = _state.value.assignmentMode
             val result = if (staffMemberId != null) {
@@ -62,7 +71,10 @@ class MyPumpViewModel(
                     assignmentMode = mode,
                 )
             } else {
-                repository.myPump(_state.value.assignmentDate.toString(), "override")
+                // Self-service is always for today: send no date so the server
+                // resolves it, rather than a date this screen may have been
+                // holding since before midnight.
+                repository.myPump()
             }
             when (result) {
                 is ApiResult.Success -> _state.update { it.applyLoaded(result.data) }
@@ -120,7 +132,7 @@ class MyPumpViewModel(
                     assignmentMode = s.assignmentMode,
                 )
             } else {
-                repository.updateMyPump(pumpId, nozzleIds, s.assignmentDate.toString(), "override")
+                repository.updateMyPump(pumpId, nozzleIds)
             }
             when (result) {
                 is ApiResult.Success -> _state.update { it.applyLoaded(result.data).copy(saved = true) }

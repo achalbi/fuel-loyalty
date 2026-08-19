@@ -378,6 +378,8 @@ a:hover{text-decoration:underline}
 <li><strong>Conversion probability</strong> is recomputed on read, never stored; contact rows are immutable audit records.</li>
 <li><strong>Report money</strong> is derived: <code>amount = litres × catalog_selling_price</code> when litres exist, else stored <code>fuel_amount</code>. Never trust a standalone ₹ if litres+price are present (Q1).</li>
 <li><strong>Transaction edit</strong> (G1) writes an <code>audit</code> trail and <strong>re-runs point accrual</strong> (reverse old ledger entry, re-award) so rewards stay consistent; edits to settled days flag the settlement as <code>needs_review</code> (D9 hook).</li>
+<li><strong>Customer thresholds ("show me customers who…").</strong> The admin customer list filters on <em>at least</em> N visits, litres filled, times contacted, ₹ discount given, and reward points, and shows each of those numbers on the row it filtered on. The figures come from <code>Admin::Crm::CustomerMetrics</code> — the single definition described in <code>13-spec-customer-crm-capture.html</code> business rule 8 — so a customer's row and their profile always agree. Blank, non-numeric, negative and implausibly large values are ignored rather than erroring the page, and every filter chip and clear-link carries the active thresholds forward so none is silently dropped.</li>
+<li><strong>E1 reports and the per-customer figures are deliberately different populations.</strong> <code>LedgerReport</code> is the per-visit <em>capture</em> ledger: it reads <code>visit_entries</code> only, so a drive-in loyalty customer who only has transactions does not appear in it. <code>CustomerMetrics</code> unions both sources. Neither is wrong; the report answers "what did we capture at the pump", the customer page answers "what has this customer cost and earned". Both surfaces state which they are.</li>
 </ol>
 <h3 id="workflow-dashboard-tile-customer-list-contactreach-out">Workflow: dashboard tile → customer list → contact/reach-out</h3>
 <figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">flowchart TD
@@ -438,14 +440,17 @@ a:hover{text-decoration:underline}
 }
 </code></pre>
 <h3 id="e3-per-customer-insight">E3 — Per-customer insight</h3>
-<p><code>GET /api/v1/admin/customers/:id/insight</code></p>
+<p><code>GET /api/v1/admin/customers/:id/insight</code> — optional <code>preset</code> / <code>start_date</code> / <code>end_date</code> narrow the commercial <code>metrics</code> to a period and add <code>lifetime_metrics</code> beside them; without a period every figure is lifetime and <code>lifetime_metrics</code> is omitted.</p>
 <pre><code class="language-json">{ &quot;customer_id&quot;: 42, &quot;first_visited_at&quot;: &quot;2026-01-04T...&quot;, &quot;last_visited_at&quot;: &quot;2026-07-19T...&quot;,
   &quot;days_since_last_visit&quot;: 2, &quot;visit_count&quot;: 12,
   &quot;cadence_class&quot;: &quot;weekly&quot;, &quot;median_gap_days&quot;: 6, &quot;expected_next_visit_at&quot;: &quot;2026-07-25T...&quot;,
   &quot;is_lost&quot;: false, &quot;conversion_probability&quot;: 82,
+  &quot;metrics&quot;: { &quot;visits&quot;: 12, &quot;litres&quot;: 1840.5, &quot;discount&quot;: 3200.0, &quot;gifts&quot;: 450.0,
+               &quot;contacts&quot;: 3, &quot;points&quot;: 1260 },
   &quot;contacts&quot;: { &quot;count&quot;: 3, &quot;last_contacted_at&quot;: &quot;2026-07-10T...&quot;, &quot;last_outcome&quot;: &quot;reached&quot; },
   &quot;feedback&quot;: { &quot;count&quot;: 2, &quot;avg_rating&quot;: 4.5, &quot;latest_comment&quot;: &quot;Quick service&quot; } }
 </code></pre>
+<p><code>metrics</code> answers "what has this customer filled, cost us in discount, and taken in gifts" — the ₹ value of their redemptions. All values are plain numbers (never decimal-as-string). See <code>13-spec-customer-crm-capture.html</code> business rule 8 for the counting rules; the admin customer <strong>list</strong> filters on these same figures.</p>
 <h3 id="e4-customer-type-segmentation">E4 — Customer-type segmentation</h3>
 <p><code>GET /api/v1/admin/dashboard/segments</code> (respects period + filters)</p>
 <pre><code class="language-json">{ &quot;segments&quot;: [
@@ -492,7 +497,8 @@ a:hover{text-decoration:underline}
 <li>New <strong>"Customer Types" panel</strong> (E4) in the "Customer Insights" section — a 4-way segmented bar + counts, each segment a drill link.</li>
 <li>New <strong>"Lost customers / Reach out" panel</strong> (E6) below Customer Insights: table sorted by conversion %, each row with a "Log contact" button (opens the contact modal) and a "Send offer" link (F-series hook).</li>
 <li>Add a <strong>pump filter chip row</strong> (G1) next to the existing fuel-type chips (L69-83), populated from <code>FuelPump.active</code>.</li>
-<li><strong>Customer show</strong> (<code>app/views/customers/show.html.erb</code>, admin renders it): add an <strong>Insight card</strong> (last visit, cadence, conversion %, first-seen), a <strong>Contacts timeline</strong> with an "Add contact" modal (E5), and a <strong>Feedback</strong> block with a star-rating form (E7).</li>
+<li><strong>Customer show</strong> (<code>app/views/customers/show.html.erb</code>, admin renders it): add an <strong>Insight card</strong> (last visit, cadence, conversion %, first-seen, plus <strong>litres filled / discount given / gifts given / times contacted</strong>), a <strong>Contacts timeline</strong> with an "Add contact" modal (E5), and a <strong>Feedback</strong> block with a star-rating form (E7). When the page is opened from a period-filtered list it carries that period through, shows the period figures, and states the lifetime ones beneath them.</li>
+<li><strong>Customer index</strong> (<code>app/views/admin/customers/index.html.erb</code>): add a <strong>"Show customers with at least"</strong> filter group — visits, litres filled, times contacted, discount given (₹), reward points — and render those five figures on each row so the list shows what it filtered on (business rule 7).</li>
 <li><strong>Transactions</strong> (<code>app/views/admin/transactions/index.html.erb</code>): add a <strong>pump filter</strong> to the filter card (L19-78); turn the read-only detail modal (L119-191) into an <strong>Edit form</strong> (litres, discount, pump, nozzle, amount, datetime) with a Save action posting to <code>PATCH admin_transaction_path</code>; add an "Edit" pencil beside the existing eye icon.</li>
 <li><strong>New Reports page</strong> <code>admin/reports#index</code>: dimension selector (vehicle/transporter/driver/customer), grain selector (day/week/month/<strong>year</strong>), date range + pump + fuel filters, a results table with totals row, and a <strong>Download CSV</strong> button (real data export — distinct from the dashboard's chart-screenshot "Download PDF"). Add a nav entry in the admin sidebar.</li>
 </ul>

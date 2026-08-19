@@ -1,7 +1,8 @@
 <%# D1–D10 shift-end settlement form, shared by the staff capture flow and the
     admin edit console. Live totals are JS feedback only; the server recomputes
     every derived ₹ on submit (settlement_form.js). Locals: form_url, form_method,
-    cancel_path, admin_mode (adds a required change-reason + single Save). %>
+    cancel_path, admin_mode (adds a required on-behalf-of + change-reason and a
+    single Save). %>
 <% admin_mode = local_assigns.fetch(:admin_mode, false) %>
 <% form_url = local_assigns.fetch(:form_url, @settlement.persisted? ? staff_settlement_path(@settlement) : staff_settlements_path) %>
 <% form_method = local_assigns.fetch(:form_method, @settlement.persisted? ? :patch : :post) %>
@@ -11,6 +12,27 @@
 
   <% if @settlement.errors.any? %>
     <div class="alert alert-danger"><%= @settlement.errors.full_messages.to_sentence %></div>
+  <% end %>
+
+  <%# Admin-12 — an admin filing through the FSM flow must say whose settlement
+      this is; `entered_by` still records that the admin keyed it. %>
+  <% if !admin_mode && respond_to?(:assignable_recorders) && current_user.admin? && assignable_recorders.empty? %>
+    <div class="alert alert-warning mb-0">
+      A settlement belongs to the staff member who worked the shift, and there are no staff accounts yet.
+      <%= link_to "Add a staff account", admin_users_path, class: "alert-link" %> before recording one.
+    </div>
+  <% elsif !admin_mode && respond_to?(:assignable_recorders) && assignable_recorders.any? %>
+    <div>
+      <%= form.label :recorded_by_id, "Recorded for (FSM)", class: "form-label" %>
+      <%= form.select :recorded_by_id,
+            options_for_select(
+              assignable_recorders.map { |u| ["#{u.display_name}#{u.active? ? "" : " (Inactive)"}", u.id] },
+              @settlement.recorded_by_id
+            ),
+            { include_blank: "Select a staff member" },
+            class: "form-select", required: true %>
+      <div class="form-text">You are entering this on behalf of a staff member. Your name is recorded as the person who keyed it in.</div>
+    </div>
   <% end %>
 
   <%= form.hidden_field :fuel_pump_id, value: @fuel_pump&.id %>
@@ -260,6 +282,17 @@
   </div>
 
   <% if admin_mode %>
+    <div>
+      <%= label_tag :on_behalf_of_id, "Entering on behalf of", class: "form-label" %>
+      <%= select_tag :on_behalf_of_id,
+            options_for_select(
+              @on_behalf_of_options.to_a.map { |u| ["#{u.display_name}#{u.active? ? "" : " (Inactive)"}", u.id] },
+              (params[:on_behalf_of_id].presence || @settlement.recorded_by_id).to_i
+            ),
+            { include_blank: "Select a staff member", class: "form-select", required: true } %>
+      <div class="form-text">An admin enters a settlement only for the staff member who could not. Recorded in the audit trail.</div>
+    </div>
+
     <div>
       <%= label_tag :change_reason, "Reason for change", class: "form-label" %>
       <%= text_field_tag :change_reason, params[:change_reason], class: "form-control", required: true,

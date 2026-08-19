@@ -225,5 +225,28 @@ module Admin
       assert_select "#editUserModal-#{users(:one).id} .alert.alert-danger", text: /at least one admin user/
       assert_equal "admin", users(:one).reload.role
     end
+
+    test "users index lists active users before inactive ones" do
+      # Sorts first under the old (role, name) ordering, so it can only end up last
+      # if active accounts are genuinely lifted to the top.
+      inactive_admin = User.create!(
+        name: "Aaa Retired Admin",
+        username: "retired-admin",
+        phone_number: "9000000077",
+        password: "password123",
+        password_confirmation: "password123",
+        role: :admin,
+        active: false
+      )
+      sign_in users(:one)
+
+      get admin_users_path
+
+      assert_response :success
+      names = css_select(".admin-user-item__name").map { |node| node.text.strip }
+      assert_equal ["Admin", "Staff", inactive_admin.name], names
+      assert_select ".admin-user-item__status.is-active", count: 2, text: "Active"
+      assert_select ".admin-user-item__status.is-inactive", count: 1, text: "Inactive"
+    end
   end
 end

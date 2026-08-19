@@ -40,6 +40,21 @@ module Api
           assert_equal second_pump, user.transaction_fuel_pump(on: target_date)
         end
 
+        test "admin cannot back-date a staff member's daily pump override" do
+          second_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
+          second_nozzle = second_pump.nozzles.first
+          past_date = Date.current - 1.day
+
+          patch pump_api_v1_admin_staff_member_path(users(:two)),
+            params: { user: { assignment_mode: "override", assignment_date: past_date.iso8601, fuel_pump_id: second_pump.id, assigned_fuel_pump_nozzle_ids: ["", second_nozzle.id] } },
+            headers: auth_headers(users(:one)),
+            as: :json
+
+          assert_response :unprocessable_entity
+          assert_equal "past_assignment_date", response.parsed_body.dig("error", "code")
+          assert_nil users(:two).reload.pump_assignment_for(on: past_date)
+        end
+
         test "admin can update a staff member's protected default pump and nozzles" do
           second_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
           second_nozzle = second_pump.nozzles.first

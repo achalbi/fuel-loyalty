@@ -19,10 +19,10 @@
 
 <div class="card shadow-sm admin-transactions-filter admin-customers-filter mb-4">
   <div class="card-body">
-    <% period_params = { preset: @current_preset, start_date: @current_start_date, end_date: @current_end_date }.compact_blank %>
+    <% carry_params = @period_params.merge(@threshold_params) %>
     <%= form_with url: admin_customers_path, method: :get, local: true, class: "admin-customers-filter__form" do |form| %>
       <%= hidden_field_tag :status, @current_status %>
-      <% period_params.each do |key, value| %>
+      <% @period_params.each do |key, value| %>
         <%= hidden_field_tag key, value %>
       <% end %>
 
@@ -38,13 +38,13 @@
         <span class="admin-transactions-filter__label">Quick Filter</span>
         <div class="dashboard-filter-chips">
           <%= link_to "All",
-            admin_customers_path({ q: @query.presence, status: "all", type: @current_customer_type }.compact_blank.merge(period_params)),
+            admin_customers_path({ q: @query.presence, status: "all", type: @current_customer_type }.compact_blank.merge(carry_params)),
             class: "dashboard-filter-chip #{'is-active' if @current_status == 'all'}" %>
           <%= link_to "Active",
-            admin_customers_path({ q: @query.presence, status: "active", type: @current_customer_type }.compact_blank.merge(period_params)),
+            admin_customers_path({ q: @query.presence, status: "active", type: @current_customer_type }.compact_blank.merge(carry_params)),
             class: "dashboard-filter-chip #{'is-active' if @current_status == 'active'}" %>
           <%= link_to "Inactive",
-            admin_customers_path({ q: @query.presence, status: "inactive", type: @current_customer_type }.compact_blank.merge(period_params)),
+            admin_customers_path({ q: @query.presence, status: "inactive", type: @current_customer_type }.compact_blank.merge(carry_params)),
             class: "dashboard-filter-chip #{'is-active' if @current_status == 'inactive'}" %>
         </div>
       </div>
@@ -55,15 +55,34 @@
           <% customer_type_filters = [[nil, "All"], ["drive_in", "Drive-in"], ["otp", "OTP / Fleet"], ["credit", "Credit"]] %>
           <% customer_type_filters.each do |type, label| %>
             <%= link_to label,
-              admin_customers_path({ q: @query.presence, status: @current_status, type: type }.compact_blank.merge(period_params)),
+              admin_customers_path({ q: @query.presence, status: @current_status, type: type }.compact_blank.merge(carry_params)),
               class: "dashboard-filter-chip #{'is-active' if @current_customer_type == type}" %>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="admin-transactions-filter__group admin-customers-filter__thresholds">
+        <span class="admin-transactions-filter__label">Show customers with at least</span>
+        <div class="admin-customers-filter__threshold-grid">
+          <% [
+               [:min_visits, "Visits", 1, "0"],
+               [:min_litres, "Litres filled", 0.001, "0"],
+               [:min_contacts, "Times contacted", 1, "0"],
+               [:min_discount, "Discount given (₹)", 0.01, "0"],
+               [:min_points, "Reward points", 1, "0"],
+             ].each do |name, label, step, min| %>
+            <div class="admin-customers-filter__threshold">
+              <%= label_tag name, label, class: "admin-transactions-filter__label" %>
+              <%= number_field_tag name, @threshold_params[name], step: step, min: min,
+                    class: "form-control admin-customers-filter__input", placeholder: "Any" %>
+            </div>
           <% end %>
         </div>
       </div>
 
       <div class="admin-customers-filter__actions">
         <%= form.submit "Search", class: "btn btn-primary" %>
-        <% if @query.present? || @current_status != "all" || @current_customer_type.present? || @period_range.present? %>
+        <% if filters_applied? %>
           <%= link_to "Clear", admin_customers_path, class: "btn btn-outline-secondary" %>
         <% end %>
       </div>
@@ -76,7 +95,7 @@
           q: @query.presence,
           status: (@current_status unless @current_status == "all"),
           type: @current_customer_type
-        }.compact_blank), class: "alert-link" %>
+        }.compact_blank.merge(@threshold_params)), class: "alert-link" %>
       </div>
     <% end %>
   </div>
@@ -99,10 +118,17 @@
                 <span class="admin-customer-item__phone">+91 <%= customer.phone_number %></span>
                 <span class="admin-customer-item__vehicles"><%= vehicle_summary %></span>
               </div>
+              <div class="admin-customer-item__metrics">
+                <span><%= pluralize(customer[:visit_days].to_i, "visit") %></span>
+                <span><%= number_with_precision(customer[:litres_filled].to_d, precision: 3, strip_insignificant_zeros: true) %> L</span>
+                <span><%= number_to_currency(customer[:discount_given], unit: "₹") %> discount</span>
+                <span><%= number_to_currency(customer[:gifts_value], unit: "₹") %> gifts</span>
+                <span><%= pluralize(customer[:contact_count].to_i, "contact") %></span>
+              </div>
             </div>
             <div class="admin-customer-item__side">
               <span class="admin-customer-item__points"><%= customer.total_points %> pts</span>
-              <%= link_to admin_customer_path(customer),
+              <%= link_to admin_customer_path(customer, @period_params),
                 class: "customer-details-history-preview-action admin-customer-item__view",
                 aria: { label: "View #{display_name}" },
                 title: "View customer" do %>
@@ -114,7 +140,7 @@
       </div>
     <% else %>
       <p class="admin-customers-empty mb-0">
-        <%= (@query.present? || @current_status != "all" || @current_customer_type.present? || @period_range.present?) ? "No customers matched the current filters." : "No customers available yet." %>
+        <%= filters_applied? ? "No customers matched the current filters." : "No customers available yet." %>
       </p>
     <% end %>
   </div>

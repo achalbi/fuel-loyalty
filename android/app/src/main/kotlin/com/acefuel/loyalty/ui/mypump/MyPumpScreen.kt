@@ -151,7 +151,7 @@ fun MyPumpScreen(
                     allowDateSelection ->
                         "The selected date overrides the default pump without changing it."
                     else ->
-                        "Staff self-assignment applies to today only and does not change the default pump."
+                        "My Pump always applies to today and does not change the default pump."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.nayara.textSecondary,

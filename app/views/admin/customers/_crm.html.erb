@@ -8,7 +8,7 @@
     <div class="customer-details-section__header">
       <div>
         <h2 class="h5 mb-1">CRM Insight</h2>
-        <p class="text-muted mb-0">Visit cadence, recency and conversion likelihood.</p>
+        <p class="text-muted mb-0">Visit cadence, recency, conversion likelihood and what this customer has cost and earned.</p>
       </div>
     </div>
 
@@ -30,9 +30,18 @@
       </div>
     </div>
 
-    <dl class="row mb-0 small">
+    <% metrics = insight[:metrics] %>
+    <dl class="row mb-0 small" data-customer-metrics>
       <dt class="col-6 text-muted fw-normal">Visits</dt>
       <dd class="col-6 text-end mb-1"><%= insight[:visit_count] %></dd>
+      <dt class="col-6 text-muted fw-normal">Litres filled</dt>
+      <dd class="col-6 text-end mb-1" data-metric="litres"><%= number_with_precision(metrics[:litres], precision: 3, strip_insignificant_zeros: true) %> L</dd>
+      <dt class="col-6 text-muted fw-normal">Discount given</dt>
+      <dd class="col-6 text-end mb-1" data-metric="discount"><%= number_to_currency(metrics[:discount], unit: "₹") %></dd>
+      <dt class="col-6 text-muted fw-normal">Gifts given</dt>
+      <dd class="col-6 text-end mb-1" data-metric="gifts"><%= number_to_currency(metrics[:gifts], unit: "₹") %></dd>
+      <dt class="col-6 text-muted fw-normal">Times contacted</dt>
+      <dd class="col-6 text-end mb-1" data-metric="contacts"><%= metrics[:contacts] %></dd>
       <dt class="col-6 text-muted fw-normal">Last visit</dt>
       <dd class="col-6 text-end mb-1">
         <%= insight[:last_visited_on] ? "#{l(insight[:last_visited_on], format: :long)} (#{insight[:days_since_last_visit]}d ago)" : "—" %>
@@ -42,6 +51,17 @@
       <dt class="col-6 text-muted fw-normal">Expected next</dt>
       <dd class="col-6 text-end mb-0"><%= insight[:expected_next_visit_on] ? l(insight[:expected_next_visit_on], format: :long) : "—" %></dd>
     </dl>
+
+    <% if (lifetime = insight[:lifetime_metrics]) %>
+      <p class="text-muted small mt-3 mb-0" data-customer-lifetime-metrics>
+        Litres, discount, gifts and contacts above cover the selected period.
+        Lifetime:
+        <%= number_with_precision(lifetime[:litres], precision: 3, strip_insignificant_zeros: true) %> L ·
+        <%= number_to_currency(lifetime[:discount], unit: "₹") %> discount ·
+        <%= number_to_currency(lifetime[:gifts], unit: "₹") %> gifts ·
+        <%= pluralize(lifetime[:contacts], "contact") %>.
+      </p>
+    <% end %>
   </div>
 </div>
 

@@ -101,10 +101,14 @@ module Staff
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_pump_nozzle_id]']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[payment_mode]'][value='cash']"
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[lock_vehicle_details]'][value='0']"
-      assert_select "#transactionAddCustomerModal input[name='customer[vehicle_number]'][required]"
+      # Vehicle details are offered here but optional — a customer can be
+      # registered on a phone number alone and given a vehicle later.
+      assert_select "#transactionAddCustomerModal input[name='customer[vehicle_number]']", 1
+      assert_select "#transactionAddCustomerModal input[name='customer[vehicle_number]'][required]", 0
       assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[fuel_type]'][value='petrol']", 1
-      assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[fuel_type]'][value='petrol'][required]"
-      assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler'][required]"
+      assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[fuel_type]'][value='petrol'][required]", 0
+      assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler']", 1
+      assert_select "#transactionAddCustomerModal input[type='radio'][name='customer[vehicle_kind]'][value='two_wheeler'][required]", 0
       assert_select "#transactionAddCustomerModal [data-commercial-vehicle-fields].d-none", 1
       assert_select "#transactionAddCustomerModal input[name='customer[commercial_company_name]']", 1
       assert_select "#transactionAddCustomerModal input[name='customer[commercial_contact_name]']", 1

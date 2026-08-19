@@ -8,12 +8,13 @@ module Settlement
 
     def self.call(...) = new(...).call
 
-    def initialize(settlement:, attributes:, actor:, admin_edit: false, change_reason: nil)
+    def initialize(settlement:, attributes:, actor:, admin_edit: false, change_reason: nil, on_behalf_of: nil)
       @settlement = settlement
       @attributes = attributes || {}
       @actor = actor
       @admin_edit = admin_edit
       @change_reason = change_reason
+      @on_behalf_of = on_behalf_of
     end
 
     def call
@@ -22,6 +23,11 @@ module Settlement
 
         @settlement.assign_attributes(@attributes)
         @settlement.recorded_by ||= @actor
+        # Stamped only when the row is created: who keyed this settlement in. A
+        # later edit must never back-stamp it — that would claim the editing admin
+        # keyed in every settlement that predates this column. Edit history lives
+        # in settlement_changes instead.
+        @settlement.entered_by ||= @actor if @settlement.new_record?
         snapshot_prices!
         stamp_submission
         @settlement.save!
@@ -68,11 +74,13 @@ module Settlement
 
     # D9 — record an audit row for every admin edit; propagate a customer-linked
     # discount change back to loyalty points (C5) inside this same transaction.
+    # `on_behalf_of` is the FSM the admin entered the edit for (Admin-12).
     def record_change!(before)
       diffs = Differ.diff(before, Differ.snapshot(@settlement))
       recomputed = PointsRecomputeService.call(@settlement, diffs)
       @settlement.audit_changes.create!(
         changed_by: @actor,
+        on_behalf_of: @on_behalf_of,
         change_reason: @change_reason,
         field_diffs: diffs,
         recomputed_points: recomputed

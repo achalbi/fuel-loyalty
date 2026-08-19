@@ -29,6 +29,25 @@ module Api
           assert body.key?("conversion_probability")
           assert body.key?("contacts")
           assert body.key?("feedback")
+          assert_equal 75.0, body.dig("metrics", "litres")
+          assert_equal 0.0, body.dig("metrics", "discount")
+          assert_equal 0.0, body.dig("metrics", "gifts")
+          assert_equal 3, body.dig("metrics", "visits")
+          assert_not body.key?("lifetime_metrics"), "no period was asked for, so there is nothing to compare against"
+        end
+
+        test "a period narrows the commercial totals and carries the lifetime ones alongside" do
+          @customer.points_ledgers.create!(entry_type: :redeem, points: -20, cash_reward_amount: 60,
+                                           created_at: Time.zone.local(2026, 7, 8, 10, 0))
+
+          get insight_api_v1_admin_customer_path(@customer, start_date: "2026-07-08", end_date: "2026-07-08"),
+            headers: auth_headers(@admin)
+
+          assert_response :ok
+          body = response.parsed_body
+          assert_equal 25.0, body.dig("metrics", "litres")
+          assert_equal 60.0, body.dig("metrics", "gifts")
+          assert_equal 75.0, body.dig("lifetime_metrics", "litres")
         end
 
         test "staff cannot read customer insight" do

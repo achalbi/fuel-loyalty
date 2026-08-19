@@ -136,6 +136,8 @@ No table. A `Admin::Crm::CustomerInsight` service computes per customer:
 4. **Conversion probability** is recomputed on read, never stored; contact rows are immutable audit records.
 5. **Report money** is derived: `amount = litres × catalog_selling_price` when litres exist, else stored `fuel_amount`. Never trust a standalone ₹ if litres+price are present (Q1).
 6. **Transaction edit** (G1) writes an `audit` trail and **re-runs point accrual** (reverse old ledger entry, re-award) so rewards stay consistent; edits to settled days flag the settlement as `needs_review` (D9 hook).
+7. **Customer thresholds ("show me customers who…").** The admin customer list filters on *at least* N visits, litres filled, times contacted, ₹ discount given, and reward points, and shows each of those numbers on the row it filtered on. The figures come from `Admin::Crm::CustomerMetrics` — the single definition described in `13-spec-customer-crm-capture.md` business rule 8 — so a customer's row and their profile always agree. Blank, non-numeric, negative and implausibly large values are ignored rather than erroring the page, and every filter chip and clear-link carries the active thresholds forward so none is silently dropped.
+8. **E1 reports and the per-customer figures are deliberately different populations.** `LedgerReport` is the per-visit *capture* ledger: it reads `visit_entries` only, so a drive-in loyalty customer who only has transactions does not appear in it. `CustomerMetrics` unions both sources. Neither is wrong; the report answers "what did we capture at the pump", the customer page answers "what has this customer cost and earned". Both surfaces state which they are.
 
 ### Workflow: dashboard tile → customer list → contact/reach-out
 
@@ -210,16 +212,20 @@ Request (query): `metric` (`total|active|new|repeat|churn`), or `bucket` (`visit
 
 ### E3 — Per-customer insight
 
-`GET /api/v1/admin/customers/:id/insight`
+`GET /api/v1/admin/customers/:id/insight` — optional `preset` / `start_date` / `end_date` narrow the commercial `metrics` to a period and add `lifetime_metrics` beside them; without a period every figure is lifetime and `lifetime_metrics` is omitted.
 
 ```json
 { "customer_id": 42, "first_visited_at": "2026-01-04T...", "last_visited_at": "2026-07-19T...",
   "days_since_last_visit": 2, "visit_count": 12,
   "cadence_class": "weekly", "median_gap_days": 6, "expected_next_visit_at": "2026-07-25T...",
   "is_lost": false, "conversion_probability": 82,
+  "metrics": { "visits": 12, "litres": 1840.5, "discount": 3200.0, "gifts": 450.0,
+               "contacts": 3, "points": 1260 },
   "contacts": { "count": 3, "last_contacted_at": "2026-07-10T...", "last_outcome": "reached" },
   "feedback": { "count": 2, "avg_rating": 4.5, "latest_comment": "Quick service" } }
 ```
+
+`metrics` answers "what has this customer filled, cost us in discount, and taken in gifts" — the ₹ value of their redemptions. All values are plain numbers (never decimal-as-string). See `13-spec-customer-crm-capture.md` business rule 8 for the counting rules; the admin customer **list** filters on these same figures.
 
 ### E4 — Customer-type segmentation
 
@@ -280,7 +286,8 @@ Request: `dimension` (`vehicle|transporter|driver|customer`), `grain` (`day|week
   - New **"Customer Types" panel** (E4) in the "Customer Insights" section — a 4-way segmented bar + counts, each segment a drill link.
   - New **"Lost customers / Reach out" panel** (E6) below Customer Insights: table sorted by conversion %, each row with a "Log contact" button (opens the contact modal) and a "Send offer" link (F-series hook).
   - Add a **pump filter chip row** (G1) next to the existing fuel-type chips (L69-83), populated from `FuelPump.active`.
-- **Customer show** (`app/views/customers/show.html.erb`, admin renders it): add an **Insight card** (last visit, cadence, conversion %, first-seen), a **Contacts timeline** with an "Add contact" modal (E5), and a **Feedback** block with a star-rating form (E7).
+- **Customer show** (`app/views/customers/show.html.erb`, admin renders it): add an **Insight card** (last visit, cadence, conversion %, first-seen, plus **litres filled / discount given / gifts given / times contacted**), a **Contacts timeline** with an "Add contact" modal (E5), and a **Feedback** block with a star-rating form (E7). When the page is opened from a period-filtered list it carries that period through, shows the period figures, and states the lifetime ones beneath them.
+- **Customer index** (`app/views/admin/customers/index.html.erb`): add a **"Show customers with at least"** filter group — visits, litres filled, times contacted, discount given (₹), reward points — and render those five figures on each row so the list shows what it filtered on (business rule 7).
 - **Transactions** (`app/views/admin/transactions/index.html.erb`): add a **pump filter** to the filter card (L19-78); turn the read-only detail modal (L119-191) into an **Edit form** (litres, discount, pump, nozzle, amount, datetime) with a Save action posting to `PATCH admin_transaction_path`; add an "Edit" pencil beside the existing eye icon.
 - **New Reports page** `admin/reports#index`: dimension selector (vehicle/transporter/driver/customer), grain selector (day/week/month/**year**), date range + pump + fuel filters, a results table with totals row, and a **Download CSV** button (real data export — distinct from the dashboard's chart-screenshot "Download PDF"). Add a nav entry in the admin sidebar.
 
