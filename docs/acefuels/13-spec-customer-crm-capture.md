@@ -32,23 +32,41 @@ Fuel-station customers today are a thin record (name + one phone + a plate). The
 > kinds reported as **separate figures** — the ₹ value of points redemptions and
 > the count of physical F1 campaign gifts — because they are different units and
 > blending them would be a lie in either direction.
+> The block is **all time**, never narrowed by the selected period: "what have we
+> ever handed over" is the question, and a gift given last quarter did not
+> un-happen because the admin picked this month. The windowed view of the same
+> money is the `metrics` rollup (`Admin::Crm::CustomerMetrics`) beside it.
+> `discount_total` reuses `Customer#discount_total` and `gift_count` reuses the
+> predicate `Admin::Reports::LedgerReport` counts gifts with, so neither the
+> customer page nor the reports page can drift into a second answer.
 > - **Web:** a **Rewards Given** card in the admin CRM column
 >   (`app/views/admin/customers/_crm.html.erb`) plus compact "discount given" /
->   "gifts given" chips in the customer hero. Both are gated on `@crm_insight`,
->   which only the admin controller builds, so the staff customer page is
->   unchanged. Each transaction row now shows its own discount.
+>   "campaign gifts given" chips in the customer hero. Both are gated on
+>   `@crm_insight`, which only the admin controller builds, so the staff customer
+>   page is unchanged. Each transaction row shows its own discount. Note the two
+>   senses of "gift" on that page: the ₹ figure in the CRM Insight card is the
+>   cash value of point **redemptions** for the period, while **Campaign gifts**
+>   in the Rewards card — and the hero chip — counts physical F1 gifts, which
+>   carry no ₹ at all. The hero chip reads `rewards[:gift_count]` for exactly that
+>   reason; reading `metrics[:gifts]` as a tally would report ₹90 of redemptions
+>   as "90 gifts".
 > - **API:** `GET /api/v1/admin/customers/:id/insight` carries the `rewards`
 >   block; `CustomerProfileSerializer`'s transaction JSON gains `discount_amount`.
 > - **Android:** a **Rewards Given** card in the admin-only CRM section of
 >   `CustomerProfileScreen`, and each transaction card now shows that fuelling's
 >   own discount — `TransactionSummaryDto.discount_amount`, gated on `> 0` exactly
 >   as the web row is, so a ₹0 discount stays invisible. (The `cash_reward` line
->   beside it is the pre-existing ₹ value of the points **earned** — a different
->   figure that predates this item.)
+>   beside it, rendered here for lockstep with the web row, is the ₹ value of the
+>   points that fuelling **earned** — a different figure entirely.)
 > - **The ₹0 trap, again:** with no cash-value-per-point configured every
 >   redemption stored `cash_reward_amount = NULL`, so `redemption_value` is a
 >   structural zero. `reward_value_configured` lets web and Android render `—`
->   instead of `₹0.00`, exactly as the reports page does.
+>   instead of `₹0.00`, exactly as the reports page does. Both surfaces derive
+>   **one** flag — `reward_value_configured || redemption_value != 0` — and drive
+>   the value *and* its explanatory footnote from it, because a redemption taken
+>   while a rate WAS configured keeps its snapshotted amount: gate the two
+>   separately and the page prints a real ₹ figure under a note claiming the
+>   figure is unavailable.
 
 
 > **Capture merged (2026-08-19, staff feedback item 2):** B2's separate Capture
@@ -68,19 +86,23 @@ Fuel-station customers today are a thin record (name + one phone + a plate). The
 > correlated subqueries the customers scope both SELECTs (to show them) and WHEREs
 > (to filter on them):
 >
-> | Metric | Rule |
-> |--------|------|
-> | `visit_count` | distinct visit **days** across transactions ∪ visit_entries (a linked pair is one day, not two) — the same figure `Admin::Crm::Cadence` reports |
-> | `litres_total` | de-duplicated across the two tables (see *Counting a discount once* below — litres are copied onto the linked transaction too) |
-> | `discount_total` | the same de-duplication rule; the set-wise twin of `Customer#discount_total` |
-> | `contact_count` | `contact_logs` in the window |
-> | `points_earned` | `points_ledgers` `entry_type: earn` **in the window** |
-> | `points_balance` | lifetime **net** balance, never windowed |
+> | Metric | Rule | Filter |
+> |--------|------|--------|
+> | `visit_count` | distinct visit **days** across transactions ∪ visit_entries (a linked pair is one day, not two) — the same figure `Admin::Crm::Cadence` reports | `min_visits` |
+> | `litres_total` | the same de-duplicated rows (see *Counting a discount once* below — litres are copied onto the linked transaction too) | `min_litres` |
+> | `discount_total` | the same rows again; the set-wise twin of `Customer#discount_total` | `min_discount` |
+> | `contact_count` | `contact_logs` in the window | `min_contacts` |
+> | `points_earned` | `points_ledgers` `entry_type: earn` **in the window** | `min_points_earned` |
+> | `points_balance` | lifetime **net** balance, never windowed | `min_points` |
 >
 > - **Both point cohorts, on purpose.** Per the client decision, "accumulated x
->   reward points" is exposed twice: what they *earned in the period* and the
->   *balance they hold today*. Someone who earned 5,000 and redeemed the lot has a
->   large `points_earned` and a zero balance — different people, different lists.
+>   reward points" is exposed twice: what they *earned in the period*
+>   (`min_points_earned`) and the *balance they hold today* (`min_points`).
+>   Someone who earned 5,000 and redeemed 4,800 has `points_earned` 5,000 and a
+>   balance of 200 — the earned filter finds them at 5,000 and the balance filter
+>   cannot, which is the whole reason there are two. The balance filter keeps the
+>   plain `min_points` spelling it shipped with, so existing bookmarks, chip links
+>   and the dashboard drill-through keep working unchanged.
 > - **Thresholds are `>=`, optional, and AND-combined.** An unset threshold adds no
 >   clause at all, so a customer with zero contacts or zero points stays reachable;
 >   the subqueries COALESCE to 0 rather than dropping the row.
@@ -98,15 +120,20 @@ Fuel-station customers today are a thin record (name + one phone + a plate). The
 >   my customers" and must include visit-entry-only accounts. The divergence is
 >   documented on the class; reconciling the campaign gate onto these expressions
 >   is a follow-up.
-> - **Paged.** The admin customer list was unbounded; it is now 25 per page at the
->   SQL level (OFFSET/LIMIT), with `[customer_id, created_at]` /
->   `[customer_id, entry_date]` indexes added for the subqueries.
-> - **Web:** a collapsible "Filter by activity" panel on the admin customers index
->   (auto-opened when a threshold is applied) plus a per-row metric strip.
->   **API:** `GET /api/v1/admin/customers`. **Android:** an admin-only **Segments**
->   screen (`ui/admin/crm/CustomerSegmentsScreen.kt`) reached from the Customers
->   tab — `CustomersScreen` is shared verbatim with staff, so the action is passed
->   in by `AdminShell` and simply does not exist for staff.
+> - **Paged on the API.** `GET /api/v1/admin/customers` pages server-side at 25
+>   (OFFSET/LIMIT, `per_page` up to 100), with `[customer_id, created_at]` /
+>   `[customer_id, entry_date]` indexes added for the subqueries. The web list is
+>   still unbounded — paging it is a follow-up.
+> - **One cohort definition, two surfaces.** `CustomerMetrics#cohort` owns search,
+>   status, account type, "active in period" *and* the thresholds; the web
+>   controller and the API index both call it, so they cannot drift into returning
+>   different customers for the same query. It de-duplicates the vehicle search
+>   with a subquery rather than a `JOIN … DISTINCT`, because a distinct list can be
+>   neither counted nor paged cleanly once the metric columns are in the SELECT.
+> - **Web:** a threshold row in the admin customers filter bar (one number field
+>   per filter) plus a per-row metric strip. **API:** `GET /api/v1/admin/customers`
+>   (contract §14). **Android:** nothing — there is no admin segments screen; the
+>   app reads a single customer's figures through `…/customers/:id/insight`.
 > See [Staff feedback — Aug 2026](50-staff-feedback-2026-08.md).
 
 ## Requirements covered
@@ -269,7 +296,8 @@ erDiagram
     - **Litres and discount come from every transaction, plus only those `visit_entries` with no linked transaction.** `VisitEntryRecorder` copies the capture's litres and discount onto the transaction it creates and back-links via `visit_entries.transaction_id`, so counting both sides of a linked pair doubles every figure. Residual, accepted: a capture and a transaction recorded separately for one physical fill-up, with no link between them, still double-counts — there is no key to detect that, and day-grained visit counting absorbs it for the visit metric.
     - **Anonymous captures** (`customer_id IS NULL`) belong to nobody and are excluded.
     - **Gifts** are the ₹ `cash_reward_amount` of `points_ledgers` rows with `entry_type = redeem` — the same definition E1's reports use.
-    - **Flows are period-scoped; the points balance is not.** Litres, discount, contacts and gifts follow the selected period. The points balance is a *stock*, not a flow: it stays lifetime, because that is the number the row displays and the redemption rules act on. Filtering on a period-scoped balance while showing the lifetime one would return rows that visibly contradict the filter.
+    - **Flows are period-scoped; the points balance is not.** Litres, discount, contacts, gifts and **points earned** follow the selected period. The points balance is a *stock*, not a flow: it stays lifetime, because that is the number the row displays and the redemption rules act on. Filtering on a period-scoped balance while showing the lifetime one would return rows that visibly contradict the filter.
+    - **"Reward points" is two filters, not one.** `min_points_earned` reads `entry_type: earn` inside the period; `min_points` reads the lifetime net balance. They are independent thresholds because a customer who earned 5,000 and redeemed 4,800 belongs in the first cohort and not the second, and neither reading is the wrong answer to "customers who have accumulated x reward points".
 9. **"Active in a period" means served in it.** The admin customer list's period filter uses the same union as the metrics above, so a fleet/OTP customer with visit captures but no loyalty transaction is no longer dropped from a period-filtered list.
 
 ### Workflow: FSM captures a visit

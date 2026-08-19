@@ -15,6 +15,10 @@ class DailySettlementPolicy < ApplicationPolicy
     staff_access?
   end
 
+  # Gates the FSM flow only, and says nothing about *which* settlement: the staff
+  # controllers scope that to the caller's own sheet. An admin passes this check
+  # but has no editable sheet there — an admin edit of a recorded settlement runs
+  # through `admin_manage?` in the audited D9 console, which writes the diff.
   def update?
     staff_access?
   end

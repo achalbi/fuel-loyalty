@@ -1,11 +1,12 @@
 module Admin
   module Crm
     # E3 + E5 — the per-customer CRM profile: visit cadence, recency, a conversion
-    # probability, rollups of outreach (contact_logs) and feedback, and the
-    # commercial totals (litres, discount given, gifts given) from CustomerMetrics.
+    # probability, rollups of outreach (contact_logs) and feedback, the
+    # commercial totals (litres, discount given, gifts given) from CustomerMetrics,
+    # and the all-time `rewards` rollup (staff feedback item 5).
     # Computed on read from the visit history; nothing is denormalized on
     # `customers`. `range` narrows the commercial totals to a period; the cadence
-    # fields are always full-history.
+    # fields and the rewards rollup are always full-history.
     class CustomerInsight
       def initialize(customer, as_of: Time.current, range: nil)
         @customer = customer
@@ -48,7 +49,8 @@ module Admin
           conversion_probability: conversion_probability,
           metrics: metrics.to_h,
           contacts: contacts_summary,
-          feedback: feedback_summary
+          feedback: feedback_summary,
+          rewards: rewards_summary
         }.tap do |data|
           # Only worth carrying when it says something the period totals do not.
           data[:lifetime_metrics] = lifetime_metrics.to_h if @range
@@ -99,6 +101,66 @@ module Admin
           latest_rating: latest&.rating,
           latest_comment: latest&.comment
         }
+      end
+
+      # Item 5 — "show up discount amount paid, or gifts given for that customer".
+      # Deliberately three separate figures rather than one blended "rewards"
+      # number, because they are three different things in three different units:
+      #
+      # * `discount_total` — ₹ knocked off at the pump. Customer#discount_total
+      #   owns the de-duplication of the visit-entry/transaction pair; this reuses
+      #   it rather than restating the rule and risking a second answer.
+      # * `redemption_*` — points cashed in: the ₹ value, the points, the count.
+      # * `gift_count` / `gift_descriptions` — physical F1 campaign gifts actually
+      #   handed over, and WHAT they were (the client asked for the item, not just
+      #   a tally). These carry no ₹ at all, which is why they are not folded into
+      #   `redemption_value`.
+      #
+      # All-time regardless of `@range`: "what has this customer ever been given"
+      # is the question, and a gift handed over last quarter did not un-happen
+      # because the admin picked this month. The windowed view of the same money
+      # is `metrics[:discount]` / `metrics[:gifts]`.
+      def rewards_summary
+        redemptions = @customer.points_ledgers.where(entry_type: :redeem)
+        gifts = granted_gift_descriptions
+        {
+          discount_total: @customer.discount_total.to_f.round(2),
+          redemption_value: redemptions.sum(:cash_reward_amount).to_f.round(2),
+          # Redeem rows store points NEGATIVE (PointsRedeemer); report the magnitude.
+          redemption_points: redemptions.sum("ABS(points)").to_i,
+          redemption_count: redemptions.count,
+          gift_count: gifts.size,
+          # The tally is `gift_count`; this list answers "what did we hand over",
+          # so a gift won three times is named once.
+          gift_descriptions: gifts.compact_blank.uniq,
+          reward_value_configured: reward_value_configured?
+        }
+      end
+
+      # A granted F1 gift writes no ledger row and carries no ₹ — the stamped
+      # `campaign_qualifications.reward_granted_at` is its only trace, so a
+      # qualification the customer earned but was never handed does not count.
+      # Same predicate LedgerReport#gift_count_lookup counts gifts with, so the
+      # reports page and this card cannot disagree about what a gift is. One row
+      # per gift, newest first, so the descriptions read newest-received first
+      # once de-duplicated.
+      def granted_gift_descriptions
+        @granted_gift_descriptions ||= @customer.campaign_qualifications
+          .joins(:campaign).merge(::Campaign.reward_gift)
+          .where.not(reward_granted_at: nil)
+          .order(reward_granted_at: :desc)
+          .pluck("campaigns.gift_description")
+      end
+
+      # With no ₹-per-point rate ever set, EVERY redemption stored
+      # cash_reward_amount = NULL, so `redemption_value` sums to a structural 0.
+      # Surfaced so web and Android render "—" instead of a ₹0.00 that reads as
+      # "we gave them nothing". Reuses the predicate the reports page already
+      # applies (Admin::Reports::LedgerReport#reward_value_configured?).
+      def reward_value_configured?
+        return @reward_value_configured if defined?(@reward_value_configured)
+
+        @reward_value_configured = RewardSetting.current.cash_reward_configured?
       end
     end
   end

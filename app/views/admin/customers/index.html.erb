@@ -64,12 +64,18 @@
       <div class="admin-transactions-filter__group admin-customers-filter__thresholds">
         <span class="admin-transactions-filter__label">Show customers with at least</span>
         <div class="admin-customers-filter__threshold-grid">
+          <%# "Reward points" is asked two ways and answered two ways: points EARNED
+              in the selected period, and the lifetime balance the customer still
+              holds. Someone who earned 5,000 and redeemed 4,800 is in the first
+              cohort and not the second, so the labels have to say which is which.
+              `min_points` keeps its name — bookmarks and chip links carry it. %>
           <% [
                [:min_visits, "Visits", 1, "0"],
                [:min_litres, "Litres filled", 0.001, "0"],
                [:min_contacts, "Times contacted", 1, "0"],
                [:min_discount, "Discount given (₹)", 0.01, "0"],
-               [:min_points, "Reward points", 1, "0"],
+               [:min_points_earned, "Reward points earned", 1, "0"],
+               [:min_points, "Reward points balance", 1, "0"],
              ].each do |name, label, step, min| %>
             <div class="admin-customers-filter__threshold">
               <%= label_tag name, label, class: "admin-transactions-filter__label" %>
@@ -119,11 +125,16 @@
                 <span class="admin-customer-item__vehicles"><%= vehicle_summary %></span>
               </div>
               <div class="admin-customer-item__metrics">
+                <%# Fuellings, de-duplicated on the visit-entry/transaction link —
+                    the same rows the litres and discount beside it are summed off. %>
                 <span><%= pluralize(customer[:visit_days].to_i, "visit") %></span>
                 <span><%= number_with_precision(customer[:litres_filled].to_d, precision: 3, strip_insignificant_zeros: true) %> L</span>
                 <span><%= number_to_currency(customer[:discount_given], unit: "₹") %> discount</span>
                 <span><%= number_to_currency(customer[:gifts_value], unit: "₹") %> gifts</span>
                 <span><%= pluralize(customer[:contact_count].to_i, "contact") %></span>
+                <%# Earned, not held: the balance is the "N pts" on the right, and
+                    the two differ by everything the customer has redeemed. %>
+                <span><%= number_with_delimiter(customer[:points_earned].to_i) %> pts earned</span>
               </div>
             </div>
             <div class="admin-customer-item__side">

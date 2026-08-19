@@ -786,14 +786,25 @@ builds keep working.</p>
    stops a client re-posting saved rows without their ids from doubling a
    settlement (staff feedback item 6). Credit and discount lines are exempt —
    they have no natural key, so a second row may be genuine.</li>
-<li><strong>Staff read their pump, edit their own.</strong> An FSM sees any settlement for a
-   pump they're posted to, including a colleague's shift, but may only edit one
-   they recorded. Admins see and edit everything.</li>
+<li><strong>Staff read their pump, edit their own; an admin edits only in the audited
+   console.</strong> An FSM sees any settlement for a pump they're posted to, including a
+   colleague's shift, but may only edit one they recorded. Admins <strong>read</strong>
+   everything through the same flow. They <strong>edit</strong> nothing through it: the FSM flow
+   persists without <code>admin_edit:</code>, so it writes no <code>settlement_changes</code> row, and an
+   admin editing there would rewrite an FSM's figures with no audit row and no
+   change reason — the very thing the D9 console exists to prevent. So an admin has
+   no editable settlement in the FSM flow at all. The web hands them the same sheet
+   in the console (<code>edit_admin_settlement_path</code>) rather than dropping them on a bare
+   index — from the Edit control on the list and the sheet, from the staff edit URL
+   directly, and from the "a settlement already exists for that pump and date"
+   hand-off on the new-settlement form — and the staff API answers <code>403</code>, the same
+   refusal it gives for a colleague's sheet. Admin <strong>create</strong> on an FSM's behalf
+   (rule 13) is untouched.</li>
 <li><strong>Cross-pump view (D9/Admin-13):</strong> admin can list/aggregate settlements for a <code>business_date</code> across all pumps, summing fuel/lube/discount/credit/cash/shortage.</li>
 <li><strong>Per-FSM view (Admin-12).</strong> The same list also rolls up <strong>per staff member</strong> — one row per <code>recorded_by</code>, carrying that FSM's settlement count, the pumps they covered and the same money columns, with a filter to narrow the list to one FSM. Grouping is on <code>recorded_by_id</code>, never on <code>fsm_name_snapshot</code>: the snapshot is frozen at create, so two users sharing a display name would merge and a renamed user would split. Only <code>submitted</code>/<code>reconciled</code> rows carry money, so the rollup counts only those and reports any drafts separately — a count that included drafts would contradict its own totals.</li>
 <li><strong>An admin never enters a settlement as himself (Admin-12).</strong> A settlement belongs to the FSM who worked the shift. An admin may still enter one <em>for</em> an FSM who cannot — that is the only case where an admin enters anything:<ul>
 <li><strong>Creating:</strong> the admin must name the staff member; <code>recorded_by</code> becomes that FSM (so <code>fsm_name_snapshot</code> is theirs) and <code>daily_settlements.entered_by</code> records the admin who keyed it in. <code>entered_by</code> is stamped <strong>once, at creation</strong> — never back-stamped by a later edit or reconcile, which would falsely claim the editing admin keyed in every settlement predating the column. A staff member may never set <code>recorded_by</code>; their settlement is always their own.</li>
-<li><strong>Editing:</strong> the admin must name the staff member the edit is for; <code>settlement_changes.on_behalf_of</code> records them alongside <code>changed_by</code> (the admin). The two are never conflated.</li>
+<li><strong>Editing:</strong> the admin must name the staff member the edit is for; <code>settlement_changes.on_behalf_of</code> records them alongside <code>changed_by</code> (the admin). The two are never conflated. This happens <strong>only</strong> in the admin console — the FSM flow, which records no reason and no diff, refuses an admin edit outright (rule 10).</li>
 <li>Neither may name the acting admin — naming yourself is exactly what this rule forbids. Ownership is decided once at creation and can never be re-pointed afterwards, which would move money between people with no audit row.</li>
 <li><strong>Reconcile is exempt:</strong> approving a settlement is an act of the admin's own authority, not data entry.</li>
 </ul>
@@ -909,7 +920,7 @@ Request:</p>
 <p>When the caller is an <strong>admin</strong>, <code>settlement.recorded_by_id</code> is additionally accepted and <strong>required</strong>: it names the staff member the settlement belongs to, and <code>422 on_behalf_of_required</code> is returned without it, or when it names anyone but a current staff member other than the caller (business rule 10). The acting admin is stored as <code>entered_by</code>. The field is ignored for staff callers and on <code>PATCH</code> for everyone — ownership is set once, at creation.</p>
 <p><strong>GET <code>/api/v1/staff/settlements</code></strong> — list the FSM's own settlements (query <code>business_date</code>, <code>fuel_pump_id</code>). Returns summary rows.
 <strong>GET <code>/api/v1/staff/settlements/:id</code></strong> — full read (FSM's own; blocked once <code>locked</code>/reconciled except read-only).
-<strong>PATCH <code>/api/v1/staff/settlements/:id</code></strong> — update while still <code>draft</code>; <code>409</code> if <code>locked</code>.</p>
+<strong>PATCH <code>/api/v1/staff/settlements/:id</code></strong> — update while still <code>draft</code>; <code>409</code> if <code>locked</code>; <code>403</code> for a sheet the caller did not record — including <strong>every</strong> admin caller, who edits via <code>PATCH /api/v1/admin/settlements/:id</code> instead (rule 10).</p>
 <h3 id="admin">Admin</h3>
 <p><strong>GET <code>/api/v1/admin/settlements</code></strong> — list/filter across pumps. Query: <code>business_date</code> (or <code>from</code>/<code>to</code>), <code>fuel_pump_id</code> (optional; omit = all pumps), <code>user_id</code> (optional; the FSM who recorded it), <code>status</code>. Response includes per-settlement summary, a <code>per_user_totals</code> array (one entry per FSM: <code>user_id</code>, <code>name</code>, <code>count</code>, <code>pumps[]</code>, <code>totals{}</code> — Admin-12), plus, when a single date and no pump filter, a <code>cross_pump_totals</code> block (Admin-13).
 <strong>GET <code>/api/v1/admin/settlements/:id</code></strong> — full settlement + <code>changes</code> audit array (each change carries <code>changed_by</code>, <code>on_behalf_of</code>, <code>on_behalf_of_id</code>).
@@ -942,7 +953,7 @@ end
 <li><strong>Stock received / Decantation / Rate comparison</strong> — three compact repeatable sections.</li>
 <li>Sticky <strong>Submit</strong> button. All computed fields recalc client-side via Stimulus for feedback; server recomputes on submit.</li>
 <li><strong>Admin — extend <code>admin/transactions</code></strong> area (currently index-only, <code>config/routes.rb:147</code>) or add sibling <strong><code>admin/settlements</code></strong>: an index filterable by date/pump/<strong>staff (FSM)</strong>/status with a <strong>cross-pump totals</strong> header and a <strong>per-staff-member</strong> rollup card (count, pumps covered, fuel/discount/final/cash/shortage; drafts noted separately, each row linking through to that FSM's own settlements), a per-settlement detail page reusing the staff form in editable mode with a mandatory <strong>"Entering on behalf of"</strong> selector and <strong>"Reason for change"</strong> field, an <strong>Audit trail</strong> panel listing <code>settlement_changes</code> (who/on-whose-behalf/when/reason/diffs, mirroring the attendance-changes UI), and a <strong>Reconcile</strong> action. The detail header shows <code>FSM: &lt;name&gt; · entered by &lt;admin&gt;</code> when the two differ. Admin-12 "visualize per pump" is a small chart (litres/₹/shortage over a date range) on the pump detail.</li>
-<li><strong>Admin does not get a settlement-entry entry point.</strong> The admin sidebar has no "Daily Settlement" link; an admin who must file for an FSM uses the staff flow, where the form asks who it is <strong>Recorded for</strong>. The Android home hides its Daily Settlement tile from admins for the same reason — its request body carries no FSM field, so offering it would only produce an unsatisfiable error.</li>
+<li><strong>Admin does not get a settlement-entry entry point.</strong> The admin sidebar has no "Daily Settlement" link; an admin who must file for an FSM uses the staff flow, where the form asks who it is <strong>Recorded for</strong>. That flow is for <em>filing</em> only: every Edit control an admin sees on the staff list or sheet points at the audited console, and the staff edit URL redirects there for the same settlement (rule 10). The Android home hides its Daily Settlement tile from admins for the same reason — its request body carries no FSM field, so offering it would only produce an unsatisfiable error.</li>
 </ul>
 <h3 id="android-compose">Android (Compose)</h3>
 <ul>

@@ -25,6 +25,13 @@ module Admin
         CustomerMetrics.for(@customer, period_range: period_range)
       end
 
+      # The ids the "at least X" filters actually return, which is the only way to
+      # tell two thresholds apart: Totals reports one number per metric, a filter
+      # decides who is in the list.
+      def cohort_ids(period_range: nil, **thresholds)
+        CustomerMetrics.new(period_range: period_range, thresholds: thresholds).cohort.pluck(:id)
+      end
+
       test "sums litres and discount across transactions and unlinked captures" do
         transaction_on(Time.zone.local(2026, 7, 10, 9, 0), litres: 10, discount: 5)
         capture_on(Date.new(2026, 7, 11), litres: 20, discount: 7)
@@ -47,21 +54,39 @@ module Admin
         assert_equal 1, result.visits
       end
 
-      test "visits count distinct days, not rows" do
-        transaction_on(Time.zone.local(2026, 7, 10, 8, 0), litres: 5, discount: 0)
-        transaction_on(Time.zone.local(2026, 7, 10, 20, 0), litres: 5, discount: 0)
-        capture_on(Date.new(2026, 7, 12), litres: 5, discount: 0)
+      # The regression that made visits contradict litres and discount on the same
+      # A linked pair is ONE row in the stream: the visit-entry branch of the union
+      # is gated `transaction_id IS NULL`, so the capture is dropped and its
+      # transaction carries the figures. Regression guard on that gate — it is what
+      # stops a back-dated fleet capture (30 Jun) whose transaction landed after
+      # midnight (1 Jul) from being counted twice.
+      test "a linked pair is one visit, and litres and discount agree with it" do
+        linked = transaction_on(Time.zone.local(2026, 7, 1, 0, 20), litres: 20, discount: 100)
+        capture_on(Date.new(2026, 6, 30), litres: 20, discount: 100, transaction: linked)
 
-        assert_equal 2, totals.visits
+        result = totals
+
+        assert_equal 1, result.visits, "one fuelling, counted once"
+        assert_equal 20.0, result.litres
+        assert_equal 100.0, result.discount
       end
 
-      test "a late-evening transaction lands on the local day, not the UTC one" do
-        # 23:30 IST on the 10th is 18:00 UTC on the 10th; naive ::date would still
-        # say the 10th, so use a time that crosses: 05:00 IST = 23:30 UTC previous day.
-        transaction_on(Time.zone.local(2026, 7, 11, 5, 0), litres: 5, discount: 0)
-        transaction_on(Time.zone.local(2026, 7, 11, 23, 0), litres: 5, discount: 0)
+      # A visit is a DAY SERVED, matching what Cadence reports on the profile, so a
+      # customer whose profile reads "2 visits" is found by a "visited at least 2
+      # times" filter. Litres and discount are sums over every row, so they and the
+      # visit count deliberately answer different questions on the same line.
+      test "two fuellings on one day are one visit, matching the profile" do
+        transaction_on(Time.zone.local(2026, 7, 10, 8, 0), litres: 5, discount: 1)
+        transaction_on(Time.zone.local(2026, 7, 10, 20, 0), litres: 5, discount: 1)
+        capture_on(Date.new(2026, 7, 12), litres: 5, discount: 1)
 
-        assert_equal 1, totals.visits
+        result = totals
+
+        assert_equal 2, result.visits, "10 Jul and 12 Jul — days served, not fuellings"
+        assert_equal 15.0, result.litres, "but litres sum all three fuellings"
+        assert_equal 3.0, result.discount
+        assert_equal 2, CustomerInsight.new(@customer).cadence.visit_count,
+          "the cohort filter and the profile must agree, or a filtered list contradicts the page it links to"
       end
 
       test "anonymous captures belong to nobody" do
@@ -119,12 +144,58 @@ module Admin
         assert_equal 0, result.points
       end
 
+      # "Accumulated x reward points" has two honest readings, so it is two
+      # filters. This customer is the proof they are not aliases of each other:
+      # 5,000 earned, 4,800 spent, 200 left. The earned filter finds them; the
+      # balance filter — which is what min_points has always meant — cannot.
+      test "the earned and balance point thresholds are genuinely different filters" do
+        @customer.points_ledgers.create!(entry_type: :earn, points: 5_000)
+        @customer.points_ledgers.create!(entry_type: :redeem, points: -4_800, cash_reward_amount: 1_200)
+
+        assert_equal 200, totals.points, "the balance is what is left"
+
+        assert_includes cohort_ids(min_points_earned: 5_000), @customer.id
+        assert_not_includes cohort_ids(min_points: 5_000), @customer.id
+        assert_includes cohort_ids(min_points: 200), @customer.id
+        assert_not_includes cohort_ids(min_points_earned: 5_001), @customer.id
+      end
+
+      test "points earned follow the selected period while the balance stays lifetime" do
+        transaction_on(Time.zone.local(2026, 7, 10, 9, 0), litres: 10, discount: 0)
+        @customer.points_ledgers.create!(entry_type: :earn, points: 200,
+                                         created_at: Time.zone.local(2026, 7, 10, 9, 0))
+        @customer.points_ledgers.create!(entry_type: :earn, points: 300,
+                                         created_at: Time.zone.local(2026, 8, 10, 9, 0))
+
+        july = Time.zone.local(2026, 7, 1).beginning_of_day..Time.zone.local(2026, 7, 31).end_of_day
+
+        assert_includes cohort_ids(period_range: july, min_points_earned: 200), @customer.id
+        assert_not_includes cohort_ids(period_range: july, min_points_earned: 201), @customer.id,
+          "August's 300 points were not earned in July"
+        assert_includes cohort_ids(period_range: july, min_points: 500), @customer.id,
+          "the balance is a stock and is never windowed, even when a period is set"
+      end
+
+      # docs/acefuels/13-spec-customer-crm-capture.md pins these two to the same
+      # rule: Customer#discount_total owns it for one customer, this class owns the
+      # set-wise twin for a whole list. Change one and change the other.
+      test "the set-wise discount rule agrees with Customer#discount_total" do
+        linked = transaction_on(Time.zone.local(2026, 7, 10, 9, 0), litres: 10, discount: 5)
+        capture_on(Date.new(2026, 7, 10), litres: 10, discount: 5, transaction: linked)
+        transaction_on(Time.zone.local(2026, 7, 11, 9, 0), litres: 8, discount: 3)
+        capture_on(Date.new(2026, 7, 12), litres: 6, discount: 7)
+
+        assert_equal @customer.discount_total.to_f, totals.discount
+        assert_equal 15.0, totals.discount
+      end
+
       test "thresholds ignore blank, negative, non-numeric and oversized values" do
         normalized = CustomerMetrics.normalize_thresholds(
-          min_visits: "3", min_litres: "12.5", min_contacts: "", min_discount: "-4", min_points: "abc"
+          min_visits: "3", min_litres: "12.5", min_contacts: "", min_discount: "-4",
+          min_points: "abc", min_points_earned: "750"
         )
 
-        assert_equal({ min_visits: 3, min_litres: BigDecimal("12.5") }, normalized)
+        assert_equal({ min_visits: 3, min_litres: BigDecimal("12.5"), min_points_earned: 750 }, normalized)
         assert_empty CustomerMetrics.normalize_thresholds(min_litres: "12345678901234")
       end
 

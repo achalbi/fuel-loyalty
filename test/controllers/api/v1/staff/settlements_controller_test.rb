@@ -174,6 +174,41 @@ module Api
           assert_not_includes ids, elsewhere.id
         end
 
+        # This endpoint calls the Persister without `admin_edit:`, so nothing it
+        # writes leaves an audit row — an admin is refused here in exactly the
+        # shape a colleague's sheet is refused, and edits through
+        # PATCH /api/v1/admin/settlements/:id instead.
+        test "an admin cannot update a settlement through the staff API" do
+          admin = users(:one)
+          settlement = DailySettlement.create!(fuel_pump: @pump, business_date: Date.new(2026, 7, 24), recorded_by: @staff,
+                                               status: "submitted",
+                                               nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1000, closing_reading: 1100, unit_price: 100 }])
+          reading = settlement.nozzle_readings.first
+
+          assert_no_difference -> { SettlementChange.count } do
+            patch api_v1_staff_settlement_path(settlement),
+                  params: { settlement: { notes: "silent rewrite",
+                                          nozzle_readings_attributes: [{ id: reading.id, closing_reading: "9999" }] } }.to_json,
+                  headers: auth_headers(admin).merge("CONTENT_TYPE" => "application/json")
+          end
+
+          assert_response :forbidden
+          assert_equal "forbidden", response.parsed_body.dig("error", "code")
+          assert_nil settlement.reload.notes
+          assert_equal 1100, reading.reload.closing_reading.to_i
+        end
+
+        # An admin still reads any sheet through this endpoint — only writing moved.
+        test "an admin can still read a settlement through the staff API" do
+          settlement = DailySettlement.create!(fuel_pump: @pump, business_date: Date.new(2026, 7, 24), recorded_by: @staff,
+                                               nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1, closing_reading: 2, unit_price: 100 }])
+
+          get api_v1_staff_settlement_path(settlement), headers: auth_headers(users(:one))
+
+          assert_response :ok
+          assert_equal settlement.id, response.parsed_body["id"]
+        end
+
         test "a staff member cannot update a settlement recorded by someone else" do
           theirs = DailySettlement.create!(fuel_pump: @pump, business_date: Date.new(2026, 7, 24), recorded_by: users(:one),
                                            nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1, closing_reading: 2, unit_price: 100 }])

@@ -107,51 +107,17 @@ module Admin
     end
     helper_method :filters_applied?
 
+    # Search, status, type, "active in this period" and the "at least X"
+    # thresholds all live on Admin::Crm::CustomerMetrics#cohort, which
+    # GET /api/v1/admin/customers calls too — so the console and the app cannot
+    # disagree about which customers a given query returns, any more than they can
+    # disagree about what "5 visits" means.
     def filtered_customers
-      metrics = ::Admin::Crm::CustomerMetrics.new(period_range: @period_range, thresholds: @thresholds)
-      # The metrics rollups are 1:1 with customers.id, so they survive the
-      # vehicles fan-out + DISTINCT that the search needs.
-      scope = metrics.apply(Customer.left_joins(:vehicles).select("customers.*").distinct)
-
-      if @query.present?
-        name_query = "%#{ActiveRecord::Base.sanitize_sql_like(@query.downcase)}%"
-        phone_query = Customer.normalize_phone_number(@query)
-        vehicle_query = Vehicle.normalize_vehicle_number(@query)
-        conditions = ["LOWER(customers.name) LIKE :name"]
-        values = { name: name_query }
-
-        if phone_query.present?
-          values[:phone] = "%#{ActiveRecord::Base.sanitize_sql_like(phone_query)}%"
-          conditions << "customers.phone_number LIKE :phone"
-        end
-
-        if vehicle_query.present?
-          vehicle_like = "%#{ActiveRecord::Base.sanitize_sql_like(vehicle_query)}%"
-          values[:legacy_vehicle] = vehicle_like
-          values[:vehicle] = vehicle_like
-          conditions << "customers.vehicle_number LIKE :legacy_vehicle"
-          conditions << "vehicles.vehicle_number LIKE :vehicle"
-        end
-
-        scope = scope.where(conditions.join(" OR "), values)
-      end
-
-      scope = case @current_status
-      when "active"
-        scope.where(active: true)
-      when "inactive"
-        scope.where(active: false)
-      else
-        scope
-      end
-
-      # "Active in this period" means served in it — a fleet/OTP customer with
-      # visit captures but no loyalty transaction counts, matching the visit
-      # definition the metrics above use.
-      scope = scope.where("visit_stats.customer_id IS NOT NULL") if @period_range
-      scope = scope.where(customer_type: @current_customer_type) if @current_customer_type
-
-      scope.preload(:vehicles).order(created_at: :desc)
+      ::Admin::Crm::CustomerMetrics
+        .new(period_range: @period_range, thresholds: @thresholds)
+        .cohort(query: @query, status: @current_status, customer_type: @current_customer_type)
+        .preload(:vehicles)
+        .order(created_at: :desc)
     end
 
     def normalized_customer_type

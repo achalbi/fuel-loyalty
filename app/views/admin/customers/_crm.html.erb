@@ -1,6 +1,15 @@
 <%# E3/E5/E7 — admin-only CRM panels for the customer console. Rendered from the
     shared customers/show view only when @crm_insight is present (admin context). %>
 <% insight = @crm_insight %>
+<% rewards = insight[:rewards] %>
+<%# Item 5 — with no ₹-per-point rate configured every redemption stored
+    cash_reward_amount = NULL, so a ₹0 redemption value is structural, not real.
+    Same "—" rule the reports page applies. A redemption taken while a rate WAS
+    configured still carries its snapshotted amount, so a non-zero figure is
+    shown even once the rate is blanked — and this ONE flag drives both the value
+    and the note below it, so the page can never print a real ₹ figure under a
+    note claiming the figure is unavailable. %>
+<% redemption_value_known = rewards[:reward_value_configured] || rewards[:redemption_value].to_f.nonzero? %>
 
 <%# ---- E3/E5 Insight card ---- %>
 <div class="card shadow-sm loyalty-result-card customer-details-section">
@@ -61,6 +70,48 @@
         <%= number_to_currency(lifetime[:gifts], unit: "₹") %> gifts ·
         <%= pluralize(lifetime[:contacts], "contact") %>.
       </p>
+    <% end %>
+  </div>
+</div>
+
+<%# ---- Item 5 Rewards card — what this customer has actually been given ----
+    All time, deliberately: the Insight card above answers "what did they cost us
+    in the selected period", this one answers "what have we ever handed over".
+    Note the two different senses of "gift" on this page: the ₹ figure above is
+    the cash value of point redemptions, while "Campaign gifts" here counts
+    physical F1 gifts, which carry no ₹ at all. %>
+<div class="card shadow-sm loyalty-result-card customer-details-section">
+  <div class="card-body">
+    <div class="customer-details-section__header">
+      <div>
+        <h2 class="h5 mb-1">Rewards Given</h2>
+        <p class="text-muted mb-0">Discount paid out, points redeemed and gifts handed over — all time.</p>
+      </div>
+    </div>
+
+    <dl class="row mb-0 small mt-2" data-customer-rewards>
+      <dt class="col-6 text-muted fw-normal">Discount paid</dt>
+      <dd class="col-6 text-end mb-1" data-reward="discount"><%= number_to_currency(rewards[:discount_total], unit: "₹") %></dd>
+      <dt class="col-6 text-muted fw-normal">Redemption value</dt>
+      <dd class="col-6 text-end mb-1" data-reward="redemption-value"><%= redemption_value_known ? number_to_currency(rewards[:redemption_value], unit: "₹") : "—" %></dd>
+      <dt class="col-6 text-muted fw-normal">Points redeemed</dt>
+      <dd class="col-6 text-end mb-1" data-reward="redemption-points">
+        <%= number_with_delimiter(rewards[:redemption_points]) %>
+        <span class="text-muted">(<%= pluralize(rewards[:redemption_count], "redemption") %>)</span>
+      </dd>
+      <dt class="col-6 text-muted fw-normal">Campaign gifts</dt>
+      <dd class="col-6 text-end mb-0" data-reward="gift-count"><%= rewards[:gift_count] %></dd>
+    </dl>
+
+    <%# The client asked WHAT was given, not just how many — an F1 campaign gift
+        carries no ₹, so the description is the only thing worth reporting. %>
+    <% if rewards[:gift_descriptions].any? %>
+      <p class="small text-muted mb-0 mt-2" data-reward="gift-descriptions">Gifts: <%= rewards[:gift_descriptions].to_sentence %></p>
+    <% end %>
+    <%# Gated on the SAME flag as the value above: the note only ever appears
+        beside a "—", never beside a real ₹ figure. %>
+    <% unless redemption_value_known %>
+      <p class="small text-muted mb-0 mt-2" data-reward="redemption-value-note">No cash value per point is configured, so redemption ₹ shows as “—”.</p>
     <% end %>
   </div>
 </div>
