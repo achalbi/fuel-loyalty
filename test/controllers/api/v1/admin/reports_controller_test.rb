@@ -23,7 +23,7 @@ module Api
           assert_response :ok
           body = response.parsed_body
           assert_equal "transporter", body["dimension"]
-          assert_equal %w[key label period litres amount discount gifts visits], body["columns"]
+          assert_equal %w[key label period litres amount discount gifts gift_count visits], body["columns"]
           row = body["rows"].first
           assert_equal "NL Roadways", row["key"]
           assert_equal 40.0, row["litres"]
@@ -37,7 +37,40 @@ module Api
           assert_response :ok
           assert_match %r{text/csv}, response.media_type
           assert_match(/attachment/, response.headers["Content-Disposition"])
-          assert_includes response.body, "key,label,period,litres,amount,discount,gifts,visits"
+          # The CSV carries human labels, not the machine column keys, and is
+          # BOM-prefixed — force UTF-8 before matching the non-ASCII ₹ headers.
+          assert_includes response.body.dup.force_encoding("UTF-8"),
+            "Key,Label,Period,Litres,Amount ₹,Discount ₹,Reward ₹,Gifts,Visits"
+        end
+
+        # The Android client renders "—" instead of "₹0.00" off this one flag, so a
+        # renamed/missing key would degrade silently back to the misleading zero.
+        test "reward_value_configured reports whether a cash-per-point rate exists" do
+          get api_v1_admin_reports_path, params: { dimension: "customer", grain: "month" }, headers: auth_headers(@admin)
+          assert_equal false, response.parsed_body["reward_value_configured"],
+            "no rate configured — every redemption stored a NULL cash value"
+
+          RewardSetting.current.update!(cash_value_per_point: 0.5)
+          get api_v1_admin_reports_path, params: { dimension: "customer", grain: "month" }, headers: auth_headers(@admin)
+          assert_equal true, response.parsed_body["reward_value_configured"]
+        end
+
+        test "customer_id narrows the report to a single customer" do
+          customer = Customer.create!(name: "Fleet One", phone_number: "9800000011")
+          other = Customer.create!(name: "Fleet Two", phone_number: "9800000012")
+          [customer, other].each_with_index do |c, index|
+            VisitEntry.create!(user: @staff, fuel_pump: fuel_pumps(:one), entry_date: Date.new(2026, 7, 6),
+                               customer: c, vehicle_number: "KA01BB000#{index}", litres: 25,
+                               discount_amount: 0, fuel_type_code: "petrol")
+          end
+
+          get api_v1_admin_reports_path,
+            params: { dimension: "customer", grain: "month", start_date: "2026-07-01", end_date: "2026-07-31",
+                      customer_id: customer.id },
+            headers: auth_headers(@admin)
+          assert_response :ok
+          keys = response.parsed_body["rows"].map { |r| r["key"] }
+          assert_equal [customer.id.to_s], keys, "only the requested customer's rows survive the filter"
         end
 
         test "staff cannot access reports" do

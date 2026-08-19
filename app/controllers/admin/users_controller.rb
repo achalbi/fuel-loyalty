@@ -80,7 +80,7 @@ module Admin
     # Active accounts sort to the top of the directory (admin feedback): an admin
     # scanning the list is almost always looking for someone who can still sign in.
     def load_index_state(new_user: User.new(role: :staff), edit_user: nil)
-      @users = User.kept.order(active: :desc).order(:role, :name, :username, :phone_number)
+      @users = User.admin_listing
       @user = new_user
       @edit_user = edit_user
     end

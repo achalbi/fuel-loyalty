@@ -11,7 +11,6 @@ class MyPumpsController < ApplicationController
   TODAY_ONLY_MESSAGE = "My Pump always applies to today.".freeze
 
   before_action :authenticate_user!
-  before_action :ensure_staff_or_admin!
 
   def show
     authorize current_user, :manage_pump?
@@ -34,14 +33,8 @@ class MyPumpsController < ApplicationController
 
   private
 
-  def ensure_staff_or_admin!
-    return if current_user&.admin? || current_user&.staff?
-
-    raise Pundit::NotAuthorizedError, "not allowed"
-  end
-
   def my_pump_params
-    params.require(:user).permit(:fuel_pump_id, :assignment_date, assigned_fuel_pump_nozzle_ids: [])
+    params.require(:user).permit(:fuel_pump_id, assigned_fuel_pump_nozzle_ids: [])
   end
 
   def load_form_state
@@ -53,6 +46,8 @@ class MyPumpsController < ApplicationController
     @daily_pump_assignment = current_user.pump_assignment_for(on: @assignment_date)
   end
 
+  # My Pump always applies to today — the screen no longer offers a date picker,
+  # and any supplied date param is ignored so an override can't be back/post-dated.
   def assignment_date
     Date.current
   end

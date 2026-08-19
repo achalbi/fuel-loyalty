@@ -2,7 +2,7 @@
 
 Turn the dashboard from a purely *descriptive* analytics surface (aggregate KPIs, trend charts, top-N leaderboards) into an *actionable CRM* over individual customers. This spec adds: clickable period tiles that drill through to a customer **list** (E2); a per-customer last-visit + visit-cadence profile (E3); a customer-type (OTP-Fleet / Drive-in / Credit / TT) segmentation view (E4); contact-tracking with a conversion-probability score (E5); "came last week, not this week" churn detection with a reach-out surface (E6); customer feedback/rating capture (E7); a real reporting subsystem (daily/weekly/monthly/**yearly** per vehicle / transporter / driver, with litres, discount and gifts, **exportable**) (E1); and a per-pump filter plus editable past-day transactions (G1). Every feature ships on the Rails PWA, the native Android app, and the JSON API that backs Android (Locked Decision Q2). All money figures are **derived** from litres × catalog selling price; litres/readings are the source of truth (Locked Decision Q1).
 
-> **Implementation status (2026-07-21):** ✅ **E2 shipped** — a "View customers" drill-through on the dashboard (web toolbar link kept in sync via `renderCustomersLink` on AJAX filter change; Android "View customers for this period" button on the quick-range row) opens a customer list scoped to the active period. Backed by a `Customer.transacted_between(range)` scope + a shared `OverviewReport.period_range(preset:, start_date:, end_date:)` resolver applied on both the admin web customers index and the `GET /api/v1/staff/customers` endpoint (the list Android uses). Covered by model + web + API tests. ✅ **E1 Reports shipped (Phase 2, 2026-07-22) on all three surfaces:** `Admin::Reports::LedgerReport` aggregates the B2 `visit_entries` (litres/discount/driver/transporter/vehicle) by dimension (vehicle/transporter/driver/customer) and grain (day/week/month/year), derives ₹ from litres × catalog selling price (Q1; blank when no price, never ₹0), and attributes "gifts" (₹ value of `points_ledgers` redemptions) per customer; `GET /api/v1/admin/reports` returns JSON or a streamed UTF-8-BOM CSV; web `Admin::ReportsController` + a filterable table with a totals row and a real Download-CSV export; Android `ui/admin/reports` chip-filtered card table. Tested.
+> **Implementation status (2026-07-21):** ✅ **E2 shipped** — a "View customers" drill-through on the dashboard (web toolbar link kept in sync via `renderCustomersLink` on AJAX filter change; Android "View customers for this period" button on the quick-range row) opens a customer list scoped to the active period. Backed by a `Customer.transacted_between(range)` scope + a shared `OverviewReport.period_range(preset:, start_date:, end_date:)` resolver applied on both the admin web customers index and the `GET /api/v1/staff/customers` endpoint (the list Android uses). Covered by model + web + API tests. ✅ **E1 Reports shipped (Phase 2, 2026-07-22) on all three surfaces:** `Admin::Reports::LedgerReport` aggregates the B2 `visit_entries` (litres/discount/driver/transporter/vehicle) by dimension (vehicle/transporter/driver/customer) and grain (day/week/month/year), derives ₹ from litres × catalog selling price (Q1; blank when no price, never ₹0), and attributes rewards per customer; `GET /api/v1/admin/reports` returns JSON or a streamed UTF-8-BOM CSV; web `Admin::ReportsController` + a filterable table with a totals row and a real Download-CSV export; Android `ui/admin/reports` chip-filtered card table. Tested. **Reward columns split (client feedback, 2026-08):** the ₹ column (`gifts`) is now labelled **"Reward ₹"** and a separate **`gift_count`** column counts physical campaign gifts (F1 `reward_kind: gift`) on the customer dimension; a `customer_id` filter pulls a single customer's report on all three surfaces; and an unconfigured cash-value-per-point now renders **`—`** instead of a misleading `₹0.00` (`reward_value_configured` in the payload).
 >
 > **Phase 4 status (2026-07-22):** ✅ **E3 / E5 / E6 / E7 shipped on all three surfaces, tested** (branch `acefuels-phase4-crm`; 612 Rails runs green, brakeman clean, Android `assembleDebug` SUCCESSFUL). Reconciled against what Phases 1–3 actually shipped (this spec predates them), with these deviations from the original target design above:
 > - **Visit source is a UNION of `transactions` + `visit_entries`** (`Customer.visited_between`), not transactions alone — a fleet/OTP/credit customer may have visit_entries but no loyalty transaction, and a drive-in customer the reverse; using one source alone would silently drop a whole segment from cadence/churn.
@@ -257,18 +257,25 @@ Request (query): `metric` (`total|active|new|repeat|churn`), or `bucket` (`visit
 
 `GET /api/v1/admin/reports`
 
-Request: `dimension` (`vehicle|transporter|driver|customer`), `grain` (`day|week|month|year`), `start_date`, `end_date` (or `preset`), `fuel_type`, `fuel_pump_id`, `format` (`json|csv`).
+Request: `dimension` (`vehicle|transporter|driver|customer`), `grain` (`day|week|month|year`), `start_date`, `end_date` (or `preset`), `fuel_type`, `fuel_pump_id`, `customer_id` (narrows the report to one customer), `format` (`json|csv`).
 
 ```json
 { "dimension": "transporter", "grain": "month",
-  "columns": ["key","label","litres","amount","discount","gifts","visits"],
+  "columns": ["key","label","period","litres","amount","discount","gifts","gift_count","visits"],
+  "reward_value_configured": true,
   "rows": [
     { "key": "ABC Logistics", "label": "ABC Logistics", "period": "2026-07",
-      "litres": 12400.5, "amount": 1226000.0, "discount": 18400.0, "gifts": 4200.0, "visits": 96 } ],
-  "totals": { "litres": 12400.5, "amount": 1226000.0, "discount": 18400.0, "gifts": 4200.0, "visits": 96 } }
+      "litres": 12400.5, "amount": 1226000.0, "discount": 18400.0,
+      "gifts": 4200.0, "gift_count": 2, "visits": 96 } ],
+  "totals": { "litres": 12400.5, "amount": 1226000.0, "discount": 18400.0,
+              "gifts": 4200.0, "gift_count": 2, "visits": 96 } }
 ```
 
-`format=csv` streams `text/csv` (`Content-Disposition: attachment`) with the same columns; litres/discount render blank when the underlying B2/D1 columns are absent.
+**The two reward columns are different units.** `gifts` is ₹ — the cash value of points redemptions — and is labelled **"Reward ₹"** on every surface; the key stays `gifts` so existing clients don't break. `gift_count` is a **count** of physical campaign gifts handed over (F1 `reward_kind: gift`, traced through `campaign_qualifications.reward_granted_at`, which is the only record a gift grant leaves — no ledger row, no ₹). A qualification is per-customer and carries no vehicle/driver/transporter, so `gift_count` is populated on the **customer** dimension only and reads `0` on the others.
+
+**The ₹0 trap.** `RewardSetting#cash_value_for_points` returns `nil` until an operator sets a cash value per point, so on a pump that never configured one *every* redemption stored `cash_reward_amount = NULL` and "Reward ₹" sums to zero for structural reasons. The payload therefore carries `reward_value_configured`; when it is `false` and the value is zero, web, CSV and Android all render **`—`** (plus a web hint pointing at reward settings) so an unconfigured rate is visibly distinct from a genuine ₹0.
+
+`format=csv` streams `text/csv` (`Content-Disposition: attachment`, UTF-8 BOM) with the same columns under human headers — `Key,Label,Period,Litres,Amount ₹,Discount ₹,Reward ₹,Gifts,Visits` — plus a `TOTAL` line; litres/discount render blank when the underlying B2/D1 columns are absent.
 
 ### G1 — Per-pump filter + edit
 
@@ -289,7 +296,7 @@ Request: `dimension` (`vehicle|transporter|driver|customer`), `grain` (`day|week
 - **Customer show** (`app/views/customers/show.html.erb`, admin renders it): add an **Insight card** (last visit, cadence, conversion %, first-seen, plus **litres filled / discount given / gifts given / times contacted**), a **Contacts timeline** with an "Add contact" modal (E5), and a **Feedback** block with a star-rating form (E7). When the page is opened from a period-filtered list it carries that period through, shows the period figures, and states the lifetime ones beneath them.
 - **Customer index** (`app/views/admin/customers/index.html.erb`): add a **"Show customers with at least"** filter group — visits, litres filled, times contacted, discount given (₹), reward points — and render those five figures on each row so the list shows what it filtered on (business rule 7).
 - **Transactions** (`app/views/admin/transactions/index.html.erb`): add a **pump filter** to the filter card (L19-78); turn the read-only detail modal (L119-191) into an **Edit form** (litres, discount, pump, nozzle, amount, datetime) with a Save action posting to `PATCH admin_transaction_path`; add an "Edit" pencil beside the existing eye icon.
-- **New Reports page** `admin/reports#index`: dimension selector (vehicle/transporter/driver/customer), grain selector (day/week/month/**year**), date range + pump + fuel filters, a results table with totals row, and a **Download CSV** button (real data export — distinct from the dashboard's chart-screenshot "Download PDF"). Add a nav entry in the admin sidebar.
+- **New Reports page** `admin/reports#index`: dimension selector (vehicle/transporter/driver/customer), grain selector (day/week/month/**year**), date range + pump + fuel + **customer** filters, a results table with totals row (Litres, Amount ₹, Discount ₹, **Reward ₹**, **Gifts**, Visits), and a **Download CSV** button (real data export — distinct from the dashboard's chart-screenshot "Download PDF"). Add a nav entry in the admin sidebar.
 
 ### Android (Compose)
 
@@ -299,7 +306,7 @@ Request: `dimension` (`vehicle|transporter|driver|customer`), `grain` (`day|week
   - `ContactSheet` (E5): bottom sheet with channel / role / outcome / notes → `POST contacts`.
   - `FeedbackSheet` (E7): star selector + comment → `POST feedback`. Also reachable from the staff-side customer screen so FSMs capture ratings.
   - `ReachOutScreen` (E6): churn list from `GET /admin/dashboard/churn`, sorted by conversion %, each row with Log-contact and Send-offer actions.
-- **New `admin/reports` package** (E1): dimension + grain + filter selectors, results table with totals, and an export action. Android export downloads the CSV (respect the download-permission rule) or renders the JSON table with a "Share CSV" intent.
+- **New `admin/reports` package** (E1): dimension + grain + filter selectors, results table with totals, and an export action. `AdminReportsScreen` takes an optional `customerId` so a customer screen can deep-link into that customer's report (clearable chip); each row card carries Litres / Amount / **Reward** / **Gifts** / Visits stats, with Reward showing `—` when `reward_value_configured` is false. Android export downloads the CSV (respect the download-permission rule) or renders the JSON table with a "Share CSV" intent.
 - **`admin/transactions`** (`TransactionsScreen.kt`): add a pump filter to the filter row and an **edit sheet** (litres/discount/pump/nozzle/amount/datetime) posting `PATCH /admin/transactions/:id` via a new repository method.
 
 ## Validation & edge cases

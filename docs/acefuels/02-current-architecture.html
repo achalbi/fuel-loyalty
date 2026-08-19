@@ -255,10 +255,18 @@ the same Devise credential resolver and the same active/soft-delete gates.</p>
   API 403 (<code>api/v1/base_controller.rb:70-73</code>).</li>
 </ul>
 <blockquote>
-<p>Note the audit finding <strong>S-MYPUMP / S-PAUSE</strong>: "My Pump" and per-customer
-"pause rewards" are reachable by staff today, which is the <em>opposite</em> of the sheet's
-constraint that those be hidden from staff. That is a policy-surface gap, not an
-auth-scheme gap.</p>
+<p>Note the audit finding <strong>S-MYPUMP / S-PAUSE</strong>: at audit time "My Pump" and
+per-customer "pause rewards" were reachable by staff, the <em>opposite</em> of the sheet's
+constraint that those be hidden from staff. That was a policy-surface gap, not an
+auth-scheme gap, and both are now closed in <code>UserPolicy</code> / <code>CustomerPolicy</code>.</p>
+<p><strong>Resolved (Phase 0), regressed, re-fixed (2026-08):</strong> commit <code>2142f53</code> ("Add daily
+pump assignments and customer filters") widened <code>UserPolicy#manage_pump?</code> back to
+<code>staff? &amp;&amp; record == user</code>, re-opening My Pump to staff and adding an admin-only
+date picker. Both are reverted: <code>manage_pump?</code> is admin-self again and the
+assignment is pinned to <code>Date.current</code> on every surface. <em>Writing</em> is admin-only;
+<em>reading</em> your own assignment (<code>UserPolicy#read_pump?</code>) stays open to the owner
+because <code>GET /api/v1/my_pump</code> is what the native transaction and visit-entry
+screens read to know which nozzles to offer.</p>
 </blockquote>
 <hr />
 <h2 id="3-loyalty-points-pipeline">3. Loyalty / points pipeline</h2>

@@ -116,10 +116,19 @@ the same Devise credential resolver and the same active/soft-delete gates.
   user, shift_*, etc.). Failures raise `Pundit::NotAuthorizedError` → web redirect /
   API 403 (`api/v1/base_controller.rb:70-73`).
 
-> Note the audit finding **S-MYPUMP / S-PAUSE**: "My Pump" and per-customer
-> "pause rewards" are reachable by staff today, which is the *opposite* of the sheet's
-> constraint that those be hidden from staff. That is a policy-surface gap, not an
-> auth-scheme gap.
+> Note the audit finding **S-MYPUMP / S-PAUSE**: at audit time "My Pump" and
+> per-customer "pause rewards" were reachable by staff, the *opposite* of the sheet's
+> constraint that those be hidden from staff. That was a policy-surface gap, not an
+> auth-scheme gap, and both are now closed in `UserPolicy` / `CustomerPolicy`.
+>
+> **Resolved (Phase 0), regressed, re-fixed (2026-08):** commit `2142f53` ("Add daily
+> pump assignments and customer filters") widened `UserPolicy#manage_pump?` back to
+> `staff? && record == user`, re-opening My Pump to staff and adding an admin-only
+> date picker. Both are reverted: `manage_pump?` is admin-self again and the
+> assignment is pinned to `Date.current` on every surface. *Writing* is admin-only;
+> *reading* your own assignment (`UserPolicy#read_pump?`) stays open to the owner
+> because `GET /api/v1/my_pump` is what the native transaction and visit-entry
+> screens read to know which nozzles to offer.
 
 ---
 

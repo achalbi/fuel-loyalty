@@ -1,7 +1,7 @@
 module Admin
   # E1 — the reporting page: per vehicle/transporter/driver/customer at
-  # day/week/month/year grain (litres, ₹, discount, gifts, visits) with a real
-  # CSV data export (distinct from the dashboard's chart screenshot).
+  # day/week/month/year grain (litres, ₹, discount, reward ₹, gifts, visits) with
+  # a real CSV data export (distinct from the dashboard's chart screenshot).
   class ReportsController < BaseController
     def index
       authorize :dashboard, :show?
@@ -10,6 +10,7 @@ module Admin
       @grains = ::Admin::Reports::LedgerReport::GRAINS
       @fuel_types = FuelType.active.order(:name).to_a
       @fuel_pumps = FuelPump.active.ordered.to_a
+      @customers = Customer.active.order(:name).limit(500).to_a
 
       respond_to do |format|
         format.html
@@ -26,7 +27,8 @@ module Admin
       ::Admin::Reports::LedgerReport.new(
         dimension: params[:dimension], grain: params[:grain],
         start_date: params[:start_date], end_date: params[:end_date], preset: params[:preset],
-        fuel_type: params[:fuel_type], fuel_pump_id: params[:fuel_pump_id]
+        fuel_type: params[:fuel_type], fuel_pump_id: params[:fuel_pump_id],
+        customer_id: params[:customer_id]
       )
     end
 
