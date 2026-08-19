@@ -1,10 +1,52 @@
 steps:
   # -----------------------------
+  # Compile the Android app (Kotlin type check)
+  # -----------------------------
+  # Runs here rather than in GitHub Actions: the Actions workflow never once
+  # obtained a runner (no runner assigned, ~2s failures, every run since it was
+  # created), while this pipeline demonstrably works.
+  #
+  # Starts immediately, in parallel with Pull/Build/Push, so it costs little
+  # wall-clock; Migrate waits on it, so a Kotlin break stops the pipeline BEFORE
+  # anything is migrated or deployed.
+  #
+  # The real google-services.json is per-environment Firebase config and is
+  # gitignored, so no checkout has one — and :app:processDebugGoogleServices
+  # gates :app:compileDebugKotlin. Type checking needs a file that parses, not
+  # one that addresses a live project, hence the checked-in placeholder.
+  - name: eclipse-temurin:17-jdk
+    id: AndroidCompile
+    entrypoint: /bin/bash
+    waitFor: ['-']
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        apt-get update -qq && apt-get install -y -qq --no-install-recommends curl unzip >/dev/null
+
+        export ANDROID_HOME=/workspace/.android-sdk
+        export ANDROID_SDK_ROOT="$$ANDROID_HOME"
+        mkdir -p "$$ANDROID_HOME/cmdline-tools"
+        curl -sSL -o /tmp/cmdline-tools.zip \
+          https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+        unzip -q /tmp/cmdline-tools.zip -d "$$ANDROID_HOME/cmdline-tools"
+        mv "$$ANDROID_HOME/cmdline-tools/cmdline-tools" "$$ANDROID_HOME/cmdline-tools/latest"
+        export PATH="$$ANDROID_HOME/cmdline-tools/latest/bin:$$PATH"
+
+        yes | sdkmanager --licenses >/dev/null 2>&1 || true
+        sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" >/dev/null
+
+        cp android/ci-google-services.json android/app/google-services.json
+        cd android
+        ./gradlew :app:compileDebugKotlin --no-daemon --stacktrace
+
+  # -----------------------------
   # Pull previous image (for cache)
   # -----------------------------
   - name: gcr.io/cloud-builders/docker
     id: Pull
     entrypoint: /bin/bash
+    waitFor: ['-']
     args:
       - -c
       - |
@@ -15,6 +57,7 @@ steps:
   # -----------------------------
   - name: gcr.io/cloud-builders/docker
     id: Build
+    waitFor: ['Pull']
     env:
       - DOCKER_BUILDKIT=1
     args:
@@ -33,6 +76,7 @@ steps:
   # -----------------------------
   - name: gcr.io/cloud-builders/docker
     id: Push
+    waitFor: ['Build']
     args:
       - push
       - --all-tags
@@ -41,8 +85,11 @@ steps:
   # -----------------------------
   # Run database migrations
   # -----------------------------
+  # Gated on AndroidCompile as well as Push: nothing reaches the database or the
+  # running service until the Kotlin type-checks.
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: Migrate
+    waitFor: ['Push', 'AndroidCompile']
     entrypoint: /bin/bash
     args:
       - -c
@@ -71,6 +118,7 @@ steps:
   # -----------------------------
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: Deploy
+    waitFor: ['Migrate']
     entrypoint: gcloud
     args:
       - run
