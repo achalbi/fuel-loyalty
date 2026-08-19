@@ -23,6 +23,12 @@ class User < ApplicationRecord
   has_many :shift_assignments, dependent: :restrict_with_exception
   has_many :shift_templates, through: :shift_assignments
   has_many :shift_cycles, through: :shift_assignments
+  has_many :daily_settlements, foreign_key: :recorded_by_id, inverse_of: :recorded_by, dependent: :restrict_with_exception
+  # Sheets this (admin) user typed on an FSM's behalf. Restricted like the
+  # recorded ones: the enterer is half of the attribution and losing it would
+  # leave "recorded for X, entered by ?" on the books.
+  has_many :entered_daily_settlements, class_name: "DailySettlement", foreign_key: :entered_by_id,
+                                       inverse_of: :entered_by, dependent: :restrict_with_exception
   has_many :recorded_attendance_runs, class_name: "AttendanceRun", foreign_key: :recorded_by_id, dependent: :restrict_with_exception
   has_many :scheduled_attendance_entries, class_name: "AttendanceEntry", foreign_key: :scheduled_user_id, dependent: :restrict_with_exception
   has_many :actual_attendance_entries, class_name: "AttendanceEntry", foreign_key: :actual_user_id, dependent: :restrict_with_exception
@@ -70,6 +76,23 @@ class User < ApplicationRecord
 
   scope :kept, -> { where(deleted_at: nil) }
   scope :soft_deleted, -> { where.not(deleted_at: nil) }
+  # Admin-12 — the option list for the admin console's "recorded by" filter.
+  # Derived from the settlements themselves rather than from `role: :staff`:
+  # admins appear as a recorder on sheets captured through the FSM form, and
+  # those rows would otherwise be invisible to every value of the filter. Not
+  # scoped to `kept` either — a departed operator's sheets stay on the books.
+  scope :settlement_recorders, -> { where(id: DailySettlement.select(:recorded_by_id)).order(:name, :username) }
+  # Staff feedback item 3 — the option list for the admin's "record on behalf
+  # of" picker. This is a forward-looking list (who can a sheet be attributed to
+  # *now*), so unlike `settlement_recorders` above it is not derived from
+  # existing settlements: a brand-new FSM who has never settled must be
+  # pickable. Admins are included as well as staff — an admin does stand a shift
+  # on a small site, and admin-recorded sheets already exist in the data — so it
+  # is deliberately NOT scoped to `role: :staff`. Soft-deleted and deactivated
+  # accounts are excluded: you do not open a fresh sheet for someone who has
+  # left (their historical sheets stay readable and filterable through
+  # `settlement_recorders`).
+  scope :settlement_recorder_candidates, -> { kept.where(active: true).order(:name, :username) }
   # Admin user listing order: active accounts first, then role → name → username
   # → phone. `active` is NOT NULL and Postgres sorts false < true, so :desc puts
   # the actives on top without a NULLS clause. Shared by the web and JSON admin

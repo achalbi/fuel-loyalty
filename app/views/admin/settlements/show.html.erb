@@ -1,14 +1,34 @@
 <% content_for :title, "Settlement" %>
 
+<%# Staff feedback item 3 — the sheet stays the FSM's. Name them as the author
+    and an admin only as the last corrector, so an edit reads as work done on
+    the FSM's behalf rather than as the admin's own entry. %>
+<% fsm_name = @settlement.fsm_name_snapshot.presence || @settlement.recorded_by&.display_name || "the FSM on duty" %>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h1 class="h3 mb-0"><%= @settlement.fuel_pump&.display_name %> · <%= @settlement.business_date %></h1>
     <span class="badge text-bg-<%= @settlement.reconciled? ? "success" : (@settlement.submitted? ? "primary" : "secondary") %>"><%= @settlement.status.humanize %></span>
-    <span class="text-muted small">FSM: <%= @settlement.fsm_name_snapshot %></span>
+    <div class="text-muted small">
+      Recorded by <strong><%= fsm_name %></strong>
+      <%# An admin typed this one. Keyed off entered_by rather than "was it on
+          behalf", because entry and reconciliation sitting with one admin is
+          exactly the case the trail must not hide. %>
+      <% if @settlement.admin_entered? %>
+        <span data-entered-by>
+          · entered by <strong><%= @settlement.entered_by&.display_name %></strong>
+          <%= @settlement.entered_on_behalf? ? "on their behalf" : "(their own sheet, entered as admin)" %>
+        </span>
+      <% end %>
+      <% if @last_change %>
+        · last corrected by <%= @last_change.changed_by&.display_name || "an admin" %>
+        on <%= @last_change.created_at&.strftime("%d %b %Y %H:%M") %>
+      <% end %>
+    </div>
   </div>
   <div class="d-flex gap-2">
     <%= link_to "Back", admin_settlements_path, class: "btn btn-outline-secondary btn-sm" %>
-    <%= link_to "Edit", edit_admin_settlement_path(@settlement), class: "btn btn-primary btn-sm" %>
+    <%= link_to "Correct on behalf of #{fsm_name}", edit_admin_settlement_path(@settlement), class: "btn btn-primary btn-sm" %>
     <% unless @settlement.reconciled? %>
       <%= button_to "Reconcile", reconcile_admin_settlement_path(@settlement), method: :patch,
             class: "btn btn-success btn-sm", data: { turbo_confirm: "Reconcile and lock this settlement?" } %>

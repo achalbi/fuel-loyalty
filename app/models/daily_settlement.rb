@@ -10,6 +10,12 @@ class DailySettlement < ApplicationRecord
   belongs_to :fuel_pump
   belongs_to :shift_template, optional: true
   belongs_to :recorded_by, class_name: "User"
+  # Staff feedback item 3 — the admin who typed a sheet an FSM could not record
+  # themselves. Authorship never moves: `recorded_by` stays the named FSM and
+  # `fsm_name_snapshot` keeps their name, and this is the second half of
+  # "recorded for ‹FSM›, entered by ‹admin›". NULL on a sheet the FSM recorded
+  # themselves, which is the ordinary case.
+  belongs_to :entered_by, class_name: "User", optional: true
 
   has_many :nozzle_readings, class_name: "SettlementNozzleReading", dependent: :destroy, inverse_of: :daily_settlement
   has_many :lube_lines, class_name: "SettlementLubeLine", dependent: :destroy, inverse_of: :daily_settlement
@@ -52,6 +58,43 @@ class DailySettlement < ApplicationRecord
   scope :for_date, ->(date) { where(business_date: date) }
   scope :financial, -> { where(status: %i[submitted reconciled]) }
   scope :recent_first, -> { order(business_date: :desc, created_at: :desc) }
+  # Admin-12 — "the settlement reports of the users for a particular day".
+  # recorded_by_id is NOT NULL and indexed, so filter on it rather than on the
+  # fsm_name_snapshot text (which is a display copy and can repeat across users).
+  scope :recorded_by_user, ->(user_id) { where(recorded_by_id: user_id) }
+
+  # The ₹ columns Admin-13 rolls up. The aggregates below are shared by the web
+  # and JSON admin index actions so the two surfaces cannot drift.
+  FINANCIAL_TOTAL_FIELDS = %i[
+    total_fuel_amount total_lube_amount total_discount_amount total_credit_amount
+    final_amount_to_settle counted_cash_amount shortage_amount
+  ].freeze
+
+  # Admin-13 — sum an already-loaded list. Drafts are excluded: an unsubmitted
+  # sheet is not money yet.
+  def self.totals_for(rows)
+    financial = rows.select { |row| row.submitted? || row.reconciled? }
+    FINANCIAL_TOTAL_FIELDS.index_with { |field| financial.sum { |row| row.public_send(field).to_d } }
+  end
+
+  # Admin-12 — the same rollup split by the FSM who recorded each sheet, so an
+  # admin can read the day's settlement per user without opening each one.
+  # Pass rows loaded with :recorded_by; a recorder with only drafts is omitted,
+  # matching the drafts-aren't-money rule above.
+  def self.per_recorder_totals(rows)
+    rows
+      .select { |row| row.submitted? || row.reconciled? }
+      .group_by(&:recorded_by_id)
+      .map do |recorded_by_id, group|
+        {
+          recorded_by_id: recorded_by_id,
+          fsm_name: group.first.fsm_name_snapshot.presence || group.first.recorded_by&.display_name,
+          settlement_count: group.size,
+          totals: totals_for(group)
+        }
+      end
+      .sort_by { |row| row[:fsm_name].to_s.downcase }
+  end
 
   # Most recent prior closing reading for a nozzle, used to auto-populate the
   # next settlement's opening reading (business rule 1).
@@ -68,6 +111,37 @@ class DailySettlement < ApplicationRecord
 
   def editable_by_fsm?
     draft? && !locked?
+  end
+
+  # --- who typed it (staff feedback item 3) ---------------------------------
+  # An admin captured this sheet rather than the FSM. True for both flavours
+  # below; false (and `entered_by` NULL) on an ordinary FSM-recorded sheet.
+  def admin_entered?
+    entered_by_id.present?
+  end
+
+  # The on-behalf case proper: an admin typed it and attributed it to SOMEONE
+  # ELSE — the FSM who was absent/sick/without a device.
+  def entered_on_behalf?
+    admin_entered? && entered_by_id != recorded_by_id
+  end
+
+  # An admin typed a sheet and attributed it to themselves. Allowed (a
+  # single-admin site would otherwise deadlock, since reconcile is admin-only),
+  # but it is the case where entry and approval sit with one person, so surface
+  # it wherever the FSM name is shown rather than letting it read as an ordinary
+  # FSM-recorded sheet.
+  def self_entered_by_admin?
+    admin_entered? && entered_by_id == recorded_by_id
+  end
+
+  # "Suresh" / "Suresh (entered by Admin)" — the one-line attribution both
+  # surfaces render.
+  def attribution_label
+    name = fsm_name_snapshot.presence || recorded_by&.display_name
+    return name unless admin_entered?
+
+    "#{name} (entered by #{entered_by&.display_name})"
   end
 
   def display_title

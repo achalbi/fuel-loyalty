@@ -29,19 +29,29 @@
 
       <div class="collapse transaction-entry-titlebar__hint mt-2" id="<%= pump_hint_id %>">
         <div class="transaction-entry-titlebar__hint-card">
-          <%= nozzle_feature_enabled ?
-            "Your selected pump can be changed by clicking the change icon on top-right. Choose the nozzle used for this transaction." :
-            "Nozzle selection is turned off. Choose the pump used for this transaction." %>
+          <% if !nozzle_feature_enabled %>
+            Nozzle selection is turned off. Choose the pump used for this transaction.
+          <% elsif policy(current_user).manage_pump? %>
+            Your selected pump can be changed by clicking the change icon on top-right. Choose the nozzle used for this transaction.
+          <% else %>
+            Your pump is assigned by your manager. Choose the nozzle used for this transaction.
+          <% end %>
         </div>
       </div>
     </div>
-    <% if nozzle_feature_enabled && policy(current_user).manage_pump? %>
-      <%= link_to my_pump_path,
-        class: "transaction-pump-card__change-link customer-details-vehicle-row__menu-toggle",
-        aria: { label: "Change My Pump" },
-        title: "Change My Pump" do %>
-        <i class="ti ti-edit" aria-hidden="true"></i>
-        <span class="visually-hidden">Change My Pump</span>
+    <%# S-MYPUMP — staff cannot reassign their own pump, so they get read-only text
+        instead of the edit link. Nozzle choice below stays: it is per-transaction. %>
+    <% if nozzle_feature_enabled %>
+      <% if policy(current_user).manage_pump? %>
+        <%= link_to my_pump_path,
+          class: "transaction-pump-card__change-link customer-details-vehicle-row__menu-toggle",
+          aria: { label: "Change My Pump" },
+          title: "Change My Pump" do %>
+          <i class="ti ti-edit" aria-hidden="true"></i>
+          <span class="visually-hidden">Change My Pump</span>
+        <% end %>
+      <% else %>
+        <span class="text-muted small" data-transaction-pump-assigned-note>Assigned by your manager</span>
       <% end %>
     <% end %>
   </div>

@@ -26,7 +26,25 @@ module Api
             fuel_pump_id: @settlement.fuel_pump_id,
             fuel_pump: @settlement.fuel_pump&.display_name,
             shift_template_id: @settlement.shift_template_id,
+            # Admin-12 — the id as well as the display name: the name is a
+            # snapshot and can repeat, so only the id lets a client group or
+            # filter a list by the FSM who recorded each sheet.
+            recorded_by_id: @settlement.recorded_by_id,
             fsm_name: @settlement.fsm_name_snapshot,
+            # Staff feedback item 3 — the other half of the attribution. The
+            # sheet is still the FSM's above; these say an admin typed it for
+            # them, so a client can render "recorded for ‹fsm_name›, entered by
+            # ‹entered_by_name›" instead of showing a sheet the FSM never
+            # touched as if they had filled it in. All null on the ordinary
+            # FSM-recorded sheet.
+            entered_by_id: @settlement.entered_by_id,
+            entered_by_name: @settlement.entered_by&.display_name,
+            # True only when the enterer and the FSM are different people. An
+            # admin who enters a sheet under their OWN name has entered_by_id ==
+            # recorded_by_id and reads false here, but still carries the two
+            # fields above — entry and approval sitting with one person is
+            # exactly what the trail must not hide.
+            entered_on_behalf: @settlement.entered_on_behalf?,
             total_fuel_amount: f(@settlement.total_fuel_amount),
             total_lube_amount: f(@settlement.total_lube_amount),
             total_discount_amount: f(@settlement.total_discount_amount),
@@ -43,7 +61,6 @@ module Api
 
         def full
           summary.merge(
-            recorded_by_id: @settlement.recorded_by_id,
             # Item 10 replaced these two columns with free-form digital receipt
             # lines. They stay in the payload, derived from the matching rows,
             # because an app build already on a phone requires both keys.

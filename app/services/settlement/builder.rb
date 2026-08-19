@@ -6,7 +6,7 @@ module Settlement
   # denomination grid (D7). Returns the option lists the "new" API/UI needs.
   class Builder
     Result = Struct.new(
-      :settlement, :fuel_pump, :lube_products, :denominations, :existing,
+      :settlement, :fuel_pump, :lube_products, :denominations, :existing, :recorded_for,
       keyword_init: true
     )
 
@@ -15,10 +15,25 @@ module Settlement
     # The business date a settlement defaults to when none was supplied.
     def self.default_business_date = Date.yesterday
 
-    def initialize(user:, fuel_pump_id: nil, business_date: nil, shift_template_id: nil)
+    # `user` is who is driving the form; `recorded_for` is who the sheet belongs
+    # to. They are the same person for an FSM capturing their own settlement —
+    # which is every caller that omits `recorded_for`, so existing behaviour is
+    # unchanged. They differ only in the admin "record on behalf of" flow (staff
+    # feedback item 3), and there EVERY default has to resolve against the FSM,
+    # not the admin: their pump, and therefore their nozzles, their nozzles'
+    # yesterday-closing readings, and their pump's same-day discount lines. An
+    # admin's own pump assignment must never leak into a sheet attributed to
+    # someone else.
+    def initialize(user:, fuel_pump_id: nil, business_date: nil, shift_template_id: nil, recorded_for: nil)
       @user = user
-      @fuel_pump = resolve_pump(fuel_pump_id)
+      @recorded_for = recorded_for || user
+      # Date first: the pump has to resolve against the BUSINESS date, not today.
+      # A settlement is filed the morning after (and an on-behalf one later still),
+      # and `User#transaction_fuel_pump` reads the dated assignment for the day —
+      # so resolving on Date.current would post the sheet to whatever pump the FSM
+      # stands now and pull that pump's opening readings, corrupting the day's math.
       @business_date = parse_date(business_date)
+      @fuel_pump = resolve_pump(fuel_pump_id)
       @shift_template_id = shift_template_id.presence
     end
 
@@ -27,8 +42,8 @@ module Settlement
         fuel_pump: @fuel_pump,
         business_date: @business_date,
         shift_template_id: @shift_template_id,
-        recorded_by: @user,
-        fsm_name_snapshot: @user&.display_name
+        recorded_by: @recorded_for,
+        fsm_name_snapshot: @recorded_for&.display_name
       )
 
       if @fuel_pump
@@ -41,15 +56,29 @@ module Settlement
         fuel_pump: @fuel_pump,
         lube_products: lube_products,
         denominations: SettlementCashDenomination::DENOMINATIONS,
-        existing: existing_settlement
+        existing: existing_settlement,
+        recorded_for: @recorded_for
       )
     end
 
     private
 
+    # An explicit pump wins; otherwise fall back to the pump of the person the
+    # sheet is FOR (which is the caller themselves in the ordinary FSM flow).
     def resolve_pump(fuel_pump_id)
       pump = FuelPump.active.find_by(id: fuel_pump_id) if fuel_pump_id.present?
-      pump || @user&.transaction_fuel_pump
+      pump || dated_pump || @recorded_for&.transaction_fuel_pump
+    end
+
+    # The pump they were actually posted to on the BUSINESS date, which is what a
+    # late-filed sheet must be built from — a settlement is written the morning
+    # after, and an on-behalf one later still, so "today" is the wrong question.
+    # Falls through to `transaction_fuel_pump` (their standing pump) when no dated
+    # override exists for that day; note that method deliberately restricts the
+    # standing pump to today, so it cannot serve as the dated lookup itself.
+    def dated_pump
+      pump = @recorded_for&.pump_assignment_for(on: @business_date)&.fuel_pump
+      pump if pump&.active?
     end
 
     # Staff record the day's transactions as they happen and settle the next

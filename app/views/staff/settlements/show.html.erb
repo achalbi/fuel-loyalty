@@ -4,7 +4,14 @@
   <div>
     <h1 class="h3 mb-0"><%= @settlement.fuel_pump&.display_name %> · <%= @settlement.business_date %></h1>
     <span class="badge text-bg-<%= @settlement.reconciled? ? "success" : (@settlement.submitted? ? "primary" : "secondary") %>"><%= @settlement.status.humanize %></span>
-    <span class="text-muted small">FSM: <%= @settlement.fsm_name_snapshot %></span>
+    <%# The FSM's own view is where this matters most — it is how they find out a
+        sheet in their name was filled in for them while they were away. %>
+    <span class="text-muted small">
+      FSM: <%= @settlement.fsm_name_snapshot %>
+      <% if @settlement.admin_entered? %>
+        <span data-entered-by>· entered by <%= @settlement.entered_by&.display_name %><%= " on their behalf" if @settlement.entered_on_behalf? %></span>
+      <% end %>
+    </span>
   </div>
   <div class="d-flex gap-2">
     <%= link_to "Back", staff_settlements_path, class: "btn btn-outline-secondary btn-sm" %>

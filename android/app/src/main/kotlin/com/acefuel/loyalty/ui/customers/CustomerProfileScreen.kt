@@ -84,6 +84,7 @@ import com.acefuel.loyalty.ui.admin.crm.CrmRepository
 import com.acefuel.loyalty.ui.admin.crm.CustomerCrmViewModel
 import com.acefuel.loyalty.ui.admin.crm.FeedbackDto
 import com.acefuel.loyalty.ui.admin.crm.InsightDto
+import com.acefuel.loyalty.ui.admin.crm.RewardsSummaryDto
 import com.acefuel.loyalty.ui.designsystem.AnimatedCounter
 import com.acefuel.loyalty.ui.designsystem.Avatar
 import com.acefuel.loyalty.ui.designsystem.ChipTone
@@ -256,6 +257,11 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
                         if (isAdmin) {
                             item { SectionHeader("CRM Insight") }
                             item { InsightCard(crmState.insight, crmState.insightLoading) }
+
+                            // Item 5 — discount paid out, points redeemed and gifts
+                            // handed over, for this customer.
+                            item { SectionHeader("Rewards Given") }
+                            item { RewardsCard(crmState.insight?.rewards, crmState.insightLoading) }
 
                             item {
                                 SectionHeaderWithAction("Outreach", "Log contact") { showContactSheet = true }
@@ -1215,6 +1221,26 @@ private fun TransactionCard(t: TransactionSummaryDto, modifier: Modifier = Modif
                     color = if (it >= 0) MaterialTheme.nayara.statusSuccessText else MaterialTheme.nayara.textPrimary,
                 )
             }
+            // The ₹ value of the points this fuelling EARNED. Null (not 0) when no
+            // cash-value-per-point is configured, so the line simply disappears
+            // rather than claiming a ₹0.00 reward — same rule the web row applies.
+            t.cashReward?.let {
+                Text(
+                    "Cash Reward: ₹%.2f".format(it),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.nayara.textSecondary,
+                )
+            }
+            // Item 5 — the ₹ knocked off this fuelling. A ₹0 discount is the norm,
+            // so only a real one earns a line (the web row's rule exactly:
+            // `transaction.discount_amount.to_d.positive?`).
+            if (t.discountAmount > 0) {
+                Text(
+                    "Discount: ₹%.2f".format(t.discountAmount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.nayara.textSecondary,
+                )
+            }
             Text(formatDateTime(t.createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.nayara.textTertiary)
         }
     }
@@ -1359,6 +1385,84 @@ private fun InsightCard(insight: InsightDto?, loading: Boolean) {
                 }
             }
         }
+    }
+}
+
+/**
+ * Item 5 — the per-customer rewards rollup. Deliberately three separate figures:
+ * discount is rupees off at the pump, redemptions are points cashed in, and a
+ * campaign gift is a physical item with no rupee value at all.
+ */
+@Composable
+private fun RewardsCard(rewards: RewardsSummaryDto?, loading: Boolean) {
+    NayaraCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(NayaraSpacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm),
+        ) {
+            when {
+                rewards == null && loading -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(NayaraSpacing.Md))
+                    Text(
+                        "Loading rewards…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.nayara.textSecondary,
+                    )
+                }
+                rewards == null -> EmptyNote("Rewards aren't available yet.")
+                else -> {
+                    RewardStatRow("Discount paid", "₹%.2f".format(rewards.discountTotal))
+                    // With no cash-value-per-point set, every redemption stored a NULL
+                    // amount — that 0 is structural, so show "—" and not "₹0.00".
+                    RewardStatRow(
+                        "Redemption value",
+                        if (rewards.rewardValueConfigured || rewards.redemptionValue != 0.0) {
+                            "₹%.2f".format(rewards.redemptionValue)
+                        } else {
+                            "—"
+                        },
+                    )
+                    val plural = if (rewards.redemptionCount == 1) "" else "s"
+                    RewardStatRow(
+                        "Points redeemed",
+                        "${rewards.redemptionPoints} (${rewards.redemptionCount} redemption$plural)",
+                    )
+                    RewardStatRow("Gifts given", rewards.giftCount.toString())
+                    // The client asked WHAT was given, not just how many.
+                    if (rewards.giftDescriptions.isNotEmpty()) {
+                        Text(
+                            "Gifts: ${rewards.giftDescriptions.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.nayara.textSecondary,
+                        )
+                    }
+                    if (!rewards.rewardValueConfigured) {
+                        Text(
+                            "No cash value per point is configured, so redemption ₹ shows as \u201c—\u201d.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.nayara.textTertiary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RewardStatRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.nayara.textSecondary,
+        )
+        Text(value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
     }
 }
 

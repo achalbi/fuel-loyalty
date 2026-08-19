@@ -1,27 +1,47 @@
 <% content_for :title, "Settlements" %>
 
-<h1 class="h3 mb-3">Daily Settlements</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Daily Settlements</h1>
+  <%# Staff feedback item 3 — capturing a fresh sheet is the FSM's job, so an
+      admin gets this audited on-behalf route rather than the FSM's own form. %>
+  <% if policy(DailySettlement).create_on_behalf? %>
+    <%= link_to "Record on behalf of an FSM", new_admin_settlement_path, class: "btn btn-primary btn-sm" %>
+  <% end %>
+</div>
 
 <%= form_with url: admin_settlements_path, method: :get, class: "row g-2 align-items-end mb-3" do |f| %>
-  <div class="col-sm-3">
+  <div class="col-sm-6 col-lg-3">
     <%= f.label :business_date, "Date", class: "form-label" %>
     <%= f.date_field :business_date, value: @business_date, class: "form-control" %>
   </div>
-  <div class="col-sm-3">
+  <div class="col-sm-6 col-lg-3">
     <%= f.label :fuel_pump_id, "Pump", class: "form-label" %>
-    <%= f.select :fuel_pump_id, options_for_select(@fuel_pumps.map { |p| [p.display_name, p.id] }, @fuel_pump&.id), { include_blank: "All pumps" }, class: "form-select" %>
+    <%= f.select :fuel_pump_id, options_for_select(@fuel_pumps.map { |p| [p.display_name, p.id] }, @fuel_pump_id), { include_blank: "All pumps" }, class: "form-select" %>
   </div>
-  <div class="col-sm-3">
+  <%# Admin-12 — read one FSM's sheets for the day. Options come from the
+      settlements themselves, so an admin-recorded sheet stays reachable. %>
+  <div class="col-sm-6 col-lg-3">
+    <%= f.label :recorded_by_id, "Recorded by", class: "form-label" %>
+    <%= f.select :recorded_by_id, options_for_select(@fsm_options.map { |u| [u.display_name, u.id] }, @recorded_by_id), { include_blank: "All FSMs" }, class: "form-select" %>
+  </div>
+  <div class="col-sm-6 col-lg-2">
     <%= f.label :status, "Status", class: "form-label" %>
     <%= f.select :status, options_for_select(DailySettlement.statuses.keys.map { |s| [s.humanize, s] }, params[:status]), { include_blank: "Any" }, class: "form-select" %>
   </div>
-  <div class="col-sm-3"><%= f.submit "Filter", class: "btn btn-outline-secondary" %></div>
+  <div class="col-12 col-lg-1 d-grid"><%= f.submit "Filter", class: "btn btn-outline-secondary" %></div>
 <% end %>
 
 <% if @cross_pump_totals %>
   <div class="card bg-body-tertiary mb-3">
     <div class="card-body row text-center g-2">
-      <div class="col-12"><strong>Cross-pump totals — <%= @business_date %></strong></div>
+      <div class="col-12">
+        <strong>Cross-pump totals — <%= @business_date %></strong>
+        <%# Say so when the day is narrowed to one recorder, or the heading reads
+            as the whole day's takings. Keyed off the filter, not the user row,
+            so an id with nobody behind it still qualifies the label — the JSON
+            `filtered_by` block and the native card do the same. %>
+        <% if @recorded_by_id %><span class="text-muted">· <%= @recorded_by&.display_name || "one FSM" %> only</span><% end %>
+      </div>
       <% [["Fuel", :total_fuel_amount], ["Lubes", :total_lube_amount], ["Discounts", :total_discount_amount],
           ["Credit", :total_credit_amount], ["Final", :final_amount_to_settle], ["Cash", :counted_cash_amount],
           ["Shortage", :shortage_amount]].each do |label, key| %>
@@ -30,6 +50,41 @@
           <div class="fw-semibold"><%= number_to_currency(@cross_pump_totals[key], unit: "₹") %></div>
         </div>
       <% end %>
+    </div>
+  </div>
+<% end %>
+
+<%# Admin-12 — "the settlement report of the users for a particular day": the
+    same ₹ rollup, one row per FSM who recorded a submitted/reconciled sheet. %>
+<% if @per_fsm_totals.any? %>
+  <div class="card mb-3">
+    <div class="card-body">
+      <h2 class="h6 mb-2">Per-FSM totals<% if @business_date %> — <%= @business_date %><% end %></h2>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>FSM</th><th class="text-end">Sheets</th><th class="text-end">Fuel ₹</th><th class="text-end">Lubes ₹</th><th class="text-end">Discounts ₹</th><th class="text-end">Credit ₹</th><th class="text-end">Final ₹</th><th class="text-end">Cash ₹</th><th class="text-end">Shortage ₹</th></tr></thead>
+          <tbody>
+            <% @per_fsm_totals.each do |row| %>
+              <tr data-per-fsm-row="<%= row[:recorded_by_id] %>">
+                <td>
+                  <%# String key: query_parameters is string-keyed, so a symbol
+                      would leave the old recorded_by_id in the URL too. %>
+                  <%= link_to row[:fsm_name].presence || "—",
+                        admin_settlements_path(request.query_parameters.merge("recorded_by_id" => row[:recorded_by_id])) %>
+                </td>
+                <td class="text-end"><%= row[:settlement_count] %></td>
+                <% %i[total_fuel_amount total_lube_amount total_discount_amount total_credit_amount
+                      final_amount_to_settle counted_cash_amount].each do |key| %>
+                  <td class="text-end"><%= number_to_currency(row[:totals][key], unit: "₹") %></td>
+                <% end %>
+                <td class="text-end <%= "text-danger" if row[:totals][:shortage_amount].positive? %>">
+                  <%= number_to_currency(row[:totals][:shortage_amount], unit: "₹") %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 <% end %>
@@ -43,7 +98,19 @@
           <tr>
             <td><%= s.business_date %></td>
             <td><%= s.fuel_pump&.display_name %></td>
-            <td><%= s.fsm_name_snapshot %></td>
+            <%# The FSM the sheet belongs to, plus the admin who typed it when
+                one did — branch on entered_by, not on entered_on_behalf, so an
+                admin who entered a sheet under their own name (and may then
+                reconcile it) is on the row too rather than reading as an
+                ordinary FSM capture. %>
+            <td>
+              <%= s.fsm_name_snapshot %>
+              <% if s.admin_entered? %>
+                <div class="text-muted small" data-entered-by>
+                  entered by <%= s.entered_by&.display_name %><%= " on their behalf" if s.entered_on_behalf? %>
+                </div>
+              <% end %>
+            </td>
             <td><span class="badge text-bg-<%= s.reconciled? ? "success" : (s.submitted? ? "primary" : "secondary") %>"><%= s.status.humanize %></span></td>
             <td class="text-end"><%= number_to_currency(s.total_fuel_amount, unit: "₹") %></td>
             <td class="text-end"><%= number_to_currency(s.final_amount_to_settle, unit: "₹") %></td>

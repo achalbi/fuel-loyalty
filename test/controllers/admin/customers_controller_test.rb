@@ -373,5 +373,162 @@ module Admin
       assert_match "Fleet Fred", response.body
       assert_no_match(/Walkin Will/, response.body)
     end
+
+    # ---- Item 4: activity thresholds -----------------------------------------
+
+    # Three visits, 150 L, ₹90 discount, one outreach call, 500 earned / 300 net.
+    def build_regular_customer(name:, phone:, visits: 3, litres: 50, discount: 30)
+      customer = Customer.create!(name: name, phone_number: phone)
+      visits.times do |index|
+        VisitEntry.create!(customer: customer, user: users(:two), fuel_pump: fuel_pumps(:one),
+                           entry_date: Date.new(2026, 7, 1) + index.days,
+                           vehicle_number: "TN70AA#{phone.last(4)}", litres: litres, discount_amount: discount)
+      end
+      customer
+    end
+
+    test "admin can filter customers by visit, litres, contact, discount and points thresholds" do
+      sign_in users(:one)
+      regular = build_regular_customer(name: "Regular Raja", phone: "9700100001")
+      ContactLog.create!(customer: regular, user: users(:two), channel: "call", outcome: "reached",
+                         contacted_at: Time.zone.local(2026, 7, 6, 10))
+      regular.points_ledgers.create!(points: 500, entry_type: :earn, created_at: Time.zone.local(2026, 7, 2))
+      regular.points_ledgers.create!(points: -200, entry_type: :redeem, created_at: Time.zone.local(2026, 7, 3))
+      occasional = build_regular_customer(name: "Occasional Om", phone: "9700100002", visits: 1, litres: 5, discount: 0)
+
+      get admin_customers_path(min_visits: 3)
+      assert_response :success
+      assert_select "[data-customers-threshold-banner]"
+      assert_match "Regular Raja", response.body
+      assert_no_match(/Occasional Om/, response.body)
+
+      # The metric strip renders the figures the filter acts on.
+      get admin_customers_path(q: "Regular Raja")
+      assert_response :success
+      assert_select ".admin-customer-item__metrics", text: /3 visits/
+      assert_select ".admin-customer-item__metrics", text: /150\.00 L/
+      assert_select ".admin-customer-item__metrics", text: /₹90\.00 discount/
+      assert_select ".admin-customer-item__metrics", text: /1 contacts/
+      assert_select ".admin-customer-item__metrics", text: /500 pts earned/
+
+      get admin_customers_path(min_litres: 150)
+      assert_response :success
+      assert_match "Regular Raja", response.body
+      assert_no_match(/Occasional Om/, response.body)
+
+      get admin_customers_path(min_discount: 90)
+      assert_response :success
+      assert_match "Regular Raja", response.body
+      assert_no_match(/Occasional Om/, response.body)
+
+      get admin_customers_path(min_contacts: 1)
+      assert_response :success
+      assert_match "Regular Raja", response.body
+      assert_no_match(/Occasional Om/, response.body)
+
+      # Both reward-point cohorts, which are deliberately different figures.
+      get admin_customers_path(min_points_earned: 500)
+      assert_response :success
+      assert_match "Regular Raja", response.body
+
+      # The net balance is 300, not the 500 earned — deliberately two cohorts.
+      get admin_customers_path(min_points_balance: 400)
+      assert_response :success
+      assert_no_match(/Regular Raja/, response.body)
+
+      assert occasional.persisted?
+    end
+
+    test "a customer exactly at the threshold is included and thresholds AND-combine" do
+      sign_in users(:one)
+      exact = build_regular_customer(name: "Exact Eshwar", phone: "9700100003")
+
+      get admin_customers_path(min_visits: 3)
+      assert_response :success
+      assert_match "Exact Eshwar", response.body
+
+      get admin_customers_path(min_visits: 4)
+      assert_response :success
+      assert_no_match(/Exact Eshwar/, response.body)
+
+      # Visits pass, contacts do not — one unmet threshold drops the customer.
+      get admin_customers_path(min_visits: 3, min_contacts: 1)
+      assert_response :success
+      assert_no_match(/Exact Eshwar/, response.body)
+      assert exact.persisted?
+    end
+
+    test "a linked visit and transaction pair counts one visit and one discount" do
+      sign_in users(:one)
+      customer = Customer.create!(name: "Linked Lakshmi", phone_number: "9700100004")
+      vehicle = customer.vehicles.create!(vehicle_number: "TN70CD0004", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+      transaction = customer.transactions.create!(user: users(:two), vehicle: vehicle, fuel_pump: fuel_pumps(:one),
+                                                  fuel_amount: 1000, litres: 20, discount_amount: 100,
+                                                  created_at: Time.zone.local(2026, 7, 10, 9))
+      VisitEntry.create!(customer: customer, user: users(:two), fuel_pump: fuel_pumps(:one),
+                         entry_date: Date.new(2026, 7, 10), vehicle_number: "TN70CD0004",
+                         litres: 20, discount_amount: 100, fuel_transaction: transaction)
+
+      get admin_customers_path(q: "Linked Lakshmi")
+      assert_response :success
+      assert_select ".admin-customer-item__metrics", text: /1 visits/
+      assert_select ".admin-customer-item__metrics", text: /20\.00 L/
+      assert_select ".admin-customer-item__metrics", text: /₹100\.00 discount/
+
+      # The pair must not be double counted into a 2-visit cohort.
+      get admin_customers_path(min_visits: 2)
+      assert_response :success
+      assert_no_match(/Linked Lakshmi/, response.body)
+    end
+
+    test "a period filter keeps visit-entry-only customers" do
+      sign_in users(:one)
+      # This is the transacted_between regression: the period used to be
+      # transactions-only, so a fleet customer captured as a visit_entry vanished
+      # the moment a date range was picked.
+      fleet = Customer.create!(name: "Visitonly Vimal", phone_number: "9700100005", customer_type: "otp")
+      VisitEntry.create!(customer: fleet, user: users(:two), fuel_pump: fuel_pumps(:one),
+                         entry_date: Time.zone.today, vehicle_number: "TN70EF0005", litres: 300)
+
+      get admin_customers_path(preset: "today")
+
+      assert_response :success
+      assert_select "[data-customers-period-banner]"
+      assert_match "Visitonly Vimal", response.body
+    end
+
+    test "the customers list is paginated and carries the filters across pages" do
+      sign_in users(:one)
+      30.times { |index| Customer.create!(name: "Bulk #{index}", phone_number: "97002000#{index.to_s.rjust(2, '0')}") }
+
+      get admin_customers_path
+      assert_response :success
+      assert_select ".admin-customer-item", Admin::CustomersController::CUSTOMERS_PER_PAGE
+      assert_select ".admin-customers-pagination"
+      assert_select "a", text: "Next"
+
+      get admin_customers_path(page: 2, min_visits: 0)
+      assert_response :success
+      assert_select ".admin-customer-item", minimum: 1
+      # The pager keeps the cohort rather than silently resetting it.
+      assert_select "a[href*='min_visits=0']"
+    end
+
+    test "activity filters stay collapsed until one is applied" do
+      sign_in users(:one)
+
+      get admin_customers_path
+      assert_response :success
+      assert_select "[data-customer-metric-filters-toggle][aria-expanded='false']"
+      assert_select "#customerMetricFilters.collapse"
+      assert_select "#customerMetricFilters.show", 0
+      assert_select "[data-customers-threshold-banner]", 0
+
+      get admin_customers_path(min_visits: 2)
+      assert_response :success
+      assert_select "[data-customer-metric-filters-toggle][aria-expanded='true']"
+      assert_select "#customerMetricFilters.collapse.show"
+      assert_select "input[name='min_visits'][value='2']"
+    end
   end
 end

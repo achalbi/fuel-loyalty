@@ -11,6 +11,12 @@ class Customer < ApplicationRecord
   has_many :contact_logs, dependent: :destroy
   has_many :customer_feedbacks, dependent: :destroy
   has_many :visit_entries, dependent: :nullify
+  # F1 — `:destroy` rather than the `:nullify` used by the neighbours above:
+  # `campaign_qualifications.customer_id` is NOT NULL, so there is no orphan state
+  # to nullify to. (The FK is already ON DELETE CASCADE, so the rows go either way;
+  # declaring it keeps the Rails side honest about the association and runs the
+  # model callbacks instead of letting the database delete behind our back.)
+  has_many :campaign_qualifications, dependent: :destroy
   has_many :push_subscriptions, dependent: :nullify
   has_many :notification_recipients, dependent: :nullify
 
@@ -177,6 +183,41 @@ class Customer < ApplicationRecord
     [minimum_redeemable_points - total_points.to_i, 0].max
   end
 
+  # Item 5 — the total ₹ discount this customer was given, counted ONCE per
+  # fuelling. Discount is captured on two tables and `VisitEntryRecorder` COPIES
+  # the visit entry's discount onto the loyalty transaction it links
+  # (`visit_entries.transaction_id`), so a naive
+  # `visit_entries.sum + transactions.sum` doubles every linked pair. The rule:
+  #
+  # * every visit entry contributes its own `discount_amount`, linked or not;
+  # * a transaction contributes only when NO visit entry points at it (anti-join)
+  #   — i.e. a standalone counter transaction with no B2 capture behind it.
+  #
+  # `range` optionally windows the figure, splitting the way `visited_between`
+  # does: visit entries compare on `entry_date`, transactions on `created_at`. The
+  # anti-join is scoped to the SAME windowed visit scope, so a back-dated pair
+  # straddling the boundary is still counted once — by whichever side falls inside
+  # the window — rather than dropped by both.
+  #
+  # This method owns the rule for ONE customer. Item 4 needs the same figure for
+  # a whole list at once, which cannot be done a customer at a time, so
+  # Admin::Crm::CustomerMetrics carries a set-wise SQL twin of exactly this rule
+  # (`deduplicated_sum_sql`). The two are pinned together by a test in
+  # test/services/admin/crm/customer_metrics_test.rb that asserts they agree on
+  # the same customer — change one and change the other.
+  def discount_total(range: nil)
+    visits = visit_entries
+    visits = visits.where(entry_date: range.begin.to_date..range.end.to_date) if range
+    txns = transactions
+    txns = txns.where(created_at: timestamp_window(range)) if range
+
+    # `where.not(transaction_id: nil)` is load-bearing: a single NULL inside a
+    # NOT IN subquery makes the whole predicate match no rows at all.
+    linked_transaction_ids = visits.where.not(transaction_id: nil).select(:transaction_id)
+
+    visits.sum(:discount_amount).to_d + txns.where.not(id: linked_transaction_ids).sum(:discount_amount).to_d
+  end
+
   def recent_transactions(limit = 5)
     transactions
       .includes(:points_ledger, :fuel_pump, :vehicle, :user, fuel_pump_nozzle: %i[fuel_pump fuel_type_record])
@@ -202,6 +243,24 @@ class Customer < ApplicationRecord
   end
 
   private
+
+  # The two halves of `discount_total` compare against different column types —
+  # `visit_entries.entry_date` is a DATE, `transactions.created_at` a TIMESTAMP —
+  # so the transaction bounds are coerced explicitly rather than handed the raw
+  # range. A caller passing a Date range (`jul_1..jul_31`, which is exactly what
+  # the visit side wants) would otherwise have its end cast to that day's 00:00
+  # and silently drop every transaction recorded on the last day of the window.
+  # A bound that already carries a clock (Time / TimeWithZone / DateTime) is left
+  # alone, so a Time range keeps the meaning its caller gave it.
+  def timestamp_window(range)
+    day_bound(range.begin, :beginning_of_day)..day_bound(range.end, :end_of_day)
+  end
+
+  def day_bound(value, edge)
+    return value unless value.is_a?(Date) && !value.is_a?(DateTime)
+
+    value.public_send(edge)
+  end
 
   def normalize_phone_number
     self.phone_number = self.class.normalize_phone_number(phone_number)

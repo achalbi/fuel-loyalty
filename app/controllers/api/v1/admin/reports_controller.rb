@@ -2,8 +2,8 @@ module Api
   module V1
     module Admin
       # E1 — reports: per vehicle/transporter/driver/customer at day/week/month/
-      # year grain (litres, ₹ amount, discount, gifts, visits) as JSON, or a CSV
-      # data export. Admin-only.
+      # year grain (litres, ₹ amount, discount, reward ₹, gift count, visits) as
+      # JSON, or a CSV data export. Admin-only.
       class ReportsController < Api::V1::Admin::BaseController
         def index
           authorize :dashboard, :show?
@@ -23,7 +23,8 @@ module Api
           ::Admin::Reports::LedgerReport.new(
             dimension: params[:dimension], grain: params[:grain],
             start_date: params[:start_date], end_date: params[:end_date], preset: params[:preset],
-            fuel_type: params[:fuel_type], fuel_pump_id: params[:fuel_pump_id]
+            fuel_type: params[:fuel_type], fuel_pump_id: params[:fuel_pump_id],
+            customer_id: params[:customer_id]
           )
         end
 
@@ -33,6 +34,9 @@ module Api
             grain: report.grain,
             range: { from: report.date_range.begin.iso8601, to: report.date_range.end.iso8601 },
             columns: ::Admin::Reports::LedgerReport::COLUMNS,
+            # False when no ₹-per-point rate is configured: every redemption stored
+            # a NULL cash value, so the client must render "—", not "₹0.00".
+            reward_value_configured: report.reward_value_configured?,
             rows: report.rows.map(&:to_h),
             totals: report.totals,
           }

@@ -202,10 +202,20 @@ module Api
           base = Customer.left_joins(:points_ledgers, :vehicles).includes(:vehicles)
                          .select("customers.*, COALESCE(SUM(points_ledgers.points), 0) AS total_points_sum")
                          .group("customers.id")
-          # E2: when a dashboard period is passed, restrict to customers who
-          # transacted in it and relax the blank-query top-3 cap so the drilled-in
-          # list actually shows the period's customers.
-          base = base.where(id: Transaction.where(created_at: range).select(:customer_id)) if range
+          # E2: when a dashboard period is passed, restrict to customers ACTIVE in
+          # it and relax the blank-query top-3 cap so the drilled-in list actually
+          # shows the period's customers.
+          #
+          # `visited_between` (transactions ∪ visit_entries), not the
+          # transactions-only filter this used to inline: the web admin list goes
+          # through Admin::Crm::CustomerMetrics#cohort, which uses that scope, and
+          # this endpoint backs the very same E2 drill-through in the Android admin
+          # shell. Two spellings of "active in this period" meant the same admin on
+          # the same period saw a DIFFERENT customer set on web than in the app —
+          # every fleet/OTP/credit customer whose fuelling is captured as a
+          # visit_entry and never becomes a loyalty transaction was missing from
+          # the app's list only. One scope, one answer.
+          base = base.merge(Customer.visited_between(range)) if range
           # E4: filter by account type (OTP/drive_in/credit).
           base = base.where(customer_type: customer_type) if customer_type
 

@@ -3,6 +3,11 @@ module Admin
     include CustomerPointsLedgerRendering
     include CustomerTransactionHistoryRendering
 
+    # Item 4 — the list is no longer unbounded. It used to render every customer
+    # in one page, which was survivable while each row was a plain column read;
+    # with six metric subqueries per row it is not.
+    CUSTOMERS_PER_PAGE = 25
+
     def index
       authorize Customer
       load_index_state
@@ -92,62 +97,49 @@ module Admin
         preset: @current_preset, start_date: @current_start_date, end_date: @current_end_date
       )
       @current_customer_type = normalized_customer_type
-      @customers = filtered_customers
+      # Item 4 — one metrics object per request, shared by the SELECT (display) and
+      # the WHERE (thresholds), windowed by the same period the filter bar sets.
+      # `points_balance` stays lifetime by design; see the service.
+      @customer_metrics = ::Admin::Crm::CustomerMetrics.new(range: @period_range)
+      @thresholds = ::Admin::Crm::CustomerMetrics.thresholds_from(params)
+
+      scope = filtered_customers
+      @total_customers = scope.count
+      @total_pages = @total_customers.zero? ? 1 : (@total_customers.to_f / CUSTOMERS_PER_PAGE).ceil
+      @current_page = normalized_page(@total_pages)
+      @customers = scope
+        .select("customers.*", @customer_metrics.select_sql)
+        .order(created_at: :desc, id: :desc)
+        .offset((@current_page - 1) * CUSTOMERS_PER_PAGE)
+        .limit(CUSTOMERS_PER_PAGE)
+        .preload(:vehicles)
+        .to_a
+      @showing_from = @total_customers.zero? ? 0 : ((@current_page - 1) * CUSTOMERS_PER_PAGE) + 1
+      @showing_to = @total_customers.zero? ? 0 : @showing_from + @customers.size - 1
       @customer = form_customer
     end
 
+    # Item 4 — search / status / account type / period AND the six optional
+    # thresholds, all resolved by Admin::Crm::CustomerMetrics#cohort so this list
+    # and GET /api/v1/admin/customers cannot answer the same question differently.
+    # Every threshold is optional and AND-combined; an unset one adds no clause at
+    # all, so a customer with zero visits, contacts or points stays reachable.
+    # (The period filter used to be `transacted_between` and dropped every
+    # visit-entry-only fleet customer — fixed inside #cohort, documented there.)
     def filtered_customers
-      scope = Customer
-        .left_joins(:vehicles)
-        .select(<<~SQL.squish)
-          customers.*,
-          COALESCE(
-            (
-              SELECT SUM(points_ledgers.points)
-              FROM points_ledgers
-              WHERE points_ledgers.customer_id = customers.id
-            ),
-            0
-          ) AS total_points_sum
-        SQL
-        .distinct
+      @customer_metrics.cohort(
+        query: @query,
+        status: @current_status,
+        customer_type: @current_customer_type,
+        thresholds: @thresholds
+      )
+    end
 
-      if @query.present?
-        name_query = "%#{ActiveRecord::Base.sanitize_sql_like(@query.downcase)}%"
-        phone_query = Customer.normalize_phone_number(@query)
-        vehicle_query = Vehicle.normalize_vehicle_number(@query)
-        conditions = ["LOWER(customers.name) LIKE :name"]
-        values = { name: name_query }
-
-        if phone_query.present?
-          values[:phone] = "%#{ActiveRecord::Base.sanitize_sql_like(phone_query)}%"
-          conditions << "customers.phone_number LIKE :phone"
-        end
-
-        if vehicle_query.present?
-          vehicle_like = "%#{ActiveRecord::Base.sanitize_sql_like(vehicle_query)}%"
-          values[:legacy_vehicle] = vehicle_like
-          values[:vehicle] = vehicle_like
-          conditions << "customers.vehicle_number LIKE :legacy_vehicle"
-          conditions << "vehicles.vehicle_number LIKE :vehicle"
-        end
-
-        scope = scope.where(conditions.join(" OR "), values)
-      end
-
-      scope = case @current_status
-      when "active"
-        scope.where(active: true)
-      when "inactive"
-        scope.where(active: false)
-      else
-        scope
-      end
-
-      scope = scope.merge(Customer.transacted_between(@period_range)) if @period_range
-      scope = scope.where(customer_type: @current_customer_type) if @current_customer_type
-
-      scope.preload(:vehicles).order(created_at: :desc)
+    def normalized_page(total_pages)
+      page = params[:page].to_i
+      page = 1 if page < 1
+      page = total_pages if page > total_pages
+      page
     end
 
     def normalized_customer_type

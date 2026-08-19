@@ -3,6 +3,12 @@ module Staff
   # settlement sheet; ₹ is derived from the catalog (LOCKED Q1) and recomputed
   # server-side on submit. See docs/acefuels/12-spec-daily-settlement.md.
   class SettlementsController < BaseController
+    # Every WRITE, not just create. Gating new/create alone left `edit`/`update`
+    # open to admins through this controller, and that path calls the persister
+    # with neither `admin_edit:` nor `recorded_for:` — so an admin could rewrite
+    # any FSM's figures with no audit row and no mandatory reason, which is the
+    # exact hole staff feedback item 3 exists to close.
+    before_action :redirect_admin_to_console, only: %i[new create edit update]
     before_action :set_settlement, only: %i[show edit update]
     before_action :ensure_editable_settlement, only: %i[edit update]
 
@@ -10,7 +16,7 @@ module Staff
       authorize DailySettlement, :index?
       @business_date = parse_date(params[:business_date])
       @fuel_pump = FuelPump.find_by(id: params[:fuel_pump_id])
-      scope = viewable_settlements.recent_first.includes(:fuel_pump, :recorded_by)
+      scope = viewable_settlements.recent_first.includes(:fuel_pump, :recorded_by, :entered_by)
       scope = scope.for_date(@business_date) if @business_date
       scope = scope.where(fuel_pump_id: @fuel_pump.id) if @fuel_pump
       @settlements = scope.to_a
@@ -69,6 +75,18 @@ module Staff
 
     private
 
+    # Staff feedback item 3 — an admin is a reader here, not a recorder. Reaching
+    # this form by URL would save a sheet stamped `recorded_by = the admin` with
+    # no audit row, so send them to the console they should be working in. The
+    # policy refuses it too (DailySettlementPolicy#new?/#create?); this runs
+    # first only so the web surface gets a redirect rather than a bare 403.
+    def redirect_admin_to_console
+      return unless current_user&.admin?
+
+      redirect_to admin_settlements_path,
+        alert: "Settlements are recorded by the FSM on duty. Open the sheet from the admin console to correct it on their behalf."
+    end
+
     # An FSM needs to read the day's sheet for their own pump — including the
     # shift a colleague recorded (staff feedback item 6) — but may still only
     # edit their own. Admins see and edit everything.
@@ -80,8 +98,10 @@ module Staff
         .or(DailySettlement.where(fuel_pump_id: current_user.settlement_pump_ids))
     end
 
+    # No admin branch: an admin corrects through the audited admin console, and
+    # `redirect_admin_to_console` sends them there before this is ever consulted.
     def editable_settlements
-      current_user.admin? ? DailySettlement.all : DailySettlement.where(recorded_by: current_user)
+      DailySettlement.where(recorded_by: current_user)
     end
 
     def set_settlement

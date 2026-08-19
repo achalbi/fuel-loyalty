@@ -50,6 +50,14 @@
           <% if reward_setting.cash_reward_configured? %>
             <span class="customer-details-hero__chip"><strong><%= number_to_currency(total_points_cash_reward, unit: "₹") %></strong> cash value</span>
           <% end %>
+          <%# Item 5 — a compact "what we have given this customer" total. Only the
+              admin controller builds @crm_insight, so the staff hero is unchanged. %>
+          <% if @crm_insight.present? %>
+            <span class="customer-details-hero__chip"><strong><%= number_to_currency(@crm_insight[:rewards][:discount_total], unit: "₹") %></strong> discount given</span>
+            <% if @crm_insight[:rewards][:gift_count].positive? %>
+              <span class="customer-details-hero__chip"><strong><%= @crm_insight[:rewards][:gift_count] %></strong> gift<%= "s" unless @crm_insight[:rewards][:gift_count] == 1 %> given</span>
+            <% end %>
+          <% end %>
           <span class="customer-details-hero__chip">Joined <strong><%= @customer.created_at.strftime("%b %Y") %></strong></span>
           <% if can_redeem_points %>
             <%= link_to new_staff_redemption_path(redemption: { phone_number: @customer.phone_number }),

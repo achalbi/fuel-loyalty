@@ -86,7 +86,14 @@ Rails.application.routes.draw do
         resources :fuel_pumps, only: %i[index create update destroy] do
           patch :feature_settings, on: :collection
         end
-        resources :settlements, only: %i[index show update] do
+        # Staff feedback item 3 — `new`/`create` here are the admin "record on
+        # behalf of a named FSM" flow, NOT a second FSM capture route: the FSM
+        # is named in the request, authorship stays theirs, and every create
+        # writes an audited settlement_changes row. Declared before the resource
+        # so /settlements/new is not captured as /settlements/:id (same reason
+        # as the staff block above).
+        get "settlements/new", to: "settlements#new", as: :new_settlement
+        resources :settlements, only: %i[index show create update] do
           patch :reconcile, on: :member
           get :summary, on: :collection
         end
@@ -224,7 +231,11 @@ Rails.application.routes.draw do
         patch :pause
       end
     end
-    resources :settlements, only: %i[index show edit update] do
+    # `new`/`create` are the "record on behalf of a named FSM" flow (staff
+    # feedback item 3), not a copy of the FSM's own capture form: the FSM is
+    # picked on the form, the sheet stays attributed to them, and the admin who
+    # typed it is stored in `entered_by` with a mandatory reason.
+    resources :settlements, only: %i[index new create show edit update] do
       patch :reconcile, on: :member
     end
     resources :points_adjustments, only: %i[new create]

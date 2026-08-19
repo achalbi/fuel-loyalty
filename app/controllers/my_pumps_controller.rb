@@ -1,20 +1,17 @@
 class MyPumpsController < ApplicationController
   before_action :authenticate_user!
-  before_action :ensure_staff_or_admin!
 
   def show
     authorize current_user, :manage_pump?
-    return unless staff_daily_assignment_only!
 
     load_form_state
   end
 
   def update
     authorize current_user, :manage_pump?
-    return unless staff_daily_assignment_only!
 
     if current_user.update_pump_assignment(my_pump_params, on: assignment_date, assigned_by: current_user)
-      redirect_to my_pump_path(assignment_date: assignment_date), notice: "My pump updated successfully."
+      redirect_to my_pump_path, notice: "My pump updated successfully."
     else
       load_form_state
       render :show, status: :unprocessable_entity
@@ -23,14 +20,8 @@ class MyPumpsController < ApplicationController
 
   private
 
-  def ensure_staff_or_admin!
-    return if current_user&.admin? || current_user&.staff?
-
-    raise Pundit::NotAuthorizedError, "not allowed"
-  end
-
   def my_pump_params
-    params.require(:user).permit(:fuel_pump_id, :assignment_date, assigned_fuel_pump_nozzle_ids: [])
+    params.require(:user).permit(:fuel_pump_id, assigned_fuel_pump_nozzle_ids: [])
   end
 
   def load_form_state
@@ -42,17 +33,9 @@ class MyPumpsController < ApplicationController
     @daily_pump_assignment = current_user.pump_assignment_for(on: @assignment_date)
   end
 
+  # My Pump always applies to today — the screen no longer offers a date picker,
+  # and any supplied date param is ignored so an override can't be back/post-dated.
   def assignment_date
-    raw = params[:assignment_date].presence || params.dig(:user, :assignment_date).presence
-    Date.iso8601(raw.to_s)
-  rescue ArgumentError, TypeError
     Date.current
-  end
-
-  def staff_daily_assignment_only!
-    return true unless current_user.staff? && assignment_date != Date.current
-
-    redirect_to my_pump_path, alert: "Staff can only set a daily pump assignment for today."
-    false
   end
 end

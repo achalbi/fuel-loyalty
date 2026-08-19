@@ -1,6 +1,11 @@
 <%# E3/E5/E7 — admin-only CRM panels for the customer console. Rendered from the
     shared customers/show view only when @crm_insight is present (admin context). %>
 <% insight = @crm_insight %>
+<% rewards = insight[:rewards] %>
+<%# Item 5 — with no ₹-per-point rate configured every redemption stored
+    cash_reward_amount = NULL, so a ₹0 here is structural. Same "—" rule the
+    reports page applies, so an unconfigured rate never reads as a real zero. %>
+<% reward_value = ->(value) { (rewards[:reward_value_configured] || value.to_d.nonzero?) ? number_to_currency(value, unit: "₹") : "—" } %>
 
 <%# ---- E3/E5 Insight card ---- %>
 <div class="card shadow-sm loyalty-result-card customer-details-section">
@@ -42,6 +47,41 @@
       <dt class="col-6 text-muted fw-normal">Expected next</dt>
       <dd class="col-6 text-end mb-0"><%= insight[:expected_next_visit_on] ? l(insight[:expected_next_visit_on], format: :long) : "—" %></dd>
     </dl>
+  </div>
+</div>
+
+<%# ---- Item 5 Rewards card — what this customer has actually been given ---- %>
+<div class="card shadow-sm loyalty-result-card customer-details-section">
+  <div class="card-body">
+    <div class="customer-details-section__header">
+      <div>
+        <h2 class="h5 mb-1">Rewards Given</h2>
+        <p class="text-muted mb-0">Discount paid out, points redeemed and gifts handed over — all time.</p>
+      </div>
+    </div>
+
+    <dl class="row mb-0 small mt-2">
+      <dt class="col-6 text-muted fw-normal">Discount paid</dt>
+      <dd class="col-6 text-end mb-1"><%= number_to_currency(rewards[:discount_total], unit: "₹") %></dd>
+      <dt class="col-6 text-muted fw-normal">Redemption value</dt>
+      <dd class="col-6 text-end mb-1"><%= reward_value.call(rewards[:redemption_value]) %></dd>
+      <dt class="col-6 text-muted fw-normal">Points redeemed</dt>
+      <dd class="col-6 text-end mb-1">
+        <%= number_with_delimiter(rewards[:redemption_points]) %>
+        <span class="text-muted">(<%= rewards[:redemption_count] %> redemption<%= "s" unless rewards[:redemption_count] == 1 %>)</span>
+      </dd>
+      <dt class="col-6 text-muted fw-normal">Gifts given</dt>
+      <dd class="col-6 text-end mb-0"><%= rewards[:gift_count] %></dd>
+    </dl>
+
+    <%# The client asked WHAT was given, not just how many — F1 campaign gifts
+        carry no ₹, so the description is the only thing worth reporting. %>
+    <% if rewards[:gift_descriptions].any? %>
+      <p class="small text-muted mb-0 mt-2">Gifts: <%= rewards[:gift_descriptions].to_sentence %></p>
+    <% end %>
+    <% unless rewards[:reward_value_configured] %>
+      <p class="small text-muted mb-0 mt-2">No cash value per point is configured, so redemption ₹ shows as “—”.</p>
+    <% end %>
   </div>
 </div>
 

@@ -135,7 +135,35 @@ audit-trail panel, Reconcile, edit-with-reason). ✅ <strong>Android admin settl
 totals, nozzle readings, audit trail + Reconcile). <strong>➡️ Daily Settlement (D1–D10) COMPLETE
 on all three surfaces, tested (467 Rails runs green, brakeman clean, Android compiles).</strong>
 Web-first deferrals: native <strong>decantation</strong> (D8 tank dips) inputs and native admin
-<strong>line-item editing</strong> (the native admin console covers view + reconcile).</p>
+<strong>line-item editing</strong> (the native admin console covers view + reconcile).
+<strong>Staff feedback item 3 (admin read side) shipped:</strong> the admin console filters by
+<code>recorded_by_id</code> and shows <strong>per-FSM totals</strong> on web, API and Android (filter row +
+FSM on the list row); the summary serializer exposes <code>recorded_by_id</code>; the show/edit
+pages are reframed as a correction <em>on behalf of</em> the FSM; and the misattributing
+back door is closed — <code>DailySettlementPolicy#new?</code>/<code>#create?</code> are staff-only and an
+admin hitting <code>/staff/settlements/new</code> is redirected to the console (business rules
+12–13). <strong>Staff feedback item 3 (admin write side) — backend + JSON API shipped:</strong>
+an admin can now <em>record on behalf of</em> a named FSM who could not file their own
+sheet (business rule 14). New nullable <code>daily_settlements.entered_by_id</code> (FK→users,
+indexed) records the admin who typed it while <code>recorded_by</code>/<code>fsm_name_snapshot</code> stay
+the FSM's; <code>Settlement::Builder</code> takes <code>recorded_for:</code> so every default resolves
+against the FSM's pump; <code>Settlement::Persister</code> grew an audited on-behalf create path
+(creates were previously unaudited); <code>DailySettlementPolicy#create_on_behalf?</code> is
+admin-only and <code>#new?</code>/<code>#create?</code> stay staff-only; <code>GET/POST /api/v1/admin/settlements</code>
+<code>new</code>/<code>create</code> carry the FSM picker (<code>User.settlement_recorder_candidates</code>, admins
+included) and the create, with a <code>409 settlement_exists</code> on an occupied slot; and the
+summary serializer exposes <code>entered_by_id</code>/<code>entered_by_name</code>/<code>entered_on_behalf</code>
+alongside <code>fsm_name</code>/<code>recorded_by_id</code>.
+<strong>Staff feedback item 3 (admin write side) — web + Android shipped:</strong>
+<code>Admin::SettlementsController#new</code>/<code>#create</code> render the FSM picker and then the
+<em>existing</em> <code>staff/settlements/_form</code> partial with an <code>on_behalf</code> local (mandatory
+reason, top-level hidden <code>recorded_by_id</code>, FSM-named submit buttons), reached from
+a "Record on behalf of an FSM" button on the admin index; Android reuses
+<code>SettlementScreen</code>/<code>SettlementViewModel</code> in an <code>onBehalf</code> mode (candidate chips →
+the FSM's draft → reason → audited create) behind the same button on
+<code>AdminSettlementsScreen</code>. <code>entered_by</code> is rendered next to the FSM name on the web
+index/show/form and the native list row and detail. <strong>➡️ Business rule 14 COMPLETE
+on all three surfaces.</strong></p>
 </blockquote>
 <p>Daily Settlement is the shift-end reconciliation ledger for a fuel outlet. At the end of a shift the FSM (pump operator) picks their pump, and the system shows that pump's nozzles and their fuel. The FSM enters today's meter readings; the app auto-populates yesterday's closing reading from the prior settlement, subtracts testing litres, derives net litres sold, prices each nozzle from the product catalog's selling price, and totals fuel by type. The FSM then records lubricant sales (with opening/closing stock), pulls same-day customer discounts, enters PhonePe POS and Scanner receipts, Fleet/OTP and tank-truck credit lines, and finally reconciles cash by denomination against the computed <strong>Final Amount to Settle</strong>, capturing shortage. Stock received, tank decantation, and a JIO-BP-vs-own rate comparison round out the record. Admins can view and edit any settlement — current or past, per pump or across pumps — with a full audit trail, and any edit that changes derived ₹ recomputes loyalty points. This is the single largest module and the source of truth for litres sold (per LOCKED Q1: readings/litres are canonical; ₹ is derived from catalog selling price).</p>
 <h2 id="requirements-covered">Requirements covered</h2>
@@ -245,12 +273,17 @@ Web-first deferrals: native <strong>decantation</strong> (D8 tank dips) inputs a
 <tr>
 <td><code>recorded_by_id</code></td>
 <td>bigint FK→users</td>
-<td>FSM who submitted (Staff-1)</td>
+<td>FSM the sheet belongs to (Staff-1). Never moves to an admin — not on an admin edit, not on an on-behalf create</td>
 </tr>
 <tr>
 <td><code>fsm_name_snapshot</code></td>
 <td>string</td>
 <td>"Name of FSM" printed on the sheet, snapshotted</td>
+</tr>
+<tr>
+<td><code>entered_by_id</code></td>
+<td>bigint FK→users, <strong>null</strong></td>
+<td>The admin who <em>typed</em> a sheet its FSM could not record themselves (staff feedback item 3). NULL is the normal case — an FSM-recorded sheet has no separate enterer — so no backfill was needed</td>
 </tr>
 <tr>
 <td><code>status</code></td>
@@ -790,6 +823,93 @@ builds keep working.</p>
    pump they're posted to, including a colleague's shift, but may only edit one
    they recorded. Admins see and edit everything.</li>
 <li><strong>Cross-pump view (D9/Admin-13):</strong> admin can list/aggregate settlements for a <code>business_date</code> across all pumps, summing fuel/lube/discount/credit/cash/shortage.</li>
+<li><strong>Per-FSM view (Admin-12, staff feedback item 3).</strong> The admin console also
+   filters by <code>recorded_by_id</code> and renders a <strong>per-FSM totals</strong> block — the same
+   ₹ rollup grouped by the FSM who recorded each sheet — so "the settlement
+   report of the users for a particular day" is answerable without opening every
+   settlement. Both aggregates come from <code>DailySettlement.totals_for</code> /
+   <code>.per_recorder_totals</code> so web and API cannot drift, and both ignore drafts
+   (an unsubmitted sheet is not money yet). The filter's option list is
+   <code>User.settlement_recorders</code> — derived from the settlements themselves, <strong>not</strong>
+   from <code>role: :staff</code>, because admin-recorded sheets exist in the data and would
+   otherwise be unreachable by every value of the filter. Both surfaces filter on
+   the <strong>raw</strong> <code>fuel_pump_id</code>/<code>recorded_by_id</code> param and look the record up only
+   to label the page: an id with no row behind it (stale bookmark, deleted user)
+   must narrow the list to nothing on web and API alike, never silently drop the
+   filter and list everybody. A pump filter — recognised or not — suppresses the
+   cross-pump block on both surfaces; a recorder filter keeps it but qualifies
+   its label (see <code>filtered_by</code> in the API contract below).</li>
+<li><strong>The admin reads; the FSM records.</strong> Capturing a fresh sheet is the FSM's
+   job: <code>DailySettlementPolicy#new?</code>/<code>#create?</code> are staff-only, and an admin who
+   reaches <code>/staff/settlements/new</code> by URL is redirected to the admin console.
+   Previously both resolved through <code>staff_access?</code> (which includes admins), so
+   an admin could save a sheet stamped <code>recorded_by = the admin</code> <strong>with no audit
+   row at all</strong>, since <code>Settlement::Persister</code> audits only the <code>admin_edit</code> path.
+   An admin edit is framed throughout as a correction <em>on behalf of</em> the FSM:
+   <code>recorded_by</code> never moves (<code>@settlement.recorded_by ||= @actor</code>), the admin
+   strong params omit <code>recorded_by_id</code>/<code>fuel_pump_id</code>/<code>business_date</code>, a blank
+   <code>change_reason</code> is refused with 422, and the show page reads
+   "Recorded by ‹FSM› · last corrected by ‹admin› on ‹date›".</li>
+<li><strong>Record on behalf of a named FSM (staff feedback item 3, final part).</strong>
+   When an FSM cannot file their own sheet — absent, sick, phone dead — an admin
+   records it <em>for</em> them through an admin-only flow that is nothing like the
+   closed back door in rule 13:</li>
+<li><strong>Attribution stays with the FSM.</strong> <code>recorded_by</code> is the <strong>named</strong> FSM and
+     <code>fsm_name_snapshot</code> is their name; the admin lands in the new
+     <code>entered_by_id</code> column. The sheet is the FSM's money and rolls up under
+     them in the per-FSM totals; only "who typed it" differs. <code>entered_by</code> is
+     serialized and displayed everywhere <code>fsm_name</code> is, so an entered sheet
+     never reads as one the FSM filled in themselves.</li>
+<li><strong>Defaults resolve against the FSM, not the admin.</strong> <code>Settlement::Builder</code>
+     takes a <code>recorded_for:</code> kwarg; the pump, its nozzles, their
+     yesterday-closing readings, the catalog price snapshots and the same-day
+     pulled discounts all come from the FSM's pump. An admin's own pump
+     assignment must never leak into a sheet attributed to someone else.</li>
+<li><strong>Every create is audited.</strong> <code>Settlement::Persister</code> previously wrote a
+     <code>settlement_changes</code> row only on the <code>admin_edit</code> path, so creates were
+     unaudited. An on-behalf create now writes one too, with the same mandatory
+     <code>change_reason</code>, diffed against a blank sheet so the row records the
+     attribution (<code>recorded_by_id</code>, <code>fsm_name_snapshot</code>, <code>entered_by_id</code>), the
+     slot (pump/date/shift) and the money that was entered.</li>
+<li><strong>The admin submits directly.</strong> The premise is that the FSM cannot act, so
+     parking the sheet in <code>draft</code> awaiting their submission would defeat the
+     purpose; <code>status</code> defaults to <code>submitted</code> and a client that wants a parked
+     sheet passes <code>draft</code> explicitly.</li>
+<li><strong>Reconcile stays admin-only and is still allowed on a self-entered
+     sheet</strong> — a single-admin site would otherwise deadlock — but because
+     <code>entered_by_id</code> is recorded, entry-and-approval by one person is visible
+     rather than hidden. <code>DailySettlement#self_entered_by_admin?</code> marks that
+     case; <code>#entered_on_behalf?</code> is true only when the enterer and the FSM are
+     different people.</li>
+<li><strong>The picker includes admins.</strong> <code>User.settlement_recorder_candidates</code>
+     (active, non-deleted, <strong>both roles</strong>) is the option list — an admin does
+     stand a shift on a small site, and admin-recorded sheets already exist in
+     the data. It is deliberately separate from <code>User.settlement_recorders</code> in
+     rule 12: that one is the <em>filter</em> list, derived from settlements already on
+     the books (so a departed operator's sheets stay findable); this one is the
+     forward-looking <em>picker</em> list (so a brand-new FSM who has never settled is
+     still selectable, and a departed one is not).</li>
+<li><strong>Policy.</strong> A new admin-only <code>DailySettlementPolicy#create_on_behalf?</code>.
+     <code>#new?</code>/<code>#create?</code> stay staff-only — the on-behalf flow is an addition, not
+     a loosening, so the unaudited back door stays shut.</li>
+<li><strong>Duplicates.</strong> <code>(pump, date, shift)</code> is unique, so a slot that is already
+     settled comes back as a <code>409 settlement_exists</code> naming
+     <code>existing_settlement_id</code>, not a 500 — the console offers "open the existing
+     sheet" instead.</li>
+<li><strong>One form, three flows.</strong> Neither surface got a second D1–D10 form. The
+     web renders <code>staff/settlements/_form</code> with an <code>on_behalf: true</code> local
+     (mandatory reason, a top-level hidden <code>recorded_by_id</code>, and buttons that
+     name the FSM) exactly as the admin edit console renders it with
+     <code>admin_mode: true</code>; Android reuses <code>ui/settlement/SettlementScreen</code> and
+     <code>SettlementViewModel</code> with an <code>onBehalf</code> flag. The FSM picker is a <em>state</em>
+     of that one screen rather than a screen of its own, because the sheet below
+     it cannot be hydrated until it is answered. A duplicated settlement form
+     would drift line by line from the FSM's within a release or two.</li>
+<li><strong>Filing ends the flow.</strong> Once the on-behalf create lands, the form goes
+     read-only and points at the console. A second POST would collide with the
+     unique index, and a PATCH would go to the <em>staff</em> update endpoint — an
+     unaudited admin write into someone else's record, which is exactly the hole
+     rule 13 closed. Corrections go through the audited admin edit.</li>
 </ol>
 <figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">flowchart TD
   A[FSM taps Daily Settlement at shift end] --&gt; B[Pick pump&lt;br/&gt;defaults to My Pump]
@@ -851,9 +971,10 @@ builds keep working.</p>
 </pre></figure>
 <h3 id="services">Services</h3>
 <ul>
-<li><code>Settlement::Builder</code> — given <code>fuel_pump_id</code>, <code>business_date</code>, <code>shift_template_id</code>, returns a pre-filled draft: active nozzles with auto-popped opening readings, catalog prices, same-day discount lines from B2, and a blank denomination grid.</li>
+<li><code>Settlement::Builder</code> — given <code>fuel_pump_id</code>, <code>business_date</code>, <code>shift_template_id</code>, returns a pre-filled draft: active nozzles with auto-popped opening readings, catalog prices, same-day discount lines from B2, and a blank denomination grid. <code>user:</code> is who is driving the form; the optional <code>recorded_for:</code> is who the sheet is <em>for</em> (business rule 14). They are the same person for an FSM capturing their own settlement — which is every caller that omits <code>recorded_for</code>, so existing behaviour is unchanged — and every default (pump → nozzles → prior readings → pulled discounts) resolves against <code>recorded_for</code>. <code>Result</code> carries <code>recorded_for</code> back alongside <code>settlement</code>/<code>fuel_pump</code>/<code>existing</code>.</li>
 <li><code>Settlement::Calculator</code> — pure recompute of all derived fields and the D6/D7 totals; called on every create/update.</li>
-<li><code>Settlement::Persister</code> — atomic upsert of parent + all children (nested attributes with <code>allow_destroy</code>), writes a <code>settlement_changes</code> row on admin edits, and invokes <code>PointsRecomputeService</code> when a customer-linked figure changed.</li>
+<li><code>Settlement::Persister</code> — atomic upsert of parent + all children (nested attributes with <code>allow_destroy</code>), writes a <code>settlement_changes</code> row on admin edits <strong>and on on-behalf creates</strong>, and invokes <code>PointsRecomputeService</code> when a customer-linked figure changed. Attribution: with no <code>recorded_for:</code> the long-standing <code>recorded_by ||= actor</code> rule applies and nothing is audited; with <code>recorded_for:</code> the sheet is stamped <code>recorded_by</code>/<code>fsm_name_snapshot</code> = that FSM and <code>entered_by</code> = the actor, and an audit row is mandatory (a blank <code>change_reason</code> rolls the whole save back).</li>
+<li><code>Settlement::Differ</code> — <code>PARENT_FIELDS</code> leads with the identity/attribution columns (<code>business_date</code>, <code>fuel_pump_id</code>, <code>shift_template_id</code>, <code>recorded_by_id</code>, <code>fsm_name_snapshot</code>, <code>entered_by_id</code>). They can never change on an admin edit (the admin strong params omit them) so they normally contribute nothing, but they are exactly what an on-behalf create must put on the record — and if authorship ever did move, the diff would say so. <code>Differ.blank_snapshot</code> is the "before" side of a sheet that did not exist yet, so a create diff lists only what was actually entered rather than every default.</li>
 </ul>
 <h2 id="api-changes">API changes</h2>
 <p>All under <code>namespace :api, :v1</code>. Staff routes added to the <code>staff</code> block (<code>config/routes.rb:29-49</code>), admin to the <code>admin</code> block (<code>config/routes.rb:51-86</code>). Auth: existing token auth; staff scoped to their own pump/shift, admin unrestricted.</p>
@@ -901,22 +1022,33 @@ Request:</p>
 <strong>GET <code>/api/v1/staff/settlements/:id</code></strong> — full read (FSM's own; blocked once <code>locked</code>/reconciled except read-only).
 <strong>PATCH <code>/api/v1/staff/settlements/:id</code></strong> — update while still <code>draft</code>; <code>409</code> if <code>locked</code>.</p>
 <h3 id="admin">Admin</h3>
-<p><strong>GET <code>/api/v1/admin/settlements</code></strong> — list/filter across pumps. Query: <code>business_date</code> (or <code>from</code>/<code>to</code>), <code>fuel_pump_id</code> (optional; omit = all pumps), <code>status</code>. Response includes per-settlement summary plus, when a single date and no pump filter, a <code>cross_pump_totals</code> block (Admin-13).
-<strong>GET <code>/api/v1/admin/settlements/:id</code></strong> — full settlement + <code>changes</code> audit array.
+<p><strong>GET <code>/api/v1/admin/settlements</code></strong> — list/filter across pumps. Query: <code>business_date</code> (or <code>from</code>/<code>to</code>), <code>fuel_pump_id</code> (optional; omit = all pumps), <code>status</code>, <code>recorded_by_id</code> (optional; the FSM who recorded the sheet). Response includes per-settlement summary — each row carries <code>recorded_by_id</code> as well as the <code>fsm_name</code> display snapshot, so a client can group by user — plus:</p>
+<ul>
+<li><code>per_fsm_totals</code>: <code>[{ recorded_by_id, fsm_name, settlement_count, totals: { …the same ₹ fields as</code>cross_pump_totals<code>} }]</code>, sorted by name, drafts excluded (Admin-12).</li>
+<li><code>fsm_options</code>: <code>[{ id, name }]</code> — the option list for the <code>recorded_by_id</code> filter. Includes admins, not just <code>role: :staff</code> (see business rule 12).</li>
+<li><code>cross_pump_totals</code>: only when a single date and no pump filter (Admin-13).</li>
+<li><code>filtered_by</code>: <code>{ recorded_by_id, fsm_name }</code>, or <code>null</code> when no <code>recorded_by_id</code> was given. <code>cross_pump_totals</code> is still computed from the <em>filtered</em> rows, so with a recorder filter on it is one operator's money under a key that reads "the whole day across all pumps" — clients must qualify the label from this block (<code>fsm_name</code>, or "one FSM" when the id matches no user). The <strong>object's presence</strong> is the signal, not the id inside it: an id nobody has has still narrowed the list. The web heading appends "· ‹FSM› only" and the Android card appends the same suffix.
+<strong>GET <code>/api/v1/admin/settlements/new</code></strong> — hydration for "record on behalf of" (business rule 14). Query: <code>recorded_by_id</code> (optional), <code>fuel_pump_id</code>, <code>business_date</code>, <code>shift_template_id</code>. Returns <code>fsm_options</code> (the picker list — active operators of <strong>both</strong> roles, each with <code>id</code>, <code>name</code>, <code>role</code> and their <em>standing</em> <code>default_fuel_pump_id</code>/<code>default_fuel_pump</code>), <code>entered_by</code> (<code>{id,name}</code> — the calling admin), <code>recorded_for</code> (<code>{id,name}</code> or null), and <code>draft</code> — the same <code>SettlementDraftSerializer</code> payload the FSM's own <code>new</code> returns, built against <strong>their</strong> pump, or null until an FSM is named. <code>422 recorded_by_invalid</code> if an id is supplied that is not on the picker list.</li>
+</ul>
+<p><strong>POST <code>/api/v1/admin/settlements</code></strong> — record on behalf of a named FSM. Top-level <code>recorded_by_id</code> and <code>change_reason</code> are both required and live <strong>outside</strong> the settlement body — attribution is applied server-side, so a client cannot post its way into <code>recorded_by_id</code>/<code>entered_by_id</code>. Body is the same nested-attributes shape as the staff create, and unlike the admin PATCH it must carry <code>fuel_pump_id</code>/<code>business_date</code>/<code>shift_template_id</code>. <code>status</code> is optional and defaults to <code>submitted</code>. Response <code>201</code> — the full settlement (with <code>entered_by_id</code>/<code>entered_by_name</code>/<code>entered_on_behalf</code>) plus its <code>changes</code> array containing the create's audit row. Errors: <code>422 change_reason_required</code>, <code>422 recorded_by_required</code>, <code>422 recorded_by_invalid</code>, <code>409 settlement_exists</code> (with <code>details.existing_settlement_id</code>), <code>422 validation_failed</code>, <code>403</code> for staff.</p>
+<p><strong>GET <code>/api/v1/admin/settlements/:id</code></strong> — full settlement + <code>changes</code> audit array.
 <strong>PATCH <code>/api/v1/admin/settlements/:id</code></strong> — edit any field/child; <strong><code>change_reason</code> required</strong> (<code>422</code> without it). Same nested-attributes body as staff create plus <code>change_reason</code>. Response returns updated settlement, a new <code>settlement_changes</code> entry, and <code>points_recomputed: true|false</code>.
 <strong>PATCH <code>/api/v1/admin/settlements/:id/reconcile</code></strong> — set <code>reconciled</code>, <code>locked=true</code>.
 <strong>GET <code>/api/v1/admin/settlements/summary</code></strong> — Admin-12 "visualize per pump anytime": query <code>fuel_pump_id</code>, <code>from</code>, <code>to</code>; returns time series of litres/₹/shortage.</p>
-<p>Routes to add:</p>
+<p>Routes:</p>
 <pre><code class="language-ruby"># staff block
+get &quot;settlements/new&quot;, to: &quot;settlements#new&quot;, as: :new_settlement
+resources :settlements, only: %i[index show create update]
+# admin block — new/create are &quot;record on behalf of&quot;, NOT a second FSM capture
+# route. Declared before the resource so /settlements/new is not captured as
+# /settlements/:id.
+get &quot;settlements/new&quot;, to: &quot;settlements#new&quot;, as: :new_settlement
 resources :settlements, only: %i[index show create update] do
-  get :new, on: :collection
-end
-# admin block
-resources :settlements, only: %i[index show update] do
   patch :reconcile, on: :member
   get :summary, on: :collection
 end
 </code></pre>
+<p>The web console mirrors it: <code>resources :settlements, only: %i[index new create show edit update]</code> under <code>namespace :admin</code>.</p>
 <h2 id="ui">UI</h2>
 <h3 id="rails-pwa">Rails PWA</h3>
 <ul>
@@ -931,12 +1063,14 @@ end
 <li><strong>Cash</strong> — denomination grid (500/200/100/50/20/10/5 × qty → amount), counted-cash total, live <strong>Shortage</strong> readout (D7).</li>
 <li><strong>Stock received / Decantation / Rate comparison</strong> — three compact repeatable sections.</li>
 <li>Sticky <strong>Submit</strong> button. All computed fields recalc client-side via Stimulus for feedback; server recomputes on submit.</li>
-<li><strong>Admin — extend <code>admin/transactions</code></strong> area (currently index-only, <code>config/routes.rb:147</code>) or add sibling <strong><code>admin/settlements</code></strong>: an index filterable by date/pump/status with a <strong>cross-pump totals</strong> header, a per-settlement detail page reusing the staff form in editable mode with a mandatory <strong>"Reason for change"</strong> field, an <strong>Audit trail</strong> panel listing <code>settlement_changes</code> (who/when/reason/diffs, mirroring the attendance-changes UI), and a <strong>Reconcile</strong> action. Admin-12 "visualize per pump" is a small chart (litres/₹/shortage over a date range) on the pump detail.</li>
+<li><strong>Admin — extend <code>admin/transactions</code></strong> area (currently index-only, <code>config/routes.rb:147</code>) or add sibling <strong><code>admin/settlements</code></strong>: an index filterable by date/pump/status/<strong>recorded-by FSM</strong> with <strong>cross-pump</strong> and <strong>per-FSM totals</strong> headers, a per-settlement detail page reusing the staff form in editable mode with a mandatory <strong>"Reason for change"</strong> field, an <strong>Audit trail</strong> panel listing <code>settlement_changes</code> (who/when/reason/diffs, mirroring the attendance-changes UI), and a <strong>Reconcile</strong> action. Admin-12 "visualize per pump" is a small chart (litres/₹/shortage over a date range) on the pump detail.</li>
+<li><strong>Admin — "Record on behalf of an FSM"</strong> (business rule 14), reached from a button on the settlements index gated on <code>DailySettlementPolicy#create_on_behalf?</code>. <code>admin/settlements/new</code> is one page in two steps: a GET chooser (FSM, optional pump override, date) that reloads a draft hydrated against <strong>the FSM's</strong> pump, then <code>staff/settlements/_form</code> rendered with <code>on_behalf: true</code> + <code>recorded_for:</code> — the identical D1–D10 form, plus a mandatory reason, a hidden top-level <code>recorded_by_id</code>, and <strong>Save as draft</strong> / <strong>Record &amp; submit for ‹FSM›</strong> buttons. A standing warning banner says the sheet will belong to the named FSM and that the reason is permanent. An occupied slot redirects into the audited edit rather than failing the create. Wherever the FSM name appears — index rows, the show header, the form header — <code>entered_by</code> is rendered beside it (branching on <code>entered_by_id</code>, <strong>not</strong> on <code>entered_on_behalf</code>, so a self-entered-then-reconciled sheet stays visible).</li>
 </ul>
 <h3 id="android-compose">Android (Compose)</h3>
 <ul>
 <li><strong>New staff area <code>ui/settlement/</code></strong> with the house layout <code>SettlementApi.kt</code>, <code>SettlementDtos.kt</code>, <code>SettlementRepository.kt</code>, <code>SettlementScreen.kt</code>, <code>SettlementViewModel.kt</code> (same shape as <code>ui/admin/attendance/</code>). Entry point: a "Daily Settlement" tile on the FSM home (<code>ui/home</code>), enabled at shift end. <code>SettlementScreen</code> is a scrollable multi-section form mirroring the PWA sections; nozzle rows and denomination grid use editable rows with live-computed read-only fields; a pinned bottom bar shows Final Amount, Counted Cash, and Shortage. <code>SettlementViewModel</code> calls <code>GET new</code> on open to hydrate the draft (auto-popped readings, catalog prices, pulled discounts) and posts on submit; offline-safe drafts held in the ViewModel until submit.</li>
 <li><strong>New admin area <code>ui/admin/settlements/</code></strong> (<code>Api/Dtos/Repository/Screen/ViewModel</code>) added to <code>AdminShell.kt</code> nav next to <code>transactions</code>. List screen with date/pump/status filters and a cross-pump totals card; detail screen renders the settlement read-only with an <strong>Edit</strong> toggle that requires a reason before save, an <strong>Audit</strong> tab, and a <strong>Reconcile</strong> button. Reuse <code>ui/designsystem</code> components and <code>Nayara*</code> theme.</li>
+<li><strong>Record on behalf of an FSM (business rule 14)</strong> — a "Record on behalf of an FSM" button on <code>AdminSettlementsScreen</code> pushes route <code>settlement_on_behalf</code>, which is <strong><code>SettlementScreen(onBehalf = true)</code></strong>: the same composable and the same <code>SettlementViewModel</code>, not a second form. In that mode the view model calls <code>GET /api/v1/admin/settlements/new</code> (picker first, then the named FSM's draft) and posts to <code>POST /api/v1/admin/settlements</code>; <code>OnBehalfState</code> on the UI state carries the candidate chips, the chosen FSM, the enterer, the business date and the mandatory reason, and turns the bottom bar into <strong>Save draft / Record &amp; submit</strong> with both gated on a non-blank reason. An occupied slot renders "already has a settlement — open it from the list" instead of a form; a successful create switches the screen to read-only with a <strong>Done</strong> button. <code>entered_by</code> is rendered next to the FSM name on the admin list row, the admin detail header (<code>attributionLabel()</code>) and the settlement form header, so an on-behalf sheet never reads as the FSM's own entry.</li>
 </ul>
 <h2 id="validation-edge-cases">Validation &amp; edge cases</h2>
 <ul>
@@ -982,6 +1116,14 @@ end
 <li>[ ] Admin can list settlements filtered by date/pump/status, and view cross-pump totals for a date.</li>
 <li>[ ] Admin can edit any current or past settlement only with a mandatory change reason; every edit writes a <code>settlement_changes</code> audit row with who/when/reason/diffs.</li>
 <li>[ ] An admin edit that changes a customer-linked derived ₹ reverses and re-awards the affected loyalty points atomically, and the audit row records that recompute occurred.</li>
+<li>[ ] An admin can record a settlement on behalf of a named FSM who could not file it, and the saved sheet is attributed to that FSM (<code>recorded_by</code>/<code>fsm_name_snapshot</code>) with the admin only in <code>entered_by</code>.</li>
+<li>[ ] The on-behalf draft resolves the FSM's pump, nozzles, yesterday-closing readings and same-day discounts — never the admin's.</li>
+<li>[ ] Every on-behalf create writes a <code>settlement_changes</code> row with a mandatory reason recording the attribution, the slot and the money entered.</li>
+<li>[ ] The FSM picker offers admins as well as staff, and a staff user is refused (403) on the on-behalf route while the FSM capture form stays staff-only.</li>
+<li>[ ] <code>entered_by</code> is shown wherever the FSM name is, so an admin-entered (or self-entered-then-reconciled) sheet is never mistaken for one the FSM filled in.</li>
+<li>[ ] An on-behalf create for a pump/date/shift that already has a sheet returns a clean <code>409</code> naming that sheet, not a 500, and both UIs offer to open it rather than letting the create fail.</li>
+<li>[ ] Both surfaces reach the on-behalf flow through the FSM's own D1–D10 form (web: <code>staff/settlements/_form</code> with <code>on_behalf: true</code>; Android: <code>SettlementScreen(onBehalf = true)</code>), so there is exactly one settlement form per surface.</li>
+<li>[ ] The on-behalf UI refuses to submit — draft included — until a reason is given, and both surfaces make it unmistakable on screen that the sheet will belong to the named FSM and not to the admin.</li>
 <li>[ ] A second settlement for the same pump/date/shift is rejected with a clear message.</li>
 <li>[ ] Negative net litres are rejected (unless an explicit meter-rollover flag is set).</li>
 <li>[ ] All amounts and totals are recomputed server-side; client-supplied derived values are never trusted.</li>

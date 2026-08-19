@@ -13,5 +13,6 @@ interface ReportsApi {
         @Query("end_date") endDate: String? = null,
         @Query("fuel_type") fuelType: String? = null,
         @Query("fuel_pump_id") fuelPumpId: Long? = null,
+        @Query("customer_id") customerId: Long? = null,
     ): ReportResponse
 }

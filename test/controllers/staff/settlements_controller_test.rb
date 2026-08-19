@@ -12,6 +12,56 @@ module Staff
       Product.create!(name: "10W30", category: "lubricant", pack_size: 1, pack_unit: "L", mrp: 500, selling_price: 500)
     end
 
+    # Staff feedback item 3: an admin writing through the FSM controller reaches
+    # Settlement::Persister with neither `admin_edit:` nor `recorded_for:`, so the
+    # change lands with no settlement_changes row and no mandatory reason. Gating
+    # only new/create left this open on edit/update — the audited admin console is
+    # the sole write path for an admin.
+    test "an admin is sent to the admin console instead of editing an FSM sheet here" do
+      settlement = DailySettlement.create!(
+        fuel_pump: @pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff, status: "draft",
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1000, closing_reading: 1100, unit_price: 100 }]
+      )
+      sign_in users(:one)
+
+      get edit_staff_settlement_path(settlement)
+      assert_redirected_to admin_settlements_path
+
+      assert_no_difference -> { SettlementChange.count } do
+        patch staff_settlement_path(settlement), params: { settlement: { notes: "rewritten by an admin" } }
+      end
+      assert_redirected_to admin_settlements_path
+      assert_nil settlement.reload.notes, "the unaudited admin write must not land"
+    end
+
+    # The whole suite hand-builds `settlement: {...}` payloads, so for a long time
+    # nothing noticed that the rendered form named every field `daily_settlement[...]`
+    # while all three controllers read `params.require(:settlement)` — a real
+    # submission reduced to `{status:}` and every reading was silently discarded.
+    # This asserts the CONTRACT BETWEEN the page and the controller: post exactly
+    # what the browser would, and check the readings actually persist.
+    test "the rendered form posts under the key the controller reads" do
+      sign_in @staff
+      get new_staff_settlement_path
+      assert_response :success
+
+      names = response.body.scan(/name="([^"]+)"/).flatten.uniq
+      assert_empty names.select { |n| n.start_with?("daily_settlement[") },
+        "the form must not emit the model's own param key — no controller reads it"
+      assert_includes names, "settlement[nozzle_readings_attributes][0][closing_reading]"
+
+      nozzle_row = { "0" => { fuel_pump_nozzle_id: @petrol.id, opening_reading: "1000",
+                              closing_reading: "1180", unit_price: "102.75" } }
+      assert_difference -> { DailySettlement.count }, 1 do
+        post staff_settlements_path, params: {
+          settlement: { fuel_pump_id: @pump.id, business_date: "2026-07-21",
+                        status: "draft", nozzle_readings_attributes: nozzle_row }
+        }
+      end
+      reading = DailySettlement.order(:id).last.nozzle_readings.find_by(fuel_pump_nozzle_id: @petrol.id)
+      assert_equal 1180, reading.closing_reading.to_i, "the reading must survive the round trip"
+    end
+
     test "staff can open the settlement form with a pre-filled draft and lube grid" do
       sign_in @staff
       get new_staff_settlement_path
@@ -83,6 +133,35 @@ module Staff
       sign_in @staff
       get edit_staff_settlement_path(settlement)
       assert_redirected_to staff_settlement_path(settlement)
+    end
+
+    # Staff feedback item 3 — an admin is a reader here, not a recorder. This
+    # form used to be reachable by URL (DailySettlementPolicy#new? resolved
+    # through staff_access?, which includes admins) and would save a sheet
+    # stamped `recorded_by = the admin` with no audit row, because
+    # Settlement::Persister only audits the admin_edit path.
+    test "an admin opening the FSM capture form is sent to the admin console" do
+      sign_in users(:one)
+      assert_no_difference -> { DailySettlement.count } do
+        get new_staff_settlement_path, params: { fuel_pump_id: @pump.id, business_date: "2026-07-21" }
+      end
+      assert_redirected_to admin_settlements_path
+      assert_match(/recorded by the FSM on duty/, flash[:alert])
+    end
+
+    test "an admin cannot create a settlement through the FSM path" do
+      sign_in users(:one)
+      assert_no_difference -> { DailySettlement.count } do
+        post staff_settlements_path, params: {
+          settlement: {
+            fuel_pump_id: @pump.id, business_date: "2026-07-21", status: "submitted",
+            nozzle_readings_attributes: {
+              "0" => { fuel_pump_nozzle_id: @petrol.id, opening_reading: "1000", closing_reading: "1100" },
+            },
+          },
+        }
+      end
+      assert_redirected_to admin_settlements_path
     end
   end
 end

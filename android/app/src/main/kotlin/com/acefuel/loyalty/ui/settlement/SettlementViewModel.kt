@@ -46,6 +46,36 @@ data class ExpenseRow(val description: String = "", val amount: String = "", val
 data class StockRow(val fuelTypeCode: String, val litres: String = "", val existingId: Long? = null)
 data class RateRow(val fuelTypeCode: String, val ownPrice: Double, val competitor: String = "", val existingId: Long? = null)
 
+/**
+ * Staff feedback item 3, final part — the admin "record on behalf of a named
+ * FSM" mode. Non-null on [SettlementUiState] turns the very same D1–D10 form
+ * into the on-behalf flow: an FSM picker first, then the FSM's own draft plus a
+ * mandatory reason, posted to the audited admin create rather than the staff one.
+ *
+ * The sheet is the FSM's. [recordedForId] is who it BELONGS to; the admin only
+ * ever appears as the enterer ([enteredByName]).
+ */
+data class OnBehalfState(
+    val candidates: List<FsmCandidateDto> = emptyList(),
+    val recordedForId: Long? = null,
+    val recordedForName: String? = null,
+    val enteredByName: String? = null,
+    val reason: String = "",
+    val businessDate: String? = null,
+    // Non-null => that pump/date/shift is already settled. Creating would 409,
+    // and editing it belongs in the admin console where the edit is audited.
+    val existingSettlementId: Long? = null,
+    // The create landed. A second POST would collide with the unique index, and
+    // a PATCH would go to the staff endpoint — an unaudited admin write. So the
+    // form goes read-only and points at the console.
+    val saved: Boolean = false,
+) {
+    val fsmChosen: Boolean get() = recordedForId != null
+    val slotTaken: Boolean get() = existingSettlementId != null
+    /** The form may be filled in only once an FSM is named and the slot is free. */
+    val formReady: Boolean get() = fsmChosen && !slotTaken
+}
+
 data class SettlementUiState(
     val loading: Boolean = true,
     val submitting: Boolean = false,
@@ -55,6 +85,9 @@ data class SettlementUiState(
     val fuelPumpId: Long? = null,
     val pumpName: String? = null,
     val fsmName: String? = null,
+    // Set only when an admin typed this sheet for the FSM — so an FSM opening a
+    // sheet they never filled in can see who did (staff feedback item 3).
+    val enteredByName: String? = null,
     val nozzles: List<NozzleRow> = emptyList(),
     val lubes: List<LubeRow> = emptyList(),
     val discounts: List<DiscountRow> = emptyList(),
@@ -66,6 +99,9 @@ data class SettlementUiState(
     val receipts: List<ReceiptRow> = emptyList(),
     val expenses: List<ExpenseRow> = emptyList(),
     val notes: String = "",
+    // Non-null only in the admin "record on behalf of" mode; null is the FSM
+    // capturing their own sheet, which is every other caller.
+    val onBehalf: OnBehalfState? = null,
     val error: String? = null,
     val savedMessage: String? = null,
 ) {
@@ -88,19 +124,33 @@ data class SettlementUiState(
     val finalToSettle: Double get() = totalFuel + totalLube - (totalDiscount + totalCredit + totalReceipts + totalExpenses)
     val shortage: Double get() = finalToSettle - countedCash
 
-    val canSubmit: Boolean get() = !submitting && !loading && !locked && nozzles.any { it.closing.isNotBlank() }
+    /** Editable at all: never once the sheet is locked, or once it has been filed. */
+    val editable: Boolean get() = !locked && onBehalf?.saved != true
+
+    /**
+     * The reason is mandatory on BOTH on-behalf buttons, draft included — the
+     * server refuses an unexplained admin write into someone else's record, so
+     * gating here saves a round trip rather than inventing a client-side rule.
+     */
+    val canSave: Boolean get() =
+        !submitting && !loading && editable && (onBehalf == null || (onBehalf.formReady && onBehalf.reason.isNotBlank()))
+
+    val canSubmit: Boolean get() = canSave && nozzles.any { it.closing.isNotBlank() }
 }
 
 class SettlementViewModel(
     private val repository: SettlementRepository,
     private val fuelPumpId: Long?,
     private val businessDate: String?,
+    // Staff feedback item 3 — drives the admin on-behalf flow instead of the
+    // FSM's own capture. Everything below the header is identical.
+    private val onBehalf: Boolean = false,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettlementUiState())
     val state: StateFlow<SettlementUiState> = _state.asStateFlow()
 
-    init { load() }
+    init { if (onBehalf) loadOnBehalf(recordedForId = null) else load() }
 
     private fun load() {
         _state.update { it.copy(loading = true, error = null) }
@@ -128,10 +178,75 @@ class SettlementViewModel(
         }
     }
 
+    // ---- record on behalf of a named FSM (staff feedback item 3) ----------
+
+    /**
+     * One endpoint, two steps. Called with a null [recordedForId] it returns
+     * only the picker; called with one it returns the FSM's own hydrated draft —
+     * their pump, their nozzles, their yesterday-closings, their pulled
+     * discounts. There is nothing to hydrate before the pick, which is why the
+     * picker is a state of this screen rather than a separate one.
+     */
+    private fun loadOnBehalf(recordedForId: Long?, date: String? = null) {
+        val chosenDate = date ?: _state.value.onBehalf?.businessDate ?: businessDate
+        _state.update { it.copy(loading = true, error = null) }
+        viewModelScope.launch {
+            when (val res = repository.newOnBehalfDraft(recordedForId, fuelPumpId, chosenDate)) {
+                is ApiResult.Success -> hydrateOnBehalf(res.data, chosenDate)
+                is ApiResult.Error -> _state.update { it.copy(loading = false, error = res.message) }
+                is ApiResult.NetworkError -> _state.update { it.copy(loading = false, error = "Couldn't reach the server. Try again.") }
+            }
+        }
+    }
+
+    private fun hydrateOnBehalf(res: OnBehalfDraftResponse, chosenDate: String?) {
+        val header = OnBehalfState(
+            candidates = res.fsmOptions,
+            recordedForId = res.recordedFor?.id,
+            recordedForName = res.recordedFor?.name,
+            enteredByName = res.enteredBy?.name,
+            // A reason already typed survives a change of date or of FSM.
+            reason = _state.value.onBehalf?.reason.orEmpty(),
+            businessDate = res.draft?.businessDate ?: chosenDate,
+            existingSettlementId = res.draft?.existingSettlementId,
+        )
+        // No FSM named yet, or that slot is already settled — either way there
+        // is no fresh sheet to fill in, so drop any grids a previous pick left
+        // behind rather than letting them read as this FSM's figures.
+        if (res.draft == null || header.slotTaken) {
+            _state.update {
+                SettlementUiState(loading = false, onBehalf = header, businessDate = header.businessDate.orEmpty())
+            }
+            return
+        }
+        _state.update { it.copy(onBehalf = header) }
+        hydrateDraft(res.draft)
+    }
+
+    /** Pick (or re-pick) the FSM this sheet is being recorded for. */
+    fun onPickFsm(userId: Long) {
+        if (_state.value.onBehalf?.saved == true) return
+        loadOnBehalf(recordedForId = userId)
+    }
+
+    /** Re-hydrate for another business date; the FSM and reason are kept. */
+    fun onOnBehalfDate(date: String) {
+        val header = _state.value.onBehalf ?: return
+        if (header.saved) return
+        loadOnBehalf(recordedForId = header.recordedForId, date = date)
+    }
+
+    fun onChangeReason(value: String) =
+        _state.update { it.copy(onBehalf = it.onBehalf?.copy(reason = value)) }
+
     private fun hydrateDraft(draft: SettlementDraftResponse) {
         _state.update {
             SettlementUiState(
                 loading = false,
+                // Carried through every rebuild below: the header is what makes
+                // this the on-behalf flow, and rebuilding the grids must not
+                // silently turn the form back into the admin's own capture.
+                onBehalf = it.onBehalf,
                 businessDate = draft.businessDate,
                 fuelPumpId = draft.fuelPump?.id,
                 pumpName = draft.fuelPump?.displayName,
@@ -190,12 +305,14 @@ class SettlementViewModel(
         _state.update {
             SettlementUiState(
                 loading = false,
+                onBehalf = it.onBehalf,
                 settlementId = d.id,
                 locked = d.locked,
                 businessDate = d.businessDate,
                 fuelPumpId = d.fuelPumpId,
                 pumpName = d.fuelPump,
                 fsmName = d.fsmName,
+                enteredByName = d.enteredByName.takeIf { d.enteredByUserId != null },
                 receipts = mergeReceipts(d, defaultReceiptLabels),
                 expenses = d.expenseLines.map { ExpenseRow(it.description, trimNum(it.amount), it.id) } + ExpenseRow(),
                 notes = d.notes ?: "",
@@ -327,7 +444,15 @@ class SettlementViewModel(
 
     fun submit(status: String) {
         val s = _state.value
-        if (s.locked || s.submitting) return
+        if (!s.editable || s.submitting) return
+        // The on-behalf create is a different endpoint and a different set of
+        // rules (named FSM, mandatory reason, audited), so it forks here rather
+        // than trying to make one request builder serve both.
+        val header = s.onBehalf
+        if (header != null) {
+            submitOnBehalf(s, header, status)
+            return
+        }
         _state.update { it.copy(submitting = true, error = null) }
         viewModelScope.launch {
             val request = buildRequest(s, status)
@@ -351,6 +476,39 @@ class SettlementViewModel(
                             savedMessage = "Settlement ${result.data.status} — final ₹${format(result.data.finalAmountToSettle)}.",
                         )
                     }
+                }
+                is ApiResult.Error -> _state.update { it.copy(submitting = false, error = result.message) }
+                is ApiResult.NetworkError -> _state.update { it.copy(submitting = false, error = "Couldn't reach the server. Try again.") }
+            }
+        }
+    }
+
+    /**
+     * The audited admin create. Attribution is NOT in this body: the server
+     * stamps `recorded_by` from the FSM named at the top level and `entered_by`
+     * from the authenticated admin, and writes a settlement_changes row with the
+     * reason. Once it lands the form is finished — a second POST would collide
+     * with the (pump, date, shift) unique index, and correcting it belongs in
+     * the admin console where the edit is itself audited.
+     */
+    private fun submitOnBehalf(s: SettlementUiState, header: OnBehalfState, status: String) {
+        val fsmId = header.recordedForId ?: return
+        if (header.reason.isBlank()) {
+            _state.update { it.copy(error = "Say why you are recording this for them — it goes in the audit trail.") }
+            return
+        }
+        _state.update { it.copy(submitting = true, error = null) }
+        viewModelScope.launch {
+            when (val result = repository.createOnBehalf(fsmId, header.reason.trim(), buildRequest(s, status))) {
+                is ApiResult.Success -> _state.update {
+                    it.copy(
+                        submitting = false,
+                        settlementId = result.data.id,
+                        locked = result.data.locked,
+                        onBehalf = header.copy(saved = true),
+                        savedMessage = "Recorded for ${header.recordedForName ?: "the FSM"} — " +
+                            "${result.data.status}, final ₹${format(result.data.finalAmountToSettle)}.",
+                    )
                 }
                 is ApiResult.Error -> _state.update { it.copy(submitting = false, error = result.message) }
                 is ApiResult.NetworkError -> _state.update { it.copy(submitting = false, error = "Couldn't reach the server. Try again.") }

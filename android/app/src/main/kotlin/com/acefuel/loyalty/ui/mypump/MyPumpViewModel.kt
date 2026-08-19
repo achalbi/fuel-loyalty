@@ -62,7 +62,10 @@ class MyPumpViewModel(
                     assignmentMode = mode,
                 )
             } else {
-                repository.myPump(_state.value.assignmentDate.toString(), "override")
+                // S-MYPUMP — the self route always applies to today. No date is
+                // transmitted: the server pins it, so a skewed device clock can't
+                // write the override onto the wrong day.
+                repository.myPump(assignmentMode = "override")
             }
             when (result) {
                 is ApiResult.Success -> _state.update { it.applyLoaded(result.data) }
@@ -75,6 +78,9 @@ class MyPumpViewModel(
     }
 
     fun setAssignmentDate(date: LocalDate) {
+        // Only the admin route (A10) picks a date — the self route is pinned to
+        // today by the server (S-MYPUMP) and hides the picker.
+        if (staffMemberId == null) return
         if (_state.value.assignmentDate == date) return
         _state.update { it.copy(assignmentDate = date, saved = false) }
         load()
@@ -120,7 +126,9 @@ class MyPumpViewModel(
                     assignmentMode = s.assignmentMode,
                 )
             } else {
-                repository.updateMyPump(pumpId, nozzleIds, s.assignmentDate.toString(), "override")
+                // Date deliberately omitted — the server pins the self assignment
+                // to today (S-MYPUMP).
+                repository.updateMyPump(pumpId, nozzleIds, assignmentMode = "override")
             }
             when (result) {
                 is ApiResult.Success -> _state.update { it.applyLoaded(result.data).copy(saved = true) }
@@ -143,6 +151,9 @@ class MyPumpViewModel(
             ?.map { it.id }
             ?.toSet()
             ?: emptySet()
+        // Trust the server's date over the device clock: the self route is pinned
+        // server-side, so the device may disagree about what "today" is.
+        val serverDate = data.assignmentDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
         return copy(
             loading = false,
             saving = false,
@@ -151,6 +162,7 @@ class MyPumpViewModel(
             selectedPumpId = selectedPump?.id,
             selectedNozzleIds = validNozzleIds,
             assignmentMode = data.assignmentMode ?: assignmentMode,
+            assignmentDate = serverDate ?: assignmentDate,
         )
     }
 }

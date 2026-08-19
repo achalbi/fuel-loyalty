@@ -20,8 +20,14 @@
 <div class="card shadow-sm admin-transactions-filter admin-customers-filter mb-4">
   <div class="card-body">
     <% period_params = { preset: @current_preset, start_date: @current_start_date, end_date: @current_end_date }.compact_blank %>
+    <%# Item 4 — the applied thresholds, re-derived from the parsed values rather %>
+    <%# than echoed from raw params, so every chip and pager link below carries %>
+    <%# the cohort forward instead of silently clearing it. %>
+    <% metric_params = ::Admin::Crm::CustomerMetrics.threshold_params(@thresholds) %>
+    <% carry_params = period_params.merge(metric_params) %>
     <%= form_with url: admin_customers_path, method: :get, local: true, class: "admin-customers-filter__form" do |form| %>
       <%= hidden_field_tag :status, @current_status %>
+      <%= hidden_field_tag :type, @current_customer_type if @current_customer_type %>
       <% period_params.each do |key, value| %>
         <%= hidden_field_tag key, value %>
       <% end %>
@@ -38,13 +44,13 @@
         <span class="admin-transactions-filter__label">Quick Filter</span>
         <div class="dashboard-filter-chips">
           <%= link_to "All",
-            admin_customers_path({ q: @query.presence, status: "all", type: @current_customer_type }.compact_blank.merge(period_params)),
+            admin_customers_path({ q: @query.presence, status: "all", type: @current_customer_type }.compact_blank.merge(carry_params)),
             class: "dashboard-filter-chip #{'is-active' if @current_status == 'all'}" %>
           <%= link_to "Active",
-            admin_customers_path({ q: @query.presence, status: "active", type: @current_customer_type }.compact_blank.merge(period_params)),
+            admin_customers_path({ q: @query.presence, status: "active", type: @current_customer_type }.compact_blank.merge(carry_params)),
             class: "dashboard-filter-chip #{'is-active' if @current_status == 'active'}" %>
           <%= link_to "Inactive",
-            admin_customers_path({ q: @query.presence, status: "inactive", type: @current_customer_type }.compact_blank.merge(period_params)),
+            admin_customers_path({ q: @query.presence, status: "inactive", type: @current_customer_type }.compact_blank.merge(carry_params)),
             class: "dashboard-filter-chip #{'is-active' if @current_status == 'inactive'}" %>
         </div>
       </div>
@@ -55,28 +61,120 @@
           <% customer_type_filters = [[nil, "All"]] + Customer.customer_type_options.map { |label, code| [code, label] } %>
           <% customer_type_filters.each do |type, label| %>
             <%= link_to label,
-              admin_customers_path({ q: @query.presence, status: @current_status, type: type }.compact_blank.merge(period_params)),
+              admin_customers_path({ q: @query.presence, status: @current_status, type: type }.compact_blank.merge(carry_params)),
               class: "dashboard-filter-chip #{'is-active' if @current_customer_type == type}" %>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Item 4 — the threshold cohort. Collapsed by default so the common case %>
+      <%# (search + status chips) stays as uncluttered as it was, and auto-opened %>
+      <%# whenever a threshold is actually applied so it is never invisibly on. %>
+      <div class="admin-transactions-filter__group admin-customers-filter__thresholds">
+        <button class="btn btn-outline-secondary btn-sm"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#customerMetricFilters"
+          aria-expanded="<%= @thresholds.any? %>"
+          aria-controls="customerMetricFilters"
+          data-customer-metric-filters-toggle>
+          <i class="ti ti-filter" aria-hidden="true"></i>
+          Filter by activity<%= " (#{@thresholds.size})" if @thresholds.any? %>
+        </button>
+      </div>
+
+      <div class="collapse <%= "show" if @thresholds.any? %> w-100" id="customerMetricFilters" data-customer-metric-filters>
+        <div class="row g-2 mt-2">
+          <%
+            # Label copy tracks the period banner: with a period selected these are
+            # "in this period" figures, without one they are all-time. The points
+            # BALANCE is lifetime either way — that is the point of having both,
+            # and the hint below says so where a period is on, because the period
+            # still gates WHO is listed even when the figure itself is lifetime.
+            window_suffix = @period_range.present? ? " in period" : ""
+            balance_hint = "Lifetime figure. With a period selected the list is still only customers active in it — clear the period to reach dormant balances."
+            metric_fields = [
+              [:min_visits, "Visited at least#{window_suffix}", "times", "1", nil],
+              [:min_litres, "Filled at least#{window_suffix}", "litres", "0.001", nil],
+              [:min_discount, "Given at least#{window_suffix}", "₹ discount", "0.01", nil],
+              [:min_contacts, "Contacted at least#{window_suffix}", "times", "1", nil],
+              [:min_points_earned, "Earned at least#{window_suffix}", "points", "1", nil],
+              [:min_points_balance, "Points balance at least", "points (lifetime)", "1",
+               (balance_hint if @period_range.present?)],
+            ]
+          %>
+          <% metric_fields.each do |key, label, unit, step, hint| %>
+            <div class="col-6 col-lg-4">
+              <%= label_tag key, label, class: "admin-transactions-filter__label" %>
+              <%= number_field_tag key, metric_params[key],
+                min: 0,
+                step: step,
+                class: "form-control admin-customers-filter__input",
+                placeholder: unit,
+                aria: { label: "#{label} #{unit}" } %>
+              <span class="text-muted small"><%= unit %></span>
+              <% if hint.present? %>
+                <span class="d-block text-muted small" data-customers-balance-hint><%= hint %></span>
+              <% end %>
+            </div>
           <% end %>
         </div>
       </div>
 
       <div class="admin-customers-filter__actions">
         <%= form.submit "Search", class: "btn btn-primary" %>
-        <% if @query.present? || @current_status != "all" || @current_customer_type.present? || @period_range.present? %>
+        <% if @query.present? || @current_status != "all" || @current_customer_type.present? || @period_range.present? || @thresholds.any? %>
           <%= link_to "Clear", admin_customers_path, class: "btn btn-outline-secondary" %>
         <% end %>
       </div>
     <% end %>
 
+    <%# The period is a MEMBERSHIP filter, not an innocuous date range: it lists %>
+    <%# only customers who actually fuelled in the window, and that gate %>
+    <%# AND-combines with every threshold above — a dormant customer sitting on %>
+    <%# 5,000 lifetime points is not in a points-balance cohort scoped to a %>
+    <%# period. That is deliberate (it is what the E2 dashboard drill-through %>
+    <%# means by "customers this month"), so the banner says it out loud rather %>
+    <%# than letting it be discovered. Mirrored in the app's Segments screen and %>
+    <%# in docs/acefuels/20-api-contracts.md §14. %>
     <% if @period_range.present? %>
-      <div class="alert alert-info d-flex justify-content-between align-items-center mt-3 mb-0" data-customers-period-banner>
-        <span>Showing customers active between <strong><%= @period_range.begin.to_date.strftime("%d %b %Y") %></strong> and <strong><%= @period_range.end.to_date.strftime("%d %b %Y") %></strong>.</span>
-        <%= link_to "Clear period", admin_customers_path({
-          q: @query.presence,
-          status: (@current_status unless @current_status == "all"),
-          type: @current_customer_type
-        }.compact_blank), class: "alert-link" %>
+      <div class="alert alert-info mt-3 mb-0" data-customers-period-banner>
+        <div class="d-flex justify-content-between align-items-center">
+          <span>
+            <strong>Active in period.</strong>
+            Only customers who visited between
+            <strong><%= @period_range.begin.to_date.strftime("%d %b %Y") %></strong> and
+            <strong><%= @period_range.end.to_date.strftime("%d %b %Y") %></strong> are listed.
+          </span>
+          <%= link_to "Clear period", admin_customers_path({
+            q: @query.presence,
+            status: (@current_status unless @current_status == "all"),
+            type: @current_customer_type
+          }.compact_blank.merge(metric_params)), class: "alert-link" %>
+        </div>
+        <div class="small mt-1">
+          Every activity filter is measured inside this window and applies on top of it — including
+          the lifetime points balance, which lists only customers active here. Clear the period to ask an all-time question.
+        </div>
+      </div>
+    <% end %>
+
+    <% if @thresholds.any? %>
+      <div class="alert alert-secondary mt-3 mb-0" data-customers-threshold-banner>
+        <span>
+          Cohort:
+          <%= safe_join(@thresholds.map { |metric, value|
+                label = {
+                  visit_count: "#{value} or more visits",
+                  litres_total: "#{value.to_f} L or more filled",
+                  discount_total: "₹#{value.to_f} or more discount given",
+                  contact_count: "contacted #{value} or more times",
+                  points_earned: "#{value} or more points earned",
+                  points_balance: "#{value} or more points on balance"
+                }.fetch(metric)
+                content_tag(:strong, label)
+              }, " · ".html_safe) %>
+        </span>
       </div>
     <% end %>
   </div>
@@ -89,6 +187,7 @@
         <% @customers.each do |customer| %>
           <% display_name = customer.display_name.to_s.titleize %>
           <% vehicle_summary = customer.vehicles.map(&:vehicle_number).presence&.join(", ") || "No vehicles on file" %>
+          <% metrics = ::Admin::Crm::CustomerMetrics.values_for(customer) %>
           <div class="customer-details-vehicle-row admin-customer-item">
             <div class="customer-details-vehicle-row__main admin-customer-item__main">
               <div class="admin-customer-item__heading">
@@ -98,6 +197,15 @@
               <div class="admin-customer-item__details">
                 <span class="admin-customer-item__phone">+91 <%= customer.phone_number %></span>
                 <span class="admin-customer-item__vehicles"><%= vehicle_summary %></span>
+                <%# Item 4 — the five windowed figures the thresholds filter on, shown %>
+                <%# on every row so the admin can read the cohort, not just trust it. %>
+                <span class="admin-customer-item__metrics text-muted small">
+                  <%= metrics[:visit_count] %> visits ·
+                  <%= number_with_precision(metrics[:litres_total], precision: 2, delimiter: ",") %> L ·
+                  ₹<%= number_with_precision(metrics[:discount_total], precision: 2, delimiter: ",") %> discount ·
+                  <%= metrics[:contact_count] %> contacts ·
+                  <%= number_with_delimiter(metrics[:points_earned]) %> pts earned
+                </span>
               </div>
             </div>
             <div class="admin-customer-item__side">
@@ -112,9 +220,37 @@
           </div>
         <% end %>
       </div>
+
+      <%# Item 4 — SQL-level paging (OFFSET/LIMIT). The list used to render every %>
+      <%# customer in one response; with six metric subqueries per row that is not %>
+      <%# something to leave unbounded. Mirrors the transactions pager. %>
+      <div class="customer-details-ledger-pagination admin-customers-pagination">
+        <div class="customer-details-ledger-pagination__summary">
+          Showing <strong><%= @showing_from %>-<%= @showing_to %></strong> of <strong><%= @total_customers %></strong> customers
+        </div>
+
+        <% if @total_pages > 1 %>
+          <% page_params = { q: @query.presence, status: (@current_status unless @current_status == "all"), type: @current_customer_type }.compact_blank.merge(carry_params) %>
+          <div class="customer-details-ledger-pagination__actions">
+            <% if @current_page > 1 %>
+              <%= link_to "Previous", admin_customers_path(page_params.merge(page: @current_page - 1)), class: "btn btn-outline-secondary btn-sm" %>
+            <% else %>
+              <span class="btn btn-outline-secondary btn-sm disabled">Previous</span>
+            <% end %>
+
+            <span class="customer-details-ledger-pagination__status">Page <strong><%= @current_page %></strong> of <%= @total_pages %></span>
+
+            <% if @current_page < @total_pages %>
+              <%= link_to "Next", admin_customers_path(page_params.merge(page: @current_page + 1)), class: "btn btn-outline-secondary btn-sm" %>
+            <% else %>
+              <span class="btn btn-outline-secondary btn-sm disabled">Next</span>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
     <% else %>
       <p class="admin-customers-empty mb-0">
-        <%= (@query.present? || @current_status != "all" || @current_customer_type.present? || @period_range.present?) ? "No customers matched the current filters." : "No customers available yet." %>
+        <%= (@query.present? || @current_status != "all" || @current_customer_type.present? || @period_range.present? || @thresholds.any?) ? "No customers matched the current filters." : "No customers available yet." %>
       </p>
     <% end %>
   </div>

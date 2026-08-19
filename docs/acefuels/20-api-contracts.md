@@ -55,6 +55,7 @@ Endpoint sections below list **only endpoint-specific** error cases; the standar
 | 11 | Operator KYC + user listing | A7 | Changed (`admin/users`, multipart; index ordering) |
 | 12 | Reports | E1 | New |
 | 13 | Customer feedback / rating | E7 | New |
+| 14 | Admin customer cohort (activity thresholds) | Staff feedback item 4 | New (`admin/customers`) |
 
 ---
 
@@ -301,6 +302,71 @@ Auth: admin. Query: `fuel_pump_id`, `start_date`, `end_date`, `status`, `page`. 
 ### 3.6 `GET /api/v1/admin/settlements/:id` / `PATCH /api/v1/admin/settlements/:id` — **New**
 Auth: admin. Same shapes as 3.3/3.4 but unrestricted by pump; admin may edit past dates (G1 "edit current/past days").
 
+### 3.7 Record on behalf of a named FSM (staff feedback item 3) — ✅ **Shipped**
+
+When an FSM cannot file their own sheet (absent, sick, phone dead) an admin records it *for* them. **Attribution does not move**: `recorded_by_id`/`fsm_name` stay the named FSM's and the admin lands in the new `entered_by_id`. Every create is audited with a mandatory reason. `DailySettlementPolicy#new?`/`#create?` remain staff-only — this is an admin-only addition (`#create_on_behalf?`), not a loosening of them.
+
+**Serialization change (all settlement payloads, staff and admin, summary and full):** alongside the existing `recorded_by_id` / `fsm_name`, every settlement object now carries
+
+| field | type | notes |
+|---|---|---|
+| `entered_by_id` | int, null | The admin who typed the sheet. **Null** on an ordinary FSM-recorded sheet |
+| `entered_by_name` | string, null | Their display name |
+| `entered_on_behalf` | bool | `true` only when the enterer and the FSM are **different** people. An admin who enters a sheet under their own name reads `false` here but still carries the two fields above — entry-and-approval by one person must stay visible |
+
+Render it as "recorded for ‹fsm_name›, entered by ‹entered_by_name›" wherever `fsm_name` appears; never show an entered sheet as one the FSM filled in.
+
+#### `GET /api/v1/admin/settlements/new`
+Auth: admin (`403` for staff). Query: `recorded_by_id` (optional), `fuel_pump_id`, `business_date` (default: yesterday), `shift_template_id`.
+
+```json
+{
+  "fsm_options": [
+    { "id": 4, "name": "R. Kumar", "role": "staff", "default_fuel_pump_id": 1, "default_fuel_pump": "Pump 1" },
+    { "id": 2, "name": "Admin Boss", "role": "admin", "default_fuel_pump_id": null, "default_fuel_pump": null }
+  ],
+  "entered_by": { "id": 2, "name": "Admin Boss" },
+  "recorded_for": { "id": 4, "name": "R. Kumar" },
+  "draft": { "…": "exactly the 3.1 staff draft payload, built against the FSM's pump" }
+}
+```
+- `fsm_options` is the **picker** list: active, non-deleted operators of **both roles** (`User.settlement_recorder_candidates`). Distinct from the `fsm_options` on 3.5, which is the **filter** list derived from settlements already on the books.
+- `default_fuel_pump_*` is the operator's *standing* assignment — a label for the picker row. The pump a sheet is actually built against is `draft.fuel_pump`, which honours a dated override; the two can differ.
+- `recorded_for` and `draft` are **null** until `recorded_by_id` is supplied: the nozzles, the yesterday-closing readings and the pulled discounts all hang off the FSM's pump, so there is nothing to hydrate before the pick.
+- `draft.existing_settlement_id` is non-null when that pump/date/shift is already settled — offer "open the existing sheet" rather than letting the create 409.
+- Errors: `422 recorded_by_invalid` when `recorded_by_id` is supplied but is not on the picker list (deactivated, soft-deleted, unknown).
+
+#### `POST /api/v1/admin/settlements`
+Auth: admin (`403` for staff). `recorded_by_id` and `change_reason` are **required and top level** — outside the `settlement` object, because attribution is applied server-side from the resolved user and the authenticated admin. (`settlement.recorded_by_id` is tolerated as a fallback for clients that keep one object; `settlement.entered_by_id` is never honoured.)
+
+```json
+{
+  "recorded_by_id": 4,
+  "change_reason": "R. Kumar was on sick leave; readings dictated at the counter",
+  "settlement": {
+    "fuel_pump_id": 1, "business_date": "2026-07-22", "shift_template_id": null,
+    "status": "submitted", "notes": "",
+    "nozzle_readings_attributes": [ { "fuel_pump_nozzle_id": 5, "opening_reading": "1100.000", "closing_reading": "1200.000", "testing_litres": "0" } ],
+    "lube_lines_attributes": [], "discount_lines_attributes": [], "credit_lines_attributes": [],
+    "cash_denominations_attributes": [], "digital_receipts_attributes": [], "expense_lines_attributes": [],
+    "stock_receipts_attributes": [], "decantations_attributes": [], "rate_comparisons_attributes": []
+  }
+}
+```
+- Body is the same nested-attributes shape as the staff create (3.2). Unlike the admin `PATCH`, it **must** carry `fuel_pump_id`/`business_date` (and `shift_template_id` when the outlet runs shifts) — it is defining the slot.
+- `status` is optional and defaults to **`submitted`**: the premise is that the FSM cannot act, so the sheet is not parked awaiting their submission. Pass `"draft"` explicitly to park it; `"reconciled"` is accepted and locks it.
+- Response `201` — the full settlement (as 3.6, including `entered_by_*`) plus its `changes` array, whose first entry is the create's audit row. `field_diffs` on that row records the attribution (`recorded_by_id`, `fsm_name_snapshot`, `entered_by_id`), the slot and the money entered.
+
+| status | code | when |
+|---|---|---|
+| 422 | `change_reason_required` | blank/missing `change_reason` |
+| 422 | `recorded_by_required` | no `recorded_by_id` given |
+| 422 | `recorded_by_invalid` | the id is not on the picker list |
+| 409 | `settlement_exists` | that (pump, date, shift) is already settled — `details.existing_settlement_id` names it |
+| 422 | `validation_failed` | model validation (incl. a duplicate slot that raced the pre-check) |
+| 409 | `already_exists` | the unique index caught a concurrent insert |
+| 403 | `forbidden` | staff caller |
+
 ---
 
 ## 4. Customer capture — per-visit entry (B2) — ✅ **Shipped (2026-07-22)**
@@ -356,6 +422,8 @@ Extends the customer record from "name + single phone (+ commercial contact)" to
 
 ### 5.1 `GET /api/v1/staff/customers?type=` — **Changed (E4)**
 Auth: staff/admin. New optional query `type` (`drive_in`|`otp`|`credit`) filters the list server-side; combines with `q` and the E2 period params. `CustomerSummarySerializer` now includes `customer_type` and `transport_name`.
+
+**Period semantics (fixed 2026-08-19).** `preset`/`start_date`/`end_date` select customers **active in the period** using the transactions ∪ `visit_entries` union (`Customer.visited_between`) — the same rule §14 and the web admin customer list use. It previously inlined a transactions-only filter, so this endpoint (which backs the Android admin's E2 drill-through) hid every fleet/OTP/credit customer whose fuelling exists only as a captured visit entry, and the same admin on the same period saw a different customer set on web than in the app.
 
 ### 5.2 `POST /api/v1/staff/customers` & `PATCH /api/v1/staff/customers/:id`
 Auth: staff/admin. Body (`customer`) — existing fields plus optional `customer_type`, `transport_name`, `approx_vehicle_count`, `info_note`, and nested `customer_contacts_attributes` (`id`, `role`, `name`, `phone_number`, `contacted`, `notes`, `active`, `_destroy`). A contact row persists only if it carries a name or phone. Existing initial-vehicle fields (`vehicle_number`, `fuel_type`, `vehicle_kind`, `commercial_*`) unchanged. *(The nested-contacts editor is live on the **web** customer form; the native contacts write UI folds into B2.)*
@@ -647,6 +715,63 @@ Auth: admin. Paginated `feedbacks` (rows as 13.1) plus `average_rating` (number)
 
 ---
 
+## 14. Admin customer cohort — activity thresholds (staff feedback item 4) — ✅ **Shipped (2026-08-19)**
+
+"Customers who have visited us x times, filled x litres, whom I have contacted x times, whom we have given x discount, who has accumulated x reward points." One endpoint, one server-side definition of each figure (`Admin::Crm::CustomerMetrics`), shared verbatim with the web admin list so the two surfaces cannot disagree about what "5 visits" means.
+
+### 14.1 `GET /api/v1/admin/customers` — ✅ **Shipped**
+
+Auth: **admin only** (a staff token gets `403`). Note the staff customer list is a different endpoint (`GET /api/v1/staff/customers`) and is unaffected.
+
+Query params — all optional, all AND-combined:
+
+| Param | Meaning |
+|---|---|
+| `q` | free text over name / phone / vehicle number |
+| `status` | `active` \| `inactive` (anything else = both) |
+| `type` | `drive_in` \| `credit` \| `otp` |
+| `preset` \| `start_date` \| `end_date` | the dashboard period — **"active in period"**, see the note below the table |
+| `min_visits` | ≥ N recorded **fuellings** (a linked visit entry + transaction pair is one) |
+| `min_litres` | ≥ N litres filled (decimal) |
+| `min_discount` | ≥ ₹N discount given (decimal) |
+| `min_contacts` | ≥ N outreach logs |
+| `min_points_earned` | ≥ N points **earned in the period** |
+| `min_points_balance` | ≥ N points on the **lifetime net balance** |
+| `page`, `per_page` | paging (default 25, max 100) |
+
+Thresholds are **inclusive** (`>=`): a customer with exactly 5 visits is in the `min_visits=5` cohort. A blank, negative or unparseable threshold is treated as *not supplied* rather than as an error, and is omitted from the echoed `thresholds`. An **unsupplied** threshold adds no filter, so customers with zero of that metric remain in the list.
+
+**A period means "active in period", and it gates every threshold.** Supplying `preset`/`start_date`/`end_date` does two separate things, and the second one surprises people:
+
+1. it **windows the figures** — `visit_count`, `litres_total`, `discount_total`, `contact_count` and `points_earned` are all computed inside the window (`points_balance` is not; it is lifetime by design); and
+2. it **restricts membership** to customers who actually visited in the window (transactions ∪ `visit_entries`), AND-combined with every threshold.
+
+So `min_contacts=3&preset=this_month` means "contacted 3 times **and** fuelled this month", not "contacted 3 times this month". And `min_points_balance=5000&preset=this_month` will **not** return a dormant customer sitting on 5,000 lifetime points, even though `points_balance` itself is never windowed — they did not fuel this month. This is deliberate: "customers active in this period" is what the admin date picker has always meant, and the E2 dashboard drill-through ("N customers this month" → this list) depends on it. **Drop the period to ask a lifetime question.** Both surfaces label the control "active in period" (web: the blue banner above the list; app: the caption above the period chips) so it does not have to be discovered here.
+
+Response `200`:
+```json
+{ "customers": [
+    { "id": 7, "name": "ABC Logistics", "phone_number": "9800000000",
+      "customer_type": "credit", "customer_type_label": "Credit", "active": true,
+      "vehicle_numbers": ["TN01AA1111", "TN01AA1112"],
+      "metrics": { "visit_count": 12, "litres_total": 1840.5, "discount_total": 2300.0,
+                   "contact_count": 3, "points_earned": 920, "points_balance": 415 } } ],
+  "thresholds": { "visit_count": 5, "litres_total": 500.0 },
+  "period": { "start_date": "2026-08-01", "end_date": "2026-08-31" },
+  "page": 1, "per_page": 25, "total": 1, "has_more": false }
+```
+`period` is always present; both members are `null` when no period was requested.
+
+**Metric semantics (the parts that bite):**
+- `visit_count`, `litres_total` and `discount_total` share **one** de-duplication rule, so the three figures on a row can never disagree about how many fuellings happened: every captured `visit_entry` counts, and a loyalty transaction counts only when **no** visit entry links to it (`VisitEntryRecorder` copies litres and discount onto the transaction it creates). A linked pair is therefore **one** visit, 20 L and ₹100 — not two visits and 40 L. See [Customer CRM capture](13-spec-customer-crm-capture.md#counting-a-discount-once-the-two-table-trap).
+- `visit_count` counts **fuellings, de-duplicated on the link** — not distinct calendar days, which is what it counted before 2026-08-19. The day rule only collapsed a linked pair when both rows happened to land on the same date, so a visit entry captured for 30 Jun whose transaction was written on 1 Jul (back-dated capture — the fleet/credit workflow) reported *two* visits for one fuelling while litres and discount reported it once. Consequence worth knowing: **two fuellings on one day are two visits here**, whereas `Admin::Crm::Cadence` (E3) uniqs dates because it measures the gap *between* visits — different question, different figure.
+- `points_earned` is `entry_type: earn` **inside the window**; `points_balance` is the lifetime **net** figure and is never windowed. They are deliberately two cohorts — earning 5,000 and redeeming the lot leaves a big `points_earned` and a zero balance.
+- The period selects customers via the transactions ∪ `visit_entries` union (`Customer.visited_between`), so **visit-entry-only fleet/OTP/credit customers are included** (they were previously dropped by a transactions-only filter). `GET /api/v1/staff/customers` (§5.1) now uses the identical scope, so web and app agree on who is "active in this period".
+
+Errors: `401 unauthorized` (no/expired token), `403 forbidden` (staff token).
+
+---
+
 ## Appendix A — New vs changed, by route
 
 **New routes**
@@ -657,6 +782,8 @@ GET              /api/v1/staff/settlements/new
 POST             /api/v1/staff/settlements
 GET/PATCH        /api/v1/staff/settlements/:id
 GET              /api/v1/admin/settlements
+GET              /api/v1/admin/settlements/new          # record-on-behalf hydration (§3.7)
+POST             /api/v1/admin/settlements              # record on behalf of a named FSM (§3.7)
 GET/PATCH        /api/v1/admin/settlements/:id
 GET/POST         /api/v1/staff/customer_entries
 PATCH/DELETE     /api/v1/staff/customer_entries/:id
@@ -672,6 +799,7 @@ GET              /api/v1/admin/reports
 GET              /api/v1/admin/reports/export
 POST             /api/v1/staff/customers/:id/feedback
 GET              /api/v1/admin/customers/:id/feedback
+GET              /api/v1/admin/customers                 (activity-threshold cohort)
 ```
 
 **Changed routes (request/response extended, path unchanged)**

@@ -78,7 +78,7 @@ module Admin
     private
 
     def load_index_state(new_user: User.new(role: :staff), edit_user: nil)
-      @users = User.kept.order(:role, :name, :username, :phone_number)
+      @users = User.admin_listing
       @user = new_user
       @edit_user = edit_user
     end

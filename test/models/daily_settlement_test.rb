@@ -159,4 +159,49 @@ class DailySettlementTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1250"), DailySettlement.prior_closing_reading(@petrol.id, Date.new(2026, 7, 22))
     assert_nil DailySettlement.prior_closing_reading(@petrol.id, Date.new(2026, 7, 21)) # same day, not < date
   end
+
+  # --- who typed it (staff feedback item 3) ---------------------------------
+
+  test "a sheet the FSM recorded themselves has no enterer" do
+    settlement = DailySettlement.create!(base_attrs)
+
+    assert_nil settlement.entered_by_id
+    assert_not settlement.admin_entered?
+    assert_not settlement.entered_on_behalf?
+    assert_not settlement.self_entered_by_admin?
+    assert_equal @staff.display_name, settlement.attribution_label
+  end
+
+  test "an admin-entered sheet stays attributed to the FSM and names the enterer" do
+    admin = users(:one)
+    settlement = DailySettlement.create!(base_attrs(entered_by: admin))
+
+    # The sheet is still the FSM's — only who typed it differs.
+    assert_equal @staff, settlement.recorded_by
+    assert_equal @staff.display_name, settlement.fsm_name_snapshot
+    assert_equal admin, settlement.entered_by
+    assert settlement.admin_entered?
+    assert settlement.entered_on_behalf?
+    assert_not settlement.self_entered_by_admin?
+    assert_equal "#{@staff.display_name} (entered by #{admin.display_name})", settlement.attribution_label
+  end
+
+  test "an admin who enters a sheet under their own name is flagged as self-entered" do
+    # Reconcile stays admin-only and is still allowed on a self-entered sheet
+    # (a single-admin site would otherwise deadlock), so this case must be
+    # visible rather than read as an ordinary FSM-recorded sheet.
+    admin = users(:one)
+    settlement = DailySettlement.create!(base_attrs(recorded_by: admin, entered_by: admin))
+
+    assert settlement.admin_entered?
+    assert settlement.self_entered_by_admin?
+    assert_not settlement.entered_on_behalf?, "same person on both sides is not 'on behalf of'"
+  end
+
+  test "entered_by is optional and may be cleared" do
+    settlement = DailySettlement.create!(base_attrs(entered_by: users(:one)))
+
+    settlement.update!(entered_by: nil)
+    assert_nil settlement.reload.entered_by_id
+  end
 end

@@ -2,7 +2,13 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h3 mb-0">Daily Settlements</h1>
-  <%= link_to "New settlement", new_staff_settlement_path, class: "btn btn-primary" %>
+  <%# Staff feedback item 3: recording a sheet is the FSM's job — an admin reads
+      and corrects through the admin console (DailySettlementPolicy#new?). %>
+  <% if current_user.admin? %>
+    <%= link_to "Admin settlement console", admin_settlements_path, class: "btn btn-outline-primary" %>
+  <% else %>
+    <%= link_to "New settlement", new_staff_settlement_path, class: "btn btn-primary" %>
+  <% end %>
 </div>
 
 <%= form_with url: staff_settlements_path, method: :get, class: "row g-2 align-items-end mb-3" do |f| %>
@@ -28,7 +34,14 @@
           <tr>
             <td><%= settlement.business_date %></td>
             <td><%= settlement.fuel_pump&.display_name %></td>
-            <td><%= settlement.fsm_name_snapshot.presence || settlement.recorded_by&.display_name %></td>
+            <td>
+              <%= settlement.fsm_name_snapshot.presence || settlement.recorded_by&.display_name %>
+              <% if settlement.admin_entered? %>
+                <div class="text-muted small" data-entered-by>
+                  entered by <%= settlement.entered_by&.display_name %><%= " on their behalf" if settlement.entered_on_behalf? %>
+                </div>
+              <% end %>
+            </td>
             <td><span class="badge text-bg-<%= settlement.reconciled? ? "success" : (settlement.submitted? ? "primary" : "secondary") %>"><%= settlement.status.humanize %></span></td>
             <td class="text-end"><%= number_to_currency(settlement.total_fuel_amount, unit: "₹") %></td>
             <td class="text-end"><%= number_to_currency(settlement.final_amount_to_settle, unit: "₹") %></td>
@@ -45,5 +58,9 @@
     </table>
   </div>
 <% else %>
-  <p class="text-muted">No settlements yet. <%= link_to "Record one", new_staff_settlement_path %>.</p>
+  <% if current_user.admin? %>
+    <p class="text-muted">No settlements yet. An FSM records the first one.</p>
+  <% else %>
+    <p class="text-muted">No settlements yet. <%= link_to "Record one", new_staff_settlement_path %>.</p>
+  <% end %>
 <% end %>

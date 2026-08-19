@@ -25,6 +25,32 @@ module Api
           assert_not_includes names, "Stale Sam"
         end
 
+        test "index period keeps a visit-entry-only customer (same cohort as the web list)" do
+          # CROSS-SURFACE DIVERGENCE THIS PINS. This endpoint backs the Android
+          # admin's E2 drill-through, while the web console drills into
+          # Admin::Crm::CustomerMetrics#cohort. The period here used to be an
+          # inlined transactions-only filter, so a fleet/OTP/credit customer whose
+          # fuelling is captured as a visit_entry and never becomes a loyalty
+          # transaction was in the web list and missing from the app's — the same
+          # admin, the same period, two different customer sets. Both now go
+          # through Customer.visited_between (transactions ∪ visit_entries).
+          fleet = Customer.create!(name: "Visitonly Vimal", phone_number: "9812300041", customer_type: :otp)
+          VisitEntry.create!(customer: fleet, user: users(:two), fuel_pump: fuel_pumps(:one),
+                             entry_date: Time.zone.today, vehicle_number: "TN01ZZ0041", litres: 300)
+
+          # A customer with no activity at all must still be excluded — the period
+          # is a real filter, not a no-op.
+          idle = Customer.create!(name: "Idle Ilango", phone_number: "9812300042")
+
+          get api_v1_staff_customers_path(preset: "today"), headers: auth_headers(users(:two))
+
+          assert_response :ok
+          names = response.parsed_body["customers"].map { |c| c["name"] }
+          assert_includes names, "Visitonly Vimal", "a visit entry is a visit, with or without a loyalty transaction"
+          assert_not_includes names, "Idle Ilango"
+          assert idle.persisted?
+        end
+
         test "index without a period returns the full alphabetical directory" do
           Customer.create!(name: "Alpha Customer", phone_number: "9812300031")
           Customer.create!(name: "Zebra Customer", phone_number: "9812300032")

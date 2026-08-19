@@ -219,7 +219,7 @@ is called out rather than glossed as "done".</p>
 <tr>
 <td>S-MYPUMP</td>
 <td>Hide "My Pump" from staff login</td>
-<td>✅ <strong>Shipped (Phase 0)</strong> — self-service pump assignment is admin-only; nav link, staff transaction control (web) and Android account tile are hidden from staff</td>
+<td>✅ <strong>Shipped (Phase 0), regressed by <code>2142f53</code>, restored 2026-08</strong> — self-service pump assignment is admin-only again; nav link (now inside the Admin nav section), staff transaction control (web) and Android account tile are hidden from staff. The assignment is pinned to <strong>today</strong> on all surfaces — no date picker anywhere. Staff keep read access to <code>GET /api/v1/my_pump</code> (<code>UserPolicy#read_pump?</code>) because the native transaction screen reads it for nozzle options; only writing is admin-only</td>
 </tr>
 <tr>
 <td>A1</td>
@@ -349,7 +349,9 @@ is called out rather than glossed as "done".</p>
 <p>Note: <strong>S-MYPUMP and A10 both shipped in Phase 0</strong> — self-service pump assignment
 is now admin-only and hidden from staff, and admins assign an operator's pump via
 an "Assign Pump" flow on all three surfaces (web + API + Android), so the staff
-transaction flow still resolves an assigned pump.</p>
+transaction flow still resolves an assigned pump. (S-MYPUMP was briefly reverted by
+<code>2142f53</code> and restored in Aug 2026; the admin date picker introduced by that commit
+is gone — the self assignment is always today.)</p>
 </blockquote>
 <hr />
 <h2 id="4-dependency-map-why-order-matters">4. Dependency map (why order matters)</h2>

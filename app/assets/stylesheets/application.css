@@ -3321,7 +3321,8 @@ html[data-theme="dark"] .customer-details-inline-form {
   letter-spacing: -0.01em;
 }
 
-.admin-user-item__role {
+.admin-user-item__role,
+.admin-user-item__status {
   display: inline-flex;
   align-items: center;
   padding: 0.18rem 0.55rem;
@@ -3341,6 +3342,18 @@ html[data-theme="dark"] .customer-details-inline-form {
 .admin-user-item__role.is-staff {
   background: rgba(148, 163, 184, 0.14);
   border-color: rgba(148, 163, 184, 0.22);
+  color: var(--fl-gray-600);
+}
+
+.admin-user-item__status.is-active {
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.28);
+  color: #15803d;
+}
+
+.admin-user-item__status.is-inactive {
+  background: rgba(148, 163, 184, 0.16);
+  border-color: rgba(148, 163, 184, 0.24);
   color: var(--fl-gray-600);
 }
 
@@ -5833,6 +5846,18 @@ html[data-theme="dark"] .admin-user-item__role.is-admin {
 }
 
 html[data-theme="dark"] .admin-user-item__role.is-staff {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #d6d3d1;
+}
+
+html[data-theme="dark"] .admin-user-item__status.is-active {
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.32);
+  color: #b7f7c7;
+}
+
+html[data-theme="dark"] .admin-user-item__status.is-inactive {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.12);
   color: #d6d3d1;

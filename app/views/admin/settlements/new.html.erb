@@ -1,0 +1,93 @@
+<% content_for :title, "Record on behalf of an FSM" %>
+<% content_for :head do %>
+  <%= javascript_include_tag "settlement_form", "data-turbo-track": "reload", defer: true %>
+<% end %>
+
+<%# Staff feedback item 3, final part — an admin records a settlement for an FSM
+    who could not do it themselves. The sheet is the FSM's: `recorded_by` and the
+    name snapshot are theirs and the money rolls up under them, while the admin
+    is stored only as `entered_by`. Say all of that on the page, because a form
+    that looks like the FSM's own capture form must not be mistaken for one. %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Record a settlement on behalf of an FSM</h1>
+  <%= link_to "Back to settlements", admin_settlements_path, class: "btn btn-outline-secondary btn-sm" %>
+</div>
+
+<div class="alert alert-warning">
+  <strong>This sheet will belong to the FSM you name below — not to you.</strong>
+  Use it only when they could not settle themselves: absent, on leave, or a dead
+  device. It is recorded against them and their day's money counts as theirs;
+  you are stored against it as the person who typed it, and the reason you give
+  is mandatory and permanent in the audit trail.
+</div>
+
+<%# A refusal that happened before an FSM was resolved has no form to carry it —
+    the shared partial renders the settlement's errors, and it isn't on the page. %>
+<% if @recorded_for.nil? && @settlement.errors.any? %>
+  <div class="alert alert-danger"><%= @settlement.errors.full_messages.to_sentence %></div>
+<% end %>
+
+<%# Step 1 — name the FSM. Their pump, their nozzles, their yesterday-closing
+    readings and their pump's same-day discounts are what the sheet is built
+    from, so nothing can be hydrated until this is answered. A pump may be
+    overridden for the FSM who stood a different pump that day. %>
+<%= form_with url: new_admin_settlement_path, method: :get, class: "row g-2 align-items-end mb-4" do |f| %>
+  <div class="col-sm-4">
+    <%= f.label :recorded_by_id, "Recording for", class: "form-label" %>
+    <%= f.select :recorded_by_id,
+          options_for_select(
+            @fsm_options.map { |user|
+              label = user.assigned_fuel_pump ? "#{user.display_name} · #{user.assigned_fuel_pump.display_name}" : user.display_name
+              [label, user.id]
+            },
+            @recorded_for&.id
+          ),
+          { include_blank: "Choose the FSM…" }, class: "form-select", required: true %>
+  </div>
+  <div class="col-sm-3">
+    <%= f.label :fuel_pump_id, "Pump", class: "form-label" %>
+    <%= f.select :fuel_pump_id,
+          options_for_select(@fuel_pumps.map { |pump| [pump.display_name, pump.id] }, @fuel_pump&.id || params[:fuel_pump_id]),
+          { include_blank: "Their own pump" }, class: "form-select" %>
+  </div>
+  <div class="col-sm-3">
+    <%= f.label :business_date, "Date", class: "form-label" %>
+    <%= f.date_field :business_date, value: @settlement.business_date || @business_date, class: "form-control" %>
+  </div>
+  <div class="col-sm-2 d-grid">
+    <%= f.submit "Load their sheet", class: "btn btn-outline-primary" %>
+  </div>
+<% end %>
+
+<% if @recorded_for %>
+  <%# Step 2 — the very same D1–D10 form the FSM would have filled in, with a
+      mandatory reason and the FSM carried in a top-level recorded_by_id. %>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <p class="text-muted small mb-3" data-on-behalf-banner>
+        Recording for <strong><%= @recorded_for.display_name %></strong>
+        on <strong><%= @settlement.business_date %></strong>
+        at <strong><%= @fuel_pump&.display_name || "no pump assigned" %></strong>
+        · entered by <%= current_user.display_name %>
+      </p>
+      <% if @fuel_pump.nil? %>
+        <div class="alert alert-danger">
+          <%= @recorded_for.display_name %> has no pump assignment, so there are no
+          nozzles to read. Pick the pump they stood above and load the sheet again.
+        </div>
+      <% end %>
+      <%= render "staff/settlements/form",
+            on_behalf: true,
+            recorded_for: @recorded_for,
+            form_url: admin_settlements_path,
+            form_method: :post,
+            cancel_path: admin_settlements_path %>
+    </div>
+  </div>
+<% else %>
+  <p class="text-muted">
+    Choose the FSM this settlement is for, then load their sheet. Every reading
+    and price is pre-filled from <em>their</em> pump, not yours.
+  </p>
+<% end %>

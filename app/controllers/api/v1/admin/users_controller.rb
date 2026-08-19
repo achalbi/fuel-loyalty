@@ -15,10 +15,11 @@ module Api
           address aadhaar_number
         ].freeze
 
-        # GET /api/v1/admin/users
+        # GET /api/v1/admin/users — active accounts first (User.admin_listing,
+        # shared with the web index so the ordering cannot drift).
         def index
           authorize User, :index?
-          users = User.kept.order(:role, :name, :username, :phone_number)
+          users = User.admin_listing
           render json: { users: users.map { |u| Api::V1::Admin::UserSerializer.call(u) } }, status: :ok
         end
 

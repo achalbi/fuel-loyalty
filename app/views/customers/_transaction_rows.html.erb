@@ -2,6 +2,9 @@
   <% pump_nozzle_summary = transaction_pump_nozzle_summary(transaction) %>
   <% reward_entry = transaction.points_ledger %>
   <% reward_points_label = reward_entry.present? ? (reward_entry.points.positive? ? "+#{reward_entry.points}" : reward_entry.points.to_s) : nil %>
+  <%# Item 5 — the per-transaction half of "show the discount given". A ₹0 discount
+      is the norm, so only a real one earns a line. %>
+  <% discount_given = transaction.discount_amount.to_d.positive? %>
   <div class="customer-details-vehicle-row customer-details-history-row">
     <div class="customer-details-vehicle-row__main customer-details-history-row__main">
       <div class="customer-details-vehicle-row__number customer-details-history-row__vehicle">
@@ -16,14 +19,21 @@
           <span><%= pump_nozzle_summary %></span>
         </div>
       <% end %>
-      <% if reward_entry.present? %>
+      <% if reward_entry.present? || discount_given %>
         <div class="customer-details-history-row__rewards">
-          <span class="customer-details-history-row__reward-points">
-            Reward Points: <strong><%= reward_points_label %></strong>
-          </span>
-          <% if reward_entry.recorded_cash_reward? %>
+          <% if reward_entry.present? %>
+            <span class="customer-details-history-row__reward-points">
+              Reward Points: <strong><%= reward_points_label %></strong>
+            </span>
+            <% if reward_entry.recorded_cash_reward? %>
+              <span class="customer-details-history-row__reward-cash">
+                Cash Reward: <strong><%= number_to_currency(reward_entry.recorded_cash_reward_amount, unit: "₹") %></strong>
+              </span>
+            <% end %>
+          <% end %>
+          <% if discount_given %>
             <span class="customer-details-history-row__reward-cash">
-              Cash Reward: <strong><%= number_to_currency(reward_entry.recorded_cash_reward_amount, unit: "₹") %></strong>
+              Discount: <strong><%= number_to_currency(transaction.discount_amount, unit: "₹") %></strong>
             </span>
           <% end %>
         </div>

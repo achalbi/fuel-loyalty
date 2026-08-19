@@ -22,6 +22,35 @@ module Admin
       assert_select "#editUserModal-#{users(:one).id}"
     end
 
+    test "users index lists active users first and shows a status chip" do
+      sign_in users(:one)
+      # An inactive admin that sorts *ahead* of every fixture user on the old
+      # role -> name order ("Aaa Inactive" < "Admin"), so landing last can only
+      # come from the active DESC sort in User.admin_listing.
+      inactive = User.create!(
+        name: "Aaa Inactive",
+        username: "aaa.inactive",
+        phone_number: "9000000099",
+        role: :admin,
+        active: false,
+        password: "password123",
+        password_confirmation: "password123"
+      )
+
+      get admin_users_path
+
+      assert_response :success
+      names = css_select(".admin-user-item__name").map { |node| node.text.strip }
+      assert_equal inactive.name, names.last, "inactive users must sort below every active user"
+      assert_operator names.index(users(:one).name), :<, names.index(inactive.name)
+      assert_operator names.index(users(:two).name), :<, names.index(inactive.name)
+
+      # Assert the chip, not the bare words: every row also renders a hidden edit
+      # modal whose Access Status <select> already emits "Active"/"Inactive".
+      assert_select ".admin-user-item .admin-user-item__status.is-inactive", count: 1, text: "Inactive"
+      assert_select ".admin-user-item .admin-user-item__status.is-active", count: 2, text: "Active"
+    end
+
     test "admin can view the new user page with a name field" do
       sign_in users(:one)
 

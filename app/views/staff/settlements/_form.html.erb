@@ -1,12 +1,25 @@
-<%# D1–D10 shift-end settlement form, shared by the staff capture flow and the
-    admin edit console. Live totals are JS feedback only; the server recomputes
-    every derived ₹ on submit (settlement_form.js). Locals: form_url, form_method,
-    cancel_path, admin_mode (adds a required change-reason + single Save). %>
+<%# D1–D10 shift-end settlement form, shared by three flows: the FSM's own
+    capture, the admin edit console, and the admin "record on behalf of a named
+    FSM" console. Live totals are JS feedback only; the server recomputes every
+    derived ₹ on submit (settlement_form.js). Locals: form_url, form_method,
+    cancel_path, admin_mode (correcting an existing sheet — required change
+    reason + a single Save), on_behalf + recorded_for (capturing a fresh sheet
+    for someone else — required reason, the FSM carried in a top-level
+    recorded_by_id, and draft/submit buttons that name them). %>
 <% admin_mode = local_assigns.fetch(:admin_mode, false) %>
+<% on_behalf = local_assigns.fetch(:on_behalf, false) %>
+<% recorded_for = local_assigns.fetch(:recorded_for, nil) %>
+<%# Both admin paths write into someone else's record, so both demand a reason. %>
+<% reason_required = admin_mode || on_behalf %>
 <% form_url = local_assigns.fetch(:form_url, @settlement.persisted? ? staff_settlement_path(@settlement) : staff_settlements_path) %>
 <% form_method = local_assigns.fetch(:form_method, @settlement.persisted? ? :patch : :post) %>
 <% cancel_path = local_assigns.fetch(:cancel_path, staff_settlements_path) %>
-<%= form_with model: @settlement, url: form_url, method: form_method,
+<%# `scope: :settlement` is load-bearing, not cosmetic. Without it Rails derives
+    the param key from the model (`daily_settlement[...]`), while EVERY controller
+    reads `params.require(:settlement)` and settlement_form.js names the rows it
+    adds `settlement[...]`. The mismatch silently reduced every submission to
+    `{status:}` — the submit button being the one field named by hand. %>
+<%= form_with model: @settlement, scope: :settlement, url: form_url, method: form_method,
       data: { settlement_form: true }, class: "vstack gap-4" do |form| %>
 
   <% if @settlement.errors.any? %>
@@ -16,6 +29,12 @@
   <%= form.hidden_field :fuel_pump_id, value: @fuel_pump&.id %>
   <%= form.hidden_field :business_date, value: @settlement.business_date %>
   <%= form.hidden_field :shift_template_id %>
+  <%# Top level, NOT settlement[recorded_by_id]: the controller resolves the FSM
+      through the picker list and hands them to Settlement::Persister, so
+      attribution never comes out of the settlement body. %>
+  <% if on_behalf && recorded_for %>
+    <%= hidden_field_tag :recorded_by_id, recorded_for.id %>
+  <% end %>
 
   <%# 1 — Header ------------------------------------------------------------ %>
   <div class="row g-3">
@@ -29,7 +48,22 @@
     </div>
     <div class="col-sm-4">
       <label class="form-label">FSM</label>
-      <div class="form-control-plaintext"><%= @settlement.fsm_name_snapshot || current_user.display_name %></div>
+      <%# The sheet belongs to the FSM in every mode. On the on-behalf and
+          admin-entered paths the admin who typed it is named underneath, never
+          in place of them — branch on entered_by, not on "was it on behalf",
+          so an admin who enters a sheet under their OWN name is visible too. %>
+      <div class="form-control-plaintext">
+        <span data-fsm-name><%= @settlement.fsm_name_snapshot.presence || recorded_for&.display_name || current_user.display_name %></span>
+        <% if on_behalf %>
+          <span class="d-block text-muted small" data-entered-by>
+            entered by <%= current_user.display_name %> on their behalf
+          </span>
+        <% elsif @settlement.admin_entered? %>
+          <span class="d-block text-muted small" data-entered-by>
+            entered by <%= @settlement.entered_by&.display_name %><%= " on their behalf" if @settlement.entered_on_behalf? %>
+          </span>
+        <% end %>
+      </div>
     </div>
   </div>
 
@@ -311,16 +345,24 @@
     <%= form.text_area :notes, rows: 2, class: "form-control" %>
   </div>
 
-  <% if admin_mode %>
+  <% if reason_required %>
     <div>
-      <%= label_tag :change_reason, "Reason for change", class: "form-label" %>
+      <%= label_tag :change_reason, on_behalf ? "Why are you recording this for them?" : "Reason for change", class: "form-label" %>
       <%= text_field_tag :change_reason, params[:change_reason], class: "form-control", required: true,
-            placeholder: "Required — recorded in the audit trail" %>
+            placeholder: on_behalf ? "Required — e.g. \"on sick leave; readings dictated at the counter\"" : "Required — recorded in the audit trail" %>
     </div>
   <% end %>
 
   <div class="d-flex gap-2 sticky-bottom bg-body py-2 border-top">
-    <% if admin_mode %>
+    <% if on_behalf %>
+      <%# The premise is that the FSM cannot act, so parking the sheet in `draft`
+          awaiting their submission would defeat the point — submitting is the
+          primary action. Draft stays available for a sheet being filled in over
+          the counter across two sittings. %>
+      <%= form.button "Save as draft", type: :submit, name: "settlement[status]", value: "draft", class: "btn btn-outline-secondary" %>
+      <%= form.button "Record & submit for #{recorded_for&.display_name || "the FSM"}",
+            type: :submit, name: "settlement[status]", value: "submitted", class: "btn btn-primary" %>
+    <% elsif admin_mode %>
       <%= form.submit "Save changes", class: "btn btn-primary" %>
     <% else %>
       <%= form.button "Save draft", type: :submit, name: "settlement[status]", value: "draft", class: "btn btn-outline-secondary" %>

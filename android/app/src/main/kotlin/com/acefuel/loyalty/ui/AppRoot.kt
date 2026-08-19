@@ -104,6 +104,15 @@ private object Routes {
     const val PLATE_SCANNER = "plate_scanner"
     const val MY_PUMP = "my_pump"
     const val SETTLEMENT = "settlement"
+
+    /**
+     * Staff feedback item 3 — the admin "record a settlement on behalf of a
+     * named FSM who could not" flow. Same screen as SETTLEMENT above, in its
+     * on-behalf mode; pushed from the admin settlements console, never from
+     * Home. Lives here rather than on AdminRoutes because it is the settlement
+     * form, parameterised — not a thirteenth admin vertical.
+     */
+    const val SETTLEMENT_ON_BEHALF = "settlement_on_behalf"
 }
 
 /**
@@ -295,7 +304,14 @@ fun AppRoot(container: ServiceContainer) {
                             onCustomers = { navController.switchTab(Routes.CUSTOMERS) },
                             onRedeem = { navController.switchTab(Routes.REDEEM) },
                             onAdjustPoints = { navController.navigate(Routes.ADJUST) },
-                            onDailySettlement = { navController.navigate(Routes.SETTLEMENT) },
+                            // Staff feedback item 3: capturing a sheet is the FSM's
+                            // job, so an admin goes to the read/correct console
+                            // instead of the create form (which now 403s for them).
+                            onDailySettlement = {
+                                navController.navigate(
+                                    if (user.role == "admin") AdminRoutes.SETTLEMENTS else Routes.SETTLEMENT,
+                                )
+                            },
                             onAdmin = { navController.navigate(Routes.ADMIN) },
                         )
                     }
@@ -361,6 +377,12 @@ fun AppRoot(container: ServiceContainer) {
                 }
                 composable(Routes.SETTLEMENT) {
                     SettlementScreen(onBack = { navController.popBackStack() })
+                }
+                // The same form and view model, in on-behalf mode: an FSM picker
+                // first, then their draft, then a mandatory reason, posted to the
+                // audited admin create. Admin-only server-side (403 for staff).
+                composable(Routes.SETTLEMENT_ON_BEHALF) {
+                    SettlementScreen(onBack = { navController.popBackStack() }, onBehalf = true)
                 }
                 composable(Routes.CUSTOMERS) {
                     // Reached only as a bottom-nav tab — no back arrow (system
@@ -431,7 +453,12 @@ fun AppRoot(container: ServiceContainer) {
 
                 composable(AdminRoutes.TRANSACTIONS) { AdminTransactionsScreen(onBack = back) }
                 composable(AdminRoutes.REPORTS) { AdminReportsScreen(onBack = back) }
-                composable(AdminRoutes.SETTLEMENTS) { AdminSettlementsScreen(onBack = back) }
+                composable(AdminRoutes.SETTLEMENTS) {
+                    AdminSettlementsScreen(
+                        onBack = back,
+                        onRecordOnBehalf = { navController.navigate(Routes.SETTLEMENT_ON_BEHALF) },
+                    )
+                }
                 composable(AdminRoutes.CAMPAIGNS) { AdminCampaignsScreen(onBack = back) }
                 composable(AdminRoutes.REACH_OUT) {
                     AdminReachOutScreen(

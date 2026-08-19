@@ -7,12 +7,29 @@ module Settlement
   module Differ
     module_function
 
+    # The identity/attribution columns lead the list on purpose. They can never
+    # change on an admin edit (the admin strong params omit them), so they
+    # normally contribute nothing to a diff — but they are exactly what an
+    # on-behalf CREATE has to put on the record: which pump/date/shift the sheet
+    # is for, which FSM it is attributed to, and which admin actually typed it.
+    # Keeping them here also means that if authorship ever did move, the audit
+    # row would say so instead of hiding it.
     PARENT_FIELDS = %w[
+      business_date fuel_pump_id shift_template_id
+      recorded_by_id fsm_name_snapshot entered_by_id
       status notes
       total_fuel_amount total_lube_amount total_discount_amount total_credit_amount
       total_digital_receipt_amount total_expense_amount
       final_amount_to_settle counted_cash_amount shortage_amount
     ].freeze
+
+    # The "before" side of a settlement that did not exist yet. Diffing a fresh
+    # on-behalf create against this yields only the values that were actually
+    # entered — an untouched zero total stays out of the audit row, where an
+    # empty `{}` baseline would have listed every default as a change.
+    def blank_snapshot
+      snapshot(DailySettlement.new)
+    end
 
     def snapshot(settlement)
       parent = PARENT_FIELDS.index_with { |field| stringify(settlement.public_send(field)) }

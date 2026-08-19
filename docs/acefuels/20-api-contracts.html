@@ -302,6 +302,12 @@ a:hover{text-decoration:underline}
 <td>E7</td>
 <td>New</td>
 </tr>
+<tr>
+<td>14</td>
+<td>Admin customer cohort (activity thresholds)</td>
+<td>Staff feedback item 4</td>
+<td>New (<code>admin/customers</code>)</td>
+</tr>
 </tbody>
 </table></div>
 <hr />
@@ -715,6 +721,121 @@ Endpoint errors: <code>422 amount_litres_mismatch</code>; <code>422 no_price_for
 </code></pre>
 <h3 id="36-get-apiv1adminsettlementsid-patch-apiv1adminsettlementsid-new">3.6 <code>GET /api/v1/admin/settlements/:id</code> / <code>PATCH /api/v1/admin/settlements/:id</code> — <strong>New</strong></h3>
 <p>Auth: admin. Same shapes as 3.3/3.4 but unrestricted by pump; admin may edit past dates (G1 "edit current/past days").</p>
+<h3 id="37-record-on-behalf-of-a-named-fsm-staff-feedback-item-3-shipped">3.7 Record on behalf of a named FSM (staff feedback item 3) — ✅ <strong>Shipped</strong></h3>
+<p>When an FSM cannot file their own sheet (absent, sick, phone dead) an admin records it <em>for</em> them. <strong>Attribution does not move</strong>: <code>recorded_by_id</code>/<code>fsm_name</code> stay the named FSM's and the admin lands in the new <code>entered_by_id</code>. Every create is audited with a mandatory reason. <code>DailySettlementPolicy#new?</code>/<code>#create?</code> remain staff-only — this is an admin-only addition (<code>#create_on_behalf?</code>), not a loosening of them.</p>
+<p><strong>Serialization change (all settlement payloads, staff and admin, summary and full):</strong> alongside the existing <code>recorded_by_id</code> / <code>fsm_name</code>, every settlement object now carries</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>entered_by_id</code></td>
+<td>int, null</td>
+<td>The admin who typed the sheet. <strong>Null</strong> on an ordinary FSM-recorded sheet</td>
+</tr>
+<tr>
+<td><code>entered_by_name</code></td>
+<td>string, null</td>
+<td>Their display name</td>
+</tr>
+<tr>
+<td><code>entered_on_behalf</code></td>
+<td>bool</td>
+<td><code>true</code> only when the enterer and the FSM are <strong>different</strong> people. An admin who enters a sheet under their own name reads <code>false</code> here but still carries the two fields above — entry-and-approval by one person must stay visible</td>
+</tr>
+</tbody>
+</table></div>
+<p>Render it as "recorded for ‹fsm_name›, entered by ‹entered_by_name›" wherever <code>fsm_name</code> appears; never show an entered sheet as one the FSM filled in.</p>
+<h4 id="get-apiv1adminsettlementsnew"><code>GET /api/v1/admin/settlements/new</code></h4>
+<p>Auth: admin (<code>403</code> for staff). Query: <code>recorded_by_id</code> (optional), <code>fuel_pump_id</code>, <code>business_date</code> (default: yesterday), <code>shift_template_id</code>.</p>
+<pre><code class="language-json">{
+  &quot;fsm_options&quot;: [
+    { &quot;id&quot;: 4, &quot;name&quot;: &quot;R. Kumar&quot;, &quot;role&quot;: &quot;staff&quot;, &quot;default_fuel_pump_id&quot;: 1, &quot;default_fuel_pump&quot;: &quot;Pump 1&quot; },
+    { &quot;id&quot;: 2, &quot;name&quot;: &quot;Admin Boss&quot;, &quot;role&quot;: &quot;admin&quot;, &quot;default_fuel_pump_id&quot;: null, &quot;default_fuel_pump&quot;: null }
+  ],
+  &quot;entered_by&quot;: { &quot;id&quot;: 2, &quot;name&quot;: &quot;Admin Boss&quot; },
+  &quot;recorded_for&quot;: { &quot;id&quot;: 4, &quot;name&quot;: &quot;R. Kumar&quot; },
+  &quot;draft&quot;: { &quot;…&quot;: &quot;exactly the 3.1 staff draft payload, built against the FSM's pump&quot; }
+}
+</code></pre>
+<ul>
+<li><code>fsm_options</code> is the <strong>picker</strong> list: active, non-deleted operators of <strong>both roles</strong> (<code>User.settlement_recorder_candidates</code>). Distinct from the <code>fsm_options</code> on 3.5, which is the <strong>filter</strong> list derived from settlements already on the books.</li>
+<li><code>default_fuel_pump_*</code> is the operator's <em>standing</em> assignment — a label for the picker row. The pump a sheet is actually built against is <code>draft.fuel_pump</code>, which honours a dated override; the two can differ.</li>
+<li><code>recorded_for</code> and <code>draft</code> are <strong>null</strong> until <code>recorded_by_id</code> is supplied: the nozzles, the yesterday-closing readings and the pulled discounts all hang off the FSM's pump, so there is nothing to hydrate before the pick.</li>
+<li><code>draft.existing_settlement_id</code> is non-null when that pump/date/shift is already settled — offer "open the existing sheet" rather than letting the create 409.</li>
+<li>Errors: <code>422 recorded_by_invalid</code> when <code>recorded_by_id</code> is supplied but is not on the picker list (deactivated, soft-deleted, unknown).</li>
+</ul>
+<h4 id="post-apiv1adminsettlements"><code>POST /api/v1/admin/settlements</code></h4>
+<p>Auth: admin (<code>403</code> for staff). <code>recorded_by_id</code> and <code>change_reason</code> are <strong>required and top level</strong> — outside the <code>settlement</code> object, because attribution is applied server-side from the resolved user and the authenticated admin. (<code>settlement.recorded_by_id</code> is tolerated as a fallback for clients that keep one object; <code>settlement.entered_by_id</code> is never honoured.)</p>
+<pre><code class="language-json">{
+  &quot;recorded_by_id&quot;: 4,
+  &quot;change_reason&quot;: &quot;R. Kumar was on sick leave; readings dictated at the counter&quot;,
+  &quot;settlement&quot;: {
+    &quot;fuel_pump_id&quot;: 1, &quot;business_date&quot;: &quot;2026-07-22&quot;, &quot;shift_template_id&quot;: null,
+    &quot;status&quot;: &quot;submitted&quot;, &quot;notes&quot;: &quot;&quot;,
+    &quot;nozzle_readings_attributes&quot;: [ { &quot;fuel_pump_nozzle_id&quot;: 5, &quot;opening_reading&quot;: &quot;1100.000&quot;, &quot;closing_reading&quot;: &quot;1200.000&quot;, &quot;testing_litres&quot;: &quot;0&quot; } ],
+    &quot;lube_lines_attributes&quot;: [], &quot;discount_lines_attributes&quot;: [], &quot;credit_lines_attributes&quot;: [],
+    &quot;cash_denominations_attributes&quot;: [], &quot;digital_receipts_attributes&quot;: [], &quot;expense_lines_attributes&quot;: [],
+    &quot;stock_receipts_attributes&quot;: [], &quot;decantations_attributes&quot;: [], &quot;rate_comparisons_attributes&quot;: []
+  }
+}
+</code></pre>
+<ul>
+<li>Body is the same nested-attributes shape as the staff create (3.2). Unlike the admin <code>PATCH</code>, it <strong>must</strong> carry <code>fuel_pump_id</code>/<code>business_date</code> (and <code>shift_template_id</code> when the outlet runs shifts) — it is defining the slot.</li>
+<li><code>status</code> is optional and defaults to <strong><code>submitted</code></strong>: the premise is that the FSM cannot act, so the sheet is not parked awaiting their submission. Pass <code>"draft"</code> explicitly to park it; <code>"reconciled"</code> is accepted and locks it.</li>
+<li>Response <code>201</code> — the full settlement (as 3.6, including <code>entered_by_*</code>) plus its <code>changes</code> array, whose first entry is the create's audit row. <code>field_diffs</code> on that row records the attribution (<code>recorded_by_id</code>, <code>fsm_name_snapshot</code>, <code>entered_by_id</code>), the slot and the money entered.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>status</th>
+<th>code</th>
+<th>when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>422</td>
+<td><code>change_reason_required</code></td>
+<td>blank/missing <code>change_reason</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td><code>recorded_by_required</code></td>
+<td>no <code>recorded_by_id</code> given</td>
+</tr>
+<tr>
+<td>422</td>
+<td><code>recorded_by_invalid</code></td>
+<td>the id is not on the picker list</td>
+</tr>
+<tr>
+<td>409</td>
+<td><code>settlement_exists</code></td>
+<td>that (pump, date, shift) is already settled — <code>details.existing_settlement_id</code> names it</td>
+</tr>
+<tr>
+<td>422</td>
+<td><code>validation_failed</code></td>
+<td>model validation (incl. a duplicate slot that raced the pre-check)</td>
+</tr>
+<tr>
+<td>409</td>
+<td><code>already_exists</code></td>
+<td>the unique index caught a concurrent insert</td>
+</tr>
+<tr>
+<td>403</td>
+<td><code>forbidden</code></td>
+<td>staff caller</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="4-customer-capture-per-visit-entry-b2-shipped-2026-07-22">4. Customer capture — per-visit entry (B2) — ✅ <strong>Shipped (2026-07-22)</strong></h2>
 <p>The FSM <code>CustomerDetailsEntry</code>: captured many times per shift, independent of the loyalty transaction. Feeds §3.1 <code>discount_lines</code>. <em>(Shipped as </em><em><code>visit_entries</code></em><em>; <code>entry_date</code> is the shift date and phone columns are <code>*_phone_number</code>.)</em></p>
@@ -825,6 +946,7 @@ Endpoint errors: <code>422 amount_litres_mismatch</code>; <code>422 no_price_for
 <p><strong>Model note (added to <code>customers</code>):</strong> <code>customer_type</code> (<code>drive_in</code>|<code>otp</code>|<code>credit</code>, default <code>drive_in</code>), <code>transport_name</code>, <code>approx_vehicle_count</code>, <code>info_note</code>, <code>primary_contact_id</code>. <strong>New table <code>customer_contacts</code>:</strong> <code>customer_id</code>, <code>role</code> (<code>driver</code>|<code>supervisor</code>|<code>owner</code>|<code>manager</code>), <code>name</code>, <code>phone_number</code>, <code>contacted</code> (bool), <code>contacted_at</code>, <code>notes</code>, <code>active</code>.</p>
 <h3 id="51-get-apiv1staffcustomerstype-changed-e4">5.1 <code>GET /api/v1/staff/customers?type=</code> — <strong>Changed (E4)</strong></h3>
 <p>Auth: staff/admin. New optional query <code>type</code> (<code>drive_in</code>|<code>otp</code>|<code>credit</code>) filters the list server-side; combines with <code>q</code> and the E2 period params. <code>CustomerSummarySerializer</code> now includes <code>customer_type</code> and <code>transport_name</code>.</p>
+<p><strong>Period semantics (fixed 2026-08-19).</strong> <code>preset</code>/<code>start_date</code>/<code>end_date</code> select customers <strong>active in the period</strong> using the transactions ∪ <code>visit_entries</code> union (<code>Customer.visited_between</code>) — the same rule §14 and the web admin customer list use. It previously inlined a transactions-only filter, so this endpoint (which backs the Android admin's E2 drill-through) hid every fleet/OTP/credit customer whose fuelling exists only as a captured visit entry, and the same admin on the same period saw a different customer set on web than in the app.</p>
 <h3 id="52-post-apiv1staffcustomers-patch-apiv1staffcustomersid">5.2 <code>POST /api/v1/staff/customers</code> &amp; <code>PATCH /api/v1/staff/customers/:id</code></h3>
 <p>Auth: staff/admin. Body (<code>customer</code>) — existing fields plus optional <code>customer_type</code>, <code>transport_name</code>, <code>approx_vehicle_count</code>, <code>info_note</code>, and nested <code>customer_contacts_attributes</code> (<code>id</code>, <code>role</code>, <code>name</code>, <code>phone_number</code>, <code>contacted</code>, <code>notes</code>, <code>active</code>, <code>_destroy</code>). A contact row persists only if it carries a name or phone. Existing initial-vehicle fields (<code>vehicle_number</code>, <code>fuel_type</code>, <code>vehicle_kind</code>, <code>commercial_*</code>) unchanged. <em>(The nested-contacts editor is live on the </em><em>web</em><em> customer form; the native contacts write UI folds into B2.)</em></p>
 <h3 id="53-get-apiv1staffcustomersid-changed">5.3 <code>GET /api/v1/staff/customers/:id</code> — <strong>Changed</strong></h3>
@@ -1235,6 +1357,91 @@ Endpoint errors: <code>422 amount_litres_mismatch</code>; <code>422 no_price_for
 <h3 id="132-get-apiv1admincustomersidfeedback-new">13.2 <code>GET /api/v1/admin/customers/:id/feedback</code> — <strong>New</strong></h3>
 <p>Auth: admin. Paginated <code>feedbacks</code> (rows as 13.1) plus <code>average_rating</code> (number).</p>
 <hr />
+<h2 id="14-admin-customer-cohort-activity-thresholds-staff-feedback-item-4-shipped-2026-08-19">14. Admin customer cohort — activity thresholds (staff feedback item 4) — ✅ <strong>Shipped (2026-08-19)</strong></h2>
+<p>"Customers who have visited us x times, filled x litres, whom I have contacted x times, whom we have given x discount, who has accumulated x reward points." One endpoint, one server-side definition of each figure (<code>Admin::Crm::CustomerMetrics</code>), shared verbatim with the web admin list so the two surfaces cannot disagree about what "5 visits" means.</p>
+<h3 id="141-get-apiv1admincustomers-shipped">14.1 <code>GET /api/v1/admin/customers</code> — ✅ <strong>Shipped</strong></h3>
+<p>Auth: <strong>admin only</strong> (a staff token gets <code>403</code>). Note the staff customer list is a different endpoint (<code>GET /api/v1/staff/customers</code>) and is unaffected.</p>
+<p>Query params — all optional, all AND-combined:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code></td>
+<td>free text over name / phone / vehicle number</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>active</code> | <code>inactive</code> (anything else = both)</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>drive_in</code> | <code>credit</code> | <code>otp</code></td>
+</tr>
+<tr>
+<td><code>preset</code> | <code>start_date</code> | <code>end_date</code></td>
+<td>the dashboard period — <strong>"active in period"</strong>, see the note below the table</td>
+</tr>
+<tr>
+<td><code>min_visits</code></td>
+<td>≥ N recorded <strong>fuellings</strong> (a linked visit entry + transaction pair is one)</td>
+</tr>
+<tr>
+<td><code>min_litres</code></td>
+<td>≥ N litres filled (decimal)</td>
+</tr>
+<tr>
+<td><code>min_discount</code></td>
+<td>≥ ₹N discount given (decimal)</td>
+</tr>
+<tr>
+<td><code>min_contacts</code></td>
+<td>≥ N outreach logs</td>
+</tr>
+<tr>
+<td><code>min_points_earned</code></td>
+<td>≥ N points <strong>earned in the period</strong></td>
+</tr>
+<tr>
+<td><code>min_points_balance</code></td>
+<td>≥ N points on the <strong>lifetime net balance</strong></td>
+</tr>
+<tr>
+<td><code>page</code>, <code>per_page</code></td>
+<td>paging (default 25, max 100)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Thresholds are <strong>inclusive</strong> (<code>&gt;=</code>): a customer with exactly 5 visits is in the <code>min_visits=5</code> cohort. A blank, negative or unparseable threshold is treated as <em>not supplied</em> rather than as an error, and is omitted from the echoed <code>thresholds</code>. An <strong>unsupplied</strong> threshold adds no filter, so customers with zero of that metric remain in the list.</p>
+<p><strong>A period means "active in period", and it gates every threshold.</strong> Supplying <code>preset</code>/<code>start_date</code>/<code>end_date</code> does two separate things, and the second one surprises people:</p>
+<ol>
+<li>it <strong>windows the figures</strong> — <code>visit_count</code>, <code>litres_total</code>, <code>discount_total</code>, <code>contact_count</code> and <code>points_earned</code> are all computed inside the window (<code>points_balance</code> is not; it is lifetime by design); and</li>
+<li>it <strong>restricts membership</strong> to customers who actually visited in the window (transactions ∪ <code>visit_entries</code>), AND-combined with every threshold.</li>
+</ol>
+<p>So <code>min_contacts=3&amp;preset=this_month</code> means "contacted 3 times <strong>and</strong> fuelled this month", not "contacted 3 times this month". And <code>min_points_balance=5000&amp;preset=this_month</code> will <strong>not</strong> return a dormant customer sitting on 5,000 lifetime points, even though <code>points_balance</code> itself is never windowed — they did not fuel this month. This is deliberate: "customers active in this period" is what the admin date picker has always meant, and the E2 dashboard drill-through ("N customers this month" → this list) depends on it. <strong>Drop the period to ask a lifetime question.</strong> Both surfaces label the control "active in period" (web: the blue banner above the list; app: the caption above the period chips) so it does not have to be discovered here.</p>
+<p>Response <code>200</code>:</p>
+<pre><code class="language-json">{ &quot;customers&quot;: [
+    { &quot;id&quot;: 7, &quot;name&quot;: &quot;ABC Logistics&quot;, &quot;phone_number&quot;: &quot;9800000000&quot;,
+      &quot;customer_type&quot;: &quot;credit&quot;, &quot;customer_type_label&quot;: &quot;Credit&quot;, &quot;active&quot;: true,
+      &quot;vehicle_numbers&quot;: [&quot;TN01AA1111&quot;, &quot;TN01AA1112&quot;],
+      &quot;metrics&quot;: { &quot;visit_count&quot;: 12, &quot;litres_total&quot;: 1840.5, &quot;discount_total&quot;: 2300.0,
+                   &quot;contact_count&quot;: 3, &quot;points_earned&quot;: 920, &quot;points_balance&quot;: 415 } } ],
+  &quot;thresholds&quot;: { &quot;visit_count&quot;: 5, &quot;litres_total&quot;: 500.0 },
+  &quot;period&quot;: { &quot;start_date&quot;: &quot;2026-08-01&quot;, &quot;end_date&quot;: &quot;2026-08-31&quot; },
+  &quot;page&quot;: 1, &quot;per_page&quot;: 25, &quot;total&quot;: 1, &quot;has_more&quot;: false }
+</code></pre>
+<p><code>period</code> is always present; both members are <code>null</code> when no period was requested.</p>
+<p><strong>Metric semantics (the parts that bite):</strong>
+- <code>visit_count</code>, <code>litres_total</code> and <code>discount_total</code> share <strong>one</strong> de-duplication rule, so the three figures on a row can never disagree about how many fuellings happened: every captured <code>visit_entry</code> counts, and a loyalty transaction counts only when <strong>no</strong> visit entry links to it (<code>VisitEntryRecorder</code> copies litres and discount onto the transaction it creates). A linked pair is therefore <strong>one</strong> visit, 20 L and ₹100 — not two visits and 40 L. See <a href="13-spec-customer-crm-capture.html#counting-a-discount-once-the-two-table-trap">Customer CRM capture</a>.
+- <code>visit_count</code> counts <strong>fuellings, de-duplicated on the link</strong> — not distinct calendar days, which is what it counted before 2026-08-19. The day rule only collapsed a linked pair when both rows happened to land on the same date, so a visit entry captured for 30 Jun whose transaction was written on 1 Jul (back-dated capture — the fleet/credit workflow) reported <em>two</em> visits for one fuelling while litres and discount reported it once. Consequence worth knowing: <strong>two fuellings on one day are two visits here</strong>, whereas <code>Admin::Crm::Cadence</code> (E3) uniqs dates because it measures the gap <em>between</em> visits — different question, different figure.
+- <code>points_earned</code> is <code>entry_type: earn</code> <strong>inside the window</strong>; <code>points_balance</code> is the lifetime <strong>net</strong> figure and is never windowed. They are deliberately two cohorts — earning 5,000 and redeeming the lot leaves a big <code>points_earned</code> and a zero balance.
+- The period selects customers via the transactions ∪ <code>visit_entries</code> union (<code>Customer.visited_between</code>), so <strong>visit-entry-only fleet/OTP/credit customers are included</strong> (they were previously dropped by a transactions-only filter). <code>GET /api/v1/staff/customers</code> (§5.1) now uses the identical scope, so web and app agree on who is "active in this period".</p>
+<p>Errors: <code>401 unauthorized</code> (no/expired token), <code>403 forbidden</code> (staff token).</p>
+<hr />
 <h2 id="appendix-a-new-vs-changed-by-route">Appendix A — New vs changed, by route</h2>
 <p><strong>New routes</strong></p>
 <pre><code>GET/POST         /api/v1/admin/products
@@ -1243,6 +1450,8 @@ GET              /api/v1/staff/settlements/new
 POST             /api/v1/staff/settlements
 GET/PATCH        /api/v1/staff/settlements/:id
 GET              /api/v1/admin/settlements
+GET              /api/v1/admin/settlements/new          # record-on-behalf hydration (§3.7)
+POST             /api/v1/admin/settlements              # record on behalf of a named FSM (§3.7)
 GET/PATCH        /api/v1/admin/settlements/:id
 GET/POST         /api/v1/staff/customer_entries
 PATCH/DELETE     /api/v1/staff/customer_entries/:id
@@ -1258,6 +1467,7 @@ GET              /api/v1/admin/reports
 GET              /api/v1/admin/reports/export
 POST             /api/v1/staff/customers/:id/feedback
 GET              /api/v1/admin/customers/:id/feedback
+GET              /api/v1/admin/customers                 (activity-threshold cohort)
 </code></pre>
 <p><strong>Changed routes (request/response extended, path unchanged)</strong></p>
 <pre><code>GET   /api/v1/staff/catalog                     (+ products)

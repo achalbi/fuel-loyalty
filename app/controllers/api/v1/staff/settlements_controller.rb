@@ -107,8 +107,12 @@ module Api
             .or(DailySettlement.where(fuel_pump_id: current_user.settlement_pump_ids))
         end
 
+        # No admin branch. An admin editing here would reach the persister with
+        # neither `admin_edit:` nor `recorded_for:`, so the change would land with
+        # no settlement_changes row and no mandatory reason — the unaudited write
+        # path staff feedback item 3 closes. Admins correct via /api/v1/admin.
         def editable_settlements
-          current_user.admin? ? DailySettlement.all : DailySettlement.where(recorded_by: current_user)
+          DailySettlement.where(recorded_by: current_user)
         end
 
         def set_settlement

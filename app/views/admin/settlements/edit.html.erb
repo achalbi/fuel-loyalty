@@ -3,12 +3,25 @@
   <%= javascript_include_tag "settlement_form", "data-turbo-track": "reload", defer: true %>
 <% end %>
 
+<%# Staff feedback item 3 — an admin corrects on the FSM's behalf; authorship
+    never moves (Settlement::Persister keeps recorded_by) and the reason is
+    mandatory. Say so on the form so it isn't mistaken for the admin's own entry. %>
+<% fsm_name = @settlement.fsm_name_snapshot.presence || @settlement.recorded_by&.display_name || "the FSM on duty" %>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h3 mb-0">Edit settlement <span class="badge text-bg-secondary align-middle"><%= @settlement.status.humanize %></span></h1>
+  <h1 class="h3 mb-0">
+    Correct settlement <span class="badge text-bg-secondary align-middle"><%= @settlement.status.humanize %></span>
+  </h1>
   <%= link_to "Back", admin_settlement_path(@settlement), class: "btn btn-outline-secondary btn-sm" %>
 </div>
 
-<p class="text-muted">Every change is recorded in the audit trail. Editing a discount line that is linked to a customer visit re-derives that transaction's ₹ and re-awards loyalty points.</p>
+<div class="alert alert-warning">
+  You are correcting <strong><%= fsm_name %></strong>'s settlement on their behalf.
+  It stays recorded against them — you are logged only as the corrector — and the
+  reason you give is mandatory and permanent in the audit trail.
+  Editing a discount line linked to a customer visit re-derives that transaction's ₹
+  and re-awards loyalty points.
+</div>
 
 <div class="card shadow-sm">
   <div class="card-body">
