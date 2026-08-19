@@ -7,7 +7,12 @@
 <% form_url = local_assigns.fetch(:form_url, @settlement.persisted? ? staff_settlement_path(@settlement) : staff_settlements_path) %>
 <% form_method = local_assigns.fetch(:form_method, @settlement.persisted? ? :patch : :post) %>
 <% cancel_path = local_assigns.fetch(:cancel_path, staff_settlements_path) %>
-<%= form_with model: @settlement, url: form_url, method: form_method,
+<%# `scope: :settlement` is load-bearing, not cosmetic. Without it Rails derives
+    the param key from the model (`daily_settlement[...]`), while EVERY settlement
+    controller reads `params.require(:settlement)` and settlement_form.js names the
+    rows it adds `settlement[...]`. The mismatch silently reduced every submission
+    to `{status:}` — the submit button being the one field named by hand. %>
+<%= form_with model: @settlement, scope: :settlement, url: form_url, method: form_method,
       data: { settlement_form: true }, class: "vstack gap-4" do |form| %>
 
   <% if @settlement.errors.any? %>
