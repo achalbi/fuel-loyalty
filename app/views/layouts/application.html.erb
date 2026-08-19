@@ -70,17 +70,18 @@
               <% end %>
             <% end %>
 
+            <%# Item 2 — one way in. The captures list beside it is a report. %>
             <%= link_to new_staff_transaction_path,
               class: "btn btn-light btn-icon btn-sm",
-              aria: { label: "New Transaction" },
-              title: "New Transaction" do %>
+              aria: { label: "New Entry" },
+              title: "New Entry" do %>
               <i class="ti ti-gas-station" aria-hidden="true"></i>
             <% end %>
 
-            <%= link_to new_staff_visit_entry_path,
+            <%= link_to staff_visit_entries_path,
               class: "btn btn-light btn-icon btn-sm",
-              aria: { label: "Capture Visit" },
-              title: "Capture Visit" do %>
+              aria: { label: "Today's Captures" },
+              title: "Today's Captures" do %>
               <i class="ti ti-clipboard-list" aria-hidden="true"></i>
             <% end %>
 
@@ -184,7 +185,8 @@
             <li><%= link_to admin_data_reset_path, class: "nav-link text-danger #{'active' if controller_path == 'admin/data_resets'}" do %><i class="ti ti-alert-triangle"></i><span class="nav-text">Reset Data</span><% end %></li>
           <% else %>
             <li class="px-4 py-2"><small class="nav-section-label">Operations</small></li>
-            <li><%= link_to new_staff_transaction_path, class: "nav-link #{'active' if current_page?(new_staff_transaction_path)}" do %><i class="ti ti-gas-station"></i><span class="nav-text">New Transaction</span><% end %></li>
+            <li><%= link_to new_staff_transaction_path, class: "nav-link #{'active' if current_page?(new_staff_transaction_path)}" do %><i class="ti ti-gas-station"></i><span class="nav-text">New Entry</span><% end %></li>
+            <li><%= link_to staff_visit_entries_path, class: "nav-link #{'active' if controller_path == 'staff/visit_entries'}" do %><i class="ti ti-clipboard-list"></i><span class="nav-text">Today's Captures</span><% end %></li>
             <li><%= link_to staff_settlements_path, class: "nav-link #{'active' if controller_path == 'staff/settlements'}" do %><i class="ti ti-report-money"></i><span class="nav-text">Daily Settlement</span><% end %></li>
             <li><%= link_to staff_customers_path, class: "nav-link #{'active' if current_page?(staff_customers_path)}" do %><i class="ti ti-users"></i><span class="nav-text">Customers</span><% end %></li>
             <li><%= link_to new_staff_redemption_path, class: "nav-link #{'active' if current_page?(new_staff_redemption_path)}" do %><i class="ti ti-gift-card"></i><span class="nav-text">Redeem Points</span><% end %></li>

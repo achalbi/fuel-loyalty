@@ -69,6 +69,19 @@ data class TxnUiState(
     val myPumpLoading: Boolean = true,
     val myPumpError: String? = null,
     val fuelAmount: String = "",
+    val discountAmount: String = "",
+    // Item 2 — the fleet/driver detail folded in from the retired Capture Visit
+    // screen. Collapsed by default: a drive-in never has to open it.
+    val visitDetailExpanded: Boolean = false,
+    val fleetOtp: Boolean = false,
+    val transportName: String = "",
+    val approxVehicleCount: String = "",
+    val driverName: String = "",
+    val driverPhone: String = "",
+    val managerName: String = "",
+    val managerPhone: String = "",
+    val ownerName: String = "",
+    val ownerPhone: String = "",
     val paymentMode: String = "cash",
     val selectedNozzleId: Long? = null,
     val creating: Boolean = false,
@@ -133,7 +146,20 @@ data class TxnUiState(
             pumpReady &&
             selectedNozzleId != null &&
             (fuelAmount.toDoubleOrNull() ?: 0.0) > 0.0 &&
+            discountValid &&
             !creating
+
+    /**
+     * A discount is optional; when given it comes off the fuel amount, so it can
+     * be neither negative nor the whole sale. The server enforces the same rule.
+     */
+    val discountValid: Boolean
+        get() {
+            if (discountAmount.isBlank()) return true
+            val discount = discountAmount.toDoubleOrNull() ?: return false
+            val amount = fuelAmount.toDoubleOrNull() ?: return false
+            return discount >= 0.0 && discount < amount
+        }
 }
 
 class TransactionViewModel(private val repository: StaffRepository) : ViewModel() {
@@ -191,9 +217,17 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
         _state.update { it.copy(phoneNumber = value.filter(Char::isDigit).take(10)) }
 
     fun onFuelAmountChange(value: String) = _state.update { current ->
-        // Digits plus at most one decimal point.
+        current.copy(fuelAmount = decimalInput(value))
+    }
+
+    fun onDiscountAmountChange(value: String) = _state.update { current ->
+        current.copy(discountAmount = decimalInput(value))
+    }
+
+    /** Digits plus at most one decimal point. */
+    private fun decimalInput(value: String): String {
         var seenDot = false
-        val cleaned = buildString {
+        return buildString {
             for (c in value) {
                 when {
                     c.isDigit() -> append(c)
@@ -201,10 +235,22 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
                 }
             }
         }
-        current.copy(fuelAmount = cleaned)
     }
 
     fun setPayment(mode: String) = _state.update { it.copy(paymentMode = mode) }
+
+    fun toggleVisitDetail() = _state.update { it.copy(visitDetailExpanded = !it.visitDetailExpanded) }
+    fun onFleetOtp(v: Boolean) = _state.update { it.copy(fleetOtp = v) }
+    fun onTransportName(v: String) = _state.update { it.copy(transportName = v) }
+    fun onApproxVehicleCount(v: String) = _state.update { it.copy(approxVehicleCount = v.filter(Char::isDigit).take(5)) }
+    fun onDriverName(v: String) = _state.update { it.copy(driverName = v) }
+    fun onDriverPhone(v: String) = _state.update { it.copy(driverPhone = phoneInput(v)) }
+    fun onManagerName(v: String) = _state.update { it.copy(managerName = v) }
+    fun onManagerPhone(v: String) = _state.update { it.copy(managerPhone = phoneInput(v)) }
+    fun onOwnerName(v: String) = _state.update { it.copy(ownerName = v) }
+    fun onOwnerPhone(v: String) = _state.update { it.copy(ownerPhone = phoneInput(v)) }
+
+    private fun phoneInput(value: String) = value.filter(Char::isDigit).take(10)
 
     fun lookup() {
         val s = _state.value
@@ -282,8 +328,18 @@ class TransactionViewModel(private val repository: StaffRepository) : ViewModel(
                 vehicleNumber = if (s.lookupMode == MODE_VEHICLE) s.matches.getOrNull(s.selectedMatchIndex ?: -1)?.vehicleNumber else null,
                 vehicleId = vehicle.first,
                 fuelAmount = amount,
+                discountAmount = s.discountAmount.toDoubleOrNull(),
                 fuelPumpNozzleId = s.selectedNozzleId,
                 paymentMode = s.paymentMode,
+                fleetOtp = s.fleetOtp,
+                transportName = s.transportName.trim().ifBlank { null },
+                approxVehicleCount = s.approxVehicleCount.toIntOrNull(),
+                driverName = s.driverName.trim().ifBlank { null },
+                driverPhoneNumber = s.driverPhone.ifBlank { null },
+                managerName = s.managerName.trim().ifBlank { null },
+                managerPhoneNumber = s.managerPhone.ifBlank { null },
+                ownerName = s.ownerName.trim().ifBlank { null },
+                ownerPhoneNumber = s.ownerPhone.ifBlank { null },
             )
             when (val r = repository.createTransaction(request)) {
                 is ApiResult.Success -> _state.update { it.copy(creating = false, result = r.data, showCeremony = true) }

@@ -110,6 +110,10 @@ import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
 import com.acefuel.loyalty.ui.theme.NayaraPalette
 import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
+import java.time.format.DateTimeFormatter
+import java.time.OffsetDateTime
+import com.acefuel.loyalty.core.network.dto.CustomerNoteDto
+import androidx.compose.material3.HorizontalDivider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -246,7 +250,7 @@ fun CustomerProfileScreen(customerId: Long, isAdmin: Boolean, onBack: () -> Unit
                         item {
                             SectionHeaderWithAction("Notes", "Edit") { showCustomerEditSheet = true }
                         }
-                        item { InfoNoteCard(profile.infoNote) }
+                        item { NotesCard(profile.notes) }
 
                         // Phase 4 CRM — insight + outreach are admin-only.
                         if (isAdmin) {
@@ -605,16 +609,42 @@ private fun EmptyNote(text: String) {
 }
 
 @Composable
-private fun InfoNoteCard(note: String?) {
+private fun NotesCard(notes: List<CustomerNoteDto>) {
     NayaraCard(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            note?.takeIf { it.isNotBlank() } ?: "No notes added yet.",
+        if (notes.isEmpty()) {
+            Text(
+                "No notes added yet.",
+                modifier = Modifier.padding(NayaraSpacing.Lg),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.nayara.textTertiary,
+            )
+            return@NayaraCard
+        }
+
+        Column(
             modifier = Modifier.padding(NayaraSpacing.Lg),
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (note.isNullOrBlank()) MaterialTheme.nayara.textTertiary else MaterialTheme.nayara.textPrimary,
-        )
+            verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md),
+        ) {
+            notes.forEachIndexed { index, note ->
+                if (index > 0) HorizontalDivider()
+                Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xs)) {
+                    Text(
+                        listOfNotNull(formatNoteTimestamp(note.createdAt), note.author).joinToString(" · "),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.nayara.textTertiary,
+                    )
+                    Text(note.body, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
     }
 }
+
+/** ISO-8601 from the API to something readable; falls back to the raw value. */
+private fun formatNoteTimestamp(value: String): String =
+    runCatching {
+        OffsetDateTime.parse(value).format(DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a"))
+    }.getOrDefault(value)
 
 @Composable
 private fun VehicleCard(
@@ -936,7 +966,9 @@ private fun CustomerEditSheet(
     onSave: (CustomerUpdateRequest) -> Unit,
 ) {
     var name by remember(customer.id) { mutableStateOf(customer.name.orEmpty()) }
-    var notes by remember(customer.id) { mutableStateOf(customer.infoNote.orEmpty()) }
+    // Starts empty: saving appends a new dated entry rather than rewriting the
+    // last one (staff feedback item 13).
+    var notes by remember(customer.id) { mutableStateOf("") }
 
     NayaraBottomSheet(
         onDismissRequest = onDismiss,
@@ -954,8 +986,9 @@ private fun CustomerEditSheet(
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                label = { Text("Notes") },
+                label = { Text("Add a note") },
                 placeholder = { Text("What was discussed or what to follow up on") },
+                supportingText = { Text("Saved as a new dated entry — earlier notes are kept.") },
                 minLines = 4,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -967,7 +1000,7 @@ private fun CustomerEditSheet(
                 ) { Text("Cancel") }
                 NayaraButton(
                     onClick = {
-                        onSave(CustomerUpdateRequest(name = name.trim(), infoNote = notes.trim()))
+                        onSave(CustomerUpdateRequest(name = name.trim(), infoNote = notes.trim().ifBlank { null }))
                     },
                     enabled = !saving,
                     loading = saving,

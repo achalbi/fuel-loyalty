@@ -144,9 +144,23 @@ Auth: staff/admin. Body (`transaction`), changed/added fields in **bold**:
 | `fuel_amount` | number | cond | now **optional/derived**; if omitted, computed from `litres × selling_price`. If both sent and inconsistent → `422 amount_litres_mismatch` |
 | `fuel_pump_id` / `fuel_pump_nozzle_id` | int | cond | as today; nozzle drives the price/fuel type |
 | `payment_mode` | enum | yes | `cash`\|`credit` |
+| `discount_amount` | number | no | comes off the fuel amount; points accrue on the net |
+| **`fleet_otp`** | bool | no | **item 2** — the visit detail folded in from the retired Capture Visit post |
+| **`transport_name`** / **`approx_vehicle_count`** | string/int | no | **item 2** |
+| **`driver_name`** / **`driver_phone_number`** | string | no | **item 2** — upserts a customer contact |
+| **`manager_name`** / **`manager_phone_number`** | string | no | **item 2** |
+| **`owner_name`** / **`owner_phone_number`** | string | no | **item 2** |
+
+**Item 2 — one capture, both records.** This endpoint records the loyalty
+transaction *and* the visit entry from a single post (`CounterEntry`), so the
+client no longer chooses between two screens. Two cases produce only one record,
+and neither is an error: an unregistered plate yields a visit with no
+transaction, and a fuel with no catalog selling price yields the sale alone with
+`visit_skipped_reason` set. `POST /api/v1/staff/visit_entries` is unchanged for a
+caller that wants a visit-only capture.
 
 ```json
-{ "transaction": { "lookup_mode": "vehicle", "vehicle_id": 88, "litres": 35.5, "nozzle_reading": 104233.5, "fuel_pump_nozzle_id": 5, "payment_mode": "cash" } }
+{ "transaction": { "lookup_mode": "vehicle", "vehicle_id": 88, "litres": 35.5, "nozzle_reading": 104233.5, "fuel_pump_nozzle_id": 5, "payment_mode": "cash", "fleet_otp": true, "transport_name": "NL Roadways", "driver_name": "Manoj", "driver_phone_number": "9800011122" } }
 ```
 Response `201` (added fields in **bold**):
 ```json
@@ -158,9 +172,13 @@ Response `201` (added fields in **bold**):
     "id": 9001, "litres": 35.5, "unit_price": 98.95, "fuel_amount": 3512.73,
     "nozzle_reading": 104233.5, "payment_mode": "cash",
     "pump": "Pump 3", "nozzle": "N5 (HSD)", "created_at": "2026-07-21T10:12:00Z"
-  }
+  },
+  "visit_entry": { "…VisitEntrySerializer…": true },
+  "visit_skipped_reason": null
 }
 ```
+`customer`, `transaction` and `visit_entry` are each null when that record was
+not produced (see the two cases above).
 Endpoint errors: `422 amount_litres_mismatch`; `422 no_price_for_nozzle` (nozzle fuel type has no active catalog product to price from); existing `422 validation_failed`, `404 vehicle_not_found`.
 
 > **Global pause interaction (C4):** when `reward_setting.rewards_paused_globally` is true (see §6), `rewards_paused:true` and `points_earned:0` regardless of per-customer state; the transaction is still recorded.

@@ -52,7 +52,7 @@
       <div class="admin-transactions-filter__group admin-customers-filter__quick-filter">
         <span class="admin-transactions-filter__label">Customer Type</span>
         <div class="dashboard-filter-chips">
-          <% customer_type_filters = [[nil, "All"], ["drive_in", "Drive-in"], ["otp", "OTP / Fleet"], ["credit", "Credit"]] %>
+          <% customer_type_filters = [[nil, "All"]] + Customer.customer_type_options.map { |label, code| [code, label] } %>
           <% customer_type_filters.each do |type, label| %>
             <%= link_to label,
               admin_customers_path({ q: @query.presence, status: @current_status, type: type }.compact_blank.merge(carry_params)),

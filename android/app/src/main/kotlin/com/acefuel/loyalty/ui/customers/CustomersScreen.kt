@@ -68,9 +68,9 @@ import com.acefuel.loyalty.ui.theme.nayara
 // E4: account-type filter chips (null value = all accounts).
 private val CUSTOMER_TYPE_FILTERS: List<Pair<String?, String>> = listOf(
     null to "All",
-    "drive_in" to "Drive-in",
-    "otp" to "OTP / Fleet",
+    "drive_in" to "Drive-In",
     "credit" to "Credit",
+    "otp" to "Fleet/OTP",
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -354,11 +354,7 @@ private fun CustomerRow(
                 }
                 customer.phoneNumber?.let { Text("+91 $it", style = MaterialTheme.typography.bodySmall) }
                 customer.customerType?.takeIf { it != "drive_in" }?.let { type ->
-                    val label = when (type) {
-                        "otp" -> "OTP / Fleet"
-                        "credit" -> "Credit"
-                        else -> type
-                    }
+                    val label = CUSTOMER_TYPE_FILTERS.firstOrNull { it.first == type }?.second ?: type
                     Text(
                         label,
                         style = MaterialTheme.typography.labelSmall,

@@ -131,11 +131,11 @@
     </div>
   </section>
 
-  <%# 4 — Discounts pulled (D3) -------------------------------------------- %>
-  <section>
-    <h2 class="h5">Discounts <span class="text-muted small">(pulled from today's visits)</span></h2>
-    <% if @settlement.discount_lines.reject(&:marked_for_destruction?).any? %>
-      <div class="table-responsive">
+  <%# 4 — Discounts: pulled from today's visits (D3), plus any missed at
+      capture and entered here during settlement (staff feedback item 11). --%>
+  <section data-settlement-discounts>
+    <h2 class="h5">Discounts <span class="text-muted small">(pulled from today's visits — add any that were missed)</span></h2>
+    <div class="table-responsive<%= " d-none" if @settlement.discount_lines.reject(&:marked_for_destruction?).none? %>" data-discount-table>
         <table class="table table-sm align-middle">
           <thead><tr><th>Transport</th><th>Driver</th><th class="text-end">Litres</th><th class="text-end">Discount ₹</th></tr></thead>
           <tbody>
@@ -161,34 +161,57 @@
             <% end %>
           </tbody>
         </table>
-      </div>
-    <% else %>
-      <p class="text-muted mb-0">No same-day discounts captured for this pump.</p>
-    <% end %>
+    </div>
+    <p class="text-muted<%= " d-none" if @settlement.discount_lines.reject(&:marked_for_destruction?).any? %>" data-discount-empty>
+      No same-day discounts captured for this pump.
+    </p>
+    <template data-discount-row-template>
+      <tr>
+        <td><input type="text" class="form-control form-control-sm" placeholder="Transport or customer" data-template-name="transport_name"></td>
+        <td class="text-muted small">Added here</td>
+        <td class="text-end" style="min-width:5rem"><input type="number" step="0.001" min="0" class="form-control form-control-sm text-end" data-template-name="litres"></td>
+        <td class="text-end" style="min-width:7rem"><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end" data-discount data-template-name="discount_amount"></td>
+      </tr>
+    </template>
+    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" data-add-discount>Add discount</button>
   </section>
 
   <%# 5 — Digital receipts (D4) + 6 Credit lines (D5) --------------------- %>
   <div class="row g-4">
     <div class="col-md-5">
       <h2 class="h5">Digital receipts</h2>
-      <div class="mb-2">
-        <%= form.label :phonepe_pos_amount, "PhonePe POS (₹)", class: "form-label" %>
-        <%= form.number_field :phonepe_pos_amount, step: "0.01", min: 0, class: "form-control", data: { phonepe_pos: true } %>
-      </div>
-      <div>
-        <%= form.label :phonepe_scanner_amount, "PhonePe Scanner (₹)", class: "form-label" %>
-        <%= form.number_field :phonepe_scanner_amount, step: "0.01", min: 0, class: "form-control", data: { phonepe_scanner: true } %>
+      <div class="table-responsive" data-settlement-receipts>
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Means</th><th class="text-end">Amount ₹</th></tr></thead>
+          <tbody>
+            <%= form.fields_for :digital_receipts do |dr| %>
+              <tr>
+                <td><%= dr.text_field :label, class: "form-control form-control-sm", placeholder: "PAYTM, UPI, card…", maxlength: 60 %></td>
+                <td class="text-end" style="min-width:7rem">
+                  <%= dr.number_field :amount, step: "0.01", min: 0, class: "form-control form-control-sm text-end", data: { receipt: true } %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+        <template data-receipt-row-template>
+          <tr>
+            <td><input type="text" maxlength="60" class="form-control form-control-sm" placeholder="PAYTM, UPI, card…" data-template-name="label"></td>
+            <td class="text-end" style="min-width:7rem"><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end" data-receipt data-template-name="amount"></td>
+          </tr>
+        </template>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-add-receipt>Add means</button>
       </div>
     </div>
     <div class="col-md-7">
-      <h2 class="h5">Credit lines <span class="text-muted small">(Fleet/OTP &amp; TT)</span></h2>
+      <h2 class="h5">Credit lines</h2>
       <div class="table-responsive">
         <table class="table table-sm align-middle">
           <thead><tr><th>Type</th><th class="text-end">Litres</th><th class="text-end">Amount ₹</th><th>Reference</th></tr></thead>
           <tbody>
             <%= form.fields_for :credit_lines do |cl| %>
               <tr>
-                <td><%= cl.select :credit_type, SettlementCreditLine.credit_types.keys.map { |k| [k.humanize, k] }, {}, class: "form-select form-select-sm" %></td>
+                <td><%= cl.select :credit_type, SettlementCreditLine.credit_type_options, {}, class: "form-select form-select-sm" %></td>
                 <td style="min-width:5rem"><%= cl.number_field :litres, step: "0.001", min: 0, class: "form-control form-control-sm text-end" %></td>
                 <td style="min-width:6rem"><%= cl.number_field :amount, step: "0.01", min: 0, class: "form-control form-control-sm text-end", data: { credit: true } %></td>
                 <td><%= cl.text_field :reference, class: "form-control form-control-sm", placeholder: "NL-01/AE-2471" %></td>
@@ -200,6 +223,34 @@
     </div>
   </div>
 
+  <%# 6b — Cash taken out during the day: salary advance or anything else the
+      FSM notes down (staff feedback item 12). It reduces what they hand over. %>
+  <section data-settlement-expenses>
+    <h2 class="h5">Cash taken out <span class="text-muted small">(salary advance, sundry)</span></h2>
+    <div class="table-responsive" style="max-width:40rem">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>What for</th><th class="text-end">Amount ₹</th></tr></thead>
+        <tbody>
+          <%= form.fields_for :expense_lines do |el| %>
+            <tr>
+              <td><%= el.text_field :description, class: "form-control form-control-sm", placeholder: "Salary advance — Ravi", maxlength: 120 %></td>
+              <td class="text-end" style="min-width:7rem">
+                <%= el.number_field :amount, step: "0.01", min: 0, class: "form-control form-control-sm text-end", data: { expense: true } %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <template data-expense-row-template>
+      <tr>
+        <td><input type="text" maxlength="120" class="form-control form-control-sm" placeholder="Salary advance — Ravi" data-template-name="description"></td>
+        <td class="text-end" style="min-width:7rem"><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end" data-expense data-template-name="amount"></td>
+      </tr>
+    </template>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-add-expense>Add line</button>
+  </section>
+
   <%# 7 — Final amount banner (D6) ---------------------------------------- %>
   <div class="card bg-body-tertiary">
     <div class="card-body row text-center g-2">
@@ -207,7 +258,8 @@
       <div class="col"><div class="small text-muted">Lubes</div><div class="fw-semibold" data-total-lube>—</div></div>
       <div class="col"><div class="small text-muted">− Discounts</div><div class="fw-semibold" data-total-discount>—</div></div>
       <div class="col"><div class="small text-muted">− Credit</div><div class="fw-semibold" data-total-credit>—</div></div>
-      <div class="col"><div class="small text-muted">− PhonePe</div><div class="fw-semibold" data-total-phonepe>—</div></div>
+      <div class="col"><div class="small text-muted">− Digital</div><div class="fw-semibold" data-total-receipts>—</div></div>
+      <div class="col"><div class="small text-muted">− Cash out</div><div class="fw-semibold" data-total-expenses>—</div></div>
       <div class="col border-start"><div class="small text-muted">Final to settle</div><div class="fw-bold fs-5" data-final>—</div></div>
     </div>
   </div>

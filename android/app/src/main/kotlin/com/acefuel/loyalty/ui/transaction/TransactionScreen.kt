@@ -93,6 +93,67 @@ import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
 import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
 import kotlinx.coroutines.launch
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
+
+/**
+ * Item 2 — the fleet and driver detail that used to be its own Capture Visit
+ * screen. Collapsed by default so a drive-in stays a three-tap job; a fleet
+ * visit opens it and records the transport and the people behind it. Every
+ * field is optional, and the captured contacts join the customer's roster.
+ */
+@Composable
+private fun VisitDetailSection(state: TxnUiState, viewModel: TransactionViewModel) {
+    val enabled = !state.creating
+    TextButton(onClick = viewModel::toggleVisitDetail) {
+        Icon(
+            imageVector = if (state.visitDetailExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+            contentDescription = null,
+        )
+        Spacer(Modifier.width(NayaraSpacing.Xs))
+        Text("Fleet & driver detail (optional)")
+    }
+
+    AnimatedVisibility(visible = state.visitDetailExpanded, enter = stepEnter(), exit = stepExit()) {
+        Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(checked = state.fleetOtp, onCheckedChange = viewModel::onFleetOtp, enabled = enabled)
+                Spacer(Modifier.width(NayaraSpacing.Md))
+                Text("Fleet / OTP visit", style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+                FormField(state.transportName, viewModel::onTransportName, "Transport name", Modifier.weight(1.5f), enabled = enabled)
+                FormField(
+                    state.approxVehicleCount, viewModel::onApproxVehicleCount, "Vehicles", Modifier.weight(1f),
+                    enabled = enabled, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
+            ContactRow("Driver", state.driverName, viewModel::onDriverName, state.driverPhone, viewModel::onDriverPhone, enabled)
+            ContactRow("Manager", state.managerName, viewModel::onManagerName, state.managerPhone, viewModel::onManagerPhone, enabled)
+            ContactRow("Owner", state.ownerName, viewModel::onOwnerName, state.ownerPhone, viewModel::onOwnerPhone, enabled)
+        }
+    }
+}
+
+@Composable
+private fun ContactRow(
+    role: String,
+    name: String,
+    onName: (String) -> Unit,
+    phone: String,
+    onPhone: (String) -> Unit,
+    enabled: Boolean,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+        FormField(name, onName, "$role name", Modifier.weight(1f), enabled = enabled)
+        FormField(
+            phone, onPhone, "$role mobile", Modifier.weight(1f), enabled = enabled,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -398,6 +459,24 @@ fun TransactionScreen(
                             }
                         }
                         Spacer(Modifier.height(NayaraSpacing.Md))
+                        // Optional: a counter discount comes off the fuel amount, so
+                        // points are earned on what the customer actually paid.
+                        FormField(
+                            value = state.discountAmount,
+                            onValueChange = viewModel::onDiscountAmountChange,
+                            label = "Discount (optional)",
+                            prefix = { Text("₹ ") },
+                            errors = if (!state.discountValid) listOf("Discount must be less than the fuel amount.") else null,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Done,
+                            ),
+                            keyboardActions = KeyboardActions(onDone = {
+                                dismissKeyboard()
+                                if (state.canSave) showConfirm = true
+                            }),
+                        )
+                        Spacer(Modifier.height(NayaraSpacing.Md))
                         Text("Payment", style = MaterialTheme.typography.labelLarge)
                         Spacer(Modifier.height(NayaraSpacing.Sm))
                         // Compact chip-sized buttons (same footprint as the old chips) but
@@ -420,6 +499,9 @@ fun TransactionScreen(
                                 label = "Credit",
                             )
                         }
+
+                        Spacer(Modifier.height(NayaraSpacing.Md))
+                        VisitDetailSection(state, viewModel)
 
                         Spacer(Modifier.height(NayaraSpacing.Md))
                         NozzleSection(
@@ -450,6 +532,7 @@ fun TransactionScreen(
                     append("Vehicle: ${state.selectedVehicleNumber ?: "—"}")
                     state.selectedFuelTypeLabel?.let { append("\nFuel: $it") }
                     append("\nAmount: ₹${state.fuelAmount}")
+                    state.discountAmount.takeIf { it.isNotBlank() }?.let { append("\nDiscount: ₹$it") }
                     append("\nPayment: ${state.paymentMode.replaceFirstChar(Char::uppercase)}")
                 },
                 confirmLabel = "Save",

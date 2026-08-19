@@ -223,6 +223,14 @@ class User < ApplicationRecord
     pump if pump&.active?
   end
 
+  # Every pump this user has ever been posted to — their standing assignment
+  # plus each dated one. Used to decide which settlements they may read: an FSM
+  # needs to see the day's sheet for their own pump, including the shift they
+  # didn't record themselves.
+  def settlement_pump_ids
+    ([ fuel_pump_id ] + daily_pump_assignments.pluck(:fuel_pump_id)).compact.uniq
+  end
+
   def transaction_fuel_pump_nozzles(on: Date.current)
     assignment_date = normalize_assignment_date(on)
     daily_assignment = pump_assignment_for(on: assignment_date)

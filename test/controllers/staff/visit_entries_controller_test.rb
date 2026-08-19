@@ -2,12 +2,12 @@ require "test_helper"
 
 module Staff
   class VisitEntriesControllerTest < ActionDispatch::IntegrationTest
-    test "staff can open the capture form" do
+    test "the old capture form redirects to the merged New Entry screen" do
+      # Item 2 — capture happens in one place now; the old URL still lands
+      # somewhere useful for a bookmark or an old link.
       sign_in users(:two)
-      get new_staff_visit_entry_path
-      assert_response :success
-      assert_select "form[action=?]", staff_visit_entries_path
-      assert_select "input[name='visit_entry[litres]']"
+      get staff_new_visit_entry_path
+      assert_redirected_to new_staff_transaction_path
     end
 
     test "staff can record a visit and it links the customer from the plate" do
@@ -29,15 +29,15 @@ module Staff
       assert entry.fleet_otp
     end
 
-    test "invalid capture re-renders the form with errors" do
+    test "an invalid capture comes back to the day's list with the reason" do
       sign_in users(:two)
       assert_no_difference -> { VisitEntry.count } do
         post staff_visit_entries_path, params: {
           visit_entry: { vehicle_number: "", litres: "0", fuel_pump_id: fuel_pumps(:one).id },
         }
       end
-      assert_response :unprocessable_entity
-      assert_select ".alert.alert-danger"
+      assert_redirected_to staff_visit_entries_path
+      assert_match(/vehicle number/i, flash[:alert])
     end
 
     test "index lists captures for the pump and day" do

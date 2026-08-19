@@ -19,7 +19,28 @@ module Staff
       assert_select "form[data-settlement-form]"
       assert_select "tr[data-nozzle-row]", minimum: 2   # petrol + diesel nozzles
       assert_select "tr[data-lube-row]"                 # 10W30
-      assert_select "tr[data-denom-row]", 7             # full denomination grid
+      assert_select "tr[data-denom-row]", 9             # full denomination grid, ₹500 down to ₹1
+    end
+
+    test "staff can view a colleague's settlement for their pump but not edit it" do
+      colleague = users(:one)
+      theirs = DailySettlement.create!(
+        fuel_pump: fuel_pumps(:one), business_date: Date.new(2026, 7, 21), recorded_by: colleague,
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id, opening_reading: 1, closing_reading: 2, unit_price: 100 }]
+      )
+      sign_in @staff
+
+      get staff_settlements_path
+      assert_response :success
+      assert_select "a[href=?]", staff_settlement_path(theirs)
+      assert_select "a[href=?]", edit_staff_settlement_path(theirs), count: 0
+
+      get staff_settlement_path(theirs)
+      assert_response :success
+
+      get edit_staff_settlement_path(theirs)
+      assert_redirected_to staff_settlement_path(theirs)
+      assert_match(/view it but not edit it/, flash[:alert])
     end
 
     test "staff can submit a settlement and amounts are derived server-side" do
@@ -28,7 +49,7 @@ module Staff
         post staff_settlements_path, params: {
           settlement: {
             fuel_pump_id: @pump.id, business_date: "2026-07-21", status: "submitted",
-            phonepe_pos_amount: "0", phonepe_scanner_amount: "0",
+            digital_receipts_attributes: { "0" => { label: "PhonePe POS", amount: "0" } },
             nozzle_readings_attributes: {
               "0" => { fuel_pump_nozzle_id: @petrol.id, opening_reading: "1000", closing_reading: "1100", testing_litres: "0" },
             },

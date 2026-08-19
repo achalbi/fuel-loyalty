@@ -9,7 +9,7 @@ module Staff
 
       assert_response :success
       assert_select "#topbar button.btn-icon[aria-label='Scan Vehicle Plate'][data-topbar-plate-scanner-toggle]", 1
-      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
+      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Entry']", 1
       assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
       assert_select ".transaction-entry-titlebar__heading h1", text: "Record Fuel Transaction"
       assert_select ".transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionEntryHeadingHint'][aria-controls='transactionEntryHeadingHint']", 1
@@ -387,6 +387,63 @@ module Staff
       assert_equal fuel_pumps(:one), transaction.fuel_pump
       assert_nil transaction.fuel_pump_nozzle
       assert_redirected_to customer_path(customers(:one))
+    end
+
+    test "one capture records both the transaction and the visit entry" do
+      # Item 2 — New Transaction and Capture Visit are one screen now, so a
+      # single submit feeds both the points ledger and the CRM / settlement
+      # discount pipeline.
+      Product.create!(name: "MS", category: "fuel", fuel_type_code: vehicles(:one).fuel_type,
+                      pack_unit: "litre", mrp: 110, selling_price: 100)
+      sign_in users(:two)
+
+      assert_difference -> { Transaction.count }, 1 do
+        assert_difference -> { VisitEntry.count }, 1 do
+          post staff_transactions_path, params: {
+            transaction: {
+              lookup_mode: "phone",
+              phone_number: customers(:one).phone_number,
+              vehicle_id: vehicles(:one).id,
+              fuel_amount: "500",
+              discount_amount: "50",
+              fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id,
+              transport_name: "NL Roadways",
+              driver_name: "Ravi",
+              fleet_otp: "1"
+            }
+          }
+        end
+      end
+
+      visit = VisitEntry.order(:id).last
+      txn = Transaction.order(:id).last
+      assert_equal txn.id, visit.transaction_id
+      assert_equal vehicles(:one).vehicle_number, visit.vehicle_number
+      assert_equal "NL Roadways", visit.transport_name
+      assert visit.fleet_otp
+      assert_equal BigDecimal("5"), visit.litres # ₹500 at the ₹100 catalog price
+      assert_redirected_to customer_path(customers(:one))
+    end
+
+    test "with no catalog price the sale is still recorded and the skipped visit is explained" do
+      sign_in users(:two)
+
+      assert_difference -> { Transaction.count }, 1 do
+        assert_no_difference -> { VisitEntry.count } do
+          post staff_transactions_path, params: {
+            transaction: {
+              lookup_mode: "phone",
+              phone_number: customers(:one).phone_number,
+              vehicle_id: vehicles(:one).id,
+              fuel_amount: "300",
+              fuel_pump_nozzle_id: fuel_pump_nozzles(:one).id
+            }
+          }
+        end
+      end
+
+      assert_redirected_to customer_path(customers(:one))
+      assert_match(/set the price in Products/i, flash[:alert])
     end
 
     test "staff can record a credit transaction" do

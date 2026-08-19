@@ -21,6 +21,7 @@
 <div class="row g-3 mb-4">
   <% [["Fuel", @settlement.total_fuel_amount], ["Lubes", @settlement.total_lube_amount],
       ["Discounts", @settlement.total_discount_amount], ["Credit", @settlement.total_credit_amount],
+      ["Digital receipts", @settlement.total_digital_receipt_amount], ["Cash taken out", @settlement.total_expense_amount],
       ["Final to settle", @settlement.final_amount_to_settle], ["Counted cash", @settlement.counted_cash_amount],
       ["Shortage", @settlement.shortage_amount]].each do |label, value| %>
     <div class="col-6 col-md-3">

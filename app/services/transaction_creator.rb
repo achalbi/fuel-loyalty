@@ -84,10 +84,8 @@ class TransactionCreator
       snapshot = BigDecimal(snapshot.to_s)
 
       gross = (litres * snapshot).round(2)
-      discount = BigDecimal((@discount_amount.presence || 0).to_s)
-      invalid!("Discount cannot be negative.") if discount.negative?
+      discount = resolve_discount!(gross)
       net = gross - discount
-      invalid!("Discount cannot exceed the fuel amount.") if net <= 0
 
       {
         litres: litres, snapshot: snapshot, gross: gross, discount: discount, net: net,
@@ -95,9 +93,21 @@ class TransactionCreator
       }
     else
       invalid!("Fuel amount must be greater than zero.") if @fuel_amount.blank? || BigDecimal(@fuel_amount.to_s) <= 0
-      net = BigDecimal(@fuel_amount.to_s)
-      { litres: nil, snapshot: nil, gross: net, discount: BigDecimal("0"), net: net, source: :manual_amount, product: nil }
+      # A typed ₹ amount is the gross the meter showed; any discount given at the
+      # counter comes off it, so points are earned on what the customer paid.
+      gross = BigDecimal(@fuel_amount.to_s)
+      discount = resolve_discount!(gross)
+
+      { litres: nil, snapshot: nil, gross: gross, discount: discount, net: gross - discount, source: :manual_amount, product: nil }
     end
+  end
+
+  def resolve_discount!(gross)
+    discount = BigDecimal((@discount_amount.presence || 0).to_s)
+    invalid!("Discount cannot be negative.") if discount.negative?
+    invalid!("Discount cannot exceed the fuel amount.") if (gross - discount) <= 0
+
+    discount
   end
 
   def invalid!(message)

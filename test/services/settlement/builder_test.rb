@@ -46,6 +46,27 @@ module Settlement
       assert_nil result.existing
     end
 
+    test "defaults the business date to yesterday" do
+      # Staff record a day's transactions as they happen and settle the next
+      # morning, so a draft with no date asked for is yesterday's sheet.
+      result = Builder.call(user: @staff)
+
+      assert_equal Date.yesterday, result.settlement.business_date
+    end
+
+    test "falls back to yesterday when the business date is unparseable" do
+      result = Builder.call(user: @staff, business_date: "not-a-date")
+
+      assert_equal Date.yesterday, result.settlement.business_date
+    end
+
+    test "offers ₹1 and ₹2 in the denomination grid" do
+      result = Builder.call(user: @staff)
+
+      assert_includes result.denominations, 2
+      assert_includes result.denominations, 1
+    end
+
     test "a back-dated draft uses the pump the caller was on that day, not today's" do
       other_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
       # Worked `other_pump` on the 21st, moved back to their default pump today.

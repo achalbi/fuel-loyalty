@@ -3,7 +3,7 @@ class VisitEntryRecorder
   # plate (or explicit ids), defaults the pump to the caller's My Pump, upserts
   # the driver/manager/owner contacts, and — when asked — links a loyalty
   # transaction via the unchanged TransactionCreator (litres path).
-  Result = Struct.new(:visit_entry, :transaction, :points_earned, keyword_init: true)
+  Result = Struct.new(:visit_entry, :transaction, :points_earned, :rewards_paused, keyword_init: true)
 
   # A visit-entry column set the recorder assigns directly.
   DIRECT_ATTRS = %i[
@@ -20,12 +20,20 @@ class VisitEntryRecorder
 
   def self.call(...) = new(...).call
 
-  def initialize(user:, attributes:, create_transaction: false, fuel_pump_nozzle_id: nil)
+  # `payment_mode` and `fuel_amount` serve the merged counter capture (staff
+  # feedback item 2), where one screen records the visit and the loyalty
+  # transaction together: the FSM picks Cash or Credit explicitly rather than
+  # having it inferred from the Fleet/OTP switch, and may enter ₹ instead of
+  # litres.
+  def initialize(user:, attributes:, create_transaction: false, fuel_pump_nozzle_id: nil, payment_mode: nil, fuel_amount: nil)
     @user = user
     @attributes = attributes.to_h.symbolize_keys
     @create_transaction = ActiveModel::Type::Boolean.new.cast(create_transaction)
     @fuel_pump_nozzle_id = fuel_pump_nozzle_id
+    @payment_mode = payment_mode.presence
+    @fuel_amount = fuel_amount
     @points_earned = nil
+    @rewards_paused = false
   end
 
   def call
@@ -35,10 +43,12 @@ class VisitEntryRecorder
       resolve_customer_and_vehicle!(visit)
       visit.fuel_pump = resolve_pump!
       visit.entry_date ||= Date.current
+      derive_litres_from_amount!(visit)
       visit.save!
       upsert_contacts!(visit)
       link_transaction!(visit)
-      Result.new(visit_entry: visit, transaction: visit.fuel_transaction, points_earned: @points_earned)
+      Result.new(visit_entry: visit, transaction: visit.fuel_transaction,
+                 points_earned: @points_earned, rewards_paused: @rewards_paused)
     end
   end
 
@@ -55,6 +65,27 @@ class VisitEntryRecorder
 
     visit.customer = customer
     visit.vehicle = vehicle
+  end
+
+  # Litres are the source of truth (LOCKED Q1), but the counter screen lets the
+  # FSM type the ₹ the meter showed instead. Convert at the catalog price so the
+  # visit still carries litres; without a price there is nothing to convert
+  # with, and TransactionCreator raises the same "set it in Products" error on
+  # its litres path.
+  def derive_litres_from_amount!(visit)
+    return if visit.litres.present? && visit.litres.to_d.positive?
+
+    gross = BigDecimal(@fuel_amount.to_s) if @fuel_amount.present?
+    return if gross.nil? || !gross.positive?
+
+    fuel_type_code = visit.fuel_type_code.presence || visit.vehicle&.fuel_type
+    price = FuelPricing.current_price(fuel_type_code)
+    if price.blank? || price.to_d.zero?
+      invalid!("No selling price is configured for #{FuelType.label_for(fuel_type_code)}. Set it in Products.")
+    end
+
+    visit.litres = (gross / price.to_d).round(3)
+    visit.fuel_type_code ||= fuel_type_code
   end
 
   def resolve_pump!
@@ -121,9 +152,10 @@ class VisitEntryRecorder
       fuel_pump_nozzle_id: @fuel_pump_nozzle_id,
       lookup_mode: "vehicle",
       vehicle_number: visit.vehicle_number,
-      payment_mode: visit.fleet_otp? ? "credit" : "cash",
+      payment_mode: @payment_mode || (visit.fleet_otp? ? "credit" : "cash"),
     )
     visit.update!(transaction_id: result.transaction.id)
     @points_earned = result.points_earned
+    @rewards_paused = result.rewards_paused
   end
 end

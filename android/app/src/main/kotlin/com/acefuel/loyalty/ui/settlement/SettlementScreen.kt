@@ -38,9 +38,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
 import com.acefuel.loyalty.ui.designsystem.FormField
+import com.acefuel.loyalty.ui.designsystem.NayaraSegmentedControl
 import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
 import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
-import com.acefuel.loyalty.ui.designsystem.PickerField
 import com.acefuel.loyalty.ui.designsystem.showError
 import com.acefuel.loyalty.ui.designsystem.showSuccess
 import com.acefuel.loyalty.ui.theme.NayaraButton
@@ -49,6 +49,14 @@ import com.acefuel.loyalty.ui.theme.NayaraSpacing
 private fun money(v: Double): String = "₹" + "%,.2f".format(v)
 private val decimalKeyboard = KeyboardOptions(keyboardType = KeyboardType.Decimal)
 private val numberKeyboard = KeyboardOptions(keyboardType = KeyboardType.Number)
+
+// Credit-line types, mirroring SettlementCreditLine::CREDIT_TYPE_LABELS on the
+// server (wire value to display label), in the order staff asked for.
+private val CREDIT_TYPES = listOf(
+    "drive_in" to "Drive-In",
+    "credit" to "Credit",
+    "fleet_otp" to "Fleet/OTP",
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,33 +129,59 @@ fun SettlementScreen(
                 }
             }
 
-            if (state.discounts.isNotEmpty()) {
-                SectionHeader("Discounts (pulled)")
-                state.discounts.forEach { d ->
-                    Text("• ${d.transport ?: d.driver ?: "—"} — ${trim(d.litres)} L → ${money(d.discount)}", style = MaterialTheme.typography.bodyMedium)
+            // Pulled from today's visit entries, plus any the FSM missed at
+            // capture and adds here (staff feedback item 11).
+            SectionHeader("Discounts")
+            if (state.discounts.isEmpty() && state.addedDiscounts.isEmpty()) {
+                Text("No same-day discounts captured for this pump.", style = MaterialTheme.typography.bodySmall)
+            }
+            state.discounts.forEach { d ->
+                Text("• ${d.transport ?: d.driver ?: "—"} — ${trim(d.litres)} L → ${money(d.discount)}", style = MaterialTheme.typography.bodyMedium)
+            }
+            state.addedDiscounts.forEachIndexed { i, d ->
+                Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+                    FormField(d.transport, { viewModel.onAddedDiscountTransport(i, it) }, "Transport or customer", Modifier.weight(1.4f), enabled = !state.locked)
+                    FormField(d.litres, { viewModel.onAddedDiscountLitres(i, it) }, "Litres", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
+                    FormField(d.discount, { viewModel.onAddedDiscountAmount(i, it) }, "Discount ₹", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
                 }
             }
+            if (!state.locked) OutlinedButton(onClick = viewModel::addDiscount) { Text("Add discount") }
 
+            // Free-form means (staff feedback item 10): PhonePe POS and Scanner
+            // are seeded, anything else the FSM types in.
             SectionHeader("Digital receipts")
-            FormField(state.phonepePos, viewModel::onPhonepePos, "PhonePe POS ₹", enabled = !state.locked, keyboardOptions = decimalKeyboard)
-            FormField(state.phonepeScanner, viewModel::onPhonepeScanner, "PhonePe Scanner ₹", enabled = !state.locked, keyboardOptions = decimalKeyboard)
+            state.receipts.forEachIndexed { i, r ->
+                Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+                    FormField(r.label, { viewModel.onReceiptLabel(i, it) }, "Means", Modifier.weight(1.4f), enabled = !state.locked)
+                    FormField(r.amount, { viewModel.onReceiptAmount(i, it) }, "Amount ₹", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
+                }
+            }
+            if (!state.locked) OutlinedButton(onClick = viewModel::addReceipt) { Text("Add means") }
 
-            SectionHeader("Credit lines (Fleet/OTP & TT)")
+            // Cash taken out of the day's takings (staff feedback item 12).
+            SectionHeader("Cash taken out")
+            state.expenses.forEachIndexed { i, e ->
+                Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+                    FormField(e.description, { viewModel.onExpenseDescription(i, it) }, "What for", Modifier.weight(1.4f), enabled = !state.locked)
+                    FormField(e.amount, { viewModel.onExpenseAmount(i, it) }, "Amount ₹", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
+                }
+            }
+            if (!state.locked) OutlinedButton(onClick = viewModel::addExpense) { Text("Add line") }
+
+            SectionHeader("Credit lines")
             state.credits.forEachIndexed { i, c ->
+                // Type mirrors the three customer account types (staff feedback
+                // item 9) — a segmented control so all three are one tap away.
+                NayaraSegmentedControl(
+                    options = CREDIT_TYPES.map { it.second },
+                    selectedIndex = CREDIT_TYPES.indexOfFirst { it.first == c.type }.coerceAtLeast(0),
+                    onSelect = { index -> if (!state.locked) viewModel.onCreditType(i, CREDIT_TYPES[index].first) },
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
-                    PickerField(
-                        label = "Type",
-                        value = if (c.type == "tank_truck") "Tank truck" else "Fleet/OTP",
-                        onClick = { if (!state.locked) viewModel.onCreditType(i, if (c.type == "tank_truck") "fleet_otp" else "tank_truck") },
-                        modifier = Modifier.weight(1f),
-                        enabled = !state.locked,
-                    )
                     FormField(c.amount, { viewModel.onCreditAmount(i, it) }, "Amount ₹", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
                     FormField(c.litres, { viewModel.onCreditLitres(i, it) }, "Litres", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
-                    FormField(c.reference, { viewModel.onCreditRef(i, it) }, "Reference", Modifier.weight(1f), enabled = !state.locked)
                 }
+                FormField(c.reference, { viewModel.onCreditRef(i, it) }, "Reference", enabled = !state.locked)
             }
             if (!state.locked) OutlinedButton(onClick = viewModel::addCredit) { Text("Add credit line") }
 

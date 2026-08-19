@@ -17,12 +17,24 @@ module Api
             sms_opt_in: customer.sms_opt_in,
             transport_name: customer.transport_name,
             approx_vehicle_count: customer.approx_vehicle_count,
+            # `info_note` stays as the most recent entry for older app builds;
+            # `notes` is the full dated log (item 13).
             info_note: customer.info_note,
+            notes: customer.customer_notes.map { |note| note_json(note) },
             contacts: customer.customer_contacts.active.map { |contact| contact_json(contact) },
             vehicles: customer.vehicles.map { |vehicle| vehicle_json(vehicle) },
             recent_transactions: customer.recent_transactions(3).map { |txn| transaction_json(txn) },
             transactions_count: customer.transactions.size,
           )
+        end
+
+        def self.note_json(note)
+          {
+            id: note.id,
+            body: note.body,
+            author: note.author_label,
+            created_at: note.created_at.iso8601,
+          }
         end
 
         def self.contact_json(contact)

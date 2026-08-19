@@ -11,12 +11,13 @@ module Staff
       "Select the staff member this settlement is being entered on behalf of.".freeze
 
     before_action :set_settlement, only: %i[show edit update]
+    before_action :ensure_editable_settlement, only: %i[edit update]
 
     def index
       authorize DailySettlement, :index?
       @business_date = parse_date(params[:business_date])
       @fuel_pump = FuelPump.find_by(id: params[:fuel_pump_id])
-      scope = accessible_settlements.recent_first.includes(:fuel_pump)
+      scope = viewable_settlements.recent_first.includes(:fuel_pump, :recorded_by)
       scope = scope.for_date(@business_date) if @business_date
       scope = scope.where(fuel_pump_id: @fuel_pump.id) if @fuel_pump
       @settlements = scope.to_a
@@ -101,12 +102,32 @@ module Staff
       render template, status: :unprocessable_entity
     end
 
-    def accessible_settlements
+    # An FSM needs to read the day's sheet for their own pump — including the
+    # shift a colleague recorded (staff feedback item 6) — but may still only
+    # edit their own. Admins see and edit everything.
+    def viewable_settlements
+      return DailySettlement.all if current_user.admin?
+
+      DailySettlement
+        .where(recorded_by: current_user)
+        .or(DailySettlement.where(fuel_pump_id: current_user.settlement_pump_ids))
+    end
+
+    def editable_settlements
       current_user.admin? ? DailySettlement.all : DailySettlement.where(recorded_by: current_user)
     end
 
     def set_settlement
-      @settlement = accessible_settlements.find(params[:id])
+      @settlement = viewable_settlements.find(params[:id])
+    end
+
+    # Someone else's settlement is readable but not writable; say so instead of
+    # 404-ing on a record the FSM can plainly see in their list.
+    def ensure_editable_settlement
+      return if editable_settlements.exists?(id: @settlement.id)
+
+      redirect_to staff_settlement_path(@settlement),
+        alert: "#{@settlement.fsm_name_snapshot.presence || 'Another operator'} recorded this settlement — you can view it but not edit it."
     end
 
     def build_draft
@@ -136,12 +157,14 @@ module Staff
     def settlement_params
       permitted = params.require(:settlement).permit(
         :fuel_pump_id, :business_date, :shift_template_id, :status,
-        :phonepe_pos_amount, :phonepe_scanner_amount, :notes,
+        :notes,
         nozzle_readings_attributes: %i[id fuel_pump_nozzle_id opening_reading closing_reading testing_litres rollover opening_source _destroy],
         lube_lines_attributes: %i[id product_id quantity opening_stock closing_stock _destroy],
         discount_lines_attributes: %i[id visit_entry_id transport_name litres discount_amount driver_name driver_phone_number manager_name manager_phone_number owner_name owner_phone_number _destroy],
         credit_lines_attributes: %i[id credit_type litres discount_amount amount reference note _destroy],
         cash_denominations_attributes: %i[id denomination quantity _destroy],
+        digital_receipts_attributes: %i[id label amount _destroy],
+        expense_lines_attributes: %i[id description amount _destroy],
         stock_receipts_attributes: %i[id fuel_type_code litres_received _destroy],
         decantations_attributes: %i[id fuel_type_code tank_label opening_kl closing_kl _destroy],
         rate_comparisons_attributes: %i[id fuel_type_code competitor_name competitor_price own_price _destroy]

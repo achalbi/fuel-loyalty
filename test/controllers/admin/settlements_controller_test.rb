@@ -10,9 +10,10 @@ module Admin
       Product.create!(name: "MS", category: "fuel", fuel_type_code: "petrol", pack_unit: "litre", mrp: 110, selling_price: 100)
       @settlement = DailySettlement.create!(
         fuel_pump: @pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff, status: "submitted",
-        phonepe_pos_amount: 500,
+        digital_receipts_attributes: [{ label: "PhonePe POS", amount: 500 }],
         nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1000, closing_reading: 1100, unit_price: 100 }]
       )
+      @receipt = @settlement.digital_receipts.first
     end
 
     test "index shows cross-pump totals for a single date" do
@@ -34,11 +35,11 @@ module Admin
       assert_difference -> { SettlementChange.count }, 1 do
         patch admin_settlement_path(@settlement), params: {
           change_reason: "Corrected PhonePe", on_behalf_of_id: @staff.id,
-          settlement: { phonepe_pos_amount: "800" },
+          settlement: { digital_receipts_attributes: { "0" => { id: @receipt.id, label: "PhonePe POS", amount: "800" } } },
         }
       end
       assert_redirected_to admin_settlement_path(@settlement)
-      assert_equal BigDecimal("800"), @settlement.reload.phonepe_pos_amount
+      assert_equal BigDecimal("800"), @receipt.reload.amount
       change = SettlementChange.order(:id).last
       assert_equal @admin, change.changed_by
       assert_equal @staff, change.on_behalf_of
@@ -109,7 +110,7 @@ module Admin
       other_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
       other = DailySettlement.create!(
         fuel_pump: other_pump, business_date: Date.new(2026, 7, 21), recorded_by: other_staff,
-        status: "submitted", phonepe_pos_amount: 100,
+        status: "submitted", digital_receipts_attributes: [{ label: "PhonePe POS", amount: 100 }],
         nozzle_readings_attributes: [{ fuel_pump_nozzle_id: other_pump.nozzles.first.id, opening_reading: 10, closing_reading: 20, unit_price: 100 }]
       )
       sign_in @admin

@@ -71,7 +71,25 @@
   <h2 class="h5">Credit lines</h2>
   <ul class="list-unstyled mb-4">
     <% @settlement.credit_lines.each do |c| %>
-      <li><%= c.credit_type.humanize %> · <%= c.litres %> L · <%= number_to_currency(c.amount, unit: "₹") %> <span class="text-muted"><%= c.reference %></span></li>
+      <li><%= c.credit_type_label %> · <%= c.litres %> L · <%= number_to_currency(c.amount, unit: "₹") %> <span class="text-muted"><%= c.reference %></span></li>
+    <% end %>
+  </ul>
+<% end %>
+
+<% if @settlement.digital_receipts.any? %>
+  <h2 class="h5">Digital receipts</h2>
+  <ul class="list-unstyled mb-4">
+    <% @settlement.digital_receipts.each do |r| %>
+      <li><%= r.label %>: <%= number_to_currency(r.amount, unit: "₹") %></li>
+    <% end %>
+  </ul>
+<% end %>
+
+<% if @settlement.expense_lines.any? %>
+  <h2 class="h5">Cash taken out</h2>
+  <ul class="list-unstyled mb-4">
+    <% @settlement.expense_lines.each do |e| %>
+      <li><%= e.description %>: <%= number_to_currency(e.amount, unit: "₹") %></li>
     <% end %>
   </ul>
 <% end %>

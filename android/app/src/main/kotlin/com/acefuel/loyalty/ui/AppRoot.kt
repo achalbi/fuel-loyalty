@@ -58,7 +58,6 @@ import com.acefuel.loyalty.ui.mypump.MyPumpScreen
 import com.acefuel.loyalty.ui.redeem.RedeemScreen
 import com.acefuel.loyalty.ui.transaction.TransactionScreen
 import com.acefuel.loyalty.ui.scanner.PlateScannerScreen
-import com.acefuel.loyalty.ui.visitentry.VisitEntryScreen
 import com.acefuel.loyalty.ui.settlement.SettlementScreen
 import com.acefuel.loyalty.ui.theme.AceFuelLoyaltyTheme
 import com.acefuel.loyalty.ui.theme.NayaraMotion
@@ -104,7 +103,6 @@ private object Routes {
     const val ACCOUNT = "account"
     const val PLATE_SCANNER = "plate_scanner"
     const val MY_PUMP = "my_pump"
-    const val CAPTURE_VISIT = "capture_visit"
     const val SETTLEMENT = "settlement"
 }
 
@@ -297,7 +295,6 @@ fun AppRoot(container: ServiceContainer) {
                             onCustomers = { navController.switchTab(Routes.CUSTOMERS) },
                             onRedeem = { navController.switchTab(Routes.REDEEM) },
                             onAdjustPoints = { navController.navigate(Routes.ADJUST) },
-                            onCaptureVisit = { navController.navigate(Routes.CAPTURE_VISIT) },
                             onDailySettlement = { navController.navigate(Routes.SETTLEMENT) },
                             onAdmin = { navController.navigate(Routes.ADMIN) },
                         )
@@ -356,16 +353,6 @@ fun AppRoot(container: ServiceContainer) {
                     // My Pump is always today's assignment, for admins as well as
                     // staff — the server rejects any other date.
                     MyPumpScreen(onBack = { navController.popBackStack() })
-                }
-                composable(Routes.CAPTURE_VISIT) { entry ->
-                    val scannedPlate by entry.savedStateHandle
-                        .getStateFlow<String?>("scanned_plate", null)
-                        .collectAsStateWithLifecycle()
-                    VisitEntryScreen(
-                        onBack = { navController.popBackStack() },
-                        onScanPlate = { navController.navigate(Routes.PLATE_SCANNER) },
-                        scannedPlate = scannedPlate,
-                    )
                 }
                 composable(Routes.SETTLEMENT) {
                     SettlementScreen(onBack = { navController.popBackStack() })

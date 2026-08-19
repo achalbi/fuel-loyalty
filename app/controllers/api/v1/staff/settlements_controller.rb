@@ -6,6 +6,7 @@ module Api
       # and admin edits live under the admin namespace.
       class SettlementsController < Api::V1::Staff::BaseController
         before_action :set_settlement, only: %i[show update]
+        before_action :reject_edit_of_other_operators_settlement!, only: :update
 
         # GET /api/v1/staff/settlements/new — pre-filled draft for pump/date/shift.
         def new
@@ -22,7 +23,7 @@ module Api
         # GET /api/v1/staff/settlements?business_date=&fuel_pump_id=
         def index
           authorize DailySettlement, :index?
-          scope = accessible_settlements.recent_first.includes(:fuel_pump)
+          scope = viewable_settlements.recent_first.includes(:fuel_pump)
           scope = scope.for_date(parse_date(params[:business_date])) if params[:business_date].present?
           scope = scope.where(fuel_pump_id: params[:fuel_pump_id]) if params[:fuel_pump_id].present?
 
@@ -49,7 +50,7 @@ module Api
 
           result = Settlement::Persister.call(
             settlement: DailySettlement.new,
-            attributes: settlement_params,
+            attributes: with_legacy_phonepe_amounts(settlement_params),
             actor: current_user
           )
           render json: SettlementSerializer.call(result.settlement), status: :created
@@ -63,7 +64,7 @@ module Api
           reject_reconcile_by_staff!
           result = Settlement::Persister.call(
             settlement: @settlement,
-            attributes: settlement_params,
+            attributes: with_legacy_phonepe_amounts(settlement_params),
             actor: current_user
           )
           render json: SettlementSerializer.call(result.settlement), status: :ok
@@ -71,12 +72,56 @@ module Api
 
         private
 
-        def accessible_settlements
+        # Item 10 replaced the two fixed PhonePe columns with free-form digital
+        # receipt lines, but an app build already on a phone still posts
+        # `phonepe_pos_amount` / `phonepe_scanner_amount`. Fold those into the
+        # matching labelled rows so an operator who hasn't updated keeps
+        # recording receipts correctly. Only the API needs this — the web app is
+        # served fresh on every request.
+        LEGACY_RECEIPT_LABELS = {
+          phonepe_pos_amount: "PhonePe POS",
+          phonepe_scanner_amount: "PhonePe Scanner"
+        }.freeze
+
+        def with_legacy_phonepe_amounts(attributes)
+          legacy = LEGACY_RECEIPT_LABELS.filter_map do |key, label|
+            raw = params.dig(:settlement, key)
+            next if raw.nil?
+
+            existing = @settlement&.digital_receipts&.find { |row| row.label.to_s.casecmp?(label) }
+            { id: existing&.id, label: label, amount: raw }.compact
+          end
+          return attributes if legacy.none?
+
+          supplied = Array(attributes[:digital_receipts_attributes])
+          already_labelled = supplied.map { |row| row[:label].to_s.downcase }
+          attributes.merge(
+            digital_receipts_attributes: supplied + legacy.reject { |row| already_labelled.include?(row[:label].downcase) }
+          )
+        end
+
+        # Mirrors the web controller: an FSM reads any settlement for a pump
+        # they're posted to, but only writes their own (staff feedback item 6).
+        def viewable_settlements
+          return DailySettlement.all if current_user.admin?
+
+          DailySettlement
+            .where(recorded_by: current_user)
+            .or(DailySettlement.where(fuel_pump_id: current_user.settlement_pump_ids))
+        end
+
+        def editable_settlements
           current_user.admin? ? DailySettlement.all : DailySettlement.where(recorded_by: current_user)
         end
 
         def set_settlement
-          @settlement = accessible_settlements.find(params[:id])
+          @settlement = viewable_settlements.find(params[:id])
+        end
+
+        def reject_edit_of_other_operators_settlement!
+          return if editable_settlements.exists?(id: @settlement.id)
+
+          raise Pundit::NotAuthorizedError, "settlement recorded by another operator"
         end
 
         # Only admins reconcile; a staff-supplied reconciled status is refused.
@@ -108,12 +153,14 @@ module Api
         def settlement_params
           permitted = params.require(:settlement).permit(
             :fuel_pump_id, :business_date, :shift_template_id, :status,
-            :phonepe_pos_amount, :phonepe_scanner_amount, :notes,
+            :notes,
             nozzle_readings_attributes: %i[id fuel_pump_nozzle_id opening_reading closing_reading testing_litres rollover opening_source _destroy],
             lube_lines_attributes: %i[id product_id quantity opening_stock closing_stock _destroy],
             discount_lines_attributes: %i[id visit_entry_id transport_name litres discount_amount driver_name driver_phone_number manager_name manager_phone_number owner_name owner_phone_number _destroy],
             credit_lines_attributes: %i[id credit_type litres discount_amount amount reference note _destroy],
             cash_denominations_attributes: %i[id denomination quantity _destroy],
+            digital_receipts_attributes: %i[id label amount _destroy],
+            expense_lines_attributes: %i[id description amount _destroy],
             stock_receipts_attributes: %i[id fuel_type_code litres_received _destroy],
             decantations_attributes: %i[id fuel_type_code tank_label opening_kl closing_kl _destroy],
             rate_comparisons_attributes: %i[id fuel_type_code competitor_name competitor_price own_price _destroy]

@@ -31,6 +31,8 @@ module Api
             total_lube_amount: f(@settlement.total_lube_amount),
             total_discount_amount: f(@settlement.total_discount_amount),
             total_credit_amount: f(@settlement.total_credit_amount),
+            total_digital_receipt_amount: f(@settlement.total_digital_receipt_amount),
+            total_expense_amount: f(@settlement.total_expense_amount),
             final_amount_to_settle: f(@settlement.final_amount_to_settle),
             counted_cash_amount: f(@settlement.counted_cash_amount),
             shortage_amount: f(@settlement.shortage_amount),
@@ -42,14 +44,19 @@ module Api
         def full
           summary.merge(
             recorded_by_id: @settlement.recorded_by_id,
-            phonepe_pos_amount: f(@settlement.phonepe_pos_amount),
-            phonepe_scanner_amount: f(@settlement.phonepe_scanner_amount),
+            # Item 10 replaced these two columns with free-form digital receipt
+            # lines. They stay in the payload, derived from the matching rows,
+            # because an app build already on a phone requires both keys.
+            phonepe_pos_amount: legacy_receipt_amount("PhonePe POS"),
+            phonepe_scanner_amount: legacy_receipt_amount("PhonePe Scanner"),
             notes: @settlement.notes,
             nozzle_readings: @settlement.nozzle_readings.map { |r| nozzle_reading(r) },
             lube_lines: @settlement.lube_lines.map { |l| lube_line(l) },
             discount_lines: @settlement.discount_lines.map { |d| discount_line(d) },
             credit_lines: @settlement.credit_lines.map { |c| credit_line(c) },
             cash_denominations: @settlement.cash_denominations.map { |c| denomination(c) },
+            digital_receipts: @settlement.digital_receipts.map { |r| digital_receipt(r) },
+            expense_lines: @settlement.expense_lines.map { |e| expense_line(e) },
             stock_receipts: @settlement.stock_receipts.map { |s| stock_receipt(s) },
             decantations: @settlement.decantations.map { |d| decantation(d) },
             rate_comparisons: @settlement.rate_comparisons.map { |r| rate_comparison(r) },
@@ -105,6 +112,19 @@ module Api
 
         def denomination(row)
           { id: row.id, denomination: row.denomination, quantity: row.quantity, amount: f(row.amount) }
+        end
+
+        def digital_receipt(row)
+          { id: row.id, label: row.label, amount: f(row.amount) }
+        end
+
+        def expense_line(row)
+          { id: row.id, description: row.description, amount: f(row.amount) }
+        end
+
+        def legacy_receipt_amount(label)
+          row = @settlement.digital_receipts.find { |receipt| receipt.label.to_s.casecmp?(label) }
+          f(row&.amount || 0)
         end
 
         def stock_receipt(row)

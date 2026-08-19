@@ -135,19 +135,40 @@ Unique index `(fuel_pump_id, business_date, shift_template_id)` so one FSM canno
 | Column | Type | Rationale |
 |---|---|---|
 | `daily_settlement_id` | bigint FK | |
-| `credit_type` | integer enum `fleet_otp / tank_truck` | |
+| `credit_type` | integer enum `fleet_otp:0 / drive_in:2 / credit:3` | Mirrors the three Customer account types (staff feedback item 9). The retired `tank_truck:1` was migrated to `credit`. |
 | `litres` | decimal(12,3) default 0 | e.g. "OTP 136 Lts" |
 | `discount_amount` | decimal(12,2) default 0 | Per-line discount |
 | `amount` | decimal(12,2) default 0 | ₹ value of the credit line, reduces cash to settle |
 | `reference` | string, null | Vehicle/reference e.g. "NL-01/AE-2471" |
 | `note` | string, null | |
 
+**`settlement_digital_receipts`** (D6) — one row per digital-payment means.
+
+| Column | Type | Notes |
+|---|---|---|
+| `daily_settlement_id` | references | |
+| `label` | string, null:false | "PhonePe POS", "PhonePe Scanner", "PAYTM", … Unique per settlement, case-insensitive. |
+| `amount` | decimal(12,2) default 0 | |
+
+Replaces the retired `phonepe_pos_amount` / `phonepe_scanner_amount` columns;
+the two PhonePe labels are seeded on every draft. The staff API still accepts
+and emits the two old keys, derived from the matching rows, so installed app
+builds keep working.
+
+**`settlement_expense_lines`** (D6) — cash taken out before settling.
+
+| Column | Type | Notes |
+|---|---|---|
+| `daily_settlement_id` | references | |
+| `description` | string, null:false | "Salary advance — Ravi" |
+| `amount` | decimal(12,2) default 0 | |
+
 **`settlement_cash_denominations`** (D7) — one row per denomination present.
 
 | Column | Type | Rationale |
 |---|---|---|
 | `daily_settlement_id` | bigint FK | |
-| `denomination` | integer | 500/200/100/50/20/10/5 |
+| `denomination` | integer | 500/200/100/50/20/10/5/2/1 |
 | `quantity` | integer default 0 | |
 | `amount` | decimal(12,2) | Derived `= denomination × quantity` |
 
@@ -196,18 +217,31 @@ Unique index `(fuel_pump_id, business_date, shift_template_id)` so one FSM canno
 2. **Derived quantities are recomputed server-side on every save** (never trusted from the client): `net_litres_sold = closing − opening − testing`; `amount = net × unit_price`; lube `amount = qty × price`; denomination `amount = denom × qty`.
 3. **Pricing is snapshot-at-capture** from the catalog selling price (A5). Admin edits may re-snapshot only if the admin explicitly re-prices.
 4. **Final Amount to Settle (D6):**
-   `final_amount_to_settle = (total_fuel_amount + total_lube_amount) − (total_discount_amount + total_credit_amount + phonepe_pos_amount + phonepe_scanner_amount)`.
+   `final_amount_to_settle = (total_fuel_amount + total_lube_amount) − (total_discount_amount + total_credit_amount + total_digital_receipt_amount + total_expense_amount)`.
+   Digital receipts and expense lines are line items rather than fixed columns
+   (staff feedback items 10 and 12): any payment means can be recorded, and cash
+   taken out during the day — a salary advance — reduces what the FSM hands over.
 5. **Shortage (D7):** `shortage_amount = final_amount_to_settle − counted_cash_amount`. Positive = cash short; negative = excess. `counted_cash_amount = Σ denomination amounts`.
 6. **Status lifecycle:** `draft` (FSM editing) → `submitted` (FSM done; admin can view) → `reconciled` (admin confirmed; sets `locked=true`). Only admins move to `reconciled`. Only admins edit a `submitted`/`reconciled` settlement; every such edit requires a `change_reason` and writes a `settlement_changes` row.
 7. **Points recompute on edit (D9 ⇄ C5).** Loyalty points accrue from per-customer visits (B2 entries → litres × catalog price → ₹ → `PointsCalculator`). When an admin edit changes a figure that feeds a customer's derived ₹ (a linked discount line's litres/discount, or a re-priced nozzle whose price is the source for that day's B2 entries), `PointsRecomputeService` reverses the affected `points_ledgers` `earn` rows and re-awards using the new derived ₹, inside one DB transaction. The `settlement_changes.recomputed_points` flag records that this happened. Settlements that touch no customer-linked figure skip recompute.
-8. **Cross-pump view (D9/Admin-13):** admin can list/aggregate settlements for a `business_date` across all pumps, summing fuel/lube/discount/credit/cash/shortage.
-9. **Per-FSM view (Admin-12).** The same list also rolls up **per staff member** — one row per `recorded_by`, carrying that FSM's settlement count, the pumps they covered and the same money columns, with a filter to narrow the list to one FSM. Grouping is on `recorded_by_id`, never on `fsm_name_snapshot`: the snapshot is frozen at create, so two users sharing a display name would merge and a renamed user would split. Only `submitted`/`reconciled` rows carry money, so the rollup counts only those and reports any drafts separately — a count that included drafts would contradict its own totals.
-10. **An admin never enters a settlement as himself (Admin-12).** A settlement belongs to the FSM who worked the shift. An admin may still enter one *for* an FSM who cannot — that is the only case where an admin enters anything:
+8. **Business date defaults to yesterday.** Staff record a day's transactions as they happen and settle the next morning, so a draft opened with no date is yesterday's sheet (`Settlement::Builder.default_business_date`). The FSM can still pick any date in the chooser.
+9. **Keyed children are unique per settlement.** One row per nozzle, lube,
+   denomination, digital means, stock line and (fuel type, competitor) pair,
+   enforced by a model validation and a matching unique index. This is what
+   stops a client re-posting saved rows without their ids from doubling a
+   settlement (staff feedback item 6). Credit and discount lines are exempt —
+   they have no natural key, so a second row may be genuine.
+10. **Staff read their pump, edit their own.** An FSM sees any settlement for a
+   pump they're posted to, including a colleague's shift, but may only edit one
+   they recorded. Admins see and edit everything.
+11. **Cross-pump view (D9/Admin-13):** admin can list/aggregate settlements for a `business_date` across all pumps, summing fuel/lube/discount/credit/cash/shortage.
+12. **Per-FSM view (Admin-12).** The same list also rolls up **per staff member** — one row per `recorded_by`, carrying that FSM's settlement count, the pumps they covered and the same money columns, with a filter to narrow the list to one FSM. Grouping is on `recorded_by_id`, never on `fsm_name_snapshot`: the snapshot is frozen at create, so two users sharing a display name would merge and a renamed user would split. Only `submitted`/`reconciled` rows carry money, so the rollup counts only those and reports any drafts separately — a count that included drafts would contradict its own totals.
+13. **An admin never enters a settlement as himself (Admin-12).** A settlement belongs to the FSM who worked the shift. An admin may still enter one *for* an FSM who cannot — that is the only case where an admin enters anything:
     - **Creating:** the admin must name the staff member; `recorded_by` becomes that FSM (so `fsm_name_snapshot` is theirs) and `daily_settlements.entered_by` records the admin who keyed it in. `entered_by` is stamped **once, at creation** — never back-stamped by a later edit or reconcile, which would falsely claim the editing admin keyed in every settlement predating the column. A staff member may never set `recorded_by`; their settlement is always their own.
     - **Editing:** the admin must name the staff member the edit is for; `settlement_changes.on_behalf_of` records them alongside `changed_by` (the admin). The two are never conflated.
     - Neither may name the acting admin — naming yourself is exactly what this rule forbids. Ownership is decided once at creation and can never be re-pointed afterwards, which would move money between people with no audit row.
     - **Reconcile is exempt:** approving a settlement is an act of the admin's own authority, not data entry.
-11. **A back-dated draft resolves the pump for its business date.** `Settlement::Builder` picks the pump from the daily override recorded for that date, falling back to the caller's standing default — never the caller's pump *today*. The resolved pump decides both the auto-popped opening readings (rule 1) and which `visit_entries` the discount lines are pulled from (D3), so filing a settlement late against today's pump would pre-fill another pump's meter readings and another pump's discounts. An explicitly chosen `fuel_pump_id` always wins.
+14. **A back-dated draft resolves the pump for its business date.** `Settlement::Builder` picks the pump from the daily override recorded for that date, falling back to the caller's standing default — never the caller's pump *today*. The resolved pump decides both the auto-popped opening readings (rule 1) and which `visit_entries` the discount lines are pulled from (D3), so filing a settlement late against today's pump would pre-fill another pump's meter readings and another pump's discounts. An explicitly chosen `fuel_pump_id` always wins.
 
 ```mermaid
 flowchart TD

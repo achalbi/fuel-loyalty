@@ -1,0 +1,69 @@
+<%# Item 2 — the visit detail that used to live on the separate Capture Visit
+    form. Collapsed by default: a drive-in is the common case and should stay a
+    three-tap job, while a fleet visit opens this and records the transport and
+    the people behind it. Every field is optional. %>
+<% dom_prefix = local_assigns.fetch(:dom_prefix) %>
+<% panel_id = "#{dom_prefix}_visit_detail" %>
+
+<div class="transaction-visit-detail">
+  <button type="button"
+    class="btn btn-link px-0 text-decoration-none"
+    data-bs-toggle="collapse"
+    data-bs-target="#<%= panel_id %>"
+    aria-expanded="false"
+    aria-controls="<%= panel_id %>">
+    <i class="ti ti-users" aria-hidden="true"></i>
+    Fleet &amp; driver detail <span class="text-muted small">(optional)</span>
+  </button>
+
+  <div class="collapse" id="<%= panel_id %>">
+    <div class="pt-2 vstack gap-3">
+      <div class="form-check form-switch">
+        <%= form.check_box :fleet_otp, class: "form-check-input", role: "switch" %>
+        <%= form.label :fleet_otp, "Fleet / OTP visit", class: "form-check-label" %>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-sm-6">
+          <%= form.label :transport_name, "Transport name", class: "form-label small mb-1" %>
+          <%= form.text_field :transport_name, class: "form-control", placeholder: "Optional" %>
+        </div>
+        <div class="col-sm-6">
+          <%= form.label :approx_vehicle_count, "Approx vehicles", class: "form-label small mb-1" %>
+          <%= form.number_field :approx_vehicle_count, min: 0, class: "form-control", placeholder: "Optional" %>
+        </div>
+      </div>
+
+      <%# Driver / manager / owner upsert into the customer's contact roster. %>
+      <div class="row g-2">
+        <div class="col-sm-6">
+          <%= form.label :driver_name, "Driver name", class: "form-label small mb-1" %>
+          <%= form.text_field :driver_name, class: "form-control", placeholder: "Optional" %>
+        </div>
+        <div class="col-sm-6">
+          <%= form.label :driver_phone_number, "Driver mobile", class: "form-label small mb-1" %>
+          <%= form.telephone_field :driver_phone_number, class: "form-control", placeholder: "Optional",
+            inputmode: "numeric", maxlength: 10, pattern: "\\d{10}", data: { phone_number_field: true } %>
+        </div>
+        <div class="col-sm-6">
+          <%= form.label :manager_name, "Manager name", class: "form-label small mb-1" %>
+          <%= form.text_field :manager_name, class: "form-control", placeholder: "Optional" %>
+        </div>
+        <div class="col-sm-6">
+          <%= form.label :manager_phone_number, "Manager mobile", class: "form-label small mb-1" %>
+          <%= form.telephone_field :manager_phone_number, class: "form-control", placeholder: "Optional",
+            inputmode: "numeric", maxlength: 10, pattern: "\\d{10}", data: { phone_number_field: true } %>
+        </div>
+        <div class="col-sm-6">
+          <%= form.label :owner_name, "Owner name", class: "form-label small mb-1" %>
+          <%= form.text_field :owner_name, class: "form-control", placeholder: "Optional" %>
+        </div>
+        <div class="col-sm-6">
+          <%= form.label :owner_phone_number, "Owner mobile", class: "form-label small mb-1" %>
+          <%= form.telephone_field :owner_phone_number, class: "form-control", placeholder: "Optional",
+            inputmode: "numeric", maxlength: 10, pattern: "\\d{10}", data: { phone_number_field: true } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff feedback — August 2026 — AceFuels Docs</title>
+<style>
+:root{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;
+  --accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9;--surface:#ffffff;--surface-2:#eef1f5;--surface-3:#e7ebf0;
+  --ink:#16202b;--muted:#56646f;--faint:#8593a0;--border:#e0e6ec;--border-strong:#cdd6df;
+  --brand:#1f6bc0;--brand-ink:#17518f;--brand-tint:#e9f1fb;--accent:#d9861a;--accent-tint:#fbeed6;
+  --present:#1f9d6b;--present-bg:#e6f5ee;--partial:#c5851b;--partial-bg:#faf0da;--absent:#c8402f;--absent-bg:#fbe8e4;
+  --shadow:0 1px 2px rgba(16,32,45,.05),0 4px 16px rgba(16,32,45,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#0c1219;--surface:#141d27;--surface-2:#1a2531;--surface-3:#22303d;
+  --ink:#e8edf2;--muted:#a2b1bf;--faint:#6d7e8d;--border:#25333f;--border-strong:#37485a;
+  --brand:#4f97df;--brand-ink:#7fb4e8;--brand-tint:#152436;--accent:#e6a848;--accent-tint:#2e2413;
+  --present:#37b988;--present-bg:#12271f;--partial:#e0ab44;--partial-bg:#2a2412;--absent:#e2695a;--absent-bg:#2c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:900px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.back .drop{width:18px;height:18px}
+.crumb{color:var(--faint);font-size:13px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.toggle{appearance:none;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--muted);
+  width:34px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.toggle:hover{color:var(--ink);border-color:var(--brand)}
+
+.doc{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+.doc h1,.doc h2,.doc h3,.doc h4{line-height:1.25;text-wrap:balance;scroll-margin-top:64px}
+.doc h1{font-size:clamp(1.9rem,4vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin:.1em 0 .5em}
+.doc h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:2em 0 .5em;padding-top:1em;border-top:1px solid var(--border)}
+.doc h3{font-size:1.18rem;font-weight:700;margin:1.6em 0 .4em}
+.doc h4{font-size:1rem;font-weight:700;margin:1.3em 0 .3em;color:var(--muted)}
+.doc p{margin:.7em 0}
+.doc ul,.doc ol{margin:.6em 0;padding-left:1.4em}
+.doc li{margin:.3em 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{color:var(--ink);font-weight:680}
+.doc hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.doc blockquote{margin:1.2em 0;padding:.6em 1.1em;background:var(--surface-2);border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--muted)}
+.doc blockquote p{margin:.3em 0}
+.doc code{font-family:var(--mono);font-size:.87em;background:var(--surface-2);border:1px solid var(--border);
+  padding:1px 5px;border-radius:5px;color:var(--brand-ink)}
+.doc pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;
+  box-shadow:var(--shadow);margin:1.2em 0}
+.doc pre code{background:none;border:none;padding:0;color:var(--ink);font-size:12.8px;line-height:1.6}
+.table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.6px}
+.doc thead th{text-align:left;background:var(--surface-2);color:var(--faint);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.doc tbody td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+.doc tbody tr td:first-child{color:var(--ink)}
+.doc tbody td code{font-size:12px}
+.figure.diagram{margin:1.4em 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.figure.diagram figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface-2);padding:7px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.figure.diagram pre.mermaid{margin:0;border:none;border-radius:0;box-shadow:none;background:var(--surface);
+  padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55;white-space:pre;text-align:left}
+.figure.diagram.rendered pre.mermaid{white-space:normal;color:inherit;text-align:center}
+.figure.diagram pre.mermaid svg{max-width:none;height:auto;display:inline-block}
+.figure.diagram.rendered pre.mermaid{padding:18px}
+.figure.diagram.failed figcaption{color:var(--faint)}
+.figure.diagram.failed figcaption::after{content:" · source (not rendered)";text-transform:none;letter-spacing:0}
+.doc .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:0 0 2em;box-shadow:var(--shadow)}
+.doc .toc>ul{margin:0}
+.doc .toc .toctitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;font-family:var(--mono)}
+.doc .toc ul{list-style:none;padding-left:0}
+.doc .toc li{margin:.15em 0}
+.doc .toc a{color:var(--muted);font-size:13.5px}
+.doc .toc ul ul{padding-left:1.1em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.docfoot{border-top:1px solid var(--border);margin-top:3em;padding-top:1.4em;font-size:13px;color:var(--faint);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.docfoot .fnote{font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="index.html"><svg class="drop" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5c3.6 4 6.5 7.2 6.5 11a6.5 6.5 0 0 1-13 0c0-3.8 2.9-7 6.5-11Z" fill="var(--brand)"/></svg> All docs</a>
+  <span class="crumb">50-staff-feedback-2026-08.md</span>
+  <span class="spacer"></span>
+  <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">&#9680;</button>
+</div></div>
+<article class="doc">
+<h1 id="staff-feedback-august-2026">Staff feedback — August 2026</h1>
+<p>Thirteen items raised by FSM staff after running the app at the counter. This
+page is the running record of what each item meant in the code and how it was
+resolved, so the fixes stay traceable back to the request that prompted them.</p>
+<p>Items are delivered in three batches: the small, self-contained fixes first,
+then the ones needing new schema, then the New Transaction / Capture Visit
+merge.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Batch</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Loyalty Lookup — phone number not cleared after navigating away and back</td>
+<td>1</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Difference between New Transaction and Capture Visit — only one way to capture</td>
+<td>3</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Only 3 customer types: Drive-In, Credit, Fleet/OTP</td>
+<td>1</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Only 2 payment types: Cash or Credit</td>
+<td>1</td>
+<td>✅ Already correct</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Settlement date should default to yesterday</td>
+<td>1</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Daily settlement multiplies if submitted twice; staff can't view the day's settlement report</td>
+<td>2</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Cash counter should include ₹2 and ₹1</td>
+<td>1</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>8</td>
+<td>New Transaction is missing the discount field</td>
+<td>1</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Credit Line type should be the customer type</td>
+<td>1</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Free-form digital receipts (PAYTM or any other means) with an amount</td>
+<td>2</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Add a discount during settlement calculation if it was missed at capture</td>
+<td>2</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Free-form field for Salary Advance or any other same-day note</td>
+<td>2</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Customer-capture notes should be timestamped, append-only entries</td>
+<td>2</td>
+<td>✅ Done</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="batch-1-delivered">Batch 1 — delivered</h2>
+<h3 id="1-loyalty-lookup-clears-itself">1 · Loyalty lookup clears itself</h3>
+<p>The counter device is shared, so a number left in the lookup field is both a
+privacy leak and a mis-scan waiting to happen.</p>
+<ul>
+<li><strong>Android</strong> — <code>LoyaltyLookupCard</code> (Home) and <code>LoyaltyLookupScreen</code> (public)
+  held the typed number in <code>rememberSaveable</code> while the view model held the
+  result, so both survived navigating away. A <code>LifecycleResumeEffect</code> now
+  clears the field and resets the view model as soon as the screen stops being
+  the foreground destination.</li>
+<li><strong>Web</strong> — the lookup input is marked <code>data-clear-on-restore</code> and cleared on
+  <code>turbo:before-cache</code> (so the snapshot Turbo restores from is empty) and on a
+  bfcache <code>pageshow</code>. A value the server deliberately re-rendered — the number
+  that failed validation — is left alone. <code>autocomplete</code> is off.</li>
+</ul>
+<h3 id="3-three-customer-types-named-consistently">3 · Three customer types, named consistently</h3>
+<p>The three types already existed (<code>drive_in / otp / credit</code>); the wording and
+order did not. <code>Customer::CUSTOMER_TYPE_LABELS</code> is now the single source —
+<strong>Drive-In, Credit, Fleet/OTP</strong>, in that order — and every picker, filter chip
+and badge reads from it (<code>Customer.customer_type_options</code> /
+<code>customer_type_label_for</code>) instead of hardcoding a list or calling <code>humanize</code>.
+The Android filter chips mirror the same list.</p>
+<h3 id="4-two-payment-types">4 · Two payment types</h3>
+<p>Already correct on every surface: <code>Transaction#payment_mode</code> is
+<code>{ cash, credit }</code>, and the web radio group and the Android payment options
+offer exactly those two. No change.</p>
+<h3 id="5-settlement-defaults-to-yesterday">5 · Settlement defaults to yesterday</h3>
+<p>Staff record the day's transactions as they happen and settle the next morning,
+so a draft opened with no date now loads <strong>yesterday's</strong> sheet
+(<code>Settlement::Builder.default_business_date</code>). An unparseable date falls back to
+the same default. The pump/date chooser still lets the FSM pick any date, and
+Android picks the default up from the draft API.</p>
+<h3 id="7-2-and-1-in-the-cash-counter">7 · ₹2 and ₹1 in the cash counter</h3>
+<p><code>SettlementCashDenomination::DENOMINATIONS</code> is now
+<code>500, 200, 100, 50, 20, 10, 5, 2, 1</code>. The form grid, the draft API and the
+Android denomination rows all derive from that constant, so one change covers
+all three. Existing settlements gain the two new rows when reopened.</p>
+<h3 id="8-discount-on-new-transaction">8 · Discount on New Transaction</h3>
+<p><code>Transaction#discount_amount</code> existed and was permitted, but no form ever set
+it. Added on the web fuel step and the Android transaction screen, with the
+submit gate refusing a negative discount or one that swallows the sale.</p>
+<p><code>TransactionCreator</code> previously applied a discount only on the litres path; the
+web form captures ₹, so the typed-amount path now treats the figure as the
+gross and takes the discount off it. Points are earned on the net — what the
+customer actually paid.</p>
+<h3 id="9-credit-line-type-is-the-customer-type">9 · Credit line type is the customer type</h3>
+<p><code>SettlementCreditLine#credit_type</code> was <code>fleet_otp / tank_truck</code>. It now mirrors
+the three customer account types. <code>fleet_otp</code> keeps its stored value (<code>0</code>) so
+installed app builds keep posting a value the server accepts; <code>tank_truck</code> (<code>1</code>)
+was migrated to <code>credit</code> (<code>3</code>), which is what a tank-truck credit sale was being
+used to record. The Android type toggle became a three-way segmented control.</p>
+<h2 id="batch-2-delivered">Batch 2 — delivered</h2>
+<h3 id="6-settlements-no-longer-multiply-and-staff-can-read-the-days-sheet">6 · Settlements no longer multiply, and staff can read the day's sheet</h3>
+<p>Two separate problems behind one line of feedback.</p>
+<p><strong>The multiplying.</strong> The Android form kept <code>null</code> ids on its child rows after
+the first save — the response was only read for the settlement's own id. A
+second submit therefore posted every reading, lube, credit and denomination as
+a <em>new</em> nested record, so the sheet ended up with two of everything and double
+the totals. Three changes:</p>
+<ul>
+<li>The app now re-reads the saved settlement into the form after each save, so
+  every row carries the id it was handed back.</li>
+<li><code>DailySettlement</code> refuses a payload containing two rows for the same nozzle,
+  lube, denomination, digital means, stock line or rate comparison, with a
+  message the FSM can act on.</li>
+<li>Matching unique indexes make the duplicate impossible even under a race, and
+  the migration deduplicates rows already written (newest wins) and re-derives
+  every affected settlement's stored totals.</li>
+</ul>
+<p>Credit and discount lines are deliberately <em>not</em> deduplicated: they have no
+natural key, so a second row there may be a genuine second credit.</p>
+<p><strong>The report.</strong> <code>accessible_settlements</code> scoped staff to <code>recorded_by:
+current_user</code>, so an FSM couldn't see the sheet for their own pump if a
+colleague on another shift had recorded it. Staff now read any settlement for a
+pump they're posted to (their standing assignment or any dated one) while still
+editing only their own; the list shows who recorded each row and hides Edit on
+the rest.</p>
+<h3 id="10-digital-receipts-are-free-form">10 · Digital receipts are free-form</h3>
+<p><code>phonepe_pos_amount</code> and <code>phonepe_scanner_amount</code> were two fixed columns. They
+are now <code>settlement_digital_receipts</code> — a repeatable label + amount line, so
+PAYTM or any other means can be recorded without a release. PhonePe POS and
+PhonePe Scanner are seeded on every draft, so the sheet still looks the way the
+FSM expects. Existing values were migrated into rows and the columns dropped.</p>
+<p>For compatibility, the staff API still accepts the two old parameters (folding
+them into the matching labelled rows) and still emits both keys, derived from
+those rows — an app build already on a phone keeps working.</p>
+<h3 id="11-a-discount-can-be-added-during-settlement">11 · A discount can be added during settlement</h3>
+<p>Discount lines used to arrive only pulled from the same day's visit entries. The
+settlement form now has an <strong>Add discount</strong> row on both surfaces for one missed
+at capture; a line with no visit entry is a manually added one. Empty rows are
+dropped rather than saved.</p>
+<h3 id="12-cash-taken-out">12 · Cash taken out</h3>
+<p>New <code>settlement_expense_lines</code> (description + amount) for a salary advance or
+anything else taken from the day's takings. It reduces the Final Amount to
+Settle, so the counted cash still reconciles:</p>
+<pre><code>final = (fuel + lubes) − (discounts + credit + digital receipts + cash taken out)
+</code></pre>
+<h3 id="13-notes-are-a-dated-log">13 · Notes are a dated log</h3>
+<p><code>customers.info_note</code> was one text column that every save overwrote, so the
+previous conversation was lost. Notes are now <code>customer_notes</code> — append-only,
+each with its author and timestamp. The existing note was carried over as the
+first entry (stamped with the customer's last update, the closest available
+approximation) and the column dropped.</p>
+<p>Assigning <code>info_note</code> still works on all three surfaces — it queues a new dated
+entry instead of overwriting the last — and reading it returns the most recent
+entry, so older app builds and existing API consumers are unaffected. The note
+box on the web form and in the app now starts empty, with the full log rendered
+beneath it.</p>
+<h2 id="batch-3-delivered">Batch 3 — delivered</h2>
+<h3 id="2-one-way-to-capture">2 · One way to capture</h3>
+<p>New Transaction and Capture Visit were two screens writing two records for the
+same event at the counter. They are now one screen — <strong>New Entry</strong> — and one
+submit writes both:</p>
+<ul>
+<li>a <strong>VisitEntry</strong> — litres (the source of truth), the driver / transport /
+  Fleet-OTP detail, and the discount the D3 settlement pull reads; and</li>
+<li>a <strong>Transaction</strong> — the ₹ and the points ledger (C5).</li>
+</ul>
+<p>Neither downstream pipeline loses its source, and staff have one way in.</p>
+<p><strong>Where the logic lives.</strong> <code>CounterEntry</code> owns the field list both surfaces post
+and decides which records a given capture can produce. <code>VisitEntryRecorder</code>
+already composed the pair, so it does the writing; it gained an explicit
+<code>payment_mode</code> (Cash/Credit is now chosen, not inferred from the Fleet/OTP
+switch) and accepts a typed ₹ amount, converting it to litres at the catalog
+price so litres stay canonical.</p>
+<p><strong>Two captures can't produce both records, and neither blocks the counter:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unregistered plate</td>
+<td>The visit is recorded; there is no customer to award points to, so no transaction.</td>
+</tr>
+<tr>
+<td>Fuel with no catalog price, ₹ typed</td>
+<td>The sale is recorded alone. <code>visit_skipped_reason</code> says why, rather than swallowing it.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The screen.</strong> The merged form is the transaction wizard staff already know —
+plate scanner, customer lookup, inline registration, pump and nozzle — with the
+fleet and driver detail behind a collapsed <em>Fleet &amp; driver detail</em> panel. A
+drive-in stays a three-tap job; a fleet visit opens the panel and records the
+transport and the people behind it, who join the customer's contact roster.</p>
+<p><strong>What retired.</strong> The separate capture form and its Android screen are gone.
+<code>/staff/visit_entries/new</code> redirects to the merged screen so bookmarks still
+work, and the per-pump/day captures list stays — that is a report, not a second
+way in. Nav, topbar, Home quick actions and the Android home grid now offer one
+capture action plus that list.</p>
+<p><strong>API.</strong> <code>POST /api/v1/staff/transactions</code> accepts the visit fields alongside
+the sale and returns <code>visit_entry</code> and <code>visit_skipped_reason</code> next to the
+existing <code>transaction</code>. <code>POST /api/v1/staff/visit_entries</code> is unchanged, so a
+visit-only capture is still possible for a caller that wants one.</p>
+<div class="docfoot">
+  <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
+  <span class="fnote">Generated from 50-staff-feedback-2026-08.md &middot; 2026-07-22</span>
+</div>
+</article>
+<script>
+(function(){var b=document.getElementById('themeBtn');if(!b)return;
+b.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':(c==='light'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+document.documentElement.setAttribute('data-theme',n);});})();
+</script>
+
+<script src="assets/mermaid.min.js"></script>
+<script>
+(function(){
+  var seq=0;
+  var figs=[].slice.call(document.querySelectorAll('.figure.diagram'));
+  var blocks=figs.map(function(f){return f.querySelector('pre.mermaid');});
+  blocks.forEach(function(b){ if(b) b.setAttribute('data-src', b.textContent); });
+  function effTheme(){var t=document.documentElement.getAttribute('data-theme');
+    return t||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  function run(){
+    if(!window.mermaid) return;
+    try{ mermaid.initialize({startOnLoad:false, theme: effTheme()==='dark'?'dark':'neutral',
+      flowchart:{useMaxWidth:false, htmlLabels:true}, er:{useMaxWidth:false}, sequence:{useMaxWidth:false},
+      themeVariables:{fontFamily:'ui-sans-serif, system-ui, sans-serif'}}); }catch(e){}
+    blocks.forEach(function(b,i){
+      if(!b) return;
+      var fig=figs[i], src=b.getAttribute('data-src');
+      fig.classList.remove('rendered','failed');
+      b.textContent=src; b.removeAttribute('data-processed');
+      try{
+        mermaid.render('mmd_'+(seq++), src).then(function(res){
+          b.innerHTML=res.svg; if(res.bindFunctions) res.bindFunctions(b); fig.classList.add('rendered');
+        }).catch(function(){ b.textContent=src; fig.classList.add('failed'); });
+      }catch(e){ b.textContent=src; fig.classList.add('failed'); }
+    });
+  }
+  function start(){ if(window.mermaid){ run(); } else { setTimeout(start,60); } }
+  if(document.readyState!=='loading'){ start(); } else { document.addEventListener('DOMContentLoaded', start); }
+  var tb=document.getElementById('themeBtn'); if(tb){ tb.addEventListener('click', function(){ setTimeout(run,50); }); }
+})();
+</script>
+
+</body>
+</html>

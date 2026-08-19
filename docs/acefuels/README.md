@@ -37,6 +37,7 @@ per-area specs. The roadmap tells you what to build in what order.
 | 20 | [API contracts](20-api-contracts.md) | All new/changed JSON endpoints for Android |
 | 30 | [Implementation roadmap](30-implementation-roadmap.md) | Phased plan, dependencies, effort, biggest changes |
 | 40 | [Gap analysis](40-gap-analysis.md) | The audit companion — full present/partial/absent matrix |
+| 50 | [Staff feedback — Aug 2026](50-staff-feedback-2026-08.md) | The 13 counter-staff items, what each meant in code, and how it was resolved |
 
 ## Feature ID map
 `A1–A10` setup/users/shifts · `B1–B2` customer capture · `C1–C5` rewards ·

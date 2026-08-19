@@ -32,11 +32,12 @@
       <div class="card-body p-4 p-lg-5">
         <h2 id="home-quick-actions-title" class="h5 mb-3">Quick actions</h2>
         <div class="d-grid gap-2">
+          <%# Item 2 — one capture, plus the day's list beside it. %>
           <%= link_to new_staff_transaction_path, class: "btn btn-outline-primary text-start" do %>
-            <i class="ti ti-gas-station me-2" aria-hidden="true"></i>New Transaction
+            <i class="ti ti-gas-station me-2" aria-hidden="true"></i>New Entry
           <% end %>
-          <%= link_to new_staff_visit_entry_path, class: "btn btn-outline-primary text-start" do %>
-            <i class="ti ti-clipboard-list me-2" aria-hidden="true"></i>Capture Visit
+          <%= link_to staff_visit_entries_path, class: "btn btn-outline-primary text-start" do %>
+            <i class="ti ti-clipboard-list me-2" aria-hidden="true"></i>Today's Captures
           <% end %>
           <% if current_user.admin? %>
             <%= link_to admin_dashboard_path, class: "btn btn-outline-primary text-start" do %>

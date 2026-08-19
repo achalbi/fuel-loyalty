@@ -39,7 +39,7 @@
           <span class="customer-details-hero__chip"><strong><%= @customer.transactions.size %></strong> visits</span>
           <span class="customer-details-hero__chip"><strong><%= persisted_vehicles.size %></strong> vehicles</span>
           <% unless @customer.drive_in? %>
-            <span class="customer-details-hero__chip"><%= @customer.customer_type == "otp" ? "OTP / Fleet" : "Credit" %></span>
+            <span class="customer-details-hero__chip"><%= @customer.customer_type_label %></span>
           <% end %>
           <% if @customer.transport_name.present? %>
             <span class="customer-details-hero__chip">Transport: <strong><%= @customer.transport_name %></strong></span>
@@ -349,7 +349,21 @@
               </div>
             <% end %>
           </div>
-          <p class="text-muted mb-0"><%= @customer.info_note.presence || "No notes added yet." %></p>
+          <% customer_notes = @customer.customer_notes.includes(:author).to_a %>
+          <% if customer_notes.any? %>
+            <ol class="customer-details-notes list-unstyled mb-0">
+              <% customer_notes.each do |note| %>
+                <li class="customer-details-notes__item">
+                  <div class="customer-details-notes__meta small text-muted">
+                    <%= l(note.created_at, format: :long) %> · <%= note.author_label %>
+                  </div>
+                  <div class="customer-details-notes__body"><%= simple_format(note.body, {}, sanitize: true) %></div>
+                </li>
+              <% end %>
+            </ol>
+          <% else %>
+            <p class="text-muted mb-0">No notes added yet.</p>
+          <% end %>
         </div>
       </div>
 

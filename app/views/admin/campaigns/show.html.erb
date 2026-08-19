@@ -21,7 +21,7 @@
         <%= "#{@campaign.min_purchase_litres} L" if @campaign.min_purchase_litres %>
         over <%= @campaign.period.humanize.downcase %><%= " (#{@campaign.period_days} days)" if @campaign.period_rolling_days? %>
       </p>
-      <p class="mb-1"><strong>Audience:</strong> <%= @campaign.target_type.humanize %><%= " · #{@campaign.target_customer_type.humanize}" if @campaign.target_customer_type.present? %>
+      <p class="mb-1"><strong>Audience:</strong> <%= @campaign.target_type.humanize %><%= " · #{Customer.customer_type_label_for(@campaign.target_customer_type)}" if @campaign.target_customer_type.present? %>
         <%= " · #{@campaign.campaign_targets.size} customer(s)" if @campaign.target_individual? || @campaign.target_selected? %></p>
       <p class="mb-0"><strong>Channels:</strong> <%= @campaign.channel_list.map(&:upcase).join(", ") %></p>
     </div></div>

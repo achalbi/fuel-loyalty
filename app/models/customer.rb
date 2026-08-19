@@ -7,6 +7,7 @@ class Customer < ApplicationRecord
   has_many :points_ledgers, dependent: :destroy
   has_many :vehicles, -> { order(:vehicle_number) }, dependent: :destroy
   has_many :customer_contacts, dependent: :destroy
+  has_many :customer_notes, -> { recent_first }, dependent: :destroy, inverse_of: :customer
   has_many :contact_logs, dependent: :destroy
   has_many :customer_feedbacks, dependent: :destroy
   has_many :visit_entries, dependent: :nullify
@@ -30,11 +31,19 @@ class Customer < ApplicationRecord
   # E4 — account-type segmentation (OTP = fleet/credit account, drive-in = walk-in
   # cash, credit = credit account). Backfilled to drive_in for existing rows.
   CUSTOMER_TYPES = { drive_in: "drive_in", otp: "otp", credit: "credit" }.freeze
-  CUSTOMER_TYPE_LABELS = { "drive_in" => "Drive-in", "otp" => "OTP / Fleet", "credit" => "Credit" }.freeze
+  # Wording and display order fixed by FSM staff: Drive-In, Credit, Fleet/OTP.
+  # Every picker, filter chip and badge reads from here so the three types are
+  # named identically on web, API and the app.
+  CUSTOMER_TYPE_LABELS = { "drive_in" => "Drive-In", "credit" => "Credit", "otp" => "Fleet/OTP" }.freeze
   enum :customer_type, CUSTOMER_TYPES, default: :drive_in
 
   def self.customer_type_label_for(code)
     CUSTOMER_TYPE_LABELS.fetch(code.to_s) { code.to_s.humanize }
+  end
+
+  # [label, value] pairs for select/options helpers, in the staff-facing order.
+  def self.customer_type_options
+    CUSTOMER_TYPE_LABELS.map { |code, label| [label, code] }
   end
 
   def customer_type_label
@@ -57,6 +66,39 @@ class Customer < ApplicationRecord
     where(id: txn).or(where(id: visits))
   }
 
+  # Item 13 — notes are an append-only log (see CustomerNote), but the create and
+  # update paths on all three surfaces write a single `info_note` field. Keep
+  # that spelling: assigning it queues a new dated entry instead of overwriting
+  # the last one, and reading it returns the most recent entry so existing
+  # views and API payloads keep showing "the note".
+  attr_accessor :info_note_author
+
+  def info_note=(value)
+    @pending_note = value.to_s.strip.presence
+  end
+
+  def info_note
+    return @pending_note if defined?(@pending_note) && @pending_note.present?
+
+    latest_note&.body
+  end
+
+  def latest_note
+    customer_notes.loaded? ? customer_notes.max_by(&:created_at) : customer_notes.recent_first.first
+  end
+
+  after_save :append_pending_note
+
+  def append_pending_note
+    note = @pending_note
+    @pending_note = nil
+    return if note.blank?
+    # Re-saving a record without touching the field must not duplicate the entry.
+    return if latest_note&.body == note
+
+    customer_notes.create!(body: note, author: info_note_author)
+  end
+
   before_validation :normalize_phone_number
 
   # A contact may be added before we know their name; phone number is the
@@ -68,6 +110,15 @@ class Customer < ApplicationRecord
   # the same phone submitted together (nested attributes) before they hit the
   # [customer_id, phone_number] index as a 500.
   validate :customer_contact_phones_are_distinct
+  validate :pending_note_within_length
+
+  # The note is written by an after_save callback, so check its length up front
+  # rather than letting CustomerNote raise mid-transaction.
+  def pending_note_within_length
+    return if @pending_note.blank? || @pending_note.length <= 2000
+
+    errors.add(:info_note, "is too long (maximum is 2000 characters)")
+  end
 
   def customer_contact_phones_are_distinct
     phones = customer_contacts.reject(&:marked_for_destruction?)

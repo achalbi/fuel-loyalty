@@ -19,7 +19,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{loyalty_path}'][method='post']", 1
     assert_select "input[name='loyalty[phone_number]'][data-phone-number-field='true']", 1
     assert_select "a.nav-link[href='#{root_path}'].active", text: /Home/
-    assert_select "a.nav-link[href='#{new_staff_transaction_path}']", text: /New Transaction/
+    assert_select "a.nav-link[href='#{new_staff_transaction_path}']", text: /New Entry/
   end
 
   test "admin users land on Home with the loyalty lookup form" do

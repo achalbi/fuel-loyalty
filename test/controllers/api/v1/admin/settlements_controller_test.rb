@@ -12,9 +12,10 @@ module Api
           Product.create!(name: "MS", category: "fuel", fuel_type_code: "petrol", pack_unit: "litre", mrp: 110, selling_price: 100)
           @settlement = DailySettlement.create!(
             fuel_pump: @pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff, status: "submitted",
-            phonepe_pos_amount: 500,
+            digital_receipts_attributes: [{ label: "PhonePe POS", amount: 500 }],
             nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1000, closing_reading: 1100, unit_price: 100 }]
           )
+          @receipt = @settlement.digital_receipts.first
         end
 
         def auth_headers(user)
@@ -57,7 +58,7 @@ module Api
             patch api_v1_admin_settlement_path(@settlement), params: {
               change_reason: "Correcting PhonePe total",
               on_behalf_of_id: @staff.id,
-              settlement: { phonepe_pos_amount: "700" },
+              settlement: { digital_receipts_attributes: [{ id: @receipt.id, label: "PhonePe POS", amount: "700" }] },
             }, headers: auth_headers(@admin)
           end
           assert_response :ok
@@ -66,7 +67,7 @@ module Api
           change = @settlement.audit_changes.last
           assert_equal "Correcting PhonePe total", change.change_reason
           assert_equal @staff, change.on_behalf_of
-          assert_equal ["500.0", "700.0"], change.field_diffs["phonepe_pos_amount"]
+          assert_equal ["500.0", "700.0"], change.field_diffs["total_digital_receipt_amount"]
           assert_equal 9300.0, body["final_amount_to_settle"] # 10000 - 700
           assert_equal @staff.display_name, body["changes"].first["on_behalf_of"]
         end

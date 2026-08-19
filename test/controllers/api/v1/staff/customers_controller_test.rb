@@ -72,7 +72,7 @@ module Api
           assert_response :ok
           body = response.parsed_body
           assert_equal "otp", body["customer_type"]
-          assert_equal "OTP / Fleet", body["customer_type_label"]
+          assert_equal "Fleet/OTP", body["customer_type_label"]
           assert_equal "Ace Transport", body["transport_name"]
           assert_equal 1, body["contacts"].size
           contact = body["contacts"].first

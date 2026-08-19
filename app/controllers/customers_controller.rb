@@ -27,6 +27,7 @@ class CustomersController < ApplicationController
   def update
     authorize @customer
     @customer.assign_attributes(customer_params)
+    @customer.info_note_author = current_user
     @customer.phone_number = Customer.normalize_phone_number(customer_params[:phone_number])
 
     if @customer.save
