@@ -10,6 +10,9 @@ class DailySettlement < ApplicationRecord
   belongs_to :fuel_pump
   belongs_to :shift_template, optional: true
   belongs_to :recorded_by, class_name: "User"
+  # Who actually keyed the settlement in. Equal to recorded_by for a normal FSM
+  # entry; an admin entering for someone else is the case worth spotting.
+  belongs_to :entered_by, class_name: "User", optional: true
 
   has_many :nozzle_readings, class_name: "SettlementNozzleReading", dependent: :destroy, inverse_of: :daily_settlement
   has_many :lube_lines, class_name: "SettlementLubeLine", dependent: :destroy, inverse_of: :daily_settlement
@@ -72,6 +75,10 @@ class DailySettlement < ApplicationRecord
 
   def display_title
     "Settlement · #{fuel_pump&.display_name} · #{business_date}"
+  end
+
+  def entered_on_behalf?
+    entered_by_id.present? && entered_by_id != recorded_by_id
   end
 
   private

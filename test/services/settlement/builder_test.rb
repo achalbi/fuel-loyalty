@@ -67,6 +67,48 @@ module Settlement
       assert_includes result.denominations, 1
     end
 
+    test "a back-dated draft uses the pump the caller was on that day, not today's" do
+      other_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
+      # Worked `other_pump` on the 21st, moved back to their default pump today.
+      @staff.update_pump_assignment(
+        { fuel_pump_id: other_pump.id, assigned_fuel_pump_nozzle_ids: [other_pump.nozzles.first.id] },
+        on: Date.new(2026, 7, 21), assigned_by: @staff
+      )
+      @staff.update_pump_assignment(
+        { fuel_pump_id: @pump.id, assigned_fuel_pump_nozzle_ids: [@petrol.id] },
+        on: Date.current, assigned_by: @staff
+      )
+      # A discount captured on the 21st belongs to the pump worked that day.
+      VisitEntry.create!(
+        user: @staff, fuel_pump: other_pump, entry_date: Date.new(2026, 7, 21),
+        vehicle_number: "TN01AA9999", litres: 30, discount_amount: 75, transport_name: "Backdated Lines"
+      )
+
+      result = Builder.call(user: @staff, business_date: "2026-07-21")
+
+      assert_equal other_pump.id, result.fuel_pump.id
+      assert_equal ["Backdated Lines"], result.settlement.discount_lines.map(&:transport_name)
+    end
+
+    test "a back-dated draft falls back to the standing default when no override was recorded" do
+      @staff.update_pump_assignment(
+        { fuel_pump_id: @pump.id, assigned_fuel_pump_nozzle_ids: [@petrol.id] },
+        on: Date.current, assigned_by: @staff
+      )
+
+      result = Builder.call(user: @staff, business_date: "2026-07-21")
+
+      assert_equal @pump.id, result.fuel_pump.id
+    end
+
+    test "an explicit pump still wins over the assignment for the date" do
+      other_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
+
+      result = Builder.call(user: @staff, fuel_pump_id: other_pump.id, business_date: "2026-07-21")
+
+      assert_equal other_pump.id, result.fuel_pump.id
+    end
+
     test "reports an existing settlement for the pump/date/shift" do
       existing = DailySettlement.create!(
         fuel_pump: @pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff,

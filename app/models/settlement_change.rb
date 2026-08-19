@@ -5,6 +5,9 @@ class SettlementChange < ApplicationRecord
   # re-awarded loyalty points (C5 ⇄ D9).
   belongs_to :daily_settlement
   belongs_to :changed_by, class_name: "User"
+  # The FSM the admin entered this edit for. `changed_by` stays the admin who
+  # actually made it, so the two are never conflated.
+  belongs_to :on_behalf_of, class_name: "User", optional: true
 
   validates :change_reason, presence: true
 

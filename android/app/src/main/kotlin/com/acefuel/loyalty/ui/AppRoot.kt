@@ -350,10 +350,9 @@ fun AppRoot(container: ServiceContainer) {
                     AdjustPointsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.MY_PUMP) {
-                    MyPumpScreen(
-                        onBack = { navController.popBackStack() },
-                        allowDateSelection = (authState as? AuthState.LoggedIn)?.user?.role == "admin",
-                    )
+                    // My Pump is always today's assignment, for admins as well as
+                    // staff — the server rejects any other date.
+                    MyPumpScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.SETTLEMENT) {
                     SettlementScreen(onBack = { navController.popBackStack() })
@@ -471,7 +470,7 @@ fun AppRoot(container: ServiceContainer) {
                         onBack = back,
                         staffMemberId = id,
                         title = "Assign Pump",
-                        intro = "Set this operator's default pump or assign a specific-day override. Staff self-assignment remains limited to today.",
+                        intro = "Set this operator's default pump or assign a specific-day override for today or a later date. My Pump self-assignment always applies to today.",
                         saveLabel = "Save Pump Assignment",
                     )
                 }

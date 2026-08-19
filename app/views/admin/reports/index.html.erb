@@ -33,7 +33,7 @@
   <div class="col-sm-1"><%= f.submit "Run", class: "btn btn-primary w-100" %></div>
 <% end %>
 
-<p class="text-muted small">₹ amounts are derived from litres × catalog selling price (litres are the source of truth). "Gifts" is the ₹ value of reward redemptions. Litres/discount come from per-visit captures.</p>
+<p class="text-muted small">₹ amounts are derived from litres × catalog selling price (litres are the source of truth). "Gifts" is the ₹ value of reward redemptions. Litres/discount come from per-visit captures — a loyalty-only transaction has no capture, so its totals appear on the customer's own page rather than here.</p>
 
 <% if @report.rows.any? %>
   <div class="table-responsive">

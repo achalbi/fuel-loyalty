@@ -87,7 +87,13 @@ fun HomeScreen(
         // Item 2 — one capture: the entry screen records the sale and the visit
         // together, so there is no separate Capture Visit action.
         add(QuickAction(Icons.Filled.PointOfSale, "New Entry", nayara.actionPrimaryContainer, nayara.actionPrimary) { haptics.tick(); onNewTransaction() })
-        add(QuickAction(Icons.AutoMirrored.Filled.ReceiptLong, "Daily Settlement", nayara.statusInfoContainer, nayara.statusInfo) { haptics.tick(); onDailySettlement() })
+        // A settlement belongs to the FSM who worked the shift (Admin-12), so an
+        // admin does not file one from here — the web console has the
+        // enter-on-behalf-of flow for the case where an FSM cannot. Admins read
+        // and reconcile settlements from Admin > Settlements instead.
+        if (!isAdmin) {
+            add(QuickAction(Icons.AutoMirrored.Filled.ReceiptLong, "Daily Settlement", nayara.statusInfoContainer, nayara.statusInfo) { haptics.tick(); onDailySettlement() })
+        }
         add(QuickAction(Icons.Filled.People, "Customers", nayara.accentContainer, nayara.accentDefault) { haptics.tick(); onCustomers() })
         add(QuickAction(Icons.Filled.Redeem, "Redeem", nayara.rewardPointsContainer, nayara.rewardPointsText) { haptics.tick(); onRedeem() })
         if (isAdmin) {

@@ -248,6 +248,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_110000) do
     t.date "business_date", null: false
     t.decimal "counted_cash_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.datetime "created_at", null: false
+    t.bigint "entered_by_id"
     t.decimal "final_amount_to_settle", precision: 12, scale: 2, default: "0.0", null: false
     t.string "fsm_name_snapshot"
     t.bigint "fuel_pump_id", null: false
@@ -266,6 +267,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_110000) do
     t.decimal "total_lube_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.datetime "updated_at", null: false
     t.index ["business_date"], name: "index_daily_settlements_on_business_date"
+    t.index ["entered_by_id"], name: "index_daily_settlements_on_entered_by_id"
     t.index ["fuel_pump_id", "business_date", "shift_template_id"], name: "index_daily_settlements_on_pump_date_shift", unique: true, nulls_not_distinct: true
     t.index ["fuel_pump_id"], name: "index_daily_settlements_on_fuel_pump_id"
     t.index ["recorded_by_id"], name: "index_daily_settlements_on_recorded_by_id"
@@ -477,9 +479,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_110000) do
     t.datetime "created_at", null: false
     t.bigint "daily_settlement_id", null: false
     t.jsonb "field_diffs", default: {}, null: false
+    t.bigint "on_behalf_of_id"
     t.boolean "recomputed_points", default: false, null: false
     t.index ["changed_by_id"], name: "index_settlement_changes_on_changed_by_id"
     t.index ["daily_settlement_id"], name: "index_settlement_changes_on_daily_settlement_id"
+    t.index ["on_behalf_of_id"], name: "index_settlement_changes_on_on_behalf_of_id"
   end
 
   create_table "settlement_credit_lines", force: :cascade do |t|
@@ -695,6 +699,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_110000) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.bigint "vehicle_id"
+    t.index ["customer_id", "created_at"], name: "index_transactions_on_customer_id_and_created_at"
     t.index ["customer_id"], name: "index_transactions_on_customer_id"
     t.index ["fuel_pump_id"], name: "index_transactions_on_fuel_pump_id"
     t.index ["fuel_pump_nozzle_id"], name: "index_transactions_on_fuel_pump_nozzle_id"
@@ -866,6 +871,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_110000) do
   add_foreign_key "customers", "customer_contacts", column: "primary_contact_id", on_delete: :nullify
   add_foreign_key "daily_settlements", "fuel_pumps", on_delete: :restrict
   add_foreign_key "daily_settlements", "shift_templates", on_delete: :nullify
+  add_foreign_key "daily_settlements", "users", column: "entered_by_id", on_delete: :nullify
   add_foreign_key "daily_settlements", "users", column: "recorded_by_id", on_delete: :restrict
   add_foreign_key "fuel_pump_nozzles", "fuel_pumps"
   add_foreign_key "fuel_pump_nozzles", "fuel_types", column: "fuel_type_code", primary_key: "code"
@@ -886,6 +892,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_110000) do
   add_foreign_key "settlement_cash_denominations", "daily_settlements", on_delete: :cascade
   add_foreign_key "settlement_changes", "daily_settlements", on_delete: :cascade
   add_foreign_key "settlement_changes", "users", column: "changed_by_id", on_delete: :restrict
+  add_foreign_key "settlement_changes", "users", column: "on_behalf_of_id", on_delete: :nullify
   add_foreign_key "settlement_credit_lines", "daily_settlements", on_delete: :cascade
   add_foreign_key "settlement_decantations", "daily_settlements", on_delete: :cascade
   add_foreign_key "settlement_digital_receipts", "daily_settlements"

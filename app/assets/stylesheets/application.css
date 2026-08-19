@@ -3185,7 +3185,25 @@ html[data-theme="dark"] .customer-details-inline-form {
   width: 100%;
 }
 
+.admin-customers-filter__thresholds {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.admin-customers-filter__threshold-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.65rem;
+}
+
+.admin-customers-filter__threshold {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
 .admin-customers-filter__actions {
+  grid-column: 1 / -1;
   display: flex;
   align-items: end;
   justify-content: flex-end;
@@ -3268,6 +3286,15 @@ html[data-theme="dark"] .customer-details-inline-form {
   overflow-wrap: anywhere;
 }
 
+.admin-customer-item__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.75rem;
+  margin-top: 0.18rem;
+  color: var(--fl-gray-500);
+  font-size: 0.78rem;
+}
+
 .admin-customer-item__side {
   flex-shrink: 0;
   display: flex;
@@ -3341,6 +3368,29 @@ html[data-theme="dark"] .customer-details-inline-form {
 .admin-user-item__role.is-staff {
   background: rgba(148, 163, 184, 0.14);
   border-color: rgba(148, 163, 184, 0.22);
+  color: var(--fl-gray-600);
+}
+
+.admin-user-item__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.admin-user-item__status.is-active {
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.28);
+  color: #15803d;
+}
+
+.admin-user-item__status.is-inactive {
+  background: rgba(148, 163, 184, 0.16);
+  border-color: rgba(148, 163, 184, 0.24);
   color: var(--fl-gray-600);
 }
 
@@ -5833,6 +5883,18 @@ html[data-theme="dark"] .admin-user-item__role.is-admin {
 }
 
 html[data-theme="dark"] .admin-user-item__role.is-staff {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #d6d3d1;
+}
+
+html[data-theme="dark"] .admin-user-item__status.is-active {
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.32);
+  color: #b7f7c7;
+}
+
+html[data-theme="dark"] .admin-user-item__status.is-inactive {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.12);
   color: #d6d3d1;

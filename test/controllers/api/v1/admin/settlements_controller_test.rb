@@ -44,10 +44,20 @@ module Api
           assert_equal "change_reason_required", response.parsed_body.dig("error", "code")
         end
 
+        test "update without an on-behalf-of staff member is rejected" do
+          assert_no_difference -> { SettlementChange.count } do
+            patch api_v1_admin_settlement_path(@settlement),
+              params: { change_reason: "fix", settlement: { notes: "fix" } }, headers: auth_headers(@admin)
+          end
+          assert_response :unprocessable_entity
+          assert_equal "on_behalf_of_required", response.parsed_body.dig("error", "code")
+        end
+
         test "update with a reason writes an audit row with field diffs" do
           assert_difference -> { SettlementChange.count }, 1 do
             patch api_v1_admin_settlement_path(@settlement), params: {
               change_reason: "Correcting PhonePe total",
+              on_behalf_of_id: @staff.id,
               settlement: { digital_receipts_attributes: [{ id: @receipt.id, label: "PhonePe POS", amount: "700" }] },
             }, headers: auth_headers(@admin)
           end
@@ -56,8 +66,26 @@ module Api
           assert_equal false, body["points_recomputed"]
           change = @settlement.audit_changes.last
           assert_equal "Correcting PhonePe total", change.change_reason
+          assert_equal @staff, change.on_behalf_of
           assert_equal ["500.0", "700.0"], change.field_diffs["total_digital_receipt_amount"]
           assert_equal 9300.0, body["final_amount_to_settle"] # 10000 - 700
+          assert_equal @staff.display_name, body["changes"].first["on_behalf_of"]
+        end
+
+        test "index reports per-user totals and filters by user" do
+          get api_v1_admin_settlements_path, params: { business_date: @settlement.business_date.iso8601 },
+            headers: auth_headers(@admin)
+
+          assert_response :ok
+          rollup = response.parsed_body["per_user_totals"]
+          assert_equal 1, rollup.size
+          assert_equal @staff.id, rollup.first["user_id"]
+          assert_equal 1, rollup.first["count"]
+
+          get api_v1_admin_settlements_path, params: { user_id: @admin.id }, headers: auth_headers(@admin)
+
+          assert_response :ok
+          assert_equal 0, response.parsed_body["total"]
         end
 
         test "reconcile locks the settlement" do

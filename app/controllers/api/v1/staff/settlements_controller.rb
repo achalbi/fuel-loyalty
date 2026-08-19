@@ -44,6 +44,9 @@ module Api
         def create
           authorize DailySettlement, :create?
           reject_reconcile_by_staff!
+          # Admin-12 — an admin filing through the FSM flow names whose settlement
+          # it is; `entered_by` keeps the admin on record.
+          return render_missing_on_behalf_of if on_behalf_of_missing?
 
           result = Settlement::Persister.call(
             settlement: DailySettlement.new,
@@ -134,8 +137,21 @@ module Api
                        message: "This settlement is locked and can no longer be edited.")
         end
 
+        # An admin files only under a staff member's name, never his own.
+        def on_behalf_of_missing?
+          return false unless current_user.admin?
+
+          !User.kept.where(role: :staff).where.not(id: current_user.id)
+                .exists?(id: params.dig(:settlement, :recorded_by_id))
+        end
+
+        def render_missing_on_behalf_of
+          render_error(status: 422, code: "on_behalf_of_required",
+                       message: ::Staff::SettlementsController::ON_BEHALF_OF_REQUIRED_MESSAGE)
+        end
+
         def settlement_params
-          params.require(:settlement).permit(
+          permitted = params.require(:settlement).permit(
             :fuel_pump_id, :business_date, :shift_template_id, :status,
             :notes,
             nozzle_readings_attributes: %i[id fuel_pump_nozzle_id opening_reading closing_reading testing_litres rollover opening_source _destroy],
@@ -149,6 +165,14 @@ module Api
             decantations_attributes: %i[id fuel_type_code tank_label opening_kl closing_kl _destroy],
             rate_comparisons_attributes: %i[id fuel_type_code competitor_name competitor_price own_price _destroy]
           )
+          # Ownership is set once, at creation. Nothing may re-point an existing
+          # settlement at a different user — that would move money between people
+          # with no audit row.
+          recorded_by_id = params.dig(:settlement, :recorded_by_id)
+          if current_user.admin? && action_name == "create" && recorded_by_id.present?
+            permitted[:recorded_by_id] = recorded_by_id
+          end
+          permitted
         end
 
         def parse_date(value)

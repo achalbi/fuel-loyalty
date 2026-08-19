@@ -111,7 +111,7 @@ module Staff
     end
 
     def customer_scope
-      return top_customers_scope if @query.blank?
+      return directory_scope if @query.blank?
 
       scope = Customer.includes(:vehicles).order(created_at: :desc)
 
@@ -136,7 +136,9 @@ module Staff
       scope.where(conditions.join(" OR "), values).limit(50)
     end
 
-    def top_customers_scope
+    # The unsearched view is the full customer directory, A-Z — staff scan it by
+    # name. Point balances ride along so the row can show them.
+    def directory_scope
       Customer
         .left_joins(:points_ledgers)
         .includes(:vehicles)

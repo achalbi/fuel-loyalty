@@ -235,6 +235,13 @@ builds keep working.
    pump they're posted to, including a colleague's shift, but may only edit one
    they recorded. Admins see and edit everything.
 11. **Cross-pump view (D9/Admin-13):** admin can list/aggregate settlements for a `business_date` across all pumps, summing fuel/lube/discount/credit/cash/shortage.
+12. **Per-FSM view (Admin-12).** The same list also rolls up **per staff member** — one row per `recorded_by`, carrying that FSM's settlement count, the pumps they covered and the same money columns, with a filter to narrow the list to one FSM. Grouping is on `recorded_by_id`, never on `fsm_name_snapshot`: the snapshot is frozen at create, so two users sharing a display name would merge and a renamed user would split. Only `submitted`/`reconciled` rows carry money, so the rollup counts only those and reports any drafts separately — a count that included drafts would contradict its own totals.
+13. **An admin never enters a settlement as himself (Admin-12).** A settlement belongs to the FSM who worked the shift. An admin may still enter one *for* an FSM who cannot — that is the only case where an admin enters anything:
+    - **Creating:** the admin must name the staff member; `recorded_by` becomes that FSM (so `fsm_name_snapshot` is theirs) and `daily_settlements.entered_by` records the admin who keyed it in. `entered_by` is stamped **once, at creation** — never back-stamped by a later edit or reconcile, which would falsely claim the editing admin keyed in every settlement predating the column. A staff member may never set `recorded_by`; their settlement is always their own.
+    - **Editing:** the admin must name the staff member the edit is for; `settlement_changes.on_behalf_of` records them alongside `changed_by` (the admin). The two are never conflated.
+    - Neither may name the acting admin — naming yourself is exactly what this rule forbids. Ownership is decided once at creation and can never be re-pointed afterwards, which would move money between people with no audit row.
+    - **Reconcile is exempt:** approving a settlement is an act of the admin's own authority, not data entry.
+14. **A back-dated draft resolves the pump for its business date.** `Settlement::Builder` picks the pump from the daily override recorded for that date, falling back to the caller's standing default — never the caller's pump *today*. The resolved pump decides both the auto-popped opening readings (rule 1) and which `visit_entries` the discount lines are pulled from (D3), so filing a settlement late against today's pump would pre-fill another pump's meter readings and another pump's discounts. An explicitly chosen `fuel_pump_id` always wins.
 
 ```mermaid
 flowchart TD
@@ -311,7 +318,7 @@ All under `namespace :api, :v1`. Staff routes added to the `staff` block (`confi
 ### Staff (FSM)
 
 **GET `/api/v1/staff/settlements/new`** — build the pre-filled draft.
-Request query: `fuel_pump_id` (optional; defaults to My Pump), `business_date` (optional; defaults today), `shift_template_id` (optional).
+Request query: `fuel_pump_id` (optional; defaults to the pump the caller was assigned **on `business_date`**, then their standing default — see business rule 11), `business_date` (optional; defaults today), `shift_template_id` (optional).
 Response `200`:
 ```json
 {
@@ -353,16 +360,18 @@ Request:
 ```
 Response `201`: the full persisted settlement with all derived fields, `final_amount_to_settle`, `counted_cash_amount`, `shortage_amount`, and per-fuel totals. `422` on validation with `details`.
 
+When the caller is an **admin**, `settlement.recorded_by_id` is additionally accepted and **required**: it names the staff member the settlement belongs to, and `422 on_behalf_of_required` is returned without it, or when it names anyone but a current staff member other than the caller (business rule 10). The acting admin is stored as `entered_by`. The field is ignored for staff callers and on `PATCH` for everyone — ownership is set once, at creation.
+
 **GET `/api/v1/staff/settlements`** — list the FSM's own settlements (query `business_date`, `fuel_pump_id`). Returns summary rows.
 **GET `/api/v1/staff/settlements/:id`** — full read (FSM's own; blocked once `locked`/reconciled except read-only).
 **PATCH `/api/v1/staff/settlements/:id`** — update while still `draft`; `409` if `locked`.
 
 ### Admin
 
-**GET `/api/v1/admin/settlements`** — list/filter across pumps. Query: `business_date` (or `from`/`to`), `fuel_pump_id` (optional; omit = all pumps), `status`. Response includes per-settlement summary plus, when a single date and no pump filter, a `cross_pump_totals` block (Admin-13).
-**GET `/api/v1/admin/settlements/:id`** — full settlement + `changes` audit array.
-**PATCH `/api/v1/admin/settlements/:id`** — edit any field/child; **`change_reason` required** (`422` without it). Same nested-attributes body as staff create plus `change_reason`. Response returns updated settlement, a new `settlement_changes` entry, and `points_recomputed: true|false`.
-**PATCH `/api/v1/admin/settlements/:id/reconcile`** — set `reconciled`, `locked=true`.
+**GET `/api/v1/admin/settlements`** — list/filter across pumps. Query: `business_date` (or `from`/`to`), `fuel_pump_id` (optional; omit = all pumps), `user_id` (optional; the FSM who recorded it), `status`. Response includes per-settlement summary, a `per_user_totals` array (one entry per FSM: `user_id`, `name`, `count`, `pumps[]`, `totals{}` — Admin-12), plus, when a single date and no pump filter, a `cross_pump_totals` block (Admin-13).
+**GET `/api/v1/admin/settlements/:id`** — full settlement + `changes` audit array (each change carries `changed_by`, `on_behalf_of`, `on_behalf_of_id`).
+**PATCH `/api/v1/admin/settlements/:id`** — edit any field/child; **`change_reason` required** (`422 change_reason_required` without it) and **`on_behalf_of_id` required** (`422 on_behalf_of_required` without it, or when it names anyone but a current staff member other than the acting admin). Same nested-attributes body as staff create plus both fields. Response returns updated settlement, a new `settlement_changes` entry, and `points_recomputed: true|false`.
+**PATCH `/api/v1/admin/settlements/:id/reconcile`** — set `reconciled`, `locked=true`. No `on_behalf_of_id`: reconciling is the admin's own act, not data entry.
 **GET `/api/v1/admin/settlements/summary`** — Admin-12 "visualize per pump anytime": query `fuel_pump_id`, `from`, `to`; returns time series of litres/₹/shortage.
 
 Routes to add:
@@ -393,12 +402,13 @@ end
   8. **Cash** — denomination grid (500/200/100/50/20/10/5 × qty → amount), counted-cash total, live **Shortage** readout (D7).
   9. **Stock received / Decantation / Rate comparison** — three compact repeatable sections.
   10. Sticky **Submit** button. All computed fields recalc client-side via Stimulus for feedback; server recomputes on submit.
-- **Admin — extend `admin/transactions`** area (currently index-only, `config/routes.rb:147`) or add sibling **`admin/settlements`**: an index filterable by date/pump/status with a **cross-pump totals** header, a per-settlement detail page reusing the staff form in editable mode with a mandatory **"Reason for change"** field, an **Audit trail** panel listing `settlement_changes` (who/when/reason/diffs, mirroring the attendance-changes UI), and a **Reconcile** action. Admin-12 "visualize per pump" is a small chart (litres/₹/shortage over a date range) on the pump detail.
+- **Admin — extend `admin/transactions`** area (currently index-only, `config/routes.rb:147`) or add sibling **`admin/settlements`**: an index filterable by date/pump/**staff (FSM)**/status with a **cross-pump totals** header and a **per-staff-member** rollup card (count, pumps covered, fuel/discount/final/cash/shortage; drafts noted separately, each row linking through to that FSM's own settlements), a per-settlement detail page reusing the staff form in editable mode with a mandatory **"Entering on behalf of"** selector and **"Reason for change"** field, an **Audit trail** panel listing `settlement_changes` (who/on-whose-behalf/when/reason/diffs, mirroring the attendance-changes UI), and a **Reconcile** action. The detail header shows `FSM: <name> · entered by <admin>` when the two differ. Admin-12 "visualize per pump" is a small chart (litres/₹/shortage over a date range) on the pump detail.
+- **Admin does not get a settlement-entry entry point.** The admin sidebar has no "Daily Settlement" link; an admin who must file for an FSM uses the staff flow, where the form asks who it is **Recorded for**. The Android home hides its Daily Settlement tile from admins for the same reason — its request body carries no FSM field, so offering it would only produce an unsatisfiable error.
 
 ### Android (Compose)
 
 - **New staff area `ui/settlement/`** with the house layout `SettlementApi.kt`, `SettlementDtos.kt`, `SettlementRepository.kt`, `SettlementScreen.kt`, `SettlementViewModel.kt` (same shape as `ui/admin/attendance/`). Entry point: a "Daily Settlement" tile on the FSM home (`ui/home`), enabled at shift end. `SettlementScreen` is a scrollable multi-section form mirroring the PWA sections; nozzle rows and denomination grid use editable rows with live-computed read-only fields; a pinned bottom bar shows Final Amount, Counted Cash, and Shortage. `SettlementViewModel` calls `GET new` on open to hydrate the draft (auto-popped readings, catalog prices, pulled discounts) and posts on submit; offline-safe drafts held in the ViewModel until submit.
-- **New admin area `ui/admin/settlements/`** (`Api/Dtos/Repository/Screen/ViewModel`) added to `AdminShell.kt` nav next to `transactions`. List screen with date/pump/status filters and a cross-pump totals card; detail screen renders the settlement read-only with an **Edit** toggle that requires a reason before save, an **Audit** tab, and a **Reconcile** button. Reuse `ui/designsystem` components and `Nayara*` theme.
+- **New admin area `ui/admin/settlements/`** (`Api/Dtos/Repository/Screen/ViewModel`) added to `AdminShell.kt` nav next to `transactions`. List screen with date/pump/status filters and a cross-pump totals card; detail screen renders the settlement read-only with an **Edit** toggle that requires a reason before save, an **Audit** tab (each entry showing `<admin> on behalf of <FSM>` where recorded), and a **Reconcile** button. Reuse `ui/designsystem` components and `Nayara*` theme.
 
 ## Validation & edge cases
 

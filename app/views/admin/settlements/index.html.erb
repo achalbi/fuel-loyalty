@@ -3,7 +3,7 @@
 <h1 class="h3 mb-3">Daily Settlements</h1>
 
 <%= form_with url: admin_settlements_path, method: :get, class: "row g-2 align-items-end mb-3" do |f| %>
-  <div class="col-sm-3">
+  <div class="col-sm-2">
     <%= f.label :business_date, "Date", class: "form-label" %>
     <%= f.date_field :business_date, value: @business_date, class: "form-control" %>
   </div>
@@ -12,10 +12,14 @@
     <%= f.select :fuel_pump_id, options_for_select(@fuel_pumps.map { |p| [p.display_name, p.id] }, @fuel_pump&.id), { include_blank: "All pumps" }, class: "form-select" %>
   </div>
   <div class="col-sm-3">
+    <%= f.label :user_id, "Staff (FSM)", class: "form-label" %>
+    <%= f.select :user_id, options_for_select(@staff_members.map { |u| ["#{u.display_name}#{u.active? ? "" : " (Inactive)"}", u.id] }, @staff_member&.id), { include_blank: "All staff" }, class: "form-select" %>
+  </div>
+  <div class="col-sm-2">
     <%= f.label :status, "Status", class: "form-label" %>
     <%= f.select :status, options_for_select(DailySettlement.statuses.keys.map { |s| [s.humanize, s] }, params[:status]), { include_blank: "Any" }, class: "form-select" %>
   </div>
-  <div class="col-sm-3"><%= f.submit "Filter", class: "btn btn-outline-secondary" %></div>
+  <div class="col-sm-1"><%= f.submit "Filter", class: "btn btn-outline-secondary w-100" %></div>
 <% end %>
 
 <% if @cross_pump_totals %>
@@ -34,6 +38,50 @@
   </div>
 <% end %>
 
+<% if @per_user_totals.present? %>
+  <div class="card mb-3">
+    <div class="card-body">
+      <h2 class="h6 mb-2">
+        Per staff member<%= " — #{@business_date}" if @business_date %>
+      </h2>
+      <p class="text-muted small mb-2">Submitted and reconciled settlements only; drafts are still being entered.</p>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Staff (FSM)</th><th>Pumps</th><th class="text-end">Settlements</th>
+              <th class="text-end">Fuel ₹</th><th class="text-end">Discounts ₹</th>
+              <th class="text-end">Final ₹</th><th class="text-end">Cash ₹</th><th class="text-end">Shortage ₹</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @per_user_totals.each do |row| %>
+              <tr>
+                <td>
+                  <% if row[:user] %>
+                    <%= link_to row[:name], admin_settlements_path(request.query_parameters.merge(user_id: row[:user].id)) %>
+                  <% else %>
+                    <%= row[:name] %>
+                  <% end %>
+                </td>
+                <td class="text-muted small"><%= row[:pumps].join(", ").presence || "—" %></td>
+                <td class="text-end">
+                  <%= row[:count] %><% if row[:drafts].positive? %> <span class="text-muted small">+<%= row[:drafts] %> draft</span><% end %>
+                </td>
+                <td class="text-end"><%= number_to_currency(row[:totals][:total_fuel_amount], unit: "₹") %></td>
+                <td class="text-end"><%= number_to_currency(row[:totals][:total_discount_amount], unit: "₹") %></td>
+                <td class="text-end"><%= number_to_currency(row[:totals][:final_amount_to_settle], unit: "₹") %></td>
+                <td class="text-end"><%= number_to_currency(row[:totals][:counted_cash_amount], unit: "₹") %></td>
+                <td class="text-end <%= "text-danger" if row[:totals][:shortage_amount].positive? %>"><%= number_to_currency(row[:totals][:shortage_amount], unit: "₹") %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+<% end %>
+
 <% if @settlements.any? %>
   <div class="table-responsive">
     <table class="table table-hover align-middle">
@@ -43,7 +91,7 @@
           <tr>
             <td><%= s.business_date %></td>
             <td><%= s.fuel_pump&.display_name %></td>
-            <td><%= s.fsm_name_snapshot %></td>
+            <td><%= s.recorded_by&.display_name.presence || s.fsm_name_snapshot %></td>
             <td><span class="badge text-bg-<%= s.reconciled? ? "success" : (s.submitted? ? "primary" : "secondary") %>"><%= s.status.humanize %></span></td>
             <td class="text-end"><%= number_to_currency(s.total_fuel_amount, unit: "₹") %></td>
             <td class="text-end"><%= number_to_currency(s.final_amount_to_settle, unit: "₹") %></td>

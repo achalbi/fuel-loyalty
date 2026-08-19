@@ -46,6 +46,8 @@ module Api
         def update_pump
           staff_member = staff_member_for_pump
           authorize staff_member, :assign_pump?
+          return render_past_override_error if past_override?
+
           saved = if assignment_mode == "default"
             staff_member.update_default_pump_assignment(pump_assignment_params)
           else
@@ -88,6 +90,15 @@ module Api
           Date.iso8601(raw.to_s)
         rescue ArgumentError, TypeError
           Date.current
+        end
+
+        def past_override?
+          assignment_mode == "override" && assignment_date < Date.current
+        end
+
+        def render_past_override_error
+          render_error(status: 422, code: "past_assignment_date",
+                       message: ::Admin::StaffMembersController::PAST_OVERRIDE_MESSAGE)
         end
 
         def staff_members_scope

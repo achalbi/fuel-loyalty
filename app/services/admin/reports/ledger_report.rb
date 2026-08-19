@@ -104,6 +104,10 @@ module Admin
         { label: nil, litres: 0.to_d, amount: 0.to_d, discount: 0.to_d, visits: 0, customer_ids: [], priced: false }
       end
 
+      # Deliberately visit-entry-only: this report is the per-visit capture ledger,
+      # so a drive-in loyalty customer who only has transactions does not appear
+      # here. Their litres/discount live on the customer console instead, via
+      # Admin::Crm::CustomerMetrics, which unions both sources.
       def scoped_entries
         scope = VisitEntry.where(entry_date: date_range).includes(:customer)
         scope = scope.where(fuel_type_code: @fuel_type) if @fuel_type

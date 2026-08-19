@@ -81,6 +81,61 @@ module Api
           assert_includes response.parsed_body.dig("error", "message"), "already been recorded"
         end
 
+        test "an admin filing through the staff API must name the FSM it is for" do
+          admin = users(:one)
+
+          assert_no_difference -> { DailySettlement.count } do
+            post api_v1_staff_settlements_path, params: {
+              settlement: {
+                fuel_pump_id: @pump.id, business_date: "2026-07-22", status: "submitted",
+                nozzle_readings_attributes: [
+                  { fuel_pump_nozzle_id: @petrol.id, opening_reading: "1000", closing_reading: "1100", testing_litres: "0" },
+                ],
+              },
+            }, headers: auth_headers(admin), as: :json
+          end
+
+          assert_response :unprocessable_entity
+          assert_equal "on_behalf_of_required", response.parsed_body.dig("error", "code")
+        end
+
+        test "an admin naming himself is rejected the same way" do
+          admin = users(:one)
+
+          post api_v1_staff_settlements_path, params: {
+            settlement: {
+              fuel_pump_id: @pump.id, business_date: "2026-07-22", status: "submitted",
+              recorded_by_id: admin.id,
+              nozzle_readings_attributes: [
+                { fuel_pump_nozzle_id: @petrol.id, opening_reading: "1000", closing_reading: "1100", testing_litres: "0" },
+              ],
+            },
+          }, headers: auth_headers(admin), as: :json
+
+          assert_response :unprocessable_entity
+          assert_equal "on_behalf_of_required", response.parsed_body.dig("error", "code")
+        end
+
+        test "an admin naming a staff member files it under that staff member" do
+          admin = users(:one)
+
+          assert_difference -> { DailySettlement.count }, 1 do
+            post api_v1_staff_settlements_path, params: {
+              settlement: {
+                fuel_pump_id: @pump.id, business_date: "2026-07-22", status: "submitted",
+                recorded_by_id: @staff.id,
+                nozzle_readings_attributes: [
+                  { fuel_pump_nozzle_id: @petrol.id, opening_reading: "1000", closing_reading: "1100", testing_litres: "0" },
+                ],
+              },
+            }, headers: auth_headers(admin), as: :json
+          end
+
+          settlement = DailySettlement.order(:id).last
+          assert_equal @staff, settlement.recorded_by
+          assert_equal admin, settlement.entered_by
+        end
+
         test "staff cannot reconcile a settlement" do
           post api_v1_staff_settlements_path, params: {
             settlement: { fuel_pump_id: @pump.id, business_date: "2026-07-21", status: "reconciled",

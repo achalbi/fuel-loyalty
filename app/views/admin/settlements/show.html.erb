@@ -4,7 +4,9 @@
   <div>
     <h1 class="h3 mb-0"><%= @settlement.fuel_pump&.display_name %> · <%= @settlement.business_date %></h1>
     <span class="badge text-bg-<%= @settlement.reconciled? ? "success" : (@settlement.submitted? ? "primary" : "secondary") %>"><%= @settlement.status.humanize %></span>
-    <span class="text-muted small">FSM: <%= @settlement.fsm_name_snapshot %></span>
+    <span class="text-muted small">
+      FSM: <%= @settlement.recorded_by&.display_name.presence || @settlement.fsm_name_snapshot %><% if @settlement.entered_on_behalf? %> · entered by <%= @settlement.entered_by.display_name %><% end %>
+    </span>
   </div>
   <div class="d-flex gap-2">
     <%= link_to "Back", admin_settlements_path, class: "btn btn-outline-secondary btn-sm" %>
@@ -69,7 +71,10 @@
         <div class="card-body py-2">
           <div class="d-flex justify-content-between">
             <strong><%= change.change_reason %></strong>
-            <span class="text-muted small"><%= change.changed_by&.display_name %> · <%= change.created_at&.strftime("%d %b %Y %H:%M") %></span>
+            <span class="text-muted small">
+              <%= change.changed_by&.display_name %><% if change.on_behalf_of %> on behalf of <%= change.on_behalf_of.display_name %><% end %>
+              · <%= change.created_at&.strftime("%d %b %Y %H:%M") %>
+            </span>
           </div>
           <% if change.recomputed_points %><span class="badge text-bg-warning">Points recomputed</span><% end %>
           <ul class="small mb-0 mt-1">

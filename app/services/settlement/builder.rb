@@ -17,8 +17,11 @@ module Settlement
 
     def initialize(user:, fuel_pump_id: nil, business_date: nil, shift_template_id: nil)
       @user = user
-      @fuel_pump = resolve_pump(fuel_pump_id)
+      # The business date has to be settled first: it decides which pump the
+      # caller was on, and the pump in turn decides the opening readings and the
+      # discount lines pulled into the draft.
       @business_date = parse_date(business_date)
+      @fuel_pump = resolve_pump(fuel_pump_id)
       @shift_template_id = shift_template_id.presence
     end
 
@@ -47,9 +50,15 @@ module Settlement
 
     private
 
+    # The pump the caller was assigned ON the business date, falling back to their
+    # standing default. Never today's one-day override: filing a late settlement
+    # would otherwise pre-fill another pump's opening readings and pull that
+    # pump's discount lines for the date.
     def resolve_pump(fuel_pump_id)
       pump = FuelPump.active.find_by(id: fuel_pump_id) if fuel_pump_id.present?
-      pump || @user&.transaction_fuel_pump
+      pump ||= @user&.transaction_fuel_pump(on: @business_date)
+      pump ||= @user&.assigned_fuel_pump
+      pump if pump&.active?
     end
 
     # Staff record the day's transactions as they happen and settle the next

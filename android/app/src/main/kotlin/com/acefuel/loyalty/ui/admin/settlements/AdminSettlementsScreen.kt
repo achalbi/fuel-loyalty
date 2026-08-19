@@ -160,7 +160,8 @@ private fun DetailView(state: AdminSettlementsUiState, vm: AdminSettlementsViewM
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(NayaraSpacing.CardPadding)) {
                         Text(c.changeReason, fontWeight = FontWeight.Medium)
-                        Text("${c.changedBy ?: "—"} · ${c.createdAt ?: ""}", style = MaterialTheme.typography.labelSmall)
+                        val actor = c.onBehalfOf?.let { "${c.changedBy ?: "—"} on behalf of $it" } ?: (c.changedBy ?: "—")
+                        Text("$actor · ${c.createdAt ?: ""}", style = MaterialTheme.typography.labelSmall)
                         val fields = c.fieldDiffs?.keys?.joinToString(", ").orEmpty()
                         if (fields.isNotBlank()) Text("Changed: $fields", style = MaterialTheme.typography.bodySmall)
                         if (c.recomputedPoints) Text("Points recomputed", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
