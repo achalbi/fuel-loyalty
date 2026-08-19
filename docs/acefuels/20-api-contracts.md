@@ -274,7 +274,7 @@ Auth: staff/admin (staff limited to own pump). Response `200`: settlement object
 Auth: staff/admin. Body: any subset of 3.2 (child arrays replace-in-full). Response `200` recomputed settlement. Errors `404`, `422`.
 
 ### 3.5 `GET /api/v1/admin/settlements` — list across pumps (G1) — **New**
-Auth: admin. Query: `fuel_pump_id`, `start_date`, `end_date`, `status`, `page`. Paginated envelope:
+Auth: admin. Query: `fuel_pump_id`, `user_id` (the FSM who recorded it — Admin-12), `start_date`, `end_date`, `status`, `page`. The envelope also carries `per_user_totals`: one entry per FSM (`user_id`, `name`, `count`, `pumps[]`, `totals{}`), counting only `submitted`/`reconciled` rows since only those carry money. Paginated envelope:
 ```json
 { "settlements": [ { "id": 77, "fuel_pump": {"id":3,"display_name":"Pump 3"}, "business_date": "2026-07-21", "fsm_name": "Suresh", "final_amount_to_settle": 6850.25, "shortage": 650.25, "status": "submitted" } ],
   "page": 1, "per_page": 10, "total": 1, "has_more": false }
@@ -282,6 +282,10 @@ Auth: admin. Query: `fuel_pump_id`, `start_date`, `end_date`, `status`, `page`. 
 
 ### 3.6 `GET /api/v1/admin/settlements/:id` / `PATCH /api/v1/admin/settlements/:id` — **New**
 Auth: admin. Same shapes as 3.3/3.4 but unrestricted by pump; admin may edit past dates (G1 "edit current/past days").
+
+`PATCH` requires **both** `change_reason` (`422 change_reason_required`) and `on_behalf_of_id` (`422 on_behalf_of_required`) — an admin edits a settlement only *for* the FSM who could not, never as himself, so `on_behalf_of_id` must name a current staff member other than the caller (Admin-12). Each entry in the response `changes[]` carries `changed_by` (the admin) alongside `on_behalf_of` / `on_behalf_of_id` (the FSM); the two are never conflated. `PATCH .../reconcile` takes neither — approving is the admin's own act, not data entry.
+
+**§3.2 for admin callers:** `POST /api/v1/staff/settlements` additionally accepts and **requires** `settlement.recorded_by_id` when the caller is an admin (same `422 on_behalf_of_required`, same eligibility rule). The named FSM becomes `recorded_by`; the acting admin is stored as `entered_by`, stamped once at creation and never back-stamped by a later edit. Staff callers may not set it, and it is ignored on `PATCH` for everyone — ownership is decided once and never re-pointed.
 
 ---
 
@@ -375,6 +379,8 @@ Response `200`: updated payload + `message`. Precedence unchanged (`reward_setti
 
 Today assignment is staff self-service only (`/api/v1/my_pump`). Adds an admin path to assign any operator to a pump + nozzles.
 
+> **Date rules (2026-08-19).** `GET/PATCH /api/v1/my_pump` is **always today's** assignment, for admins as well as staff. A write carrying any other `assignment_date` is refused with `422 daily_assignment_only`; a read serves today whatever was asked for, and echoes `assignment_date` so a client holding a stale date corrects itself. The admin endpoints below accept a date for a specific-day override but refuse a **past** one with `422 past_assignment_date` — a back-dated override cannot move transactions that already snapshotted their pump, so it would silently achieve nothing. See `14-spec-rewards-staff-constraints.md`.
+
 ### 7.1 `GET /api/v1/admin/staff_members/:id/pump_assignment` — **New**
 Auth: admin. Response `200`:
 ```json
@@ -426,6 +432,8 @@ Auth: admin. Response `200`:
   "recent_visits": [ { "date": "2026-07-19", "litres": 136.0, "amount": 13460.0 } ] }
 ```
 `bucket` ∈ `daily`|`weekly`|`biweekly`|`irregular`.
+
+*(Shipped as `GET /api/v1/admin/customers/:id/insight`.)* The response also carries a **`metrics`** block — what this customer has taken and cost us: `{ visits, litres, discount, gifts, contacts, points }`, all plain numbers. `gifts` is the ₹ value of their reward redemptions. Optional `preset` / `start_date` / `end_date` narrow those figures to a period and add a `lifetime_metrics` block beside them; without a period every figure is lifetime and `lifetime_metrics` is omitted. The same figures back the admin customer list's "at least X" filters (`min_visits`, `min_litres`, `min_contacts`, `min_discount`, `min_points`), computed by one shared definition so list and profile cannot disagree — counting rules in `13-spec-customer-crm-capture.md` business rule 8.
 
 ### 8.4 `GET /api/v1/admin/dashboard/lost_customers` — churn (E6) — **New**
 Auth: admin. Query: `window` (`week`|`month`, default `week`), `page`. "Visited previous window, not current window." Paginated `customers` (as 8.2, plus `last_visit_at`, `days_since_last_visit`).
