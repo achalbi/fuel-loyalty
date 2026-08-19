@@ -16,7 +16,7 @@ Analytics over transactions/customers/points. Filters (query params, both endpoi
 
 ## 7.2 Users (`/admin/users`)
 
-Card list ordered role → name; role badge Admin/Staff; phone (`+91` or "Mobile not set"); email (real email or "Email not set"). "+ Add User" modal; per-row View + Edit modal. Empty: "No users available yet." Soft-deleted users excluded everywhere.
+Card list ordered **active first**, then role → name (`active DESC, role, name, username, phone_number` — the `User.admin_listing` scope, shared with `GET /api/v1/admin/users` so web and native match). Clients render the list as received and never re-sort. Each row: role badge Admin/Staff **plus an Active/Inactive status badge** (web `.admin-user-item__status`, native `ActiveChip`) so the grouping is visible; phone (`+91` or "Mobile not set"); email (real email or "Email not set"). "+ Add User" modal; per-row View + Edit modal. Empty: "No users available yet." Soft-deleted users excluded everywhere.
 
 **Form fields:** Name* · Username (Login)* ("This is the login username shown on the sign-in page.") · Mobile Number* (`+91`, 10-digit) · Email (Optional) · Role (Admin/Staff) · Access Status (Active/Inactive — "Inactive users stay in history but cannot sign in until reactivated.") · Password (edit: "Leave blank to keep the existing password.") · Password confirmation. Blank password on update = keep existing. Model rules: 02 users (unique username/phone/email, last-admin guard).
 

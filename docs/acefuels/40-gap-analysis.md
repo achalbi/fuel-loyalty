@@ -51,7 +51,7 @@ Generated 2026-07-21.
 | E2 | Dashboard → customers by period | ✅ **Shipped (Phase 0)** — "View customers" drill-through (web + Android) opens a period-scoped customer list via `Customer.transacted_between` |
 | A10 | Assign operator to a pump | ✅ **Shipped (Phase 0)** — admin "Assign Pump" flow (web + API + Android) reusing `update_pump_assignment`; staff self-service removed |
 | S-PAUSE | Pause rewards not in staff login | ✅ **Shipped (Phase 0)** — pause/resume gated admin-only in `CustomerPolicy`; staff lose the buttons (web) and the control is hidden in the Android profile; admin keeps it |
-| S-MYPUMP | Hide "My Pump" from staff login | ✅ **Shipped (Phase 0)** — self-service pump assignment is admin-only; nav link, staff transaction control (web) and Android account tile are hidden from staff |
+| S-MYPUMP | Hide "My Pump" from staff login | ✅ **Shipped (Phase 0), regressed by `2142f53`, restored 2026-08** — self-service pump assignment is admin-only again; nav link (now inside the Admin nav section), staff transaction control (web) and Android account tile are hidden from staff. The assignment is pinned to **today** on all surfaces — no date picker anywhere. Staff keep read access to `GET /api/v1/my_pump` (`UserPolicy#read_pump?`) because the native transaction screen reads it for nozzle options; only writing is admin-only |
 | A1 | Setup number of pumps | Full CRUD, web + Android + API |
 | A2 | Set up nozzles | Nested under pump, auto-sequenced |
 | A3 | Assign nozzles to pumps | Inherent in pump→nozzle model |
@@ -104,7 +104,9 @@ Generated 2026-07-21.
 > Note: **S-MYPUMP and A10 both shipped in Phase 0** — self-service pump assignment
 > is now admin-only and hidden from staff, and admins assign an operator's pump via
 > an "Assign Pump" flow on all three surfaces (web + API + Android), so the staff
-> transaction flow still resolves an assigned pump.
+> transaction flow still resolves an assigned pump. (S-MYPUMP was briefly reverted by
+> `2142f53` and restored in Aug 2026; the admin date picker introduced by that commit
+> is gone — the self assignment is always today.)
 
 ---
 

@@ -302,6 +302,12 @@ a:hover{text-decoration:underline}
 <td>E7</td>
 <td>New</td>
 </tr>
+<tr>
+<td>14</td>
+<td>Admin customer cohort (activity thresholds)</td>
+<td>Staff feedback item 4</td>
+<td>New (<code>admin/customers</code>)</td>
+</tr>
 </tbody>
 </table></div>
 <hr />
@@ -827,6 +833,7 @@ Endpoint errors: <code>422 amount_litres_mismatch</code>; <code>422 no_price_for
 <p><strong>Model note (added to <code>customers</code>):</strong> <code>customer_type</code> (<code>drive_in</code>|<code>otp</code>|<code>credit</code>, default <code>drive_in</code>), <code>transport_name</code>, <code>approx_vehicle_count</code>, <code>info_note</code>, <code>primary_contact_id</code>. <strong>New table <code>customer_contacts</code>:</strong> <code>customer_id</code>, <code>role</code> (<code>driver</code>|<code>supervisor</code>|<code>owner</code>|<code>manager</code>), <code>name</code>, <code>phone_number</code>, <code>contacted</code> (bool), <code>contacted_at</code>, <code>notes</code>, <code>active</code>.</p>
 <h3 id="51-get-apiv1staffcustomerstype-changed-e4">5.1 <code>GET /api/v1/staff/customers?type=</code> — <strong>Changed (E4)</strong></h3>
 <p>Auth: staff/admin. New optional query <code>type</code> (<code>drive_in</code>|<code>otp</code>|<code>credit</code>) filters the list server-side; combines with <code>q</code> and the E2 period params. <code>CustomerSummarySerializer</code> now includes <code>customer_type</code> and <code>transport_name</code>.</p>
+<p><strong>Period semantics (fixed 2026-08-19).</strong> <code>preset</code>/<code>start_date</code>/<code>end_date</code> select customers <strong>active in the period</strong> using the transactions ∪ <code>visit_entries</code> union (<code>Customer.visited_between</code>) — the same rule §14 and the web admin customer list use. It previously inlined a transactions-only filter, so this endpoint (which backs the Android admin's E2 drill-through) hid every fleet/OTP/credit customer whose fuelling exists only as a captured visit entry, and the same admin on the same period saw a different customer set on web than in the app.</p>
 <h3 id="52-post-apiv1staffcustomers-patch-apiv1staffcustomersid">5.2 <code>POST /api/v1/staff/customers</code> &amp; <code>PATCH /api/v1/staff/customers/:id</code></h3>
 <p>Auth: staff/admin. Body (<code>customer</code>) — existing fields plus optional <code>customer_type</code>, <code>transport_name</code>, <code>approx_vehicle_count</code>, <code>info_note</code>, and nested <code>customer_contacts_attributes</code> (<code>id</code>, <code>role</code>, <code>name</code>, <code>phone_number</code>, <code>contacted</code>, <code>notes</code>, <code>active</code>, <code>_destroy</code>). A contact row persists only if it carries a name or phone. Existing initial-vehicle fields (<code>vehicle_number</code>, <code>fuel_type</code>, <code>vehicle_kind</code>, <code>commercial_*</code>) unchanged. <em>(The nested-contacts editor is live on the </em><em>web</em><em> customer form; the native contacts write UI folds into B2.)</em></p>
 <h3 id="53-get-apiv1staffcustomersid-changed">5.3 <code>GET /api/v1/staff/customers/:id</code> — <strong>Changed</strong></h3>
@@ -1184,6 +1191,91 @@ Endpoint errors: <code>422 amount_litres_mismatch</code>; <code>422 no_price_for
 <h3 id="132-get-apiv1admincustomersidfeedback-new">13.2 <code>GET /api/v1/admin/customers/:id/feedback</code> — <strong>New</strong></h3>
 <p>Auth: admin. Paginated <code>feedbacks</code> (rows as 13.1) plus <code>average_rating</code> (number).</p>
 <hr />
+<h2 id="14-admin-customer-cohort-activity-thresholds-staff-feedback-item-4-shipped-2026-08-19">14. Admin customer cohort — activity thresholds (staff feedback item 4) — ✅ <strong>Shipped (2026-08-19)</strong></h2>
+<p>"Customers who have visited us x times, filled x litres, whom I have contacted x times, whom we have given x discount, who has accumulated x reward points." One endpoint, one server-side definition of each figure (<code>Admin::Crm::CustomerMetrics</code>), shared verbatim with the web admin list so the two surfaces cannot disagree about what "5 visits" means.</p>
+<h3 id="141-get-apiv1admincustomers-shipped">14.1 <code>GET /api/v1/admin/customers</code> — ✅ <strong>Shipped</strong></h3>
+<p>Auth: <strong>admin only</strong> (a staff token gets <code>403</code>). Note the staff customer list is a different endpoint (<code>GET /api/v1/staff/customers</code>) and is unaffected.</p>
+<p>Query params — all optional, all AND-combined:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code></td>
+<td>free text over name / phone / vehicle number</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>active</code> | <code>inactive</code> (anything else = both)</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>drive_in</code> | <code>credit</code> | <code>otp</code></td>
+</tr>
+<tr>
+<td><code>preset</code> | <code>start_date</code> | <code>end_date</code></td>
+<td>the dashboard period — <strong>"active in period"</strong>, see the note below the table</td>
+</tr>
+<tr>
+<td><code>min_visits</code></td>
+<td>≥ N recorded <strong>fuellings</strong> (a linked visit entry + transaction pair is one)</td>
+</tr>
+<tr>
+<td><code>min_litres</code></td>
+<td>≥ N litres filled (decimal)</td>
+</tr>
+<tr>
+<td><code>min_discount</code></td>
+<td>≥ ₹N discount given (decimal)</td>
+</tr>
+<tr>
+<td><code>min_contacts</code></td>
+<td>≥ N outreach logs</td>
+</tr>
+<tr>
+<td><code>min_points_earned</code></td>
+<td>≥ N points <strong>earned in the period</strong></td>
+</tr>
+<tr>
+<td><code>min_points_balance</code></td>
+<td>≥ N points on the <strong>lifetime net balance</strong></td>
+</tr>
+<tr>
+<td><code>page</code>, <code>per_page</code></td>
+<td>paging (default 25, max 100)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Thresholds are <strong>inclusive</strong> (<code>&gt;=</code>): a customer with exactly 5 visits is in the <code>min_visits=5</code> cohort. A blank, negative or unparseable threshold is treated as <em>not supplied</em> rather than as an error, and is omitted from the echoed <code>thresholds</code>. An <strong>unsupplied</strong> threshold adds no filter, so customers with zero of that metric remain in the list.</p>
+<p><strong>A period means "active in period", and it gates every threshold.</strong> Supplying <code>preset</code>/<code>start_date</code>/<code>end_date</code> does two separate things, and the second one surprises people:</p>
+<ol>
+<li>it <strong>windows the figures</strong> — <code>visit_count</code>, <code>litres_total</code>, <code>discount_total</code>, <code>contact_count</code> and <code>points_earned</code> are all computed inside the window (<code>points_balance</code> is not; it is lifetime by design); and</li>
+<li>it <strong>restricts membership</strong> to customers who actually visited in the window (transactions ∪ <code>visit_entries</code>), AND-combined with every threshold.</li>
+</ol>
+<p>So <code>min_contacts=3&amp;preset=this_month</code> means "contacted 3 times <strong>and</strong> fuelled this month", not "contacted 3 times this month". And <code>min_points_balance=5000&amp;preset=this_month</code> will <strong>not</strong> return a dormant customer sitting on 5,000 lifetime points, even though <code>points_balance</code> itself is never windowed — they did not fuel this month. This is deliberate: "customers active in this period" is what the admin date picker has always meant, and the E2 dashboard drill-through ("N customers this month" → this list) depends on it. <strong>Drop the period to ask a lifetime question.</strong> Both surfaces label the control "active in period" (web: the blue banner above the list; app: the caption above the period chips) so it does not have to be discovered here.</p>
+<p>Response <code>200</code>:</p>
+<pre><code class="language-json">{ &quot;customers&quot;: [
+    { &quot;id&quot;: 7, &quot;name&quot;: &quot;ABC Logistics&quot;, &quot;phone_number&quot;: &quot;9800000000&quot;,
+      &quot;customer_type&quot;: &quot;credit&quot;, &quot;customer_type_label&quot;: &quot;Credit&quot;, &quot;active&quot;: true,
+      &quot;vehicle_numbers&quot;: [&quot;TN01AA1111&quot;, &quot;TN01AA1112&quot;],
+      &quot;metrics&quot;: { &quot;visit_count&quot;: 12, &quot;litres_total&quot;: 1840.5, &quot;discount_total&quot;: 2300.0,
+                   &quot;contact_count&quot;: 3, &quot;points_earned&quot;: 920, &quot;points_balance&quot;: 415 } } ],
+  &quot;thresholds&quot;: { &quot;visit_count&quot;: 5, &quot;litres_total&quot;: 500.0 },
+  &quot;period&quot;: { &quot;start_date&quot;: &quot;2026-08-01&quot;, &quot;end_date&quot;: &quot;2026-08-31&quot; },
+  &quot;page&quot;: 1, &quot;per_page&quot;: 25, &quot;total&quot;: 1, &quot;has_more&quot;: false }
+</code></pre>
+<p><code>period</code> is always present; both members are <code>null</code> when no period was requested.</p>
+<p><strong>Metric semantics (the parts that bite):</strong>
+- <code>visit_count</code>, <code>litres_total</code> and <code>discount_total</code> share <strong>one</strong> de-duplication rule, so the three figures on a row can never disagree about how many fuellings happened: every captured <code>visit_entry</code> counts, and a loyalty transaction counts only when <strong>no</strong> visit entry links to it (<code>VisitEntryRecorder</code> copies litres and discount onto the transaction it creates). A linked pair is therefore <strong>one</strong> visit, 20 L and ₹100 — not two visits and 40 L. See <a href="13-spec-customer-crm-capture.html#counting-a-discount-once-the-two-table-trap">Customer CRM capture</a>.
+- <code>visit_count</code> counts <strong>fuellings, de-duplicated on the link</strong> — not distinct calendar days, which is what it counted before 2026-08-19. The day rule only collapsed a linked pair when both rows happened to land on the same date, so a visit entry captured for 30 Jun whose transaction was written on 1 Jul (back-dated capture — the fleet/credit workflow) reported <em>two</em> visits for one fuelling while litres and discount reported it once. Consequence worth knowing: <strong>two fuellings on one day are two visits here</strong>, whereas <code>Admin::Crm::Cadence</code> (E3) uniqs dates because it measures the gap <em>between</em> visits — different question, different figure.
+- <code>points_earned</code> is <code>entry_type: earn</code> <strong>inside the window</strong>; <code>points_balance</code> is the lifetime <strong>net</strong> figure and is never windowed. They are deliberately two cohorts — earning 5,000 and redeeming the lot leaves a big <code>points_earned</code> and a zero balance.
+- The period selects customers via the transactions ∪ <code>visit_entries</code> union (<code>Customer.visited_between</code>), so <strong>visit-entry-only fleet/OTP/credit customers are included</strong> (they were previously dropped by a transactions-only filter). <code>GET /api/v1/staff/customers</code> (§5.1) now uses the identical scope, so web and app agree on who is "active in this period".</p>
+<p>Errors: <code>401 unauthorized</code> (no/expired token), <code>403 forbidden</code> (staff token).</p>
+<hr />
 <h2 id="appendix-a-new-vs-changed-by-route">Appendix A — New vs changed, by route</h2>
 <p><strong>New routes</strong></p>
 <pre><code>GET/POST         /api/v1/admin/products
@@ -1192,6 +1284,8 @@ GET              /api/v1/staff/settlements/new
 POST             /api/v1/staff/settlements
 GET/PATCH        /api/v1/staff/settlements/:id
 GET              /api/v1/admin/settlements
+GET              /api/v1/admin/settlements/new          # record-on-behalf hydration (§3.7)
+POST             /api/v1/admin/settlements              # record on behalf of a named FSM (§3.7)
 GET/PATCH        /api/v1/admin/settlements/:id
 GET/POST         /api/v1/staff/customer_entries
 PATCH/DELETE     /api/v1/staff/customer_entries/:id
@@ -1207,6 +1301,7 @@ GET              /api/v1/admin/reports
 GET              /api/v1/admin/reports/export
 POST             /api/v1/staff/customers/:id/feedback
 GET              /api/v1/admin/customers/:id/feedback
+GET              /api/v1/admin/customers                 (activity-threshold cohort)
 </code></pre>
 <p><strong>Changed routes (request/response extended, path unchanged)</strong></p>
 <pre><code>GET   /api/v1/staff/catalog                     (+ products)

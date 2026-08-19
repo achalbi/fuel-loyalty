@@ -12,6 +12,10 @@ data class ReportResponse(
     val dimension: String,
     val grain: String,
     val range: ReportRange = ReportRange(),
+    // False when the operator never configured a cash value per point: every
+    // redemption then stored a NULL ₹, so `gifts` must render "—", not "₹0".
+    // Defaults true so an older server (which omits the field) keeps its behaviour.
+    @SerialName("reward_value_configured") val rewardValueConfigured: Boolean = true,
     val rows: List<ReportRowDto> = emptyList(),
     val totals: ReportTotalsDto = ReportTotalsDto(),
 )
@@ -19,6 +23,8 @@ data class ReportResponse(
 @Serializable
 data class ReportRange(val from: String? = null, val to: String? = null)
 
+// `gifts` is the ₹ value of points redemptions ("Reward ₹"); `gift_count` is the
+// number of physical campaign gifts handed over — per-customer only, 0 elsewhere.
 @Serializable
 data class ReportRowDto(
     val key: String,
@@ -28,6 +34,7 @@ data class ReportRowDto(
     val amount: Double? = null,
     val discount: Double = 0.0,
     val gifts: Double = 0.0,
+    @SerialName("gift_count") val giftCount: Int = 0,
     val visits: Int = 0,
 )
 
@@ -37,5 +44,6 @@ data class ReportTotalsDto(
     val amount: Double = 0.0,
     val discount: Double = 0.0,
     val gifts: Double = 0.0,
+    @SerialName("gift_count") val giftCount: Int = 0,
     val visits: Int = 0,
 )

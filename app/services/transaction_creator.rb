@@ -202,6 +202,15 @@ class TransactionCreator
     raise ActiveRecord::RecordInvalid.new(Transaction.new.tap { |transaction| transaction.errors.add(:vehicle, "must belong to the selected customer") })
   end
 
+  # Only an admin can reach My Pump (S-MYPUMP), so only an admin is told to use it.
+  def unassigned_pump_message
+    if user.admin?
+      "Set up My Pump with at least one active nozzle before recording a transaction"
+    else
+      "Ask an admin to assign your pump with at least one active nozzle before recording a transaction"
+    end
+  end
+
   def resolve_fuel_pump_and_nozzle!(vehicle)
     return resolve_selected_pump! unless RewardSetting.current.nozzle_feature_enabled?
 
@@ -210,7 +219,8 @@ class TransactionCreator
     unless fuel_pump
       raise ActiveRecord::RecordInvalid.new(
         Transaction.new.tap do |transaction|
-          transaction.errors.add(:base, "Set up My Pump with at least one active nozzle before recording a transaction")
+          # S-MYPUMP: staff can no longer self-assign, so don't tell them to.
+          transaction.errors.add(:base, unassigned_pump_message)
         end
       )
     end

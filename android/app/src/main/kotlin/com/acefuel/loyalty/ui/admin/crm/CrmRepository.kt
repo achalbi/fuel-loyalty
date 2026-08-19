@@ -9,6 +9,30 @@ class CrmRepository(
     private val api: CrmApi,
     private val json: Json,
 ) {
+    suspend fun customerCohort(
+        query: String? = null,
+        status: String? = null,
+        customerType: String? = null,
+        preset: String? = null,
+        startDate: String? = null,
+        endDate: String? = null,
+        minVisits: String? = null,
+        minLitres: String? = null,
+        minDiscount: String? = null,
+        minContacts: String? = null,
+        minPointsEarned: String? = null,
+        minPointsBalance: String? = null,
+        page: Int? = null,
+        perPage: Int? = null,
+    ): ApiResult<CustomerCohortResponse> =
+        apiCall(json) {
+            api.customerCohort(
+                query, status, customerType, preset, startDate, endDate,
+                minVisits, minLitres, minDiscount, minContacts, minPointsEarned, minPointsBalance,
+                page, perPage,
+            )
+        }
+
     suspend fun insight(id: Long): ApiResult<InsightDto> =
         apiCall(json) { api.insight(id) }
 

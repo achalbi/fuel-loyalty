@@ -30,10 +30,21 @@
     <%= f.label :fuel_pump_id, "Pump", class: "form-label" %>
     <%= f.select :fuel_pump_id, options_for_select(@fuel_pumps.map { |p| [p.display_name, p.id] }, params[:fuel_pump_id]), { include_blank: "All" }, class: "form-select" %>
   </div>
+  <div class="col-sm-2">
+    <%= f.label :customer_id, "Customer", class: "form-label" %>
+    <%= f.select :customer_id, options_for_select(@customers.map { |c| ["#{c.display_name} · #{c.phone_number}", c.id] }, params[:customer_id]), { include_blank: "All" }, class: "form-select" %>
+  </div>
   <div class="col-sm-1"><%= f.submit "Run", class: "btn btn-primary w-100" %></div>
 <% end %>
 
-<p class="text-muted small">₹ amounts are derived from litres × catalog selling price (litres are the source of truth). "Gifts" is the ₹ value of reward redemptions. Litres/discount come from per-visit captures — a loyalty-only transaction has no capture, so its totals appear on the customer's own page rather than here.</p>
+<p class="text-muted small">
+  ₹ amounts are derived from litres × catalog selling price (litres are the source of truth).
+  "Reward ₹" is the cash value of points redemptions; "Gifts" counts physical campaign gifts handed over
+  (attributable per customer only, so it reads 0 on the other groupings). Litres/discount come from per-visit captures.
+  <% unless @report.reward_value_configured? %>
+    <span class="text-warning-emphasis">Reward ₹ shows "—" because no cash value per point is configured — set one in reward settings for redemptions to carry a ₹ value.</span>
+  <% end %>
+</p>
 
 <% if @report.rows.any? %>
   <div class="table-responsive">
@@ -42,7 +53,8 @@
         <tr>
           <th><%= @report.dimension.humanize %></th><th>Period</th>
           <th class="text-end">Litres</th><th class="text-end">Amount ₹</th>
-          <th class="text-end">Discount ₹</th><th class="text-end">Gifts ₹</th><th class="text-end">Visits</th>
+          <th class="text-end">Discount ₹</th><th class="text-end">Reward ₹</th>
+          <th class="text-end">Gifts</th><th class="text-end">Visits</th>
         </tr>
       </thead>
       <tbody>
@@ -53,7 +65,9 @@
             <td class="text-end"><%= number_with_precision(row.litres, precision: 3, strip_insignificant_zeros: true) %></td>
             <td class="text-end"><%= row.amount ? number_to_currency(row.amount, unit: "₹") : content_tag(:span, "—", class: "text-muted") %></td>
             <td class="text-end"><%= number_to_currency(row.discount, unit: "₹") %></td>
-            <td class="text-end"><%= number_to_currency(row.gifts, unit: "₹") %></td>
+            <%# "—" when no cash-per-point rate is set: those redemptions stored a NULL ₹, so a 0 here would be a lie. %>
+            <td class="text-end"><%= (@report.reward_value_configured? || !row.gifts.zero?) ? number_to_currency(row.gifts, unit: "₹") : content_tag(:span, "—", class: "text-muted") %></td>
+            <td class="text-end"><%= row.gift_count %></td>
             <td class="text-end"><%= row.visits %></td>
           </tr>
         <% end %>
@@ -64,7 +78,8 @@
           <td class="text-end"><%= number_with_precision(@report.totals[:litres], precision: 3, strip_insignificant_zeros: true) %></td>
           <td class="text-end"><%= number_to_currency(@report.totals[:amount], unit: "₹") %></td>
           <td class="text-end"><%= number_to_currency(@report.totals[:discount], unit: "₹") %></td>
-          <td class="text-end"><%= number_to_currency(@report.totals[:gifts], unit: "₹") %></td>
+          <td class="text-end"><%= (@report.reward_value_configured? || !@report.totals[:gifts].zero?) ? number_to_currency(@report.totals[:gifts], unit: "₹") : content_tag(:span, "—", class: "text-muted") %></td>
+          <td class="text-end"><%= @report.totals[:gift_count] %></td>
           <td class="text-end"><%= @report.totals[:visits] %></td>
         </tr>
       </tfoot>

@@ -61,10 +61,11 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
- * My Pump — a staff member assigns the pump they work on and which of its
- * active nozzles are theirs. This is the setup the transaction screen requires
- * when nozzle mode is on; without it, staff are blocked from recording
- * transactions. Backend: GET/PATCH /api/v1/my_pump.
+ * My Pump — assign the pump worked on and which of its active nozzles are in
+ * use. The self route is admin-only and always lands on today (S-MYPUMP): staff
+ * are assigned their pump by an admin through the A10 staff-member route, which
+ * is the only place a date can be chosen.
+ * Backend: GET/PATCH /api/v1/my_pump.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,10 +75,13 @@ fun MyPumpScreen(
     // admin endpoint instead of the self-service /my_pump endpoint (S-MYPUMP).
     staffMemberId: Long? = null,
     title: String = "My Pump",
-    intro: String = "Choose the pump you work on and the nozzles available to you. New " +
-        "transactions use this pump and show your nozzles as options.",
+    intro: String = "Choose the pump you work on today and the nozzles available to you. " +
+        "New transactions use this pump and show your nozzles as options.",
     saveLabel: String = "Save My Pump",
-    allowDateSelection: Boolean = staffMemberId != null,
+    // S-MYPUMP — staff may see their assignment but never change it. The
+    // transaction screen still links here when their pump isn't set up, so this
+    // renders a read-only summary rather than a form the server would reject.
+    canEdit: Boolean = true,
 ) {
     val container = LocalContainer.current
     val viewModel: MyPumpViewModel = viewModel(
@@ -109,7 +113,12 @@ fun MyPumpScreen(
                 .padding(horizontal = NayaraSpacing.ScreenMargin, vertical = NayaraSpacing.Lg),
         ) {
             Text(
-                intro,
+                if (canEdit) {
+                    intro
+                } else {
+                    "Your manager assigns the pump you work on and the nozzles available " +
+                        "to you. New transactions use this pump."
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.nayara.textSecondary,
             )
@@ -135,27 +144,36 @@ fun MyPumpScreen(
                     )
                 }
                 Spacer(Modifier.height(NayaraSpacing.Md))
-            }
-            DateField(
-                label = "Assignment date",
-                value = state.assignmentDate,
-                onChange = viewModel::setAssignmentDate,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = allowDateSelection && state.assignmentMode == "override",
-                placeholder = "Select date",
-            )
-            Text(
-                when {
-                    staffMemberId != null && state.assignmentMode == "default" ->
+                DateField(
+                    label = "Assignment date",
+                    value = state.assignmentDate,
+                    onChange = viewModel::setAssignmentDate,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.assignmentMode == "override",
+                    placeholder = "Select date",
+                )
+                Text(
+                    if (state.assignmentMode == "default") {
                         "Used on days without a specific-day override."
-                    allowDateSelection ->
+                    } else {
                         "The selected date overrides the default pump without changing it."
-                    else ->
-                        "My Pump always applies to today and does not change the default pump."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.nayara.textSecondary,
-            )
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.nayara.textSecondary,
+                )
+            } else {
+                // S-MYPUMP — the self screen has no date picker: the server pins
+                // the assignment to today.
+                Text(
+                    if (canEdit) {
+                        "This applies to today only and does not change the default pump."
+                    } else {
+                        "Ask your manager if this needs to change."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.nayara.textSecondary,
+                )
+            }
             Spacer(Modifier.height(NayaraSpacing.Lg))
 
             when {
@@ -174,6 +192,8 @@ fun MyPumpScreen(
                     icon = Icons.Filled.LocalGasStation,
                 )
 
+                !canEdit -> AssignedSummary(state)
+
                 else -> PumpForm(
                     state = state,
                     saveLabel = saveLabel,
@@ -184,6 +204,56 @@ fun MyPumpScreen(
             }
         }
     }
+}
+
+/**
+ * Read-only view of the assignment an admin made (S-MYPUMP). No pump picker and
+ * no save button — staff can only see what they were given.
+ */
+@Composable
+private fun AssignedSummary(state: MyPumpUiState) {
+    val assignedPump = state.activePumps.firstOrNull { it.id == state.selectedPumpId }
+    if (assignedPump == null) {
+        Hint("No pump assigned — ask your manager to assign one before recording transactions.")
+        return
+    }
+
+    SectionLabel("Pump")
+    Spacer(Modifier.height(NayaraSpacing.Sm))
+    NayaraCard(modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(NayaraSpacing.Lg), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.LocalGasStation, contentDescription = null)
+            Spacer(Modifier.width(NayaraSpacing.Md))
+            Text(assignedPump.displayName, fontWeight = FontWeight.SemiBold)
+        }
+    }
+
+    Spacer(Modifier.height(NayaraSpacing.Xl))
+    SectionLabel("Assigned nozzles")
+    Spacer(Modifier.height(NayaraSpacing.Sm))
+    val nozzles = state.nozzlesForSelectedPump.filter { it.id in state.selectedNozzleIds }
+    if (nozzles.isEmpty()) {
+        Hint("No nozzles assigned — ask your manager to assign at least one.")
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
+            nozzles.forEach { nozzle ->
+                NayaraCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        Modifier.padding(NayaraSpacing.Lg),
+                        verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Xxs),
+                    ) {
+                        Text(nozzle.displayName, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            nozzle.fuelType ?: nozzle.fuelTypeCode.orEmpty(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.nayara.textSecondary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+    Spacer(Modifier.height(NayaraSpacing.Xxl))
 }
 
 @Composable

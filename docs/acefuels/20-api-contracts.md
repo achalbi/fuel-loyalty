@@ -55,6 +55,7 @@ Endpoint sections below list **only endpoint-specific** error cases; the standar
 | 11 | Operator KYC | A7 | Changed (`admin/users`, multipart) |
 | 12 | Reports | E1 | New |
 | 13 | Customer feedback / rating | E7 | New |
+| 14 | Admin customer cohort (activity thresholds) | Staff feedback item 4 | New (`admin/customers`) |
 
 ---
 
@@ -361,6 +362,8 @@ Extends the customer record from "name + single phone (+ commercial contact)" to
 ### 5.1 `GET /api/v1/staff/customers?type=` — **Changed (E4)**
 Auth: staff/admin. New optional query `type` (`drive_in`|`otp`|`credit`) filters the list server-side; combines with `q` and the E2 period params. `CustomerSummarySerializer` now includes `customer_type` and `transport_name`.
 
+**Period semantics (fixed 2026-08-19).** `preset`/`start_date`/`end_date` select customers **active in the period** using the transactions ∪ `visit_entries` union (`Customer.visited_between`) — the same rule §14 and the web admin customer list use. It previously inlined a transactions-only filter, so this endpoint (which backs the Android admin's E2 drill-through) hid every fleet/OTP/credit customer whose fuelling exists only as a captured visit entry, and the same admin on the same period saw a different customer set on web than in the app.
+
 ### 5.2 `POST /api/v1/staff/customers` & `PATCH /api/v1/staff/customers/:id`
 Auth: staff/admin. Body (`customer`) — existing fields plus optional `customer_type`, `transport_name`, `approx_vehicle_count`, `info_note`, and nested `customer_contacts_attributes` (`id`, `role`, `name`, `phone_number`, `contacted`, `notes`, `active`, `_destroy`). A contact row persists only if it carries a name or phone. Existing initial-vehicle fields (`vehicle_number`, `fuel_type`, `vehicle_kind`, `commercial_*`) unchanged. *(The nested-contacts editor is live on the **web** customer form; the native contacts write UI folds into B2.)*
 
@@ -625,6 +628,63 @@ Auth: admin. Paginated `feedbacks` (rows as 13.1) plus `average_rating` (number)
 
 ---
 
+## 14. Admin customer cohort — activity thresholds (staff feedback item 4) — ✅ **Shipped (2026-08-19)**
+
+"Customers who have visited us x times, filled x litres, whom I have contacted x times, whom we have given x discount, who has accumulated x reward points." One endpoint, one server-side definition of each figure (`Admin::Crm::CustomerMetrics`), shared verbatim with the web admin list so the two surfaces cannot disagree about what "5 visits" means.
+
+### 14.1 `GET /api/v1/admin/customers` — ✅ **Shipped**
+
+Auth: **admin only** (a staff token gets `403`). Note the staff customer list is a different endpoint (`GET /api/v1/staff/customers`) and is unaffected.
+
+Query params — all optional, all AND-combined:
+
+| Param | Meaning |
+|---|---|
+| `q` | free text over name / phone / vehicle number |
+| `status` | `active` \| `inactive` (anything else = both) |
+| `type` | `drive_in` \| `credit` \| `otp` |
+| `preset` \| `start_date` \| `end_date` | the dashboard period — **"active in period"**, see the note below the table |
+| `min_visits` | ≥ N recorded **fuellings** (a linked visit entry + transaction pair is one) |
+| `min_litres` | ≥ N litres filled (decimal) |
+| `min_discount` | ≥ ₹N discount given (decimal) |
+| `min_contacts` | ≥ N outreach logs |
+| `min_points_earned` | ≥ N points **earned in the period** |
+| `min_points_balance` | ≥ N points on the **lifetime net balance** |
+| `page`, `per_page` | paging (default 25, max 100) |
+
+Thresholds are **inclusive** (`>=`): a customer with exactly 5 visits is in the `min_visits=5` cohort. A blank, negative or unparseable threshold is treated as *not supplied* rather than as an error, and is omitted from the echoed `thresholds`. An **unsupplied** threshold adds no filter, so customers with zero of that metric remain in the list.
+
+**A period means "active in period", and it gates every threshold.** Supplying `preset`/`start_date`/`end_date` does two separate things, and the second one surprises people:
+
+1. it **windows the figures** — `visit_count`, `litres_total`, `discount_total`, `contact_count` and `points_earned` are all computed inside the window (`points_balance` is not; it is lifetime by design); and
+2. it **restricts membership** to customers who actually visited in the window (transactions ∪ `visit_entries`), AND-combined with every threshold.
+
+So `min_contacts=3&preset=this_month` means "contacted 3 times **and** fuelled this month", not "contacted 3 times this month". And `min_points_balance=5000&preset=this_month` will **not** return a dormant customer sitting on 5,000 lifetime points, even though `points_balance` itself is never windowed — they did not fuel this month. This is deliberate: "customers active in this period" is what the admin date picker has always meant, and the E2 dashboard drill-through ("N customers this month" → this list) depends on it. **Drop the period to ask a lifetime question.** Both surfaces label the control "active in period" (web: the blue banner above the list; app: the caption above the period chips) so it does not have to be discovered here.
+
+Response `200`:
+```json
+{ "customers": [
+    { "id": 7, "name": "ABC Logistics", "phone_number": "9800000000",
+      "customer_type": "credit", "customer_type_label": "Credit", "active": true,
+      "vehicle_numbers": ["TN01AA1111", "TN01AA1112"],
+      "metrics": { "visit_count": 12, "litres_total": 1840.5, "discount_total": 2300.0,
+                   "contact_count": 3, "points_earned": 920, "points_balance": 415 } } ],
+  "thresholds": { "visit_count": 5, "litres_total": 500.0 },
+  "period": { "start_date": "2026-08-01", "end_date": "2026-08-31" },
+  "page": 1, "per_page": 25, "total": 1, "has_more": false }
+```
+`period` is always present; both members are `null` when no period was requested.
+
+**Metric semantics (the parts that bite):**
+- `visit_count`, `litres_total` and `discount_total` share **one** de-duplication rule, so the three figures on a row can never disagree about how many fuellings happened: every captured `visit_entry` counts, and a loyalty transaction counts only when **no** visit entry links to it (`VisitEntryRecorder` copies litres and discount onto the transaction it creates). A linked pair is therefore **one** visit, 20 L and ₹100 — not two visits and 40 L. See [Customer CRM capture](13-spec-customer-crm-capture.md#counting-a-discount-once-the-two-table-trap).
+- `visit_count` counts **fuellings, de-duplicated on the link** — not distinct calendar days, which is what it counted before 2026-08-19. The day rule only collapsed a linked pair when both rows happened to land on the same date, so a visit entry captured for 30 Jun whose transaction was written on 1 Jul (back-dated capture — the fleet/credit workflow) reported *two* visits for one fuelling while litres and discount reported it once. Consequence worth knowing: **two fuellings on one day are two visits here**, whereas `Admin::Crm::Cadence` (E3) uniqs dates because it measures the gap *between* visits — different question, different figure.
+- `points_earned` is `entry_type: earn` **inside the window**; `points_balance` is the lifetime **net** figure and is never windowed. They are deliberately two cohorts — earning 5,000 and redeeming the lot leaves a big `points_earned` and a zero balance.
+- The period selects customers via the transactions ∪ `visit_entries` union (`Customer.visited_between`), so **visit-entry-only fleet/OTP/credit customers are included** (they were previously dropped by a transactions-only filter). `GET /api/v1/staff/customers` (§5.1) now uses the identical scope, so web and app agree on who is "active in this period".
+
+Errors: `401 unauthorized` (no/expired token), `403 forbidden` (staff token).
+
+---
+
 ## Appendix A — New vs changed, by route
 
 **New routes**
@@ -635,6 +695,8 @@ GET              /api/v1/staff/settlements/new
 POST             /api/v1/staff/settlements
 GET/PATCH        /api/v1/staff/settlements/:id
 GET              /api/v1/admin/settlements
+GET              /api/v1/admin/settlements/new          # record-on-behalf hydration (§3.7)
+POST             /api/v1/admin/settlements              # record on behalf of a named FSM (§3.7)
 GET/PATCH        /api/v1/admin/settlements/:id
 GET/POST         /api/v1/staff/customer_entries
 PATCH/DELETE     /api/v1/staff/customer_entries/:id
@@ -650,6 +712,7 @@ GET              /api/v1/admin/reports
 GET              /api/v1/admin/reports/export
 POST             /api/v1/staff/customers/:id/feedback
 GET              /api/v1/admin/customers/:id/feedback
+GET              /api/v1/admin/customers                 (activity-threshold cohort)
 ```
 
 **Changed routes (request/response extended, path unchanged)**

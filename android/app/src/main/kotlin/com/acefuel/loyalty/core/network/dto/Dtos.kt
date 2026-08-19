@@ -269,6 +269,11 @@ data class TransactionSummaryDto(
     @SerialName("points_earned") val pointsEarned: Int? = null,
     @SerialName("cash_reward") val cashReward: Double? = null,
     @SerialName("fuel_amount") val fuelAmount: Double,
+    // Item 5 — the ₹ knocked off THIS fuelling (not the ₹ value of the points it
+    // earned, which is `cash_reward` above). Serialized as a plain 0 rather than
+    // null when none was given, so defaulted here for builds talking to an older
+    // API that does not send the key at all.
+    @SerialName("discount_amount") val discountAmount: Double = 0.0,
     @SerialName("payment_mode") val paymentMode: String,
     @SerialName("created_at") val createdAt: String,
 )

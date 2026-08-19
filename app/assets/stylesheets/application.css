@@ -3348,7 +3348,8 @@ html[data-theme="dark"] .customer-details-inline-form {
   letter-spacing: -0.01em;
 }
 
-.admin-user-item__role {
+.admin-user-item__role,
+.admin-user-item__status {
   display: inline-flex;
   align-items: center;
   padding: 0.18rem 0.55rem;

@@ -1,7 +1,11 @@
 module Api
   module V1
-    # GET/PATCH /api/v1/my_pump — self-service pump/nozzle assignment (own record).
-    # Always for today, for admins as well as staff: see MyPumpsController.
+    # GET/PATCH /api/v1/my_pump — the caller's own pump/nozzle assignment.
+    #
+    # Writing is admin-only: staff must not set their own pump (S-MYPUMP), which
+    # UserPolicy#manage_pump? enforces — no extra role guard is needed here.
+    # Reading stays open to the owner (read_pump?) because the native transaction
+    # and visit-entry screens fetch this endpoint to learn which nozzles to offer.
     class MyPumpController < Api::V1::BaseController
       # A read always serves today, whatever date was asked for: the payload
       # echoes `assignment_date`, so a client holding a stale date (an app left
@@ -9,7 +13,8 @@ module Api
       # instead of erroring. A WRITE still refuses — landing a save on the wrong
       # day silently would be much worse.
       def show
-        authorize current_user, :manage_pump?
+        authorize current_user, :read_pump?
+
         render json: MyPumpSerializer.call(current_user, on: assignment_date), status: :ok
       end
 
@@ -33,9 +38,12 @@ module Api
       private
 
       def my_pump_params
-        resource_params(:user).permit(:fuel_pump_id, :assignment_date, assigned_fuel_pump_nozzle_ids: [])
+        resource_params(:user).permit(:fuel_pump_id, assigned_fuel_pump_nozzle_ids: [])
       end
 
+      # The assignment always lands on today. Older app builds still transmit a
+      # device-local assignment_date; it is deliberately IGNORED rather than
+      # rejected, so a clock-skewed device can still open and save My Pump.
       def assignment_date
         Date.current
       end

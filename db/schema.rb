@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_19_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_19_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -392,6 +392,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_110000) do
     t.integer "points", null: false
     t.bigint "transaction_id"
     t.datetime "updated_at", null: false
+    t.index ["customer_id", "created_at"], name: "index_points_ledgers_on_customer_id_and_created_at"
     t.index ["customer_id"], name: "index_points_ledgers_on_customer_id"
     t.index ["transaction_id"], name: "index_points_ledgers_on_transaction_id"
   end
@@ -831,6 +832,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_110000) do
     t.bigint "user_id", null: false
     t.bigint "vehicle_id"
     t.string "vehicle_number", null: false
+    t.index ["customer_id", "entry_date"], name: "index_visit_entries_on_customer_id_and_entry_date"
     t.index ["customer_id"], name: "index_visit_entries_on_customer_id"
     t.index ["entry_date"], name: "index_visit_entries_on_entry_date"
     t.index ["fuel_pump_id", "entry_date"], name: "index_visit_entries_on_fuel_pump_id_and_entry_date"

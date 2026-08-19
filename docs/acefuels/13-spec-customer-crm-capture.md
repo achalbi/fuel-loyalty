@@ -40,8 +40,11 @@ Fuel-station customers today are a thin record (name + one phone + a plate). The
 > - **API:** `GET /api/v1/admin/customers/:id/insight` carries the `rewards`
 >   block; `CustomerProfileSerializer`'s transaction JSON gains `discount_amount`.
 > - **Android:** a **Rewards Given** card in the admin-only CRM section of
->   `CustomerProfileScreen`, and the per-transaction `cash_reward` now renders on
->   the transaction cards.
+>   `CustomerProfileScreen`, and each transaction card now shows that fuelling's
+>   own discount — `TransactionSummaryDto.discount_amount`, gated on `> 0` exactly
+>   as the web row is, so a ₹0 discount stays invisible. (The `cash_reward` line
+>   beside it is the pre-existing ₹ value of the points **earned** — a different
+>   figure that predates this item.)
 > - **The ₹0 trap, again:** with no cash-value-per-point configured every
 >   redemption stored `cash_reward_amount = NULL`, so `redemption_value` is a
 >   structural zero. `reward_value_configured` lets web and Android render `—`
@@ -56,6 +59,55 @@ Fuel-station customers today are a thin record (name + one phone + a plate). The
 > survives as a report. An unregistered plate still yields a visit with no
 > transaction, and a fuel with no catalog price yields the sale alone with a
 > stated reason. See [Staff feedback — Aug 2026](50-staff-feedback-2026-08.md).
+
+> **Cohort filters (2026-08-19, staff feedback item 4):** "As an Admin, I should
+> be able to see customers who have visited us x number of times, who have filled
+> x number of litres, whom I have contacted x number of times, whom we have given
+> x amount of discount, who has accumulated x number of reward points."
+> `Admin::Crm::CustomerMetrics` is the single definition of those figures — six
+> correlated subqueries the customers scope both SELECTs (to show them) and WHEREs
+> (to filter on them):
+>
+> | Metric | Rule |
+> |--------|------|
+> | `visit_count` | distinct visit **days** across transactions ∪ visit_entries (a linked pair is one day, not two) — the same figure `Admin::Crm::Cadence` reports |
+> | `litres_total` | de-duplicated across the two tables (see *Counting a discount once* below — litres are copied onto the linked transaction too) |
+> | `discount_total` | the same de-duplication rule; the set-wise twin of `Customer#discount_total` |
+> | `contact_count` | `contact_logs` in the window |
+> | `points_earned` | `points_ledgers` `entry_type: earn` **in the window** |
+> | `points_balance` | lifetime **net** balance, never windowed |
+>
+> - **Both point cohorts, on purpose.** Per the client decision, "accumulated x
+>   reward points" is exposed twice: what they *earned in the period* and the
+>   *balance they hold today*. Someone who earned 5,000 and redeemed the lot has a
+>   large `points_earned` and a zero balance — different people, different lists.
+> - **Thresholds are `>=`, optional, and AND-combined.** An unset threshold adds no
+>   clause at all, so a customer with zero contacts or zero points stays reachable;
+>   the subqueries COALESCE to 0 rather than dropping the row.
+> - **Six subqueries, not one join.** Joining transactions, visit_entries,
+>   contact_logs and points_ledgers into one grouped query multiplies the rows
+>   against each other — 3 visits × 2 contacts reports 6 of each.
+> - **A period bug fixed on the way.** The admin list's date filter was
+>   `Customer.transacted_between` (transactions only), so choosing any range
+>   silently dropped every fleet/OTP/credit customer whose fuelling is captured as
+>   a `visit_entry` — exactly the segment a litres or discount cohort exists to
+>   find. It is now `Customer.visited_between` (the union).
+> - **Not the same aggregation as `Campaigns::Evaluator`, deliberately.** F1's
+>   `min_purchase_litres` gate counts `transactions` only, and that is right for a
+>   campaign: the reward hangs off the loyalty record. This cohort answers "who are
+>   my customers" and must include visit-entry-only accounts. The divergence is
+>   documented on the class; reconciling the campaign gate onto these expressions
+>   is a follow-up.
+> - **Paged.** The admin customer list was unbounded; it is now 25 per page at the
+>   SQL level (OFFSET/LIMIT), with `[customer_id, created_at]` /
+>   `[customer_id, entry_date]` indexes added for the subqueries.
+> - **Web:** a collapsible "Filter by activity" panel on the admin customers index
+>   (auto-opened when a threshold is applied) plus a per-row metric strip.
+>   **API:** `GET /api/v1/admin/customers`. **Android:** an admin-only **Segments**
+>   screen (`ui/admin/crm/CustomerSegmentsScreen.kt`) reached from the Customers
+>   tab — `CustomersScreen` is shared verbatim with staff, so the action is passed
+>   in by `AdminShell` and simply does not exist for staff.
+> See [Staff feedback — Aug 2026](50-staff-feedback-2026-08.md).
 
 ## Requirements covered
 
@@ -159,12 +211,16 @@ Rationale for a separate table vs bolting columns onto `transactions`: the requi
 
 ##### Counting a discount once (the two-table trap)
 
-Discount is stored on **both** tables — `visit_entries.discount_amount` and `transactions.discount_amount` — and `VisitEntryRecorder` **copies** the visit entry's discount onto the loyalty transaction it links (`visit_entries.transaction_id`). So `visit_entries.sum + transactions.sum` reports ₹200 for a single ₹100 fuelling. Every "how much discount did we give?" figure must therefore go through **`Customer#discount_total(range: nil)`**, which applies one rule:
+Discount is stored on **both** tables — `visit_entries.discount_amount` and `transactions.discount_amount` — and `VisitEntryRecorder` **copies** the visit entry's discount onto the loyalty transaction it links (`visit_entries.transaction_id`). So `visit_entries.sum + transactions.sum` reports ₹200 for a single ₹100 fuelling. Every **per-customer** "discount given" figure — the admin customer card, the customer hero chip, the E4 cohort filters — must therefore go through **`Customer#discount_total(range: nil)`** or its set-wise twin below, which apply one rule:
 
 - every visit entry contributes its own `discount_amount`, linked or not;
 - a transaction contributes **only when no visit entry points at it** (an anti-join) — i.e. a standalone counter transaction with no B2 capture behind it.
 
-Two details are load-bearing. The anti-join subquery filters `transaction_id IS NOT NULL`, because a single NULL inside a SQL `NOT IN` makes the whole predicate match nothing. And when a `range` is given the anti-join is scoped to the **same windowed visit scope**, so a back-dated pair straddling the window boundary is still counted once — by whichever side falls inside the window — rather than dropped by both.
+Three details are load-bearing. The anti-join subquery filters `transaction_id IS NOT NULL`, because a single NULL inside a SQL `NOT IN` makes the whole predicate match nothing. When a `range` is given the anti-join is scoped to the **same windowed visit scope**, so a back-dated pair straddling the window boundary is still counted once — by whichever side falls inside the window — rather than dropped by both. And the two halves compare against different column types (`entry_date` is a DATE, `created_at` a TIMESTAMP), so the transaction bounds are coerced to a full day when the caller passes a Date range; uncoerced, the end would cast to `00:00` on the last day and drop everything rung up during it.
+
+**The reports page is not this rollup, and may disagree.** The E1 ledger report (`Admin::Reports::LedgerReport`) aggregates by vehicle / transporter / driver / customer, and all four of those dimensions are columns on the **capture** — so its Discount ₹ column is `SUM(visit_entries.discount_amount)` flat. It cannot double-count (it never sums `transactions` at all), but it also never sees a standalone counter transaction that was given a discount with no B2 capture behind it. For a customer whose discount lives on such a transaction, the admin customer card therefore reads **higher** than the reports page. That is deliberate, and the reason is on `LedgerReport#scoped_entries`: a standalone transaction carries no driver, no transporter and no `entry_date`, so folding it in would either invent phantom `(none)` rows on three of the four dimensions or inflate the visit count with something never captured as a visit. The report answers *"what did the captures say"*; the customer card answers *"what did this customer actually get"*.
+
+The same rule applies to **litres** (`VisitEntryRecorder` copies those onto the linked transaction as well) and has to work for a whole list at once, which `Customer#discount_total` cannot do a customer at a time. `Admin::Crm::CustomerMetrics#deduplicated_sum_sql` is the set-wise twin: identical rule, expressed as `SUM(visit_entries) + SUM(transactions WHERE NOT EXISTS (linked visit entry))`. `NOT EXISTS` is the SQL-level way to sidestep the `NOT IN`/NULL trap above. A test pins the two implementations to the same answer for the same customer, so neither can drift.
 
 #### Relationships
 

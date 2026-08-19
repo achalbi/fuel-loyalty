@@ -32,6 +32,29 @@ data class InsightDto(
     @SerialName("lifetime_metrics") val lifetimeMetrics: CustomerMetricsDto? = null,
     val contacts: ContactsSummaryDto = ContactsSummaryDto(),
     val feedback: FeedbackSummaryDto = FeedbackSummaryDto(),
+    val rewards: RewardsSummaryDto = RewardsSummaryDto(),
+)
+
+/**
+ * Item 5 — what the customer has actually been given, all time. Three units, kept
+ * apart on purpose: `discountTotal` is rupees off at the pump (de-duplicated
+ * server-side across the visit-entry/transaction pair), `redemption*` is points
+ * cashed in, and `giftCount`/`giftDescriptions` are physical F1 campaign gifts —
+ * those carry no rupee value at all, so the description is the whole story.
+ *
+ * `rewardValueConfigured` is false when no cash-value-per-point is set: every
+ * redemption then stored a NULL amount, so `redemptionValue` is a structural 0
+ * and must render as "—", never "₹0.00".
+ */
+@Serializable
+data class RewardsSummaryDto(
+    @SerialName("discount_total") val discountTotal: Double = 0.0,
+    @SerialName("redemption_value") val redemptionValue: Double = 0.0,
+    @SerialName("redemption_points") val redemptionPoints: Int = 0,
+    @SerialName("redemption_count") val redemptionCount: Int = 0,
+    @SerialName("gift_count") val giftCount: Int = 0,
+    @SerialName("gift_descriptions") val giftDescriptions: List<String> = emptyList(),
+    @SerialName("reward_value_configured") val rewardValueConfigured: Boolean = false,
 )
 
 // What the customer has taken and cost us: litres filled, discount given, and the
@@ -60,6 +83,57 @@ data class FeedbackSummaryDto(
     @SerialName("avg_rating") val avgRating: Double? = null,
     @SerialName("latest_rating") val latestRating: Int? = null,
     @SerialName("latest_comment") val latestComment: String? = null,
+)
+
+// ---- Customer cohort / segments (admin) ------------------------------------
+
+/**
+ * Item 4 — the six figures the admin cohort filters on, computed server-side so
+ * the app never recomputes (and never disagrees with) them.
+ *
+ * `visitCount` is distinct visit DAYS across loyalty transactions and captured
+ * visit entries; a visit that also produced a transaction counts once, not
+ * twice, and the same de-duplication applies to `litresTotal` and
+ * `discountTotal`.
+ *
+ * The two point figures are deliberately different cohorts: `pointsEarned` is
+ * what the customer racked up inside the selected period, `pointsBalance` is the
+ * lifetime net they are sitting on today. Someone who earned 5,000 and redeemed
+ * the lot has a big earned figure and a zero balance.
+ */
+@Serializable
+data class CustomerMetricsDto(
+    @SerialName("visit_count") val visitCount: Int = 0,
+    @SerialName("litres_total") val litresTotal: Double = 0.0,
+    @SerialName("discount_total") val discountTotal: Double = 0.0,
+    @SerialName("contact_count") val contactCount: Int = 0,
+    @SerialName("points_earned") val pointsEarned: Int = 0,
+    @SerialName("points_balance") val pointsBalance: Int = 0,
+)
+
+@Serializable
+data class CohortCustomerDto(
+    val id: Long,
+    val name: String,
+    @SerialName("phone_number") val phoneNumber: String,
+    @SerialName("customer_type") val customerType: String,
+    @SerialName("customer_type_label") val customerTypeLabel: String,
+    val active: Boolean = true,
+    @SerialName("vehicle_numbers") val vehicleNumbers: List<String> = emptyList(),
+    val metrics: CustomerMetricsDto = CustomerMetricsDto(),
+)
+
+@Serializable
+data class CustomerCohortResponse(
+    val customers: List<CohortCustomerDto> = emptyList(),
+    // Echoed back after the server has dropped anything blank or unparseable, so
+    // the screen shows what it actually filtered on.
+    val thresholds: Map<String, Double> = emptyMap(),
+    val period: ChurnPeriodDto = ChurnPeriodDto(),
+    val page: Int = 1,
+    @SerialName("per_page") val perPage: Int = 0,
+    val total: Int = 0,
+    @SerialName("has_more") val hasMore: Boolean = false,
 )
 
 // ---- Contact logs (admin) --------------------------------------------------
