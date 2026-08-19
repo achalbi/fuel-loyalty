@@ -21,7 +21,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.acefuel.loyalty.core.network.dto.UserDto
-import com.acefuel.loyalty.ui.admin.crm.AdminCustomerSegmentsScreen
 import com.acefuel.loyalty.ui.admin.dashboard.AdminDashboardScreen
 import com.acefuel.loyalty.ui.admin.ops.AdminOpsScreen
 import com.acefuel.loyalty.ui.admin.settings.AdminSettingsScreen
@@ -93,19 +92,10 @@ fun AdminShell(
 ) {
     var tab by rememberSaveable { mutableStateOf(AdminTab.Overview) }
 
-    // Item 4 — the admin-only cohort screen ("customers who have visited x
-    // times, filled x litres…") is a *state* of the Customers tab, not a route:
-    // same "state, not a nested NavHost" rule the tabs themselves follow, and it
-    // keeps the admin filters off the CustomersScreen that staff share.
-    var showSegments by rememberSaveable { mutableStateOf(false) }
-
     // Android tab contract: back from a secondary tab returns to the primary
     // one; only the primary tab's back exits the section. Enabled only when
     // off-Overview so Overview's back falls through to the NavHost and pops.
-    // Segments is one level deeper inside Customers, so it unwinds first.
-    BackHandler(enabled = tab != AdminTab.Overview) {
-        if (showSegments) showSegments = false else tab = AdminTab.Overview
-    }
+    BackHandler(enabled = tab != AdminTab.Overview) { tab = AdminTab.Overview }
 
     Scaffold(
         // The shell owns the bottom bar only. Every tab either has its own
@@ -118,12 +108,7 @@ fun AdminShell(
                 items = AdminNavItems,
                 currentRoute = tab.route,
                 onSelect = { route ->
-                    AdminTab.entries.firstOrNull { it.route == route }?.let {
-                        // Leaving the tab drops its inner screen, so coming back
-                        // to Customers always lands on the list.
-                        showSegments = false
-                        tab = it
-                    }
+                    AdminTab.entries.firstOrNull { it.route == route }?.let { tab = it }
                 },
             )
         },
@@ -158,23 +143,10 @@ fun AdminShell(
                     // The same customers screen staff use. An admin's customer
                     // list is not a different customer list, and shipping a second
                     // one would be two screens to keep in sync forever.
-                    //
-                    // The item-4 cohort filters ARE admin-only, though, so they
-                    // live on their own screen behind a "Segments" action that
-                    // only this shell passes in — staff never see the control and
-                    // never call the admin-only endpoint behind it.
-                    AdminTab.Customers -> if (showSegments) {
-                        AdminCustomerSegmentsScreen(
-                            onBack = { showSegments = false },
-                            onOpenCustomer = onOpenCustomer,
-                        )
-                    } else {
-                        CustomersScreen(
-                            onBack = null,
-                            onOpenCustomer = onOpenCustomer,
-                            onOpenSegments = { showSegments = true },
-                        )
-                    }
+                    AdminTab.Customers -> CustomersScreen(
+                        onBack = null,
+                        onOpenCustomer = onOpenCustomer,
+                    )
 
                     AdminTab.Ops -> AdminOpsScreen(
                         onAttendance = { onOpen(AdminRoutes.ATTENDANCE) },

@@ -19,10 +19,8 @@ import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -32,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.acefuel.loyalty.core.di.LocalContainer
-import com.acefuel.loyalty.core.network.ApiResult
 import com.acefuel.loyalty.core.network.dto.UserDto
 import com.acefuel.loyalty.ui.designsystem.Avatar
 import com.acefuel.loyalty.ui.designsystem.ChipTone
@@ -51,9 +48,9 @@ import kotlinx.coroutines.launch
 //
 // Exists so the tab bar has a home for the things that were previously stranded
 // at the bottom of HomeScreen: identity, admin entry, log out. The identity
-// block comes from the already-loaded session (`GET /api/v1/auth/me`). "My
-// Pump" opens its own editor (PATCH /api/v1/my_pump) for admins only — staff
-// are assigned their pump by an admin (S-MYPUMP) and see it read-only here.
+// block comes from the already-loaded session (`GET /api/v1/auth/me`); "My
+// Pump" opens its own screen (GET/PATCH /api/v1/my_pump) where staff assign the
+// pump + nozzles that unblock recording transactions.
 // ============================================================================
 
 @Composable
@@ -67,30 +64,11 @@ fun AccountScreen(
     val nayara = MaterialTheme.nayara
     val haptics = rememberHaptics()
     val scope = rememberCoroutineScope()
-    val container = LocalContainer.current
-    val settingsStore = container.settingsStore
+    val settingsStore = LocalContainer.current.settingsStore
     val onDeviceScanFirst by settingsStore.onDeviceScanFirst.collectAsStateWithLifecycle()
     var showLogoutConfirm by rememberSaveable { mutableStateOf(false) }
     val isAdmin = user.role == "admin"
     val name = user.displayName ?: user.name ?: user.username ?: "Staff"
-
-    // S-MYPUMP — staff can't open My Pump, so the row becomes read-only and has
-    // to say what an admin assigned them. Read-only fetch; on failure the row
-    // falls back to the neutral "assigned by your manager" line.
-    var assignedPumpName by remember { mutableStateOf<String?>(null) }
-    var assignedPumpChecked by remember { mutableStateOf(false) }
-    if (!isAdmin) {
-        LaunchedEffect(user.id) {
-            when (val result = container.staffRepository.myPump()) {
-                is ApiResult.Success -> {
-                    val data = result.data
-                    assignedPumpName = data.pumps.firstOrNull { it.id == data.fuelPumpId }?.displayName
-                    assignedPumpChecked = true
-                }
-                else -> Unit // Couldn't check — keep the neutral subtitle.
-            }
-        }
-    }
 
     Column(
         modifier = modifier
@@ -142,30 +120,16 @@ fun AccountScreen(
             }
         }
 
-        // Only admins set their own pump (S-MYPUMP); staff see the assignment an
-        // admin made for them and cannot open the editor.
+        // Staff can self-assign the pump and nozzles for each working day;
+        // admins use the same screen for their own assignment.
         SectionHeader("Pump")
-        if (isAdmin) {
-            NayaraListRow(
-                title = "My Pump",
-                subtitle = "Choose your pump and its active nozzles for today",
-                leadingIcon = Icons.Filled.LocalGasStation,
-                leadingTint = nayara.actionPrimary,
-                onClick = { haptics.tick(); onMyPump() },
-            )
-        } else {
-            val pumpName = assignedPumpName
-            NayaraListRow(
-                title = "My Pump",
-                subtitle = when {
-                    pumpName != null -> "$pumpName — assigned by your manager"
-                    assignedPumpChecked -> "No pump assigned — ask your manager"
-                    else -> "Assigned by your manager"
-                },
-                leadingIcon = Icons.Filled.LocalGasStation,
-                leadingTint = nayara.actionPrimary,
-            )
-        }
+        NayaraListRow(
+            title = "My Pump",
+            subtitle = "Choose your pump and its active nozzles for today",
+            leadingIcon = Icons.Filled.LocalGasStation,
+            leadingTint = nayara.actionPrimary,
+            onClick = { haptics.tick(); onMyPump() },
+        )
 
         if (isAdmin) {
             SectionHeader("Administration")

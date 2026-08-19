@@ -80,24 +80,6 @@ class MyPumpsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Date.current, users(:one).reload.pump_assignment_for&.assigned_on
   end
 
-  test "admin assignment is pinned to today and ignores a supplied date" do
-    sign_in users(:one)
-    target_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
-    target_nozzle = target_pump.nozzles.first
-    future_date = 3.days.from_now.to_date
-
-    patch my_pump_path, params: {
-      assignment_date: future_date.iso8601,
-      user: { fuel_pump_id: target_pump.id, assigned_fuel_pump_nozzle_ids: ["", target_nozzle.id] }
-    }
-
-    assert_redirected_to my_pump_path
-    admin = users(:one).reload
-    assert_equal Date.current, admin.pump_assignment_for&.assigned_on
-    assert_nil admin.pump_assignment_for(on: future_date)
-    assert_equal target_pump, admin.transaction_fuel_pump
-  end
-
   test "admin assignment leaves the default pump untouched" do
     admin = users(:one)
     admin.update!(fuel_pump_id: fuel_pumps(:one).id)

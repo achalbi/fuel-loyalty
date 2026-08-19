@@ -12,8 +12,6 @@ interface AdminSettlementsApi {
         @Query("business_date") businessDate: String? = null,
         @Query("fuel_pump_id") fuelPumpId: Long? = null,
         @Query("status") status: String? = null,
-        // Admin-12 — read one FSM's sheets for the day.
-        @Query("recorded_by_id") recordedById: Long? = null,
     ): AdminSettlementListResponse
 
     @GET("api/v1/admin/settlements/{id}")

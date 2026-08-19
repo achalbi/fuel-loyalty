@@ -76,7 +76,11 @@ module Api
         assert_equal Date.current.iso8601, response.parsed_body["assignment_date"]
       end
 
-      test "a supplied non-today date is ignored on update" do
+      # Writes are pinned to today by refusal, not by silently rewriting the date:
+      # a client that thinks it is assigning another day must be told, not humoured.
+      # Reads stay permissive (see the read test above) so a clock-skewed device can
+      # still open the screen and correct itself.
+      test "a supplied non-today date is refused on update" do
         target_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
         target_nozzle = target_pump.nozzles.first
         future_date = 5.days.from_now.to_date
@@ -86,12 +90,10 @@ module Api
           headers: auth_headers(users(:one)),
           as: :json
 
-        assert_response :ok
-        assert_equal Date.current.iso8601, response.parsed_body["assignment_date"]
+        assert_response :unprocessable_entity
+        assert_equal "daily_assignment_only", response.parsed_body.dig("error", "code")
         admin = users(:one).reload
-        assert_equal Date.current, admin.pump_assignment_for&.assigned_on
         assert_nil admin.pump_assignment_for(on: future_date)
-        assert_equal target_pump, admin.transaction_fuel_pump
       end
 
       test "admin update does not change the protected default pump" do

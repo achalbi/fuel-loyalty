@@ -61,9 +61,6 @@ data class SettlementDetailDto(
     @SerialName("fuel_pump") val fuelPump: String? = null,
     @SerialName("shift_template_id") val shiftTemplateId: Long? = null,
     @SerialName("fsm_name") val fsmName: String? = null,
-    @SerialName("entered_by_id") val enteredByUserId: Long? = null,
-    @SerialName("entered_by_name") val enteredByName: String? = null,
-    @SerialName("entered_on_behalf") val enteredOnBehalf: Boolean = false,
     @SerialName("total_fuel_amount") val totalFuelAmount: Double = 0.0,
     @SerialName("total_lube_amount") val totalLubeAmount: Double = 0.0,
     @SerialName("total_discount_amount") val totalDiscountAmount: Double = 0.0,
@@ -92,36 +89,10 @@ data class SettlementSummaryDto(
     val status: String,
     val locked: Boolean = false,
     @SerialName("fuel_pump") val fuelPump: String? = null,
-    // Admin-12 — who recorded the sheet. fsmName is a display snapshot taken at
-    // capture and can repeat between users; recordedByUserId is what the admin
-    // console groups and filters by. Both default so the staff list (which
-    // shares this row type) is unaffected.
-    @SerialName("fsm_name") val fsmName: String? = null,
-    @SerialName("recorded_by_id") val recordedByUserId: Long? = null,
-    // Staff feedback item 3 — the admin who TYPED the sheet, when one did. The
-    // sheet still belongs to fsmName above and the money still rolls up under
-    // recordedByUserId; this only says who filled it in. Null on the ordinary
-    // FSM-recorded sheet.
-    @SerialName("entered_by_id") val enteredByUserId: Long? = null,
-    @SerialName("entered_by_name") val enteredByName: String? = null,
-    // True only when the enterer and the FSM are different people. Do NOT use it
-    // to decide whether to show the enterer — an admin who enters a sheet under
-    // their OWN name reads false here but must still be visible, because entry
-    // and reconciliation sitting with one person is the case the trail exists
-    // for. Branch on enteredByUserId; use this only to word it.
-    @SerialName("entered_on_behalf") val enteredOnBehalf: Boolean = false,
     @SerialName("total_fuel_amount") val totalFuelAmount: Double = 0.0,
     @SerialName("final_amount_to_settle") val finalAmountToSettle: Double = 0.0,
     @SerialName("shortage_amount") val shortageAmount: Double = 0.0,
-) {
-    /** "R. Kumar · entered by Admin Boss", or just the FSM when they typed it. */
-    fun attributionLabel(): String {
-        val fsm = fsmName ?: "—"
-        if (enteredByUserId == null) return fsm
-        val enterer = enteredByName ?: "an admin"
-        return if (enteredOnBehalf) "$fsm · entered by $enterer" else "$fsm · entered by $enterer (as admin)"
-    }
-}
+)
 
 @Serializable
 data class SettlementListResponse(
@@ -225,57 +196,6 @@ data class RateComparisonDto(
     @SerialName("competitor_name") val competitorName: String? = null,
     @SerialName("competitor_price") val competitorPrice: Double? = null,
     @SerialName("own_price") val ownPrice: Double? = null,
-)
-
-// ============================================================================
-// Record on behalf of a named FSM (staff feedback item 3, final part).
-// GET  /api/v1/admin/settlements/new   — the picker, and once an FSM is named,
-//                                        the very same draft the FSM would see
-//                                        but hydrated against THEIR pump.
-// POST /api/v1/admin/settlements       — the audited create.
-// Backend: app/controllers/api/v1/admin/settlements_controller.rb
-// ============================================================================
-
-@Serializable
-data class OnBehalfDraftResponse(
-    // The PICKER list: active operators of BOTH roles. Not the same list as the
-    // admin index's `fsm_options`, which is the backward-looking FILTER built
-    // from settlements already on the books.
-    @SerialName("fsm_options") val fsmOptions: List<FsmCandidateDto> = emptyList(),
-    // Always the calling admin — who the sheet will record as the enterer.
-    @SerialName("entered_by") val enteredBy: UserRefDto? = null,
-    // Both null until recorded_by_id is supplied: the nozzles, the auto-popped
-    // opening readings and the pulled discounts all depend on whose pump it is.
-    @SerialName("recorded_for") val recordedFor: UserRefDto? = null,
-    val draft: SettlementDraftResponse? = null,
-)
-
-@Serializable
-data class FsmCandidateDto(
-    val id: Long,
-    val name: String,
-    val role: String? = null,
-    // The operator's STANDING assignment — a label for the picker row only. The
-    // pump a sheet is actually built against is draft.fuelPump, which honours a
-    // dated override; the two can differ, and draft.fuelPump is the truth.
-    @SerialName("default_fuel_pump_id") val defaultFuelPumpId: Long? = null,
-    @SerialName("default_fuel_pump") val defaultFuelPump: String? = null,
-)
-
-@Serializable
-data class UserRefDto(val id: Long, val name: String)
-
-/**
- * The on-behalf create body. `recorded_by_id` and `change_reason` are REQUIRED
- * and sit at the top level, outside the settlement object: attribution is
- * applied server-side from the resolved FSM and the authenticated admin, so a
- * client cannot post itself into recorded_by_id/entered_by_id.
- */
-@Serializable
-data class OnBehalfSettlementEnvelope(
-    @SerialName("recorded_by_id") val recordedById: Long,
-    @SerialName("change_reason") val changeReason: String,
-    @SerialName("settlement") val settlement: SettlementRequest,
 )
 
 // ---- Create / update request (nested attributes; strings for precision) ----

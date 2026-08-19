@@ -81,12 +81,6 @@ fun CustomersScreen(
     // E2: when set, scope the list to customers active in this dashboard period.
     startDate: String? = null,
     endDate: String? = null,
-    // Item 4: THIS SCREEN IS SHARED WITH STAFF — AdminShell renders the very same
-    // composable deliberately. The cohort filters (visits / litres / discount /
-    // contacts / points) are admin-only and sit behind an admin-only endpoint, so
-    // the action is passed in rather than built here: null for staff means the
-    // control does not exist, not merely that it is hidden.
-    onOpenSegments: (() -> Unit)? = null,
 ) {
     val container = LocalContainer.current
     val viewModel: CustomersViewModel = viewModel(
@@ -114,10 +108,7 @@ fun CustomersScreen(
             NayaraTopBar(
                 title = "Customers",
                 onBack = onBack,
-                actions = {
-                    onOpenSegments?.let { open -> TextButton(onClick = open) { Text("Segments") } }
-                    TextButton(onClick = { showAddCustomer = true }) { Text("Add") }
-                },
+                actions = { TextButton(onClick = { showAddCustomer = true }) { Text("Add") } },
             )
         },
         snackbarHost = { NayaraSnackbarHost(snackbar) },
