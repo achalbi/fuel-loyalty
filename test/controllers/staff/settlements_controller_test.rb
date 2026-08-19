@@ -12,6 +12,37 @@ module Staff
       Product.create!(name: "10W30", category: "lubricant", pack_size: 1, pack_unit: "L", mrp: 500, selling_price: 500)
     end
 
+    # Every other test here hand-builds a `settlement: {...}` payload, so for a
+    # long time nothing noticed that the rendered form named all 65 of its fields
+    # `daily_settlement[...]` while all three settlement controllers read
+    # `params.require(:settlement)`. A real submission arrived as `{status:}` —
+    # the submit button being the one field named by hand — and every reading,
+    # lube line, denomination and expense was silently discarded on save.
+    #
+    # This asserts the CONTRACT BETWEEN the page and the controller: post what the
+    # browser would actually post, and prove the reading survives the round trip.
+    test "the rendered form posts under the key the controller reads" do
+      sign_in @staff
+      get new_staff_settlement_path
+      assert_response :success
+
+      names = response.body.scan(/name="([^"]+)"/).flatten.uniq
+      assert_empty names.select { |n| n.start_with?("daily_settlement[") },
+        "the form must not emit the model's own param key — no controller reads it"
+      assert_includes names, "settlement[nozzle_readings_attributes][0][closing_reading]"
+
+      nozzle_row = { "0" => { fuel_pump_nozzle_id: @petrol.id, opening_reading: "1000",
+                              closing_reading: "1180", unit_price: "102.75" } }
+      assert_difference -> { DailySettlement.count }, 1 do
+        post staff_settlements_path, params: {
+          settlement: { fuel_pump_id: @pump.id, business_date: "2026-07-21",
+                        status: "draft", nozzle_readings_attributes: nozzle_row }
+        }
+      end
+      reading = DailySettlement.order(:id).last.nozzle_readings.find_by(fuel_pump_nozzle_id: @petrol.id)
+      assert_equal 1180, reading.closing_reading.to_i, "the reading must survive the round trip"
+    end
+
     test "staff can open the settlement form with a pre-filled draft and lube grid" do
       sign_in @staff
       get new_staff_settlement_path
