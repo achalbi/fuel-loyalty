@@ -29,6 +29,8 @@ module Api
             discount_lines: @settlement.discount_lines.map { |d| discount_line(d) },
             lube_products: @result.lube_products.map { |p| lube_product(p) },
             denominations: @result.denominations,
+            # The means every draft starts with (item 10); the client may add more.
+            default_digital_receipt_labels: SettlementDigitalReceipt::DEFAULT_LABELS,
           }
         end
 

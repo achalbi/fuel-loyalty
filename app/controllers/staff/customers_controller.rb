@@ -18,6 +18,7 @@ module Staff
         :name, :info_note, :customer_type, :transport_name, :approx_vehicle_count,
         :whatsapp_opt_in, :sms_opt_in, :customer_contacts_attributes,
       ))
+      @customer.info_note_author = current_user
 
       if persist_customer_with_vehicle
         redirect_to customer_path(@customer), notice: "Customer created successfully."

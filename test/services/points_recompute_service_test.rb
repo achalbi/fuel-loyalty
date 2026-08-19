@@ -52,7 +52,7 @@ class PointsRecomputeServiceTest < ActiveSupport::TestCase
     )
     result = Settlement::Persister.call(
       settlement: settlement, actor: @admin, admin_edit: true, change_reason: "note",
-      attributes: { phonepe_pos_amount: "50" }
+      attributes: { digital_receipts_attributes: [{ label: "PhonePe POS", amount: "50" }] }
     )
     assert_not result.points_recomputed
     assert_equal BigDecimal("1000"), @transaction.reload.fuel_amount

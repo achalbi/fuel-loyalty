@@ -8,8 +8,9 @@ module Settlement
     module_function
 
     PARENT_FIELDS = %w[
-      status phonepe_pos_amount phonepe_scanner_amount notes
+      status notes
       total_fuel_amount total_lube_amount total_discount_amount total_credit_amount
+      total_digital_receipt_amount total_expense_amount
       final_amount_to_settle counted_cash_amount shortage_amount
     ].freeze
 
@@ -21,6 +22,8 @@ module Settlement
         "discount_lines" => fingerprint(settlement.discount_lines, %i[visit_entry_id litres discount_amount]),
         "credit_lines" => fingerprint(settlement.credit_lines, %i[credit_type litres amount reference]),
         "cash_denominations" => fingerprint(settlement.cash_denominations, %i[denomination quantity]),
+        "digital_receipts" => fingerprint(settlement.digital_receipts, %i[label amount]),
+        "expense_lines" => fingerprint(settlement.expense_lines, %i[description amount]),
         "stock_receipts" => fingerprint(settlement.stock_receipts, %i[fuel_type_code litres_received]),
         "decantations" => fingerprint(settlement.decantations, %i[fuel_type_code tank_label opening_kl closing_kl]),
         "rate_comparisons" => fingerprint(settlement.rate_comparisons, %i[fuel_type_code competitor_price own_price])

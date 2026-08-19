@@ -70,6 +70,11 @@ class User < ApplicationRecord
 
   scope :kept, -> { where(deleted_at: nil) }
   scope :soft_deleted, -> { where.not(deleted_at: nil) }
+  # Admin user listing order: active accounts first, then role → name → username
+  # → phone. `active` is NOT NULL and Postgres sorts false < true, so :desc puts
+  # the actives on top without a NULLS clause. Shared by the web and JSON admin
+  # index actions so the two surfaces cannot drift.
+  scope :admin_listing, -> { kept.order(active: :desc).order(:role, :name, :username, :phone_number) }
 
   def login
     @login || username || stored_phone_number || email
@@ -221,6 +226,14 @@ class User < ApplicationRecord
       assigned_fuel_pump
     end
     pump if pump&.active?
+  end
+
+  # Every pump this user has ever been posted to — their standing assignment
+  # plus each dated one. Used to decide which settlements they may read: an FSM
+  # needs to see the day's sheet for their own pump, including the shift they
+  # didn't record themselves.
+  def settlement_pump_ids
+    ([ fuel_pump_id ] + daily_pump_assignments.pluck(:fuel_pump_id)).compact.uniq
   end
 
   def transaction_fuel_pump_nozzles(on: Date.current)

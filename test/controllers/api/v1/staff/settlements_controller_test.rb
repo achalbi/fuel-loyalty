@@ -48,7 +48,7 @@ module Api
             post api_v1_staff_settlements_path, params: {
               settlement: {
                 fuel_pump_id: @pump.id, business_date: "2026-07-21", status: "submitted",
-                phonepe_pos_amount: "500", phonepe_scanner_amount: "0",
+                digital_receipts_attributes: [{ label: "PhonePe POS", amount: "500" }],
                 nozzle_readings_attributes: [
                   { fuel_pump_nozzle_id: @petrol.id, opening_reading: "1000", closing_reading: "1100", testing_litres: "0" },
                 ],
@@ -100,18 +100,35 @@ module Api
           assert_equal "settlement_locked", response.parsed_body.dig("error", "code")
         end
 
-        test "index lists only the caller's own settlements" do
+        test "index lists the caller's own settlements and their pump's, but not other pumps'" do
           mine = DailySettlement.create!(fuel_pump: @pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff,
                                          nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1, closing_reading: 2, unit_price: 100 }])
-          other = users(:one)
-          DailySettlement.create!(fuel_pump: @pump, business_date: Date.new(2026, 7, 22), recorded_by: other,
-                                  nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1, closing_reading: 2, unit_price: 100 }])
+          # A colleague's shift on the same pump: readable, so the FSM can see
+          # the day's sheet even when someone else recorded it (feedback item 6).
+          same_pump = DailySettlement.create!(fuel_pump: @pump, business_date: Date.new(2026, 7, 22), recorded_by: users(:one),
+                                              nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1, closing_reading: 2, unit_price: 100 }])
+          other_pump = FuelPump.create!(sequence_number: 99, active: true,
+                                        nozzles_attributes: [{ sequence_number: 1, fuel_type_code: "petrol", active: true }])
+          elsewhere = DailySettlement.create!(fuel_pump: other_pump, business_date: Date.new(2026, 7, 23), recorded_by: users(:one))
 
           get api_v1_staff_settlements_path, headers: auth_headers(@staff)
           assert_response :ok
           ids = response.parsed_body["settlements"].map { |s| s["id"] }
           assert_includes ids, mine.id
-          assert_equal 1, ids.size
+          assert_includes ids, same_pump.id
+          assert_not_includes ids, elsewhere.id
+        end
+
+        test "a staff member cannot update a settlement recorded by someone else" do
+          theirs = DailySettlement.create!(fuel_pump: @pump, business_date: Date.new(2026, 7, 24), recorded_by: users(:one),
+                                           nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1, closing_reading: 2, unit_price: 100 }])
+
+          patch api_v1_staff_settlement_path(theirs),
+                params: { settlement: { notes: "not mine to edit" } }.to_json,
+                headers: auth_headers(@staff).merge("CONTENT_TYPE" => "application/json")
+
+          assert_response :forbidden
+          assert_nil theirs.reload.notes
         end
       end
     end

@@ -142,6 +142,27 @@ Unique index `(fuel_pump_id, business_date, shift_template_id)` so one FSM canno
 | `reference` | string, null | Vehicle/reference e.g. "NL-01/AE-2471" |
 | `note` | string, null | |
 
+**`settlement_digital_receipts`** (D6) — one row per digital-payment means.
+
+| Column | Type | Notes |
+|---|---|---|
+| `daily_settlement_id` | references | |
+| `label` | string, null:false | "PhonePe POS", "PhonePe Scanner", "PAYTM", … Unique per settlement, case-insensitive. |
+| `amount` | decimal(12,2) default 0 | |
+
+Replaces the retired `phonepe_pos_amount` / `phonepe_scanner_amount` columns;
+the two PhonePe labels are seeded on every draft. The staff API still accepts
+and emits the two old keys, derived from the matching rows, so installed app
+builds keep working.
+
+**`settlement_expense_lines`** (D6) — cash taken out before settling.
+
+| Column | Type | Notes |
+|---|---|---|
+| `daily_settlement_id` | references | |
+| `description` | string, null:false | "Salary advance — Ravi" |
+| `amount` | decimal(12,2) default 0 | |
+
 **`settlement_cash_denominations`** (D7) — one row per denomination present.
 
 | Column | Type | Rationale |
@@ -196,12 +217,24 @@ Unique index `(fuel_pump_id, business_date, shift_template_id)` so one FSM canno
 2. **Derived quantities are recomputed server-side on every save** (never trusted from the client): `net_litres_sold = closing − opening − testing`; `amount = net × unit_price`; lube `amount = qty × price`; denomination `amount = denom × qty`.
 3. **Pricing is snapshot-at-capture** from the catalog selling price (A5). Admin edits may re-snapshot only if the admin explicitly re-prices.
 4. **Final Amount to Settle (D6):**
-   `final_amount_to_settle = (total_fuel_amount + total_lube_amount) − (total_discount_amount + total_credit_amount + phonepe_pos_amount + phonepe_scanner_amount)`.
+   `final_amount_to_settle = (total_fuel_amount + total_lube_amount) − (total_discount_amount + total_credit_amount + total_digital_receipt_amount + total_expense_amount)`.
+   Digital receipts and expense lines are line items rather than fixed columns
+   (staff feedback items 10 and 12): any payment means can be recorded, and cash
+   taken out during the day — a salary advance — reduces what the FSM hands over.
 5. **Shortage (D7):** `shortage_amount = final_amount_to_settle − counted_cash_amount`. Positive = cash short; negative = excess. `counted_cash_amount = Σ denomination amounts`.
 6. **Status lifecycle:** `draft` (FSM editing) → `submitted` (FSM done; admin can view) → `reconciled` (admin confirmed; sets `locked=true`). Only admins move to `reconciled`. Only admins edit a `submitted`/`reconciled` settlement; every such edit requires a `change_reason` and writes a `settlement_changes` row.
 7. **Points recompute on edit (D9 ⇄ C5).** Loyalty points accrue from per-customer visits (B2 entries → litres × catalog price → ₹ → `PointsCalculator`). When an admin edit changes a figure that feeds a customer's derived ₹ (a linked discount line's litres/discount, or a re-priced nozzle whose price is the source for that day's B2 entries), `PointsRecomputeService` reverses the affected `points_ledgers` `earn` rows and re-awards using the new derived ₹, inside one DB transaction. The `settlement_changes.recomputed_points` flag records that this happened. Settlements that touch no customer-linked figure skip recompute.
 8. **Business date defaults to yesterday.** Staff record a day's transactions as they happen and settle the next morning, so a draft opened with no date is yesterday's sheet (`Settlement::Builder.default_business_date`). The FSM can still pick any date in the chooser.
-9. **Cross-pump view (D9/Admin-13):** admin can list/aggregate settlements for a `business_date` across all pumps, summing fuel/lube/discount/credit/cash/shortage.
+9. **Keyed children are unique per settlement.** One row per nozzle, lube,
+   denomination, digital means, stock line and (fuel type, competitor) pair,
+   enforced by a model validation and a matching unique index. This is what
+   stops a client re-posting saved rows without their ids from doubling a
+   settlement (staff feedback item 6). Credit and discount lines are exempt —
+   they have no natural key, so a second row may be genuine.
+10. **Staff read their pump, edit their own.** An FSM sees any settlement for a
+   pump they're posted to, including a colleague's shift, but may only edit one
+   they recorded. Admins see and edit everything.
+11. **Cross-pump view (D9/Admin-13):** admin can list/aggregate settlements for a `business_date` across all pumps, summing fuel/lube/discount/credit/cash/shortage.
 
 ```mermaid
 flowchart TD

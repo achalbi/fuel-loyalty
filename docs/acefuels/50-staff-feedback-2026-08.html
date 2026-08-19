@@ -164,7 +164,7 @@ merge.</p>
 <td>6</td>
 <td>Daily settlement multiplies if submitted twice; staff can't view the day's settlement report</td>
 <td>2</td>
-<td>⏳ Planned</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>7</td>
@@ -188,25 +188,25 @@ merge.</p>
 <td>10</td>
 <td>Free-form digital receipts (PAYTM or any other means) with an amount</td>
 <td>2</td>
-<td>⏳ Planned</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>11</td>
 <td>Add a discount during settlement calculation if it was missed at capture</td>
 <td>2</td>
-<td>⏳ Planned</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>12</td>
 <td>Free-form field for Salary Advance or any other same-day note</td>
 <td>2</td>
-<td>⏳ Planned</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>13</td>
 <td>Customer-capture notes should be timestamped, append-only entries</td>
 <td>2</td>
-<td>⏳ Planned</td>
+<td>✅ Done</td>
 </tr>
 </tbody>
 </table></div>
@@ -261,6 +261,63 @@ the three customer account types. <code>fleet_otp</code> keeps its stored value 
 installed app builds keep posting a value the server accepts; <code>tank_truck</code> (<code>1</code>)
 was migrated to <code>credit</code> (<code>3</code>), which is what a tank-truck credit sale was being
 used to record. The Android type toggle became a three-way segmented control.</p>
+<h2 id="batch-2-delivered">Batch 2 — delivered</h2>
+<h3 id="6-settlements-no-longer-multiply-and-staff-can-read-the-days-sheet">6 · Settlements no longer multiply, and staff can read the day's sheet</h3>
+<p>Two separate problems behind one line of feedback.</p>
+<p><strong>The multiplying.</strong> The Android form kept <code>null</code> ids on its child rows after
+the first save — the response was only read for the settlement's own id. A
+second submit therefore posted every reading, lube, credit and denomination as
+a <em>new</em> nested record, so the sheet ended up with two of everything and double
+the totals. Three changes:</p>
+<ul>
+<li>The app now re-reads the saved settlement into the form after each save, so
+  every row carries the id it was handed back.</li>
+<li><code>DailySettlement</code> refuses a payload containing two rows for the same nozzle,
+  lube, denomination, digital means, stock line or rate comparison, with a
+  message the FSM can act on.</li>
+<li>Matching unique indexes make the duplicate impossible even under a race, and
+  the migration deduplicates rows already written (newest wins) and re-derives
+  every affected settlement's stored totals.</li>
+</ul>
+<p>Credit and discount lines are deliberately <em>not</em> deduplicated: they have no
+natural key, so a second row there may be a genuine second credit.</p>
+<p><strong>The report.</strong> <code>accessible_settlements</code> scoped staff to <code>recorded_by:
+current_user</code>, so an FSM couldn't see the sheet for their own pump if a
+colleague on another shift had recorded it. Staff now read any settlement for a
+pump they're posted to (their standing assignment or any dated one) while still
+editing only their own; the list shows who recorded each row and hides Edit on
+the rest.</p>
+<h3 id="10-digital-receipts-are-free-form">10 · Digital receipts are free-form</h3>
+<p><code>phonepe_pos_amount</code> and <code>phonepe_scanner_amount</code> were two fixed columns. They
+are now <code>settlement_digital_receipts</code> — a repeatable label + amount line, so
+PAYTM or any other means can be recorded without a release. PhonePe POS and
+PhonePe Scanner are seeded on every draft, so the sheet still looks the way the
+FSM expects. Existing values were migrated into rows and the columns dropped.</p>
+<p>For compatibility, the staff API still accepts the two old parameters (folding
+them into the matching labelled rows) and still emits both keys, derived from
+those rows — an app build already on a phone keeps working.</p>
+<h3 id="11-a-discount-can-be-added-during-settlement">11 · A discount can be added during settlement</h3>
+<p>Discount lines used to arrive only pulled from the same day's visit entries. The
+settlement form now has an <strong>Add discount</strong> row on both surfaces for one missed
+at capture; a line with no visit entry is a manually added one. Empty rows are
+dropped rather than saved.</p>
+<h3 id="12-cash-taken-out">12 · Cash taken out</h3>
+<p>New <code>settlement_expense_lines</code> (description + amount) for a salary advance or
+anything else taken from the day's takings. It reduces the Final Amount to
+Settle, so the counted cash still reconciles:</p>
+<pre><code>final = (fuel + lubes) − (discounts + credit + digital receipts + cash taken out)
+</code></pre>
+<h3 id="13-notes-are-a-dated-log">13 · Notes are a dated log</h3>
+<p><code>customers.info_note</code> was one text column that every save overwrote, so the
+previous conversation was lost. Notes are now <code>customer_notes</code> — append-only,
+each with its author and timestamp. The existing note was carried over as the
+first entry (stamped with the customer's last update, the closest available
+approximation) and the column dropped.</p>
+<p>Assigning <code>info_note</code> still works on all three surfaces — it queues a new dated
+entry instead of overwriting the last — and reading it returns the most recent
+entry, so older app builds and existing API consumers are unaffected. The note
+box on the web form and in the app now starts empty, with the full log rendered
+beneath it.</p>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
   <span class="fnote">Generated from 50-staff-feedback-2026-08.md &middot; 2026-07-22</span>

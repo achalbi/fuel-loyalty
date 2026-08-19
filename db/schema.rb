@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_19_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -213,12 +213,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
     t.index ["visit_entry_id"], name: "index_customer_feedbacks_on_visit_entry_id_unique", unique: true, where: "(visit_entry_id IS NOT NULL)"
   end
 
+  create_table "customer_notes", force: :cascade do |t|
+    t.bigint "author_id"
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.bigint "customer_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_customer_notes_on_author_id"
+    t.index ["customer_id", "created_at"], name: "index_customer_notes_on_customer_id_and_created_at"
+    t.index ["customer_id"], name: "index_customer_notes_on_customer_id"
+  end
+
   create_table "customers", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.integer "approx_vehicle_count"
     t.datetime "created_at", null: false
     t.string "customer_type", default: "drive_in", null: false
-    t.text "info_note"
     t.integer "last_milestone_points", default: 0, null: false
     t.string "name"
     t.string "phone_number", null: false
@@ -243,15 +253,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
     t.bigint "fuel_pump_id", null: false
     t.boolean "locked", default: false, null: false
     t.text "notes"
-    t.decimal "phonepe_pos_amount", precision: 12, scale: 2, default: "0.0", null: false
-    t.decimal "phonepe_scanner_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.bigint "recorded_by_id", null: false
     t.bigint "shift_template_id"
     t.decimal "shortage_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.integer "status", default: 0, null: false
     t.datetime "submitted_at"
     t.decimal "total_credit_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "total_digital_receipt_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.decimal "total_discount_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "total_expense_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.decimal "total_fuel_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.decimal "total_lube_amount", precision: 12, scale: 2, default: "0.0", null: false
     t.datetime "updated_at", null: false
@@ -457,6 +467,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
     t.integer "denomination", null: false
     t.integer "quantity", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.index ["daily_settlement_id", "denomination"], name: "index_cash_denominations_on_settlement_key", unique: true, nulls_not_distinct: true
     t.index ["daily_settlement_id"], name: "index_settlement_cash_denominations_on_daily_settlement_id"
   end
 
@@ -495,6 +506,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
     t.index ["daily_settlement_id"], name: "index_settlement_decantations_on_daily_settlement_id"
   end
 
+  create_table "settlement_digital_receipts", force: :cascade do |t|
+    t.decimal "amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.bigint "daily_settlement_id", null: false
+    t.string "label", null: false
+    t.datetime "updated_at", null: false
+    t.index ["daily_settlement_id", "label"], name: "index_digital_receipts_on_settlement_key", unique: true
+    t.index ["daily_settlement_id"], name: "index_settlement_digital_receipts_on_daily_settlement_id"
+  end
+
   create_table "settlement_discount_lines", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "daily_settlement_id", null: false
@@ -513,6 +534,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
     t.index ["visit_entry_id"], name: "index_settlement_discount_lines_on_visit_entry_id"
   end
 
+  create_table "settlement_expense_lines", force: :cascade do |t|
+    t.decimal "amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.bigint "daily_settlement_id", null: false
+    t.string "description", null: false
+    t.datetime "updated_at", null: false
+    t.index ["daily_settlement_id"], name: "index_settlement_expense_lines_on_daily_settlement_id"
+  end
+
   create_table "settlement_lube_lines", force: :cascade do |t|
     t.decimal "amount", precision: 12, scale: 2
     t.integer "closing_stock"
@@ -524,6 +554,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
     t.integer "quantity", default: 0, null: false
     t.decimal "unit_price", precision: 12, scale: 2
     t.datetime "updated_at", null: false
+    t.index ["daily_settlement_id", "product_id"], name: "index_lube_lines_on_settlement_key", unique: true, nulls_not_distinct: true
     t.index ["daily_settlement_id"], name: "index_settlement_lube_lines_on_daily_settlement_id"
     t.index ["product_id"], name: "index_settlement_lube_lines_on_product_id"
   end
@@ -542,6 +573,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
     t.decimal "testing_litres", precision: 12, scale: 3, default: "0.0", null: false
     t.decimal "unit_price", precision: 12, scale: 2
     t.datetime "updated_at", null: false
+    t.index ["daily_settlement_id", "fuel_pump_nozzle_id"], name: "index_nozzle_readings_on_settlement_key", unique: true, nulls_not_distinct: true
     t.index ["daily_settlement_id"], name: "index_settlement_nozzle_readings_on_daily_settlement_id"
     t.index ["fuel_pump_nozzle_id"], name: "index_settlement_nozzle_readings_on_fuel_pump_nozzle_id"
   end
@@ -554,6 +586,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
     t.string "fuel_type_code"
     t.decimal "own_price", precision: 12, scale: 2
     t.datetime "updated_at", null: false
+    t.index ["daily_settlement_id", "fuel_type_code", "competitor_name"], name: "index_rate_comparisons_on_settlement_key", unique: true, nulls_not_distinct: true
     t.index ["daily_settlement_id"], name: "index_settlement_rate_comparisons_on_daily_settlement_id"
   end
 
@@ -563,6 +596,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
     t.string "fuel_type_code"
     t.decimal "litres_received", precision: 12, scale: 3, default: "0.0", null: false
     t.datetime "updated_at", null: false
+    t.index ["daily_settlement_id", "fuel_type_code"], name: "index_stock_receipts_on_settlement_key", unique: true, nulls_not_distinct: true
     t.index ["daily_settlement_id"], name: "index_settlement_stock_receipts_on_daily_settlement_id"
   end
 
@@ -827,6 +861,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
   add_foreign_key "customer_feedbacks", "transactions", on_delete: :nullify
   add_foreign_key "customer_feedbacks", "users", column: "recorded_by_user_id", on_delete: :nullify
   add_foreign_key "customer_feedbacks", "visit_entries", on_delete: :nullify
+  add_foreign_key "customer_notes", "customers"
+  add_foreign_key "customer_notes", "users", column: "author_id"
   add_foreign_key "customers", "customer_contacts", column: "primary_contact_id", on_delete: :nullify
   add_foreign_key "daily_settlements", "fuel_pumps", on_delete: :restrict
   add_foreign_key "daily_settlements", "shift_templates", on_delete: :nullify
@@ -852,8 +888,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_090000) do
   add_foreign_key "settlement_changes", "users", column: "changed_by_id", on_delete: :restrict
   add_foreign_key "settlement_credit_lines", "daily_settlements", on_delete: :cascade
   add_foreign_key "settlement_decantations", "daily_settlements", on_delete: :cascade
+  add_foreign_key "settlement_digital_receipts", "daily_settlements"
   add_foreign_key "settlement_discount_lines", "daily_settlements", on_delete: :cascade
   add_foreign_key "settlement_discount_lines", "visit_entries", on_delete: :nullify
+  add_foreign_key "settlement_expense_lines", "daily_settlements"
   add_foreign_key "settlement_lube_lines", "daily_settlements", on_delete: :cascade
   add_foreign_key "settlement_lube_lines", "products", on_delete: :restrict
   add_foreign_key "settlement_nozzle_readings", "daily_settlements", on_delete: :cascade

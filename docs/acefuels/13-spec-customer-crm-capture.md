@@ -10,6 +10,17 @@ Fuel-station customers today are a thin record (name + one phone + a plate). The
 >
 > **B2 status (2026-07-22):** ✅ **Per-visit capture shipped on both surfaces, tested.** New `visit_entries` table (litres = source of truth, discount, `fleet_otp`, pump defaulting to My Pump + overridable, driver/manager/owner, transport, approx vehicles, nullable customer/vehicle for anonymous plates, `transaction_id` link). `VisitEntryRecorder` resolves the customer/vehicle from the plate, upserts the driver/manager/owner `customer_contacts` (business rule 2, first contact → primary), and optionally links a loyalty transaction via the unchanged `TransactionCreator` litres path. Web: a staff **Capture Visit** form + a per-pump/day captures list (top-bar action). Android: a **Capture Visit** screen (My-Pump default + override, Fleet/OTP switch, driver/manager/owner). API: `POST/GET /api/v1/staff/visit_entries` + `VisitEntrySerializer` + `VisitEntryPolicy`. **Remaining refinements:** plate-scanner prefill on the capture form, the `create_transaction` toggle on the UIs (the API supports it), an Android day-list, and admin past-day editing (lands with D9/G1 settlement editing).
 
+
+> **Notes update (2026-08-19, staff feedback item 13):** `customers.info_note`
+> was a single text column that every save overwrote, losing the previous
+> conversation. Notes are now the append-only `customer_notes` table (body,
+> author, `created_at`), rendered as a dated log on the web profile and in the
+> app. Assigning `info_note` still works on all three surfaces — it queues a new
+> entry rather than overwriting — and reading it returns the most recent entry,
+> so existing API consumers and installed app builds are unaffected. The profile
+> payload gains a `notes` array. See
+> [Staff feedback — Aug 2026](50-staff-feedback-2026-08.md).
+
 ## Requirements covered
 
 | ID | One-line |

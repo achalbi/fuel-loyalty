@@ -76,6 +76,7 @@ module Api
             :name, :info_note, :customer_type, :transport_name, :approx_vehicle_count,
             :whatsapp_opt_in, :sms_opt_in, :customer_contacts_attributes,
           ))
+          customer.info_note_author = current_user
           authorize customer, :create?
 
           if persist_customer(customer, attrs)
@@ -95,7 +96,10 @@ module Api
           customer.customer_type = attrs[:customer_type] if attrs.key?(:customer_type) && Customer.customer_types.key?(attrs[:customer_type].to_s)
           customer.whatsapp_opt_in = ActiveModel::Type::Boolean.new.cast(attrs[:whatsapp_opt_in]) if attrs.key?(:whatsapp_opt_in)
           customer.sms_opt_in = ActiveModel::Type::Boolean.new.cast(attrs[:sms_opt_in]) if attrs.key?(:sms_opt_in)
-          customer.info_note = attrs[:info_note] if attrs.key?(:info_note)
+          if attrs.key?(:info_note)
+            customer.info_note = attrs[:info_note]
+            customer.info_note_author = current_user
+          end
           customer.transport_name = attrs[:transport_name] if attrs.key?(:transport_name)
           customer.approx_vehicle_count = attrs[:approx_vehicle_count] if attrs.key?(:approx_vehicle_count)
           customer.customer_contacts_attributes = attrs[:customer_contacts_attributes] if attrs.key?(:customer_contacts_attributes)

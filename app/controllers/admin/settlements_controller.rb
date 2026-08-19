@@ -80,12 +80,14 @@ module Admin
 
     def settlement_params
       params.require(:settlement).permit(
-        :phonepe_pos_amount, :phonepe_scanner_amount, :notes, :status,
+        :notes, :status,
         nozzle_readings_attributes: %i[id fuel_pump_nozzle_id opening_reading closing_reading testing_litres rollover _destroy],
         lube_lines_attributes: %i[id product_id quantity opening_stock closing_stock _destroy],
         discount_lines_attributes: %i[id visit_entry_id transport_name litres discount_amount _destroy],
         credit_lines_attributes: %i[id credit_type litres discount_amount amount reference note _destroy],
         cash_denominations_attributes: %i[id denomination quantity _destroy],
+        digital_receipts_attributes: %i[id label amount _destroy],
+        expense_lines_attributes: %i[id description amount _destroy],
         stock_receipts_attributes: %i[id fuel_type_code litres_received _destroy],
         decantations_attributes: %i[id fuel_type_code tank_label opening_kl closing_kl _destroy],
         rate_comparisons_attributes: %i[id fuel_type_code competitor_name competitor_price own_price _destroy]

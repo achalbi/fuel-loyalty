@@ -21,6 +21,7 @@ module Admin
         :name, :info_note, :customer_type, :transport_name, :approx_vehicle_count,
         :whatsapp_opt_in, :sms_opt_in, :customer_contacts_attributes,
       ))
+      @customer.info_note_author = current_user
 
       if persist_customer_with_vehicle
         redirect_to admin_customer_path(@customer), notice: "Customer created successfully."
@@ -46,6 +47,7 @@ module Admin
       @customer = Customer.includes(:vehicles, transactions: %i[user vehicle]).find(params[:id])
       authorize @customer
       @customer.assign_attributes(customer_params.slice(:name, :phone_number, :customer_type, :whatsapp_opt_in, :sms_opt_in, :transport_name, :approx_vehicle_count, :info_note, :customer_contacts_attributes))
+      @customer.info_note_author = current_user
       @customer.phone_number = Customer.normalize_phone_number(customer_params[:phone_number])
 
       if @customer.save

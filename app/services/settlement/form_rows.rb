@@ -13,7 +13,9 @@ module Settlement
       ensure_denomination_rows(settlement)
       ensure_rate_comparison_rows(settlement, fuel_products)
       ensure_stock_receipt_rows(settlement, fuel_products)
+      ensure_digital_receipt_rows(settlement)
       ensure_blank_credit_rows(settlement, 2)
+      ensure_blank_expense_rows(settlement, 2)
       ensure_blank_decantation_rows(settlement, 2)
       settlement
     end
@@ -57,6 +59,29 @@ module Settlement
 
         settlement.stock_receipts.build(fuel_type_code: product.fuel_type_code, litres_received: 0)
       end
+    end
+
+    # PhonePe POS and Scanner are entered every day, so seed them; any other
+    # means the FSM adds is a free-form row (staff feedback item 10).
+    def ensure_digital_receipt_rows(settlement)
+      existing = settlement.digital_receipts.map { |row| row.label.to_s.downcase }
+      SettlementDigitalReceipt::DEFAULT_LABELS.each do |label|
+        next if existing.include?(label.downcase)
+
+        settlement.digital_receipts.build(label: label, amount: 0)
+      end
+      ensure_blank_digital_receipt_rows(settlement, 1)
+    end
+
+    # One spare blank row so a new means can be typed without a round trip.
+    def ensure_blank_digital_receipt_rows(settlement, count)
+      blanks = settlement.digital_receipts.count { |row| row.label.blank? }
+      (count - blanks).clamp(0, count).times { settlement.digital_receipts.build }
+    end
+
+    def ensure_blank_expense_rows(settlement, count)
+      blanks = settlement.expense_lines.count { |row| row.description.blank? }
+      (count - blanks).clamp(0, count).times { settlement.expense_lines.build }
     end
 
     def ensure_blank_credit_rows(settlement, count)

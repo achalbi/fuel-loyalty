@@ -74,8 +74,11 @@
     </div>
 
     <div>
-      <%= form.label :info_note, "Notes", class: "form-label" %>
-      <%= form.text_area :info_note, class: "form-control", rows: 3, placeholder: "Notes from conversations or follow-up plans" %>
+      <%= form.label :info_note, "Add a note", class: "form-label" %>
+      <%# Item 13 — each save appends a dated entry; nothing is overwritten. %>
+      <%= form.text_area :info_note, value: nil, class: "form-control", rows: 3,
+        placeholder: "What was said, or the follow-up planned" %>
+      <div class="form-text">Saved as a new dated entry — earlier notes are kept.</div>
     </div>
 
     <% if customer.persisted? || local_assigns[:include_contacts] %>

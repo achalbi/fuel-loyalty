@@ -349,7 +349,21 @@
               </div>
             <% end %>
           </div>
-          <p class="text-muted mb-0"><%= @customer.info_note.presence || "No notes added yet." %></p>
+          <% customer_notes = @customer.customer_notes.includes(:author).to_a %>
+          <% if customer_notes.any? %>
+            <ol class="customer-details-notes list-unstyled mb-0">
+              <% customer_notes.each do |note| %>
+                <li class="customer-details-notes__item">
+                  <div class="customer-details-notes__meta small text-muted">
+                    <%= l(note.created_at, format: :long) %> · <%= note.author_label %>
+                  </div>
+                  <div class="customer-details-notes__body"><%= simple_format(note.body, {}, sanitize: true) %></div>
+                </li>
+              <% end %>
+            </ol>
+          <% else %>
+            <p class="text-muted mb-0">No notes added yet.</p>
+          <% end %>
         </div>
       </div>
 

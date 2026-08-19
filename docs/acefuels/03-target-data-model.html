@@ -943,6 +943,93 @@ authoritative, extensible ledger. Keep the two in sync in the service layer, or 
 the columns as caches. (Alternative: drop the two columns and always aggregate —
 chosen to keep them for formula readability.)</p>
 </blockquote>
+<h3 id="settlement_digital_receipts-new-d6-digital-payment-means"><code>settlement_digital_receipts</code> — <strong>NEW</strong> (D6 digital-payment means)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>daily_settlement_id</code></td>
+<td>references, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>string, null:false</td>
+<td>Free-form means; unique per settlement (case-insensitive). Replaced the fixed <code>phonepe_pos_amount</code> / <code>phonepe_scanner_amount</code> columns.</td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td>decimal(12,2) default 0, null:false</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="settlement_expense_lines-new-d6-cash-taken-out"><code>settlement_expense_lines</code> — <strong>NEW</strong> (D6 cash taken out)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>daily_settlement_id</code></td>
+<td>references, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string, null:false</td>
+<td>Salary advance or other same-day withdrawal</td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td>decimal(12,2) default 0, null:false</td>
+<td>Reduces the Final Amount to Settle</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="customer_notes-new-append-only-note-log"><code>customer_notes</code> — <strong>NEW</strong> (append-only note log)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>customer_id</code></td>
+<td>references, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>author_id</code></td>
+<td>references users, null:true</td>
+<td>Null for notes carried over from the old <code>customers.info_note</code> column</td>
+</tr>
+<tr>
+<td><code>body</code></td>
+<td>text, null:false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>datetime</td>
+<td>The timestamp staff asked for (item 13)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Index: <code>(customer_id, created_at)</code>.</p>
 <h3 id="settlement_cash_counts-new-d7-denomination-breakdown"><code>settlement_cash_counts</code>  — <strong>NEW</strong> (D7 denomination breakdown)</h3>
 <div class="table-wrap"><table>
 <thead>

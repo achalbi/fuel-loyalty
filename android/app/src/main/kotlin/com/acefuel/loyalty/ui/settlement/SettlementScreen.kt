@@ -129,16 +129,44 @@ fun SettlementScreen(
                 }
             }
 
-            if (state.discounts.isNotEmpty()) {
-                SectionHeader("Discounts (pulled)")
-                state.discounts.forEach { d ->
-                    Text("• ${d.transport ?: d.driver ?: "—"} — ${trim(d.litres)} L → ${money(d.discount)}", style = MaterialTheme.typography.bodyMedium)
+            // Pulled from today's visit entries, plus any the FSM missed at
+            // capture and adds here (staff feedback item 11).
+            SectionHeader("Discounts")
+            if (state.discounts.isEmpty() && state.addedDiscounts.isEmpty()) {
+                Text("No same-day discounts captured for this pump.", style = MaterialTheme.typography.bodySmall)
+            }
+            state.discounts.forEach { d ->
+                Text("• ${d.transport ?: d.driver ?: "—"} — ${trim(d.litres)} L → ${money(d.discount)}", style = MaterialTheme.typography.bodyMedium)
+            }
+            state.addedDiscounts.forEachIndexed { i, d ->
+                Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+                    FormField(d.transport, { viewModel.onAddedDiscountTransport(i, it) }, "Transport or customer", Modifier.weight(1.4f), enabled = !state.locked)
+                    FormField(d.litres, { viewModel.onAddedDiscountLitres(i, it) }, "Litres", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
+                    FormField(d.discount, { viewModel.onAddedDiscountAmount(i, it) }, "Discount ₹", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
                 }
             }
+            if (!state.locked) OutlinedButton(onClick = viewModel::addDiscount) { Text("Add discount") }
 
+            // Free-form means (staff feedback item 10): PhonePe POS and Scanner
+            // are seeded, anything else the FSM types in.
             SectionHeader("Digital receipts")
-            FormField(state.phonepePos, viewModel::onPhonepePos, "PhonePe POS ₹", enabled = !state.locked, keyboardOptions = decimalKeyboard)
-            FormField(state.phonepeScanner, viewModel::onPhonepeScanner, "PhonePe Scanner ₹", enabled = !state.locked, keyboardOptions = decimalKeyboard)
+            state.receipts.forEachIndexed { i, r ->
+                Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+                    FormField(r.label, { viewModel.onReceiptLabel(i, it) }, "Means", Modifier.weight(1.4f), enabled = !state.locked)
+                    FormField(r.amount, { viewModel.onReceiptAmount(i, it) }, "Amount ₹", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
+                }
+            }
+            if (!state.locked) OutlinedButton(onClick = viewModel::addReceipt) { Text("Add means") }
+
+            // Cash taken out of the day's takings (staff feedback item 12).
+            SectionHeader("Cash taken out")
+            state.expenses.forEachIndexed { i, e ->
+                Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+                    FormField(e.description, { viewModel.onExpenseDescription(i, it) }, "What for", Modifier.weight(1.4f), enabled = !state.locked)
+                    FormField(e.amount, { viewModel.onExpenseAmount(i, it) }, "Amount ₹", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
+                }
+            }
+            if (!state.locked) OutlinedButton(onClick = viewModel::addExpense) { Text("Add line") }
 
             SectionHeader("Credit lines")
             state.credits.forEachIndexed { i, c ->

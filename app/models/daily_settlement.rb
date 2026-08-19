@@ -16,6 +16,8 @@ class DailySettlement < ApplicationRecord
   has_many :discount_lines, class_name: "SettlementDiscountLine", dependent: :destroy, inverse_of: :daily_settlement
   has_many :credit_lines, class_name: "SettlementCreditLine", dependent: :destroy, inverse_of: :daily_settlement
   has_many :cash_denominations, class_name: "SettlementCashDenomination", dependent: :destroy, inverse_of: :daily_settlement
+  has_many :digital_receipts, class_name: "SettlementDigitalReceipt", dependent: :destroy, inverse_of: :daily_settlement
+  has_many :expense_lines, class_name: "SettlementExpenseLine", dependent: :destroy, inverse_of: :daily_settlement
   has_many :stock_receipts, class_name: "SettlementStockReceipt", dependent: :destroy, inverse_of: :daily_settlement
   has_many :decantations, class_name: "SettlementDecantation", dependent: :destroy, inverse_of: :daily_settlement
   has_many :rate_comparisons, class_name: "SettlementRateComparison", dependent: :destroy, inverse_of: :daily_settlement
@@ -23,14 +25,17 @@ class DailySettlement < ApplicationRecord
 
   CHILD_ASSOCIATIONS = %i[
     nozzle_readings lube_lines discount_lines credit_lines
-    cash_denominations stock_receipts decantations rate_comparisons
+    cash_denominations digital_receipts expense_lines
+    stock_receipts decantations rate_comparisons
   ].freeze
 
   accepts_nested_attributes_for :nozzle_readings, allow_destroy: true
   accepts_nested_attributes_for :lube_lines, allow_destroy: true, reject_if: :reject_lube_line?
-  accepts_nested_attributes_for :discount_lines, allow_destroy: true
+  accepts_nested_attributes_for :discount_lines, allow_destroy: true, reject_if: :reject_discount_line?
   accepts_nested_attributes_for :credit_lines, allow_destroy: true, reject_if: :reject_credit_line?
   accepts_nested_attributes_for :cash_denominations, allow_destroy: true, reject_if: :reject_denomination?
+  accepts_nested_attributes_for :digital_receipts, allow_destroy: true, reject_if: :reject_digital_receipt?
+  accepts_nested_attributes_for :expense_lines, allow_destroy: true, reject_if: :reject_expense_line?
   accepts_nested_attributes_for :stock_receipts, allow_destroy: true, reject_if: :reject_stock_receipt?
   accepts_nested_attributes_for :decantations, allow_destroy: true, reject_if: :reject_decantation?
   accepts_nested_attributes_for :rate_comparisons, allow_destroy: true, reject_if: :reject_rate_comparison?
@@ -40,9 +45,9 @@ class DailySettlement < ApplicationRecord
   before_save :recompute_totals
 
   validates :business_date, presence: true
-  validates :phonepe_pos_amount, :phonepe_scanner_amount, numericality: { greater_than_or_equal_to: 0 }
   validate :shift_window_must_be_unique
   validate :readings_complete_when_submitted
+  validate :keyed_child_rows_are_distinct
 
   scope :for_date, ->(date) { where(business_date: date) }
   scope :financial, -> { where(status: %i[submitted reconciled]) }
@@ -87,8 +92,24 @@ class DailySettlement < ApplicationRecord
     attrs["id"].blank? && attrs["litres"].to_d.zero? && attrs["amount"].to_d.zero?
   end
 
+  # Pulled lines always carry a visit entry; a row added during settlement
+  # (item 11) is only real once it has a discount on it.
+  def reject_discount_line?(attrs)
+    attrs["id"].blank? && attrs["visit_entry_id"].blank? && attrs["discount_amount"].to_d.zero?
+  end
+
   def reject_denomination?(attrs)
     attrs["id"].blank? && attrs["quantity"].to_i.zero?
+  end
+
+  # A seeded receipt row the FSM never filled in isn't a payment; drop it rather
+  # than persist a ₹0 line for every means on every settlement.
+  def reject_digital_receipt?(attrs)
+    attrs["id"].blank? && (attrs["label"].blank? || attrs["amount"].to_d.zero?)
+  end
+
+  def reject_expense_line?(attrs)
+    attrs["id"].blank? && (attrs["description"].blank? || attrs["amount"].to_d.zero?)
   end
 
   def reject_stock_receipt?(attrs)
@@ -101,6 +122,36 @@ class DailySettlement < ApplicationRecord
 
   def reject_rate_comparison?(attrs)
     attrs["id"].blank? && (attrs["fuel_type_code"].blank? || attrs["competitor_price"].blank?)
+  end
+
+  # One row per nozzle, per lube, per denomination, per fuel type, per
+  # competitor. A client that re-posts already-saved children without their ids
+  # (the "settlement multiplying on a second submit" bug) would otherwise append
+  # a second set and double every total. The matching unique indexes catch a
+  # race; this catches the ordinary case — including two duplicates arriving
+  # unsaved in the same payload — with a message the FSM can act on.
+  # A free-form label is matched case-insensitively — "PAYTM" and "paytm" are
+  # the same means.
+  CASE_INSENSITIVE = ->(value) { value.is_a?(String) ? value.strip.downcase : value }
+
+  KEYED_CHILDREN = {
+    nozzle_readings: { keys: %i[fuel_pump_nozzle_id], label: "nozzle" },
+    lube_lines: { keys: %i[product_id], label: "lubricant" },
+    cash_denominations: { keys: %i[denomination], label: "denomination" },
+    digital_receipts: { keys: %i[label], label: "digital means", normalize: CASE_INSENSITIVE },
+    stock_receipts: { keys: %i[fuel_type_code], label: "stock receipt" },
+    rate_comparisons: { keys: %i[fuel_type_code competitor_name], label: "rate comparison" }
+  }.freeze
+
+  def keyed_child_rows_are_distinct
+    KEYED_CHILDREN.each do |association, config|
+      normalize = config[:normalize] || :itself.to_proc
+      live = public_send(association).reject(&:marked_for_destruction?)
+      keys = live.map { |record| config[:keys].map { |key| normalize.call(record.public_send(key)) } }
+      next if keys.size == keys.uniq.size
+
+      errors.add(:base, "The same #{config[:label]} was submitted more than once.")
+    end
   end
 
   def shift_window_must_be_unique

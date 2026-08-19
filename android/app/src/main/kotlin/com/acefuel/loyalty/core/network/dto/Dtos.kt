@@ -179,9 +179,21 @@ data class CustomerProfileDto(
     @SerialName("transport_name") val transportName: String? = null,
     @SerialName("approx_vehicle_count") val approxVehicleCount: Int? = null,
     @SerialName("info_note") val infoNote: String? = null,
+    // Item 13 — the full dated note log, newest first. `infoNote` above is just
+    // the most recent entry, kept for older builds.
+    val notes: List<CustomerNoteDto> = emptyList(),
     val contacts: List<CustomerContactDto> = emptyList(),
     val vehicles: List<StaffVehicleDto> = emptyList(),
     @SerialName("recent_transactions") val recentTransactions: List<TransactionSummaryDto> = emptyList(),
+)
+
+/** One dated entry in a customer's note log. */
+@Serializable
+data class CustomerNoteDto(
+    val id: Long,
+    val body: String,
+    val author: String? = null,
+    @SerialName("created_at") val createdAt: String,
 )
 
 @Serializable

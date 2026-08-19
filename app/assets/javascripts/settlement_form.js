@@ -43,7 +43,11 @@
     let totalCredit = 0;
     form.querySelectorAll("[data-credit]").forEach((el) => { totalCredit += num(el); });
 
-    const phonepe = num(form.querySelector("[data-phonepe-pos]")) + num(form.querySelector("[data-phonepe-scanner]"));
+    let totalReceipts = 0;
+    form.querySelectorAll("[data-receipt]").forEach((el) => { totalReceipts += num(el); });
+
+    let totalExpenses = 0;
+    form.querySelectorAll("[data-expense]").forEach((el) => { totalExpenses += num(el); });
 
     let countedCash = 0;
     form.querySelectorAll("[data-denom-row]").forEach((row) => {
@@ -54,7 +58,7 @@
       countedCash += amount;
     });
 
-    const final = totalFuel + totalLube - (totalDiscount + totalCredit + phonepe);
+    const final = totalFuel + totalLube - (totalDiscount + totalCredit + totalReceipts + totalExpenses);
     const shortage = final - countedCash;
 
     const set = (selector, text) => {
@@ -65,16 +69,63 @@
     set("[data-total-lube]", money(totalLube));
     set("[data-total-discount]", money(totalDiscount));
     set("[data-total-credit]", money(totalCredit));
-    set("[data-total-phonepe]", money(phonepe));
+    set("[data-total-receipts]", money(totalReceipts));
+    set("[data-total-expenses]", money(totalExpenses));
     set("[data-final]", money(final));
     set("[data-counted-cash]", money(countedCash));
     set("[data-shortage]", money(shortage));
+  };
+
+  // Rows the FSM can add on the spot: a discount missed at capture (item 11), a
+  // digital means we don't seed (item 10), cash taken out (item 12). Each
+  // section carries a <template> whose inputs are named here, so the nested
+  // attribute index is assigned at the moment the row is added and never
+  // collides with a server-rendered one.
+  const REPEATABLE_SECTIONS = [
+    { section: "[data-settlement-discounts]", trigger: "[data-add-discount]", template: "[data-discount-row-template]", attribute: "discount_lines" },
+    { section: "[data-settlement-receipts]", trigger: "[data-add-receipt]", template: "[data-receipt-row-template]", attribute: "digital_receipts" },
+    { section: "[data-settlement-expenses]", trigger: "[data-add-expense]", template: "[data-expense-row-template]", attribute: "expense_lines" }
+  ];
+
+  // One past the highest index already on the page, so added rows never reuse
+  // an index the server rendered.
+  const nextRowIndex = (form, attribute) => {
+    const pattern = new RegExp(`\\[${attribute}_attributes\\]\\[(\\d+)\\]`);
+    const used = Array.from(form.querySelectorAll(`[name*="${attribute}_attributes"]`))
+      .map((input) => Number.parseInt(input.name.match(pattern)?.[1] ?? "", 10))
+      .filter(Number.isInteger);
+    return used.length ? Math.max(...used) + 1 : 0;
+  };
+
+  const addRow = (form, { section, template, attribute }) => {
+    const host = form.querySelector(section);
+    const rowTemplate = host?.querySelector(template);
+    const body = host?.querySelector("tbody");
+    if (!host || !rowTemplate || !body) return;
+
+    const row = rowTemplate.content.firstElementChild.cloneNode(true);
+    const index = nextRowIndex(form, attribute);
+    row.querySelectorAll("[data-template-name]").forEach((input) => {
+      input.name = `settlement[${attribute}_attributes][${index}][${input.dataset.templateName}]`;
+      input.removeAttribute("data-template-name");
+    });
+    body.appendChild(row);
+
+    // The discounts section starts collapsed when nothing was pulled.
+    host.querySelector("[data-discount-table]")?.classList.remove("d-none");
+    host.querySelector("[data-discount-empty]")?.classList.add("d-none");
+
+    row.querySelector("input")?.focus();
+    recompute(form);
   };
 
   const init = () => {
     document.querySelectorAll("[data-settlement-form]").forEach((form) => {
       form.addEventListener("input", () => recompute(form));
       form.addEventListener("change", () => recompute(form));
+      REPEATABLE_SECTIONS.forEach((config) => {
+        form.querySelector(config.trigger)?.addEventListener("click", () => addRow(form, config));
+      });
       recompute(form);
     });
   };

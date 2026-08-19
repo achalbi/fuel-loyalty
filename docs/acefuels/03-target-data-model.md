@@ -294,6 +294,33 @@ FK: `settlement_id`→`settlements`.
 > the columns as caches. (Alternative: drop the two columns and always aggregate —
 > chosen to keep them for formula readability.)
 
+### `settlement_digital_receipts` — **NEW** (D6 digital-payment means)
+
+| Column | Type | Notes |
+|---|---|---|
+| `daily_settlement_id` | references, null:false | |
+| `label` | string, null:false | Free-form means; unique per settlement (case-insensitive). Replaced the fixed `phonepe_pos_amount` / `phonepe_scanner_amount` columns. |
+| `amount` | decimal(12,2) default 0, null:false | |
+
+### `settlement_expense_lines` — **NEW** (D6 cash taken out)
+
+| Column | Type | Notes |
+|---|---|---|
+| `daily_settlement_id` | references, null:false | |
+| `description` | string, null:false | Salary advance or other same-day withdrawal |
+| `amount` | decimal(12,2) default 0, null:false | Reduces the Final Amount to Settle |
+
+### `customer_notes` — **NEW** (append-only note log)
+
+| Column | Type | Notes |
+|---|---|---|
+| `customer_id` | references, null:false | |
+| `author_id` | references users, null:true | Null for notes carried over from the old `customers.info_note` column |
+| `body` | text, null:false | |
+| `created_at` | datetime | The timestamp staff asked for (item 13) |
+
+Index: `(customer_id, created_at)`.
+
 ### `settlement_cash_counts`  — **NEW** (D7 denomination breakdown)
 | Column | Type | Notes |
 |---|---|---|

@@ -26,6 +26,7 @@ data class SettlementDraftResponse(
     @SerialName("discount_lines") val discountLines: List<SettlementDiscountDto> = emptyList(),
     @SerialName("lube_products") val lubeProducts: List<LubeProductDto> = emptyList(),
     val denominations: List<Int> = emptyList(),
+    @SerialName("default_digital_receipt_labels") val defaultDigitalReceiptLabels: List<String> = emptyList(),
 )
 
 @Serializable
@@ -64,17 +65,19 @@ data class SettlementDetailDto(
     @SerialName("total_lube_amount") val totalLubeAmount: Double = 0.0,
     @SerialName("total_discount_amount") val totalDiscountAmount: Double = 0.0,
     @SerialName("total_credit_amount") val totalCreditAmount: Double = 0.0,
+    @SerialName("total_digital_receipt_amount") val totalDigitalReceiptAmount: Double = 0.0,
+    @SerialName("total_expense_amount") val totalExpenseAmount: Double = 0.0,
     @SerialName("final_amount_to_settle") val finalAmountToSettle: Double = 0.0,
     @SerialName("counted_cash_amount") val countedCashAmount: Double = 0.0,
     @SerialName("shortage_amount") val shortageAmount: Double = 0.0,
-    @SerialName("phonepe_pos_amount") val phonepePosAmount: Double = 0.0,
-    @SerialName("phonepe_scanner_amount") val phonepeScannerAmount: Double = 0.0,
     val notes: String? = null,
     @SerialName("nozzle_readings") val nozzleReadings: List<NozzleReadingDto> = emptyList(),
     @SerialName("lube_lines") val lubeLines: List<LubeLineDto> = emptyList(),
     @SerialName("discount_lines") val discountLines: List<SettlementDiscountDto> = emptyList(),
     @SerialName("credit_lines") val creditLines: List<CreditLineDto> = emptyList(),
     @SerialName("cash_denominations") val cashDenominations: List<DenominationDto> = emptyList(),
+    @SerialName("digital_receipts") val digitalReceipts: List<DigitalReceiptDto> = emptyList(),
+    @SerialName("expense_lines") val expenseLines: List<ExpenseLineDto> = emptyList(),
     @SerialName("stock_receipts") val stockReceipts: List<StockReceiptDto> = emptyList(),
     @SerialName("rate_comparisons") val rateComparisons: List<RateComparisonDto> = emptyList(),
 )
@@ -141,6 +144,36 @@ data class CreditLineDto(
     val reference: String? = null,
 )
 
+/** A digital-payment means and its ₹ total (PhonePe POS, PAYTM, …). */
+@Serializable
+data class DigitalReceiptDto(
+    val id: Long? = null,
+    val label: String,
+    val amount: Double = 0.0,
+)
+
+/** Cash taken out of the day's takings — a salary advance or similar. */
+@Serializable
+data class ExpenseLineDto(
+    val id: Long? = null,
+    val description: String,
+    val amount: Double = 0.0,
+)
+
+@Serializable
+data class DigitalReceiptRequest(
+    val id: Long? = null,
+    val label: String,
+    val amount: String? = null,
+)
+
+@Serializable
+data class ExpenseLineRequest(
+    val id: Long? = null,
+    val description: String,
+    val amount: String? = null,
+)
+
 @Serializable
 data class DenominationDto(
     val id: Long? = null,
@@ -175,14 +208,14 @@ data class SettlementRequest(
     @SerialName("business_date") val businessDate: String,
     @SerialName("shift_template_id") val shiftTemplateId: Long? = null,
     val status: String,
-    @SerialName("phonepe_pos_amount") val phonepePosAmount: String? = null,
-    @SerialName("phonepe_scanner_amount") val phonepeScannerAmount: String? = null,
     val notes: String? = null,
     @SerialName("nozzle_readings_attributes") val nozzleReadings: List<NozzleReadingRequest> = emptyList(),
     @SerialName("lube_lines_attributes") val lubeLines: List<LubeLineRequest> = emptyList(),
     @SerialName("discount_lines_attributes") val discountLines: List<DiscountLineRequest> = emptyList(),
     @SerialName("credit_lines_attributes") val creditLines: List<CreditLineRequest> = emptyList(),
     @SerialName("cash_denominations_attributes") val cashDenominations: List<DenominationRequest> = emptyList(),
+    @SerialName("digital_receipts_attributes") val digitalReceipts: List<DigitalReceiptRequest> = emptyList(),
+    @SerialName("expense_lines_attributes") val expenseLines: List<ExpenseLineRequest> = emptyList(),
     @SerialName("stock_receipts_attributes") val stockReceipts: List<StockReceiptRequest> = emptyList(),
     @SerialName("rate_comparisons_attributes") val rateComparisons: List<RateComparisonRequest> = emptyList(),
 )

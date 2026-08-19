@@ -10,9 +10,10 @@ module Admin
       Product.create!(name: "MS", category: "fuel", fuel_type_code: "petrol", pack_unit: "litre", mrp: 110, selling_price: 100)
       @settlement = DailySettlement.create!(
         fuel_pump: @pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff, status: "submitted",
-        phonepe_pos_amount: 500,
+        digital_receipts_attributes: [{ label: "PhonePe POS", amount: 500 }],
         nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1000, closing_reading: 1100, unit_price: 100 }]
       )
+      @receipt = @settlement.digital_receipts.first
     end
 
     test "index shows cross-pump totals for a single date" do
@@ -33,11 +34,12 @@ module Admin
       sign_in @admin
       assert_difference -> { SettlementChange.count }, 1 do
         patch admin_settlement_path(@settlement), params: {
-          change_reason: "Corrected PhonePe", settlement: { phonepe_pos_amount: "800" },
+          change_reason: "Corrected PhonePe",
+          settlement: { digital_receipts_attributes: { "0" => { id: @receipt.id, label: "PhonePe POS", amount: "800" } } },
         }
       end
       assert_redirected_to admin_settlement_path(@settlement)
-      assert_equal BigDecimal("800"), @settlement.reload.phonepe_pos_amount
+      assert_equal BigDecimal("800"), @receipt.reload.amount
     end
 
     test "update without a reason is rejected" do
