@@ -70,11 +70,6 @@ class User < ApplicationRecord
 
   scope :kept, -> { where(deleted_at: nil) }
   scope :soft_deleted, -> { where.not(deleted_at: nil) }
-  # Admin user listing order: active accounts first, then role → name → username
-  # → phone. `active` is NOT NULL and Postgres sorts false < true, so :desc puts
-  # the actives on top without a NULLS clause. Shared by the web and JSON admin
-  # index actions so the two surfaces cannot drift.
-  scope :admin_listing, -> { kept.order(active: :desc).order(:role, :name, :username, :phone_number) }
 
   def login
     @login || username || stored_phone_number || email

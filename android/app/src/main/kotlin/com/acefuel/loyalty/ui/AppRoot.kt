@@ -328,7 +328,6 @@ fun AppRoot(container: ServiceContainer) {
                         },
                         onScanPlate = { navController.navigate("plate_scanner") },
                         onSetupPump = { navController.navigate(Routes.MY_PUMP) },
-                        canManagePump = (authState as? AuthState.LoggedIn)?.user?.role == "admin",
                         scannedPlate = scannedPlate,
                     )
                 }
@@ -351,12 +350,9 @@ fun AppRoot(container: ServiceContainer) {
                     AdjustPointsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.MY_PUMP) {
-                    // Editing is admin-only (S-MYPUMP) and always lands on today,
-                    // so there is no date to pick. Staff still reach this route
-                    // from the transaction screen and get a read-only summary.
                     MyPumpScreen(
                         onBack = { navController.popBackStack() },
-                        canEdit = (authState as? AuthState.LoggedIn)?.user?.role == "admin",
+                        allowDateSelection = (authState as? AuthState.LoggedIn)?.user?.role == "admin",
                     )
                 }
                 composable(Routes.SETTLEMENT) {
@@ -475,7 +471,7 @@ fun AppRoot(container: ServiceContainer) {
                         onBack = back,
                         staffMemberId = id,
                         title = "Assign Pump",
-                        intro = "Set this operator's default pump or assign a specific-day override. Staff cannot change their own pump (S-MYPUMP).",
+                        intro = "Set this operator's default pump or assign a specific-day override. Staff self-assignment remains limited to today.",
                         saveLabel = "Save Pump Assignment",
                     )
                 }

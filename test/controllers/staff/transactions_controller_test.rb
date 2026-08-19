@@ -38,15 +38,12 @@ module Staff
       assert_select "input#vehicle_transaction_transaction_payment_mode_cash + label[for='vehicle_transaction_transaction_payment_mode_cash']", text: "Cash", count: 1
       assert_select "input#vehicle_transaction_transaction_payment_mode_credit + label[for='vehicle_transaction_transaction_payment_mode_credit']", text: "Credit", count: 1
       assert_select "[data-transaction-nozzle-status]", 2
-      # S-MYPUMP — staff can't reassign their own pump, so the edit link is
-      # replaced by read-only text. Nozzle choice below stays: it's per-transaction.
-      assert_select "a.transaction-pump-card__change-link[href='#{my_pump_path}']", count: 0
-      assert_select ".transaction-pump-card__change-link .ti.ti-edit", count: 0
-      assert_select ".transaction-pump-card [data-transaction-pump-assigned-note]", text: "Assigned by your manager", count: 2
+      assert_select "a.transaction-pump-card__change-link.customer-details-vehicle-row__menu-toggle[href='#{my_pump_path}'][aria-label='Change My Pump']", count: 2
+      assert_select ".transaction-pump-card__change-link .ti.ti-edit", count: 2
       assert_select ".transaction-pump-card .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#phone_transaction_pump_hint'][aria-controls='phone_transaction_pump_hint'][aria-label='Show My Pump help']", 1
       assert_select ".transaction-pump-card .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#vehicle_transaction_pump_hint'][aria-controls='vehicle_transaction_pump_hint'][aria-label='Show My Pump help']", 1
-      assert_select "#phone_transaction_pump_hint.collapse .transaction-entry-titlebar__hint-card", text: /Your pump is assigned by your manager/
-      assert_select "#vehicle_transaction_pump_hint.collapse .transaction-entry-titlebar__hint-card", text: /Your pump is assigned by your manager/
+      assert_select "#phone_transaction_pump_hint.collapse .transaction-entry-titlebar__hint-card", text: /Your selected pump can be changed by clicking the change icon on top-right/
+      assert_select "#vehicle_transaction_pump_hint.collapse .transaction-entry-titlebar__hint-card", text: /Your selected pump can be changed by clicking the change icon on top-right/
       assert_select "#transaction-phone-pane [data-transaction-step-section='lookup'] .transaction-entry-step-card__title-row h2", text: "Lookup by Phone"
       assert_select "#transaction-phone-pane .transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionPhoneLookupHint'][aria-controls='transactionPhoneLookupHint']", 1
       assert_select "#transactionPhoneLookupHint.collapse .transaction-entry-titlebar__hint-card", text: /Enter the customer's phone number to load the profile.*Customer must already exist/m
@@ -161,19 +158,7 @@ module Staff
       assert_select "input.transaction-pump-card__nozzle-input[type='radio'][name='transaction[fuel_pump_id]'][data-transaction-pump-input]", 2
       assert_select "input.transaction-pump-card__nozzle-input[type='radio'][name='transaction[fuel_pump_nozzle_id]']", 0
       assert_select "a.transaction-pump-card__change-link[href='#{my_pump_path}']", 0
-      assert_select "[data-transaction-pump-assigned-note]", 0
       assert_select "#transactionAddCustomerModal input[name='transaction_lookup[fuel_pump_id]']", 1
-    end
-
-    # S-MYPUMP applies to staff only — an admin may still reassign their own pump.
-    test "admins keep the change my pump link on the transaction form" do
-      sign_in users(:one)
-
-      get new_staff_transaction_path
-
-      assert_response :success
-      assert_select "a.transaction-pump-card__change-link[href='#{my_pump_path}'][aria-label='Change My Pump']", minimum: 1
-      assert_select "[data-transaction-pump-assigned-note]", 0
     end
 
     test "scanner shortcut auto opens the vehicle plate capture panel" do

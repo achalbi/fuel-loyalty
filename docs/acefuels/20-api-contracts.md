@@ -52,7 +52,7 @@ Endpoint sections below list **only endpoint-specific** error cases; the standar
 | 8 | Dashboard drill-through / cadence / type / churn | E2–E6 | Changed + New |
 | 9 | Campaigns | F1, F2 | New |
 | 10 | Notifications + targeting | F3, F4 | Changed + New |
-| 11 | Operator KYC + user listing | A7 | Changed (`admin/users`, multipart; index ordering) |
+| 11 | Operator KYC | A7 | Changed (`admin/users`, multipart) |
 | 12 | Reports | E1 | New |
 | 13 | Customer feedback / rating | E7 | New |
 
@@ -391,7 +391,7 @@ Response `200`: updated payload + `message`. Precedence unchanged (`reward_setti
 
 ## 7. Admin pump assignment (A10) — **New**
 
-Today assignment is admin-only (`PATCH /api/v1/my_pump`, gated by `UserPolicy#manage_pump?` per S-MYPUMP); staff keep read access via `read_pump?` so the transaction and visit-capture screens can resolve their assigned pump. A10 adds an admin path to assign any operator to a pump + nozzles.
+Today assignment is staff self-service only (`/api/v1/my_pump`). Adds an admin path to assign any operator to a pump + nozzles.
 
 ### 7.1 `GET /api/v1/admin/staff_members/:id/pump_assignment` — **New**
 Auth: admin. Response `200`:
@@ -561,71 +561,41 @@ Errors: `422 validation_failed` (`aadhaar_number` not 12 digits, unsupported con
 ### 11.2 `GET /api/v1/admin/users/:id` — **Changed**
 Returns the extended serializer above. Aadhaar is **always masked** in responses; the raw value is never serialized. PII handling (encryption at rest, access scoping) per the KYC spec.
 
-### 11.3 `GET /api/v1/admin/users` — **Changed (ordering)**
-Auth: admin. Unpaginated: `{ "users": [ <UserSerializer>, … ] }` (rows as 11.1). Operates on kept users only (soft-deleted excluded).
-
-**Ordering — `active DESC, role, name, username, phone_number`.** Active accounts are listed **first**; within each active group the previous `role → name` order is unchanged (`admin` before `staff`, then alphabetical). `users.active` is `NOT NULL`, so no NULLS clause applies. Backed by the `User.admin_listing` scope, which the server-rendered `/admin/users` index shares — the two surfaces cannot drift.
-
-Clients **must not** re-sort this list; render it in the order received and show each row's `active` flag (the web index renders an Active/Inactive chip beside the role chip; Android renders `ActiveChip`) so the grouping is visible.
-
 ---
 
-## 12. Reports (E1) — **Shipped**
+## 12. Reports (E1) — **New**
 
-Aggregated litres / ₹ / discount / rewards by period, grouped by vehicle / transporter / driver / customer.
+Aggregated litres / discount / gifts by period, grouped by vehicle / transporter / driver.
 
-### 12.1 `GET /api/v1/admin/reports`
+### 12.1 `GET /api/v1/admin/reports` — **New**
 Auth: admin. Query:
 
 | param | type | notes |
 |---|---|---|
-| `grain` | enum | `day`\|`week`\|`month`\|`year`; unknown values fall back to `month` |
-| `dimension` | enum | `vehicle`\|`transporter`\|`driver`\|`customer`; unknown values fall back to `vehicle` |
-| `start_date`, `end_date` | date | explicit range |
-| `preset` | string | shared dashboard period preset (resolved by `OverviewReport.period_range`); the range defaults to the current month |
+| `period` | enum | `daily`\|`weekly`\|`monthly`\|`yearly` |
+| `group_by` | enum | `vehicle`\|`transporter`\|`driver` |
+| `start_date`, `end_date` | date | range; defaults to current `period` window |
 | `fuel_type` | string | optional filter |
-| `fuel_pump_id` | int | optional filter (G1) |
-| `customer_id` | int | optional; narrows the whole report to one customer |
-| `format` | string | `csv` streams the export instead of JSON (12.2) |
+| `page` | int | |
 
 Response `200`:
 ```json
 {
-  "dimension": "transporter", "grain": "month",
-  "range": { "from": "2026-07-01", "to": "2026-07-31" },
-  "columns": ["key","label","period","litres","amount","discount","gifts","gift_count","visits"],
-  "reward_value_configured": true,
+  "period": "monthly", "group_by": "transporter",
+  "range": { "start_date": "2026-07-01", "end_date": "2026-07-31" },
   "rows": [
-    { "key": "ABC Logistics", "label": "ABC Logistics", "period": "2026-07",
-      "litres": 4820.0, "amount": 476000.0, "discount": 9640.0,
-      "gifts": 4200.0, "gift_count": 2, "visits": 41 }
+    { "key": "ABC Logistics", "label": "ABC Logistics",
+      "litres": 4820.0, "amount": 476000.0, "discount": 9640.0, "gifts": 2,
+      "visits": 41 }
   ],
-  "totals": { "litres": 4820.0, "amount": 476000.0, "discount": 9640.0,
-              "gifts": 4200.0, "gift_count": 2, "visits": 41 }
+  "totals": { "litres": 4820.0, "amount": 476000.0, "discount": 9640.0, "gifts": 2 },
+  "page": 1, "per_page": 25, "total": 1, "has_more": false
 }
 ```
+Errors: `422 invalid_period` / `invalid_group_by` for unknown enum values.
 
-The two reward columns are **different units** — read the table before wiring a client:
-
-| field | unit | notes |
-|---|---|---|
-| `amount` | ₹ | litres × catalog selling price (Q1). `null` — never `0` — when no catalog price exists for the fuel |
-| `discount` | ₹ | summed from the per-visit captures (B2) |
-| `gifts` | ₹ | cash value of **points redemptions**; labelled "Reward ₹" in the UI and CSV. The key is kept as `gifts` for backwards compatibility |
-| `gift_count` | count | **physical campaign gifts** handed over (F1 `reward_kind: gift`, stamped by `campaign_qualifications.reward_granted_at`). Attributable per customer only, so it is `0` on the vehicle / transporter / driver dimensions — a qualification carries no vehicle or driver |
-
-`reward_value_configured` is `false` when no cash value per point is configured in reward settings. Every redemption then stored a NULL ₹ and `gifts` sums to `0` for structural reasons, so a client MUST render `—` instead of `₹0.00` when the flag is false and the value is zero. Web and Android both do; Android defaults the field to `true` when an older server omits it.
-
-Not paginated — the response is the whole aggregation for the range. Unknown `dimension` / `grain` values coerce to the defaults above rather than returning an error.
-
-### 12.2 CSV export
-Same endpoint with `format=csv` — there is no separate `/export` path. Returns `text/csv; charset=utf-8` with a UTF-8 BOM (so Excel renders ₹) and `Content-Disposition: attachment`. The header row carries the human labels rather than the JSON keys:
-
-```
-Key,Label,Period,Litres,Amount ₹,Discount ₹,Reward ₹,Gifts,Visits
-```
-
-followed by one line per row and a final `TOTAL` line. The `Reward ₹` cell renders `—` under the same rule as the JSON flag.
+### 12.2 `GET /api/v1/admin/reports/export` — **New (optional)**
+Auth: admin. Same query as 12.1 plus `format=csv`. Returns `text/csv` (`Content-Disposition: attachment`). Non-JSON; client streams to a file. Errors as 12.1.
 
 ---
 
@@ -685,7 +655,6 @@ POST  /api/v1/admin/notifications/send          (+ audience, channels, offer)
 POST/PATCH /api/v1/admin/schedules[/:id]        (+ audience, channels)
 POST/PATCH /api/v1/admin/users[/:id]            (+ address, aadhaar_number, photo, id_card_photo; multipart)
 GET   /api/v1/admin/users/:id                   (+ KYC fields, masked aadhaar)
-GET   /api/v1/admin/users                       (ordering: active first, then role → name)
 ```
 
 ## Appendix B — Open items to confirm

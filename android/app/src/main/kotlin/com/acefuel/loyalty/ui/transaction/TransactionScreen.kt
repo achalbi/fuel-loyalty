@@ -162,8 +162,6 @@ fun TransactionScreen(
     onViewCustomer: (Long) -> Unit,
     onScanPlate: () -> Unit = {},
     onSetupPump: () -> Unit = {},
-    // S-MYPUMP: only an admin can reach My Pump, so only an admin is offered it.
-    canManagePump: Boolean = false,
     scannedPlate: String? = null,
 ) {
     val container = LocalContainer.current
@@ -510,7 +508,6 @@ fun TransactionScreen(
                             state = state,
                             onRetryPump = viewModel::loadMyPump,
                             onSetupPump = onSetupPump,
-                            canManagePump = canManagePump,
                             onSelect = { haptics.tick(); viewModel.selectNozzle(it) },
                         )
 
@@ -591,7 +588,6 @@ private fun NozzleSection(
     state: TxnUiState,
     onRetryPump: () -> Unit,
     onSetupPump: () -> Unit,
-    canManagePump: Boolean,
     onSelect: (Long) -> Unit,
 ) {
     Text("Nozzle", style = MaterialTheme.typography.labelLarge)
@@ -600,19 +596,10 @@ private fun NozzleSection(
         state.myPumpLoading -> SkeletonListItem(showAvatar = false)
         state.myPumpError != null -> InlineErrorCard(state.myPumpError, onRetry = onRetryPump)
         !state.pumpReady -> {
-            Blocker(
-                if (canManagePump) {
-                    "Set up My Pump with at least one active nozzle before recording transactions."
-                } else {
-                    "Ask an admin to assign your pump with at least one active nozzle " +
-                        "before recording transactions."
-                },
-            )
-            if (canManagePump) {
-                Spacer(Modifier.height(NayaraSpacing.Md))
-                NayaraButton(onClick = onSetupPump, modifier = Modifier.fillMaxWidth()) {
-                    Text("Set up My Pump")
-                }
+            Blocker("Set up My Pump with at least one active nozzle before recording transactions.")
+            Spacer(Modifier.height(NayaraSpacing.Md))
+            NayaraButton(onClick = onSetupPump, modifier = Modifier.fillMaxWidth()) {
+                Text("Set up My Pump")
             }
         }
         else -> {
@@ -620,20 +607,16 @@ private fun NozzleSection(
             if (options.isEmpty()) {
                 val fuel = state.selectedFuelTypeLabel
                 Blocker(
-                    when {
-                        fuel != null && canManagePump ->
-                            "Your pump has no active $fuel nozzle assigned. Update My Pump to add one " +
-                                "(or pick a pump that has a $fuel nozzle)."
-                        fuel != null ->
-                            "Your pump has no active $fuel nozzle assigned. Ask an admin to add one."
-                        else -> "No nozzle is assigned to your pump for this vehicle's fuel type."
+                    if (fuel != null) {
+                        "Your pump has no active $fuel nozzle assigned. Update My Pump to add one " +
+                            "(or pick a pump that has a $fuel nozzle)."
+                    } else {
+                        "No nozzle is assigned to your pump for this vehicle's fuel type."
                     },
                 )
-                if (canManagePump) {
-                    Spacer(Modifier.height(NayaraSpacing.Md))
-                    NayaraButton(onClick = onSetupPump, modifier = Modifier.fillMaxWidth()) {
-                        Text("Change My Pump")
-                    }
+                Spacer(Modifier.height(NayaraSpacing.Md))
+                NayaraButton(onClick = onSetupPump, modifier = Modifier.fillMaxWidth()) {
+                    Text("Change My Pump")
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {
