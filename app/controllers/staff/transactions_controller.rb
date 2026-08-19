@@ -46,22 +46,35 @@ module Staff
       end
     end
 
+    # Item 2 — one counter capture. A single submit records the loyalty
+    # transaction *and* the visit entry, so staff have one way in and neither
+    # the points ledger (C5) nor the settlement discount pull-through (D3) loses
+    # its source. VisitEntryRecorder owns the pairing; it mints the transaction
+    # through the unchanged TransactionCreator.
     def create
       authorize Transaction
-      result = TransactionCreator.call(user: current_user, **transaction_params.to_h.symbolize_keys)
+      result = CounterEntry.record(user: current_user, params: counter_entry_params)
+      customer = result.customer
 
       flash_payload = {}
 
-      if result.rewards_paused
-        flash_payload[:notice] = "Transaction recorded. Rewards are paused for this customer, so no points were added."
+      if result.transaction.nil?
+        # An unregistered plate: the visit is recorded, but there is no customer
+        # to award points to or to send the operator to.
+        flash_payload[:notice] = "Visit captured for #{result.visit_entry.vehicle_number}."
+      elsif result.rewards_paused
+        flash_payload[:notice] = "Entry recorded. Rewards are paused for this customer, so no points were added."
       else
         flash_payload[:transaction_summary] = {
           points_earned: result.points_earned,
-          current_points: result.customer.total_points
+          current_points: customer.total_points
         }
       end
+      flash_payload[:alert] = result.visit_skipped_reason if result.visit_skipped_reason.present?
 
-      redirect_to customer_path(result.customer), flash: flash_payload
+      return redirect_to(staff_visit_entries_path(date: result.visit_entry&.entry_date), flash: flash_payload) if customer.nil?
+
+      redirect_to customer_path(customer), flash: flash_payload
     rescue ActiveRecord::RecordInvalid => e
       @errors = e.record.errors.full_messages
       @transaction_error_step = transaction_error_step(e.record.errors)
@@ -108,8 +121,9 @@ module Staff
     private
 
     def transaction_params
-      params.require(:transaction).permit(:lookup_mode, :phone_number, :vehicle_number, :vehicle_id, :fuel_amount, :litres, :discount_amount, :fuel_pump_id, :fuel_pump_nozzle_id, :payment_mode)
+      params.require(:transaction).permit(*CounterEntry::PERMITTED_FIELDS)
     end
+    alias_method :counter_entry_params, :transaction_params
 
     def assign_prefill_values
       prefill_source = transaction_prefill_source
