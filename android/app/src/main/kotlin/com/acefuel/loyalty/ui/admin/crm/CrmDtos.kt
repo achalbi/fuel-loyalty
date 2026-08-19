@@ -32,6 +32,8 @@ data class InsightDto(
     @SerialName("lifetime_metrics") val lifetimeMetrics: CustomerMetricsDto? = null,
     val contacts: ContactsSummaryDto = ContactsSummaryDto(),
     val feedback: FeedbackSummaryDto = FeedbackSummaryDto(),
+    // All-time, never narrowed by the selected period (unlike `metrics` above).
+    val rewards: RewardsSummaryDto = RewardsSummaryDto(),
 )
 
 // What the customer has taken and cost us: litres filled, discount given, and the
@@ -44,6 +46,28 @@ data class CustomerMetricsDto(
     val gifts: Double = 0.0,
     val contacts: Int = 0,
     val points: Int = 0,
+)
+
+/**
+ * Item 5 — what the customer has actually been given, all time. Three units, kept
+ * apart on purpose: `discountTotal` is rupees off at the pump (de-duplicated
+ * server-side across the visit-entry/transaction pair), `redemption*` is points
+ * cashed in, and `giftCount`/`giftDescriptions` are physical F1 campaign gifts —
+ * those carry no rupee value at all, so the description is the whole story.
+ *
+ * `rewardValueConfigured` is false when no cash-value-per-point is set: every
+ * redemption then stored a NULL amount, so `redemptionValue` is a structural 0
+ * and must render as "—", never "₹0.00".
+ */
+@Serializable
+data class RewardsSummaryDto(
+    @SerialName("discount_total") val discountTotal: Double = 0.0,
+    @SerialName("redemption_value") val redemptionValue: Double = 0.0,
+    @SerialName("redemption_points") val redemptionPoints: Int = 0,
+    @SerialName("redemption_count") val redemptionCount: Int = 0,
+    @SerialName("gift_count") val giftCount: Int = 0,
+    @SerialName("gift_descriptions") val giftDescriptions: List<String> = emptyList(),
+    @SerialName("reward_value_configured") val rewardValueConfigured: Boolean = false,
 )
 
 @Serializable

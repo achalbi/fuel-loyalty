@@ -82,6 +82,12 @@ module Api
             points_earned: ledger&.points,
             cash_reward: ledger&.recorded_cash_reward_amount&.to_f,
             fuel_amount: txn.fuel_amount.to_f,
+            # Item 5 — the ₹ knocked off THIS fuelling, so the app can show a
+            # single transaction's discount and not just the customer rollup.
+            # Not the same figure as `cash_reward` above, which is the ₹ value of
+            # the points this fuelling EARNED. Always a number (nil reads as 0.0)
+            # so the client never has to special-case a missing discount.
+            discount_amount: txn.discount_amount.to_f,
             payment_mode: txn.payment_mode,
             created_at: txn.created_at.iso8601,
           }

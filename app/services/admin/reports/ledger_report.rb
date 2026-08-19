@@ -125,8 +125,12 @@ module Admin
           end
         end
 
+        # Gift counts are resolved BEFORE the ₹ lookup, because a granted gift can
+        # materialise a customer/period row no visit entry produced (see
+        # materialize_gift_rows) and that row must carry its Reward ₹ too.
+        gift_counts = gift_count_lookup
+        materialize_gift_rows(buckets, gift_counts)
         gifts = gift_lookup(buckets)
-        gift_counts = gift_count_lookup(buckets)
         @rows = buckets.map do |(key, period), bucket|
           Row.new(
             key: key, label: bucket[:label], period: period,
@@ -186,27 +190,87 @@ module Admin
       # dimension reports 0 rather than smearing a customer's gift across the
       # vehicles they happened to fill.
       #
-      # Bucketed on `period_start` (the window the customer EARNED it in), not on
-      # `reward_granted_at` (when Campaigns::Runner happened to sweep). The runner
-      # stamps the grant after the window closes, so a July gift is typically
-      # stamped in August — keying on the stamp would report it under August, or
-      # drop it entirely, since a row is only counted for a customer who has a
-      # visit in that bucket. Qualifying required purchases inside the window, so
-      # `period_start` always lands in a period where the customer did fill.
-      def gift_count_lookup(buckets)
+      # WHICH period a gift is billed to depends on the campaign's period kind,
+      # because `period_start` means two different things — see
+      # Campaign#qualification_period:
+      #
+      # * weekly / monthly — the stored [period_start, period_end] IS a calendar
+      #   aggregation window no longer than a report bucket, so `period_start` is
+      #   the period the customer EARNED it in. Billed there rather than on
+      #   `reward_granted_at` (when Campaigns::Runner happened to sweep): the runner
+      #   stamps the grant after the window closes, so a July gift is typically
+      #   stamped in August, and keying on the stamp would report it under August.
+      # * rolling_days (the DEFAULT the admin new-campaign form ships) and
+      #   fixed_window — `period_start` is NOT a usable bucket. For a rolling
+      #   campaign Campaign#qualification_period returns
+      #   `(rolling_anchor_date..reference)` where the anchor is
+      #   `starts_at || created_at`: a FIXED idempotency key, so a window that slides
+      #   daily grants once per campaign rather than once per sweep. Billing on it
+      #   charges the gift to the campaign's start date — arbitrarily long before the
+      #   purchases that earned it. `fixed_window` has the same problem for any promo
+      #   longer than a report bucket (the model bounds only start <= end).
+      #   These bill on `reward_granted_at`.
+      #
+      # `period_end` would be the natural window-close for those two, but it is NOT
+      # stable: Campaigns::Evaluator#upsert re-assigns it on EVERY sweep the customer
+      # still qualifies for (evaluator.rb, unconditional, with no `rewarded?` guard),
+      # so a long-running rolling campaign would keep moving an already-granted
+      # gift's billed period forward. `reward_granted_at` is written exactly once —
+      # Runner#grant_reward returns early on `qualification.rewarded?` — and is
+      # literally the day the operator handed the gift over.
+      #
+      # Every rule derives the billing date from the qualification alone, never from
+      # the report range, so one grant is billed to exactly one period and two
+      # adjacent reports can never both claim it.
+      def gift_count_lookup
         lookup = Hash.new(0)
         return lookup unless @dimension == "customer"
 
-        customer_ids = buckets.values.flat_map { |b| b[:customer_ids] }.uniq
-        return lookup if customer_ids.empty?
+        granted = CampaignQualification.joins(:campaign).merge(Campaign.reward_gift).where.not(reward_granted_at: nil)
+        granted = granted.where(customer_id: @customer_id) if @customer_id
 
-        CampaignQualification.joins(:campaign).merge(Campaign.reward_gift)
-          .where(customer_id: customer_ids)
-          .where.not(reward_granted_at: nil)
-          .where(period_start: date_range)
+        granted.merge(Campaign.where(period: %i[weekly monthly])).where(period_start: date_range)
           .pluck(:customer_id, :period_start)
-          .each { |cid, period_start| lookup[[cid, period_key(period_start)]] += 1 }
+          .each { |cid, earned_on| lookup[[cid, period_key(earned_on)]] += 1 }
+
+        granted.merge(Campaign.where(period: %i[rolling_days fixed_window]))
+          .where(reward_granted_at: @range)
+          .pluck(:customer_id, :reward_granted_at)
+          .each { |cid, granted_at| lookup[[cid, period_key(granted_at.to_date)]] += 1 }
+
         lookup
+      end
+
+      # Campaigns::Evaluator qualifies customers off `transactions`, while every row
+      # of this report is built from `visit_entries` (see scoped_entries), and
+      # `gifts_for` only credits a customer a bucket already lists. So a drive-in
+      # customer who qualified purely through transactions has no bucket to hang
+      # their gift on and it would be counted NOWHERE — the totals silently
+      # under-reporting gifts the operator really did hand over. Same hole whenever
+      # the billed period holds no capture for that customer (a fixed_window
+      # straddling two months; a day grain where the window start is not a fill day).
+      #
+      # So a counted gift materialises its own customer/period row: zero litres,
+      # zero visits, blank amount, the gift on it. It reads as "no capture in this
+      # period, but a gift went out" — exactly what the ledger knows.
+      #
+      # The one exception is a fuel_type / fuel_pump-filtered report. A qualification
+      # carries neither, so a gift cannot be said to belong to that slice and
+      # inventing a row inside it would assert something the data does not support;
+      # gifts for customers who DO have captures in the slice are still counted.
+      # Called out in docs/acefuels/15-spec-dashboard-reports.md.
+      def materialize_gift_rows(buckets, gift_counts)
+        return if gift_counts.empty? || @fuel_type || @fuel_pump_id
+
+        missing = gift_counts.keys.reject { |customer_id, period| buckets.key?([customer_id.to_s, period]) }
+        return if missing.empty?
+
+        customers = Customer.where(id: missing.map(&:first).uniq).index_by(&:id)
+        missing.each do |customer_id, period|
+          bucket = buckets[[customer_id.to_s, period]]
+          bucket[:label] = customers[customer_id]&.display_name || "Customer ##{customer_id}"
+          bucket[:customer_ids] << customer_id
+        end
       end
 
       def gifts_for(bucket, period, lookup)

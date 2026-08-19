@@ -478,6 +478,93 @@ module Admin
       assert_select "[data-customer-lifetime-metrics]", text: /₹525\.00 discount/
     end
 
+    # ---- Item 5: the Rewards Given card -----------------------------------
+
+    def grant_gift_to(customer, description: "Steel bottle", name: "Monsoon gift")
+      campaign = Campaign.create!(name: name, reward_kind: :gift, gift_description: description,
+                                  min_purchase_litres: 10, period: :monthly, status: :active)
+      campaign.campaign_qualifications.create!(customer: customer, period_start: Date.new(2026, 7, 1),
+                                               period_end: Date.new(2026, 7, 31),
+                                               reward_granted_at: Time.zone.local(2026, 7, 12))
+    end
+
+    test "a customer profile shows what has been given: discount paid, points redeemed and gifts" do
+      sign_in users(:one)
+      staff = users(:two)
+      # No cash-per-point rate, but the redemption below carries an amount
+      # snapshotted while one existed — the case the "—" rule must not swallow.
+      RewardSetting.current.update!(cash_value_per_point: nil)
+      customer = Customer.create!(name: "Reward Rekha", phone_number: "9444400006")
+      vehicle = customer.vehicles.create!(vehicle_number: "TN44RR0001", fuel_type: :petrol, vehicle_kind: :two_wheeler)
+      Transaction.create!(customer: customer, user: staff, vehicle: vehicle, fuel_amount: 2000,
+                          litres: 18.25, discount_amount: 60, created_at: Time.zone.local(2026, 7, 10, 9, 0))
+      customer.points_ledgers.create!(entry_type: :redeem, points: -40, cash_reward_amount: 90)
+      grant_gift_to(customer)
+
+      get admin_customer_path(customer)
+
+      assert_response :success
+      assert_select "[data-customer-rewards] [data-reward='discount']", text: "₹60.00"
+      assert_select "[data-customer-rewards] [data-reward='redemption-value']", text: "₹90.00"
+      assert_select "[data-customer-rewards] [data-reward='redemption-points']", text: /40/
+      assert_select "[data-customer-rewards] [data-reward='redemption-points']", text: /1 redemption/
+      assert_select "[data-customer-rewards] [data-reward='gift-count']", text: "1"
+      assert_select "[data-reward='gift-descriptions']", text: /Steel bottle/
+      # The hero chip counts PHYSICAL gifts, not the ₹90 of redemptions.
+      assert_select "[data-hero-gift-count]", text: /1 campaign gift given/
+      # No cash-per-point rate is configured, but this ₹90 was snapshotted when
+      # one was — a real figure must never carry the "unavailable" note.
+      assert_select "[data-reward='redemption-value-note']", count: 0
+    end
+
+    test "a redemption ₹ that is zero only because no rate is configured reads as a dash, with the note" do
+      sign_in users(:one)
+      RewardSetting.current.update!(cash_value_per_point: nil)
+      customer = Customer.create!(name: "Dash Deepa", phone_number: "9444400007")
+      # With no rate, PointsLedger snapshots cash_reward_amount as NULL.
+      customer.points_ledgers.create!(entry_type: :redeem, points: -40)
+
+      get admin_customer_path(customer)
+
+      assert_response :success
+      assert_select "[data-customer-rewards] [data-reward='redemption-value']", text: "—"
+      assert_select "[data-reward='redemption-value-note']", count: 1
+    end
+
+    test "the rewards card stays off the staff customer page" do
+      sign_in users(:two)
+      customer = Customer.create!(name: "Staff Sees Less", phone_number: "9444400008")
+      customer.points_ledgers.create!(entry_type: :redeem, points: -40, cash_reward_amount: 90)
+
+      get customer_path(customer)
+
+      assert_response :success
+      # Positive control FIRST: both absence assertions below are on selectors this
+      # change introduced, so on their own they pass trivially against any page —
+      # including a blank one. Prove the customer page actually rendered before
+      # concluding the rewards card was gated rather than simply missing.
+      assert_select ".customer-details-hero", { minimum: 1 }, "the staff customer page must have rendered"
+      assert_select "[data-customer-rewards]", { count: 0 },
+        "the CRM column is gated on @crm_insight, which only the admin controller builds"
+      assert_select "[data-hero-gift-count]", count: 0
+    end
+
+    # `Admin::Crm::CustomerInsight` and `Admin::Crm::CustomerMetrics` each compute
+    # the ₹ value of a customer's redemptions — the insight for one customer, the
+    # metrics set-wise for a filtered list. Two implementations of one figure is a
+    # drift hazard, so pin them to the same answer.
+    test "the rewards card's redemption value matches the cohort metrics figure" do
+      customer = Customer.create!(name: "Drift Guard", phone_number: "9444400009")
+      customer.points_ledgers.create!(entry_type: :redeem, points: -200, cash_reward_amount: 150)
+
+      insight_value = ::Admin::Crm::CustomerInsight.new(customer).to_h.dig(:rewards, :redemption_value).to_d
+      metrics_value = ::Admin::Crm::CustomerMetrics.for(customer).gifts.to_d
+
+      assert_equal 150.to_d, insight_value
+      assert_equal metrics_value, insight_value,
+        "the customer page and the cohort list must not disagree about the same redemption"
+    end
+
     test "admin can set a customer's account type and filter the list by it" do
       sign_in users(:one)
       fleet = Customer.create!(name: "Fleet Fred", phone_number: "9811120001", customer_type: "otp")

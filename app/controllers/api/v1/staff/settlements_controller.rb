@@ -110,18 +110,29 @@ module Api
             .or(DailySettlement.where(fuel_pump_id: current_user.settlement_pump_ids))
         end
 
+        # No admin branch, mirroring the web controller: this endpoint calls the
+        # Persister without `admin_edit:`, so nothing it writes leaves a
+        # `settlement_changes` row. An admin edits a recorded sheet through
+        # PATCH /api/v1/admin/settlements/:id, which requires a change reason and
+        # an on-behalf-of FSM. Admin *create* on an FSM's behalf is untouched.
         def editable_settlements
-          current_user.admin? ? DailySettlement.all : DailySettlement.where(recorded_by: current_user)
+          return DailySettlement.none if current_user.admin?
+
+          DailySettlement.where(recorded_by: current_user)
         end
 
         def set_settlement
           @settlement = viewable_settlements.find(params[:id])
         end
 
+        # 403 in the shape this endpoint already uses for a colleague's sheet —
+        # an admin gets the same refusal, and the message names the audited
+        # endpoint they should be calling instead.
         def reject_edit_of_other_operators_settlement!
           return if editable_settlements.exists?(id: @settlement.id)
 
-          raise Pundit::NotAuthorizedError, "settlement recorded by another operator"
+          raise Pundit::NotAuthorizedError,
+            current_user.admin? ? "admin edits go through /api/v1/admin/settlements/:id" : "settlement recorded by another operator"
         end
 
         # Only admins reconcile; a staff-supplied reconciled status is refused.

@@ -290,7 +290,7 @@ Errors: `422 validation_failed` (details per child collection, e.g. `nozzle_read
 Auth: staff/admin (staff limited to own pump). Response `200`: settlement object (as 3.2). Errors `404`, `403`.
 
 ### 3.4 `PATCH /api/v1/staff/settlements/:id` — **New**
-Auth: staff/admin. Body: any subset of 3.2 (child arrays replace-in-full). Response `200` recomputed settlement. Errors `404`, `422`.
+Auth: **staff, and only the settlement the caller recorded.** Body: any subset of 3.2 (child arrays replace-in-full). Response `200` recomputed settlement. Errors `404`, `422`, `409 settlement_locked` once reconciled, and **`403 forbidden`** — for a colleague's sheet, and for an **admin caller on any sheet**. This endpoint persists without `admin_edit:`, so it writes no `settlement_changes` row; an admin editing here would rewrite an FSM's figures with no audit trail and no change reason. Admin edits go through **3.6** `PATCH /api/v1/admin/settlements/:id` (mandatory `change_reason` + `on_behalf_of_id`, recorded diff). Reading (3.1/3.3, index) is unchanged for admins, and so is admin **create** on an FSM's behalf (see the §3.2 note below).
 
 ### 3.5 `GET /api/v1/admin/settlements` — list across pumps (G1) — **New**
 Auth: admin. Query: `fuel_pump_id`, `user_id` (the FSM who recorded it — Admin-12), `start_date`, `end_date`, `status`, `page`. The envelope also carries `per_user_totals`: one entry per FSM (`user_id`, `name`, `count`, `pumps[]`, `totals{}`), counting only `submitted`/`reconciled` rows since only those carry money. Paginated envelope:
@@ -304,7 +304,7 @@ Auth: admin. Same shapes as 3.3/3.4 but unrestricted by pump; admin may edit pas
 
 `PATCH` requires **both** `change_reason` (`422 change_reason_required`) and `on_behalf_of_id` (`422 on_behalf_of_required`) — an admin edits a settlement only *for* the FSM who could not, never as himself, so `on_behalf_of_id` must name a current staff member other than the caller (Admin-12). Each entry in the response `changes[]` carries `changed_by` (the admin) alongside `on_behalf_of` / `on_behalf_of_id` (the FSM); the two are never conflated. `PATCH .../reconcile` takes neither — approving is the admin's own act, not data entry.
 
-**§3.2 for admin callers:** `POST /api/v1/staff/settlements` additionally accepts and **requires** `settlement.recorded_by_id` when the caller is an admin (same `422 on_behalf_of_required`, same eligibility rule). The named FSM becomes `recorded_by`; the acting admin is stored as `entered_by`, stamped once at creation and never back-stamped by a later edit. Staff callers may not set it, and it is ignored on `PATCH` for everyone — ownership is decided once and never re-pointed.
+**§3.2 for admin callers:** `POST /api/v1/staff/settlements` additionally accepts and **requires** `settlement.recorded_by_id` when the caller is an admin (same `422 on_behalf_of_required`, same eligibility rule). The named FSM becomes `recorded_by`; the acting admin is stored as `entered_by`, stamped once at creation and never back-stamped by a later edit. Staff callers may not set it, and it is ignored on `PATCH` for everyone — ownership is decided once and never re-pointed. Creating is the *only* thing an admin does through the staff endpoints; §3.4 refuses them.
 
 ---
 
@@ -454,7 +454,7 @@ Auth: admin. Response `200`:
 ```
 `bucket` ∈ `daily`|`weekly`|`biweekly`|`irregular`.
 
-*(Shipped as `GET /api/v1/admin/customers/:id/insight`.)* The response also carries a **`metrics`** block — what this customer has taken and cost us: `{ visits, litres, discount, gifts, contacts, points }`, all plain numbers. `gifts` is the ₹ value of their reward redemptions. Optional `preset` / `start_date` / `end_date` narrow those figures to a period and add a `lifetime_metrics` block beside them; without a period every figure is lifetime and `lifetime_metrics` is omitted. The same figures back the admin customer list's "at least X" filters (`min_visits`, `min_litres`, `min_contacts`, `min_discount`, `min_points`), computed by one shared definition so list and profile cannot disagree — counting rules in `13-spec-customer-crm-capture.md` business rule 8.
+*(Shipped as `GET /api/v1/admin/customers/:id/insight`.)* The response also carries a **`metrics`** block — what this customer has taken and cost us: `{ visits, litres, discount, gifts, contacts, points }`, all plain numbers. `gifts` is the ₹ value of their reward redemptions. Optional `preset` / `start_date` / `end_date` narrow those figures to a period and add a `lifetime_metrics` block beside them; without a period every figure is lifetime and `lifetime_metrics` is omitted. The same figures back the admin customer list's "at least X" filters (`min_visits`, `min_litres`, `min_contacts`, `min_discount`, `min_points_earned`, `min_points` — §14), computed by one shared definition so list and profile cannot disagree — counting rules in `13-spec-customer-crm-capture.md` business rule 8. Note `visits` inside `metrics` counts **fuellings** while the top-level `visit_count` on this endpoint is Cadence's distinct-**days** figure: two different questions, both on the same payload.
 
 ### 8.4 `GET /api/v1/admin/dashboard/lost_customers` — churn (E6) — **New**
 Auth: admin. Query: `window` (`week`|`month`, default `week`), `page`. "Visited previous window, not current window." Paginated `customers` (as 8.2, plus `last_visit_at`, `days_since_last_visit`).
@@ -648,18 +648,22 @@ Query params — all optional, all AND-combined:
 | `min_litres` | ≥ N litres filled (decimal) |
 | `min_discount` | ≥ ₹N discount given (decimal) |
 | `min_contacts` | ≥ N outreach logs |
-| `min_points_earned` | ≥ N points **earned in the period** |
-| `min_points_balance` | ≥ N points on the **lifetime net balance** |
-| `page`, `per_page` | paging (default 25, max 100) |
+| `min_points_earned` | ≥ N points **earned in the period** (`entry_type: earn`) |
+| `min_points` | ≥ N points on the **lifetime net balance** |
+| `page`, `per_page` | paging (default 25, max 100; a blank, zero or unparseable `per_page` means the default, never a 1-row page) |
+
+> **Naming note (2026-08-19):** the balance threshold is `min_points`, **not** `min_points_balance` as an earlier draft of this table published. `min_points` is the name the admin list shipped with and is what every filter chip, bookmark and dashboard drill-through URL carries, so it was kept and this table corrected rather than the other way round. `min_points_earned` is the new one, and its name is unchanged from that draft. There is no alias: one name per filter, so the echoed `thresholds` can be trusted to name what was actually applied.
 
 Thresholds are **inclusive** (`>=`): a customer with exactly 5 visits is in the `min_visits=5` cohort. A blank, negative or unparseable threshold is treated as *not supplied* rather than as an error, and is omitted from the echoed `thresholds`. An **unsupplied** threshold adds no filter, so customers with zero of that metric remain in the list.
 
+**Two point thresholds, deliberately.** "Customers who have accumulated x reward points" has two honest readings and the client asked for both, so they are independent filters over the same ledger: a customer who earned 5,000 and redeemed 4,800 is returned by `min_points_earned=5000` and **not** by `min_points=5000` (their balance is 200). `min_points_earned` is windowed by the period; `min_points` never is.
+
 **A period means "active in period", and it gates every threshold.** Supplying `preset`/`start_date`/`end_date` does two separate things, and the second one surprises people:
 
-1. it **windows the figures** — `visit_count`, `litres_total`, `discount_total`, `contact_count` and `points_earned` are all computed inside the window (`points_balance` is not; it is lifetime by design); and
+1. it **windows the figures** — `visits`, `litres`, `discount`, `gifts`, `contacts` and `points_earned` are all computed inside the window (`points` — the balance — is not; it is lifetime by design); and
 2. it **restricts membership** to customers who actually visited in the window (transactions ∪ `visit_entries`), AND-combined with every threshold.
 
-So `min_contacts=3&preset=this_month` means "contacted 3 times **and** fuelled this month", not "contacted 3 times this month". And `min_points_balance=5000&preset=this_month` will **not** return a dormant customer sitting on 5,000 lifetime points, even though `points_balance` itself is never windowed — they did not fuel this month. This is deliberate: "customers active in this period" is what the admin date picker has always meant, and the E2 dashboard drill-through ("N customers this month" → this list) depends on it. **Drop the period to ask a lifetime question.** Both surfaces label the control "active in period" (web: the blue banner above the list; app: the caption above the period chips) so it does not have to be discovered here.
+So `min_contacts=3&preset=this_month` means "contacted 3 times **and** fuelled this month", not "contacted 3 times this month". And `min_points=5000&preset=this_month` will **not** return a dormant customer sitting on 5,000 lifetime points, even though the balance itself is never windowed — they did not fuel this month. This is deliberate: "customers active in this period" is what the admin date picker has always meant, and the E2 dashboard drill-through ("N customers this month" → this list) depends on it. **Drop the period to ask a lifetime question.** Both surfaces label the control "active in period" (web: the blue banner above the list; app: the caption above the period chips) so it does not have to be discovered here.
 
 Response `200`:
 ```json
@@ -667,19 +671,21 @@ Response `200`:
     { "id": 7, "name": "ABC Logistics", "phone_number": "9800000000",
       "customer_type": "credit", "customer_type_label": "Credit", "active": true,
       "vehicle_numbers": ["TN01AA1111", "TN01AA1112"],
-      "metrics": { "visit_count": 12, "litres_total": 1840.5, "discount_total": 2300.0,
-                   "contact_count": 3, "points_earned": 920, "points_balance": 415 } } ],
-  "thresholds": { "visit_count": 5, "litres_total": 500.0 },
+      "metrics": { "visits": 12, "litres": 1840.5, "discount": 2300.0, "gifts": 900.0,
+                   "contacts": 3, "points": 415, "points_earned": 920 } } ],
+  "thresholds": { "min_visits": 5, "min_litres": 500.0 },
   "period": { "start_date": "2026-08-01", "end_date": "2026-08-31" },
   "page": 1, "per_page": 25, "total": 1, "has_more": false }
 ```
-`period` is always present; both members are `null` when no period was requested.
+`period` is always present; both members are `null` when no period was requested. `thresholds` echoes the thresholds **under the query-param names they were sent under**, after the server has dropped anything blank, negative or unparseable — so a client can show what it actually filtered on rather than what it hoped it did.
+
+The `metrics` block is the **same shape as `GET /customers/:id/insight`** (§8.3) plus `points_earned`, so one client-side model decodes both. `points` is the lifetime net balance; `points_earned` is what was earned inside the period.
 
 **Metric semantics (the parts that bite):**
-- `visit_count`, `litres_total` and `discount_total` share **one** de-duplication rule, so the three figures on a row can never disagree about how many fuellings happened: every captured `visit_entry` counts, and a loyalty transaction counts only when **no** visit entry links to it (`VisitEntryRecorder` copies litres and discount onto the transaction it creates). A linked pair is therefore **one** visit, 20 L and ₹100 — not two visits and 40 L. See [Customer CRM capture](13-spec-customer-crm-capture.md#counting-a-discount-once-the-two-table-trap).
-- `visit_count` counts **fuellings, de-duplicated on the link** — not distinct calendar days, which is what it counted before 2026-08-19. The day rule only collapsed a linked pair when both rows happened to land on the same date, so a visit entry captured for 30 Jun whose transaction was written on 1 Jul (back-dated capture — the fleet/credit workflow) reported *two* visits for one fuelling while litres and discount reported it once. Consequence worth knowing: **two fuellings on one day are two visits here**, whereas `Admin::Crm::Cadence` (E3) uniqs dates because it measures the gap *between* visits — different question, different figure.
-- `points_earned` is `entry_type: earn` **inside the window**; `points_balance` is the lifetime **net** figure and is never windowed. They are deliberately two cohorts — earning 5,000 and redeeming the lot leaves a big `points_earned` and a zero balance.
-- The period selects customers via the transactions ∪ `visit_entries` union (`Customer.visited_between`), so **visit-entry-only fleet/OTP/credit customers are included** (they were previously dropped by a transactions-only filter). `GET /api/v1/staff/customers` (§5.1) now uses the identical scope, so web and app agree on who is "active in this period".
+- `visits`, `litres` and `discount` are three aggregates — `COUNT(*)`, `SUM(litres)`, `SUM(discount_amount)` — over **one** de-duplicated set of rows, so they can never disagree about how many fuellings happened: every loyalty transaction counts, and a captured `visit_entry` counts only when **no** transaction is linked to it (`VisitEntryRecorder` copies litres and discount onto the transaction it creates, so counting both sides doubles everything). A linked pair is therefore **one** visit, 20 L and ₹100 — not two visits and 40 L. See [Customer CRM capture](13-spec-customer-crm-capture.md#counting-a-discount-once-the-two-table-trap).
+- `visits` counts **fuellings, de-duplicated on the link** — not distinct calendar days, which is what it counted before 2026-08-19. The day rule only collapsed a linked pair when both rows happened to land on the same date, so a visit entry captured for 30 Jun whose transaction was written on 1 Jul (back-dated capture — the fleet/credit workflow) reported *two* visits for one fuelling while litres and discount reported it once. Consequence worth knowing: **two fuellings on one day are two visits here**, whereas `Admin::Crm::Cadence` (E3) uniqs dates because it measures the gap *between* visits — different question, different figure, and the insight endpoint's own `visit_count` is still the Cadence one.
+- `points_earned` is `entry_type: earn` **inside the window**; `points` is the lifetime **net** balance and is never windowed. They are deliberately two cohorts, filtered by `min_points_earned` and `min_points` — earning 5,000 and redeeming the lot leaves a big `points_earned` and a zero balance.
+- Membership in a period is decided by the *same* windowed transactions ∪ `visit_entries` rollup the figures come from — if the rollup found nothing for a customer in the window, they were not served in it — so **visit-entry-only fleet/OTP/credit customers are included** (they were previously dropped by a transactions-only filter). `GET /api/v1/staff/customers` (§5.1) now uses the identical scope, so web and app agree on who is "active in this period".
 
 Errors: `401 unauthorized` (no/expired token), `403 forbidden` (staff token).
 

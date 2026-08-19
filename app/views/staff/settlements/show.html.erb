@@ -9,7 +9,7 @@
   <div class="d-flex gap-2">
     <%= link_to "Back", staff_settlements_path, class: "btn btn-outline-secondary btn-sm" %>
     <% unless @settlement.locked? %>
-      <%= link_to "Edit", edit_staff_settlement_path(@settlement), class: "btn btn-primary btn-sm" %>
+      <%= link_to "Edit", edit_existing_settlement_path(@settlement), class: "btn btn-primary btn-sm" %>
     <% end %>
   </div>
 </div>

@@ -51,11 +51,16 @@
             <span class="customer-details-hero__chip"><strong><%= number_to_currency(total_points_cash_reward, unit: "₹") %></strong> cash value</span>
           <% end %>
           <%# Item 5 — a compact "what we have given this customer" total. Only the
-              admin controller builds @crm_insight, so the staff hero is unchanged. %>
+              admin controller builds @crm_insight, so the staff hero is unchanged.
+              The gift chip counts PHYSICAL F1 campaign gifts (rewards[:gift_count]),
+              not metrics[:gifts] — that one is the ₹ value of point redemptions,
+              so reading it as a tally would report "₹90 of redemptions" as
+              "90 gifts". The full breakdown is the Rewards Given card. %>
           <% if @crm_insight.present? %>
             <span class="customer-details-hero__chip"><strong><%= number_to_currency(@crm_insight[:metrics][:discount], unit: "₹") %></strong> discount given</span>
-            <% if @crm_insight[:metrics][:gifts].to_i.positive? %>
-              <span class="customer-details-hero__chip"><strong><%= @crm_insight[:metrics][:gifts].to_i %></strong> gift<%= "s" unless @crm_insight[:metrics][:gifts].to_i == 1 %> given</span>
+            <% hero_gift_count = @crm_insight[:rewards][:gift_count].to_i %>
+            <% if hero_gift_count.positive? %>
+              <span class="customer-details-hero__chip" data-hero-gift-count><strong><%= hero_gift_count %></strong> campaign gift<%= "s" unless hero_gift_count == 1 %> given</span>
             <% end %>
           <% end %>
           <span class="customer-details-hero__chip">Joined <strong><%= @customer.created_at.strftime("%b %Y") %></strong></span>

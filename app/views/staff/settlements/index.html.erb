@@ -35,8 +35,10 @@
             <td class="text-end <%= "text-danger" if settlement.shortage_amount.to_d.positive? %>"><%= number_to_currency(settlement.shortage_amount, unit: "₹") %></td>
             <td class="text-end">
               <%= link_to "View", staff_settlement_path(settlement), class: "btn btn-sm btn-outline-secondary" %>
+              <%# An admin's Edit goes to the audited console — the staff edit path
+                  bounces them, and an unaudited rewrite is exactly what it stops. %>
               <% if !settlement.locked? && (current_user.admin? || settlement.recorded_by_id == current_user.id) %>
-                <%= link_to "Edit", edit_staff_settlement_path(settlement), class: "btn btn-sm btn-outline-primary" %>
+                <%= link_to "Edit", edit_existing_settlement_path(settlement), class: "btn btn-sm btn-outline-primary" %>
               <% end %>
             </td>
           </tr>

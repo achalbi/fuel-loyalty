@@ -28,7 +28,7 @@ module Staff
       authorize DailySettlement, :new?
       result = build_draft
       if result.existing
-        redirect_to edit_staff_settlement_path(result.existing),
+        redirect_to edit_existing_settlement_path(result.existing),
           notice: "A settlement already exists for that pump and date — editing it."
         return
       end
@@ -104,7 +104,8 @@ module Staff
 
     # An FSM needs to read the day's sheet for their own pump — including the
     # shift a colleague recorded (staff feedback item 6) — but may still only
-    # edit their own. Admins see and edit everything.
+    # edit their own. Admins read everything here; what they may edit is decided
+    # by `editable_settlements` below, not by this scope.
     def viewable_settlements
       return DailySettlement.all if current_user.admin?
 
@@ -113,8 +114,16 @@ module Staff
         .or(DailySettlement.where(fuel_pump_id: current_user.settlement_pump_ids))
     end
 
+    # An admin has no editable set here. This flow calls the Persister without
+    # `admin_edit:`, so it writes no `settlement_changes` row — an admin editing
+    # through it would rewrite an FSM's figures with no audit trail and no
+    # mandatory reason. Every admin edit of a recorded sheet belongs in the D9
+    # console (`Admin::SettlementsController`), which demands both. Filing a sheet
+    # *for* an FSM (create, Admin-12) is untouched — only editing one moves.
     def editable_settlements
-      current_user.admin? ? DailySettlement.all : DailySettlement.where(recorded_by: current_user)
+      return DailySettlement.none if current_user.admin?
+
+      DailySettlement.where(recorded_by: current_user)
     end
 
     def set_settlement
@@ -122,13 +131,32 @@ module Staff
     end
 
     # Someone else's settlement is readable but not writable; say so instead of
-    # 404-ing on a record the FSM can plainly see in their list.
+    # 404-ing on a record the FSM can plainly see in their list. An admin is not
+    # turned away — they are handed the same sheet in the audited console, so
+    # they never lose track of which settlement they came for.
     def ensure_editable_settlement
       return if editable_settlements.exists?(id: @settlement.id)
+
+      if current_user.admin?
+        redirect_to edit_admin_settlement_path(@settlement),
+          notice: "Admin edits are recorded — this settlement opens in the audited admin console."
+        return
+      end
 
       redirect_to staff_settlement_path(@settlement),
         alert: "#{@settlement.fsm_name_snapshot.presence || 'Another operator'} recorded this settlement — you can view it but not edit it."
     end
+
+    # Where "edit this existing sheet" leads, for whoever is asking: an FSM edits
+    # their own in place, an admin goes to the audited console (see
+    # `editable_settlements`). Shared with the views so an Edit control on this
+    # side can never point somewhere the actor is bounced out of.
+    def edit_existing_settlement_path(settlement)
+      return edit_admin_settlement_path(settlement) if current_user.admin?
+
+      edit_staff_settlement_path(settlement)
+    end
+    helper_method :edit_existing_settlement_path
 
     def build_draft
       Settlement::Builder.call(

@@ -92,6 +92,107 @@ module Admin
         assert_equal 0, august.totals[:gift_count], "the sweep month must not claim the gift"
       end
 
+      # A rolling_days campaign — the DEFAULT Admin::CampaignsController#new ships
+      # (`Campaign.new(period: :rolling_days, period_days: 30)`). Campaigns::Evaluator
+      # stores `period_start` = Campaign#qualification_period.begin, which for a
+      # rolling window is `rolling_anchor_date` (starts_at || created_at): the
+      # campaign's own start date, NOT the start of the aggregation window. The
+      # window is `(reference - 29)..reference` and `period_end` is that reference.
+      def grant_rolling_gift(customer: @customer, anchor: Date.new(2026, 4, 1), swept_on: Date.new(2026, 7, 25),
+                             granted_at: Time.zone.local(2026, 7, 25), name: "Rolling 30-day gift")
+        campaign = Campaign.create!(name: name, reward_kind: :gift, gift_description: "Steel bottle",
+                                    min_purchase_litres: 20, period: :rolling_days, period_days: 30,
+                                    starts_at: anchor.beginning_of_day, status: :active)
+        campaign.campaign_qualifications.create!(customer: customer, period_start: anchor, period_end: swept_on,
+                                                 reward_granted_at: granted_at)
+      end
+
+      # Billing a rolling gift on period_start charges it to the campaign's start
+      # date — April here — which is outside a July report altogether, so the gift
+      # silently disappears from a report whose whole job is counting gifts handed over.
+      test "gift_count bills a rolling-window gift to the sweep date, not the campaign anchor" do
+        grant_rolling_gift
+
+        july = LedgerReport.new(dimension: "customer", grain: "month", start_date: "2026-07-01", end_date: "2026-07-31")
+        row = july.rows.find { |r| r.key == @customer.id.to_s }
+
+        assert_equal 1, row.gift_count, "the July sweep is inside the window the customer filled in"
+        assert_equal 1, july.totals[:gift_count]
+        assert_equal 2, row.visits, "it lands on the customer's real July row, not a materialised one"
+
+        april = LedgerReport.new(dimension: "customer", grain: "month", start_date: "2026-04-01", end_date: "2026-04-30")
+        assert_equal 0, april.totals[:gift_count], "the anchor month is an idempotency key, not an earning period"
+      end
+
+      # The other half of the same bug: even when the anchor DOES fall inside the
+      # report range it can land in a bucket the customer never filled in, and
+      # `gifts_for` only credits customers a bucket already lists — so the gift is
+      # dropped rather than misplaced.
+      test "a rolling gift is not billed to an anchor period the customer never filled in" do
+        grant_rolling_gift(anchor: Date.new(2026, 6, 15), swept_on: Date.new(2026, 7, 25))
+
+        report = LedgerReport.new(dimension: "customer", grain: "month", start_date: "2026-06-01", end_date: "2026-07-31")
+        rows = report.rows.select { |r| r.key == @customer.id.to_s }
+
+        assert_equal [["2026-07", 1]], rows.map { |r| [r.period, r.gift_count] },
+          "the customer's only captures are in July — June is the campaign anchor, not an earning period"
+        assert_equal 1, report.totals[:gift_count]
+      end
+
+      # The calendar branch is untouched: for weekly/monthly/fixed_window the stored
+      # [period_start, period_end] IS the aggregation window, so period_start stays
+      # the billing date even with the whole quarter in range to choose from.
+      test "a calendar monthly gift is still billed to the month it was earned in" do
+        grant_gift(granted_at: Time.zone.local(2026, 8, 3))
+
+        report = LedgerReport.new(dimension: "customer", grain: "month", start_date: "2026-06-01", end_date: "2026-08-31")
+        billed = report.rows.select { |r| r.key == @customer.id.to_s && r.gift_count.positive? }
+
+        assert_equal ["2026-07"], billed.map(&:period), "July is the window it was earned in, and the month they filled"
+        assert_equal 1, report.totals[:gift_count]
+      end
+
+      # Campaigns::Evaluator aggregates `transactions`; this report is built from
+      # `visit_entries`. A drive-in customer who qualified purely on transactions has
+      # no bucket, so the gift used to be counted nowhere at all — the totals
+      # under-reporting what the operator actually handed over. It now materialises
+      # its own zero-capture row.
+      test "a gift earned purely on transactions is still counted, on a materialised row" do
+        drive_in = customers(:two)
+        Transaction.create!(customer: drive_in, user: @staff, fuel_pump: @pump, vehicle: vehicles(:three),
+                            fuel_amount: 4000, discount_amount: 0, payment_mode: "cash",
+                            created_at: Time.zone.local(2026, 7, 14, 10))
+        grant_gift(customer: drive_in, granted_at: Time.zone.local(2026, 8, 2), name: "Drive-in gift")
+
+        report = LedgerReport.new(dimension: "customer", grain: "month", start_date: "2026-07-01", end_date: "2026-07-31")
+        row = report.rows.find { |r| r.key == drive_in.id.to_s }
+
+        assert_not_nil row, "a customer with a granted gift but no visit entry must still appear"
+        assert_equal "2026-07", row.period
+        assert_equal drive_in.display_name, row.label
+        assert_equal 1, row.gift_count
+        assert_equal 0, row.visits
+        assert_equal 0.0, row.litres
+        assert_nil row.amount, "no capture behind the row, so there is no litres × price to derive"
+        assert_equal 1, report.totals[:gift_count], "the gift is counted once, not lost"
+      end
+
+      # Deliberate exception, documented on materialize_gift_rows and in
+      # docs/acefuels/15-spec-dashboard-reports.md: a qualification carries no fuel
+      # type and no pump, so a filtered slice never invents a row for one.
+      test "a fuel-filtered report does not materialise a gift row" do
+        drive_in = customers(:two)
+        grant_gift(customer: drive_in, name: "Drive-in gift")
+
+        filtered = LedgerReport.new(dimension: "customer", grain: "month", start_date: "2026-07-01",
+                                    end_date: "2026-07-31", fuel_type: "petrol")
+        assert_nil filtered.rows.find { |r| r.key == drive_in.id.to_s }
+        assert_equal 0, filtered.totals[:gift_count]
+
+        unfiltered = LedgerReport.new(dimension: "customer", grain: "month", start_date: "2026-07-01", end_date: "2026-07-31")
+        assert_equal 1, unfiltered.totals[:gift_count], "the same gift is counted with no slice filter on"
+      end
+
       test "gift_count ignores ungranted qualifications and non-gift reward kinds" do
         # Granted, but the campaign hands out points — not a physical gift.
         grant_gift(kind: :bonus_points, name: "Points push")
