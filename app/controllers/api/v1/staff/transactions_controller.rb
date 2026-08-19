@@ -29,27 +29,24 @@ module Api
         end
 
         # POST /api/v1/staff/transactions
-        # TransactionCreator runs the whole flow atomically and raises
-        # ActiveRecord::RecordInvalid on any rule failure -> 422 via BaseController.
+        # Item 2 — the single counter capture: one post records the loyalty
+        # transaction and the visit entry together. CounterEntry runs the whole
+        # flow atomically and raises ActiveRecord::RecordInvalid on any rule
+        # failure -> 422 via BaseController.
         def create
           authorize Transaction, :new?
 
-          result = TransactionCreator.call(user: current_user, **transaction_params.to_h.symbolize_keys)
-          new_total = result.customer.total_points
-
-          message = if result.rewards_paused
-            "Transaction recorded. Rewards are paused for this customer, so no points were added."
-          else
-            "+#{result.points_earned} reward points added. Balance updated to #{new_total}."
-          end
+          result = CounterEntry.record(user: current_user, params: transaction_params)
+          new_total = result.customer&.total_points
 
           render json: {
             points_earned: result.points_earned,
             rewards_paused: result.rewards_paused,
             new_total: new_total,
-            message: message,
-            customer: CustomerLookupSerializer.call(result.customer, RewardSetting.current),
-            transaction: {
+            message: create_message(result, new_total),
+            visit_skipped_reason: result.visit_skipped_reason,
+            customer: result.customer && CustomerLookupSerializer.call(result.customer, RewardSetting.current),
+            transaction: result.transaction && {
               id: result.transaction.id,
               fuel_amount: result.transaction.fuel_amount.to_f,
               payment_mode: result.transaction.payment_mode,
@@ -57,7 +54,17 @@ module Api
               nozzle: result.transaction.fuel_pump_nozzle&.display_name,
               created_at: result.transaction.created_at.iso8601,
             },
+            visit_entry: result.visit_entry && VisitEntrySerializer.call(result.visit_entry),
           }, status: :created
+        end
+
+        # An unregistered plate has no customer to award points to; a fuel with
+        # no catalog price records the sale alone (see CounterEntry).
+        def create_message(result, new_total)
+          return "Visit captured for #{result.visit_entry.vehicle_number}." if result.transaction.nil?
+          return "Transaction recorded. Rewards are paused for this customer, so no points were added." if result.rewards_paused
+
+          "+#{result.points_earned} reward points added. Balance updated to #{new_total}."
         end
 
         # POST /api/v1/staff/transactions/recognize_plate  { image_data: "data:image/jpeg;base64,..." }
@@ -123,8 +130,7 @@ module Api
         end
 
         def transaction_params
-          resource_params(:transaction).permit(:lookup_mode, :phone_number, :vehicle_number, :vehicle_id,
-                        :fuel_amount, :litres, :discount_amount, :fuel_pump_id, :fuel_pump_nozzle_id, :payment_mode)
+          resource_params(:transaction).permit(*CounterEntry::PERMITTED_FIELDS)
         end
 
         # --- register_customer helpers ---------------------------------------

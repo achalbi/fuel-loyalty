@@ -286,9 +286,9 @@ a:hover{text-decoration:underline}
 </tr>
 <tr>
 <td>11</td>
-<td>Operator KYC</td>
+<td>Operator KYC + user listing</td>
 <td>A7</td>
-<td>Changed (<code>admin/users</code>, multipart)</td>
+<td>Changed (<code>admin/users</code>, multipart; index ordering)</td>
 </tr>
 <tr>
 <td>12</td>
@@ -469,9 +469,52 @@ a:hover{text-decoration:underline}
 <td>yes</td>
 <td><code>cash</code>|<code>credit</code></td>
 </tr>
+<tr>
+<td><code>discount_amount</code></td>
+<td>number</td>
+<td>no</td>
+<td>comes off the fuel amount; points accrue on the net</td>
+</tr>
+<tr>
+<td><strong><code>fleet_otp</code></strong></td>
+<td>bool</td>
+<td>no</td>
+<td><strong>item 2</strong> — the visit detail folded in from the retired Capture Visit post</td>
+</tr>
+<tr>
+<td><strong><code>transport_name</code></strong> / <strong><code>approx_vehicle_count</code></strong></td>
+<td>string/int</td>
+<td>no</td>
+<td><strong>item 2</strong></td>
+</tr>
+<tr>
+<td><strong><code>driver_name</code></strong> / <strong><code>driver_phone_number</code></strong></td>
+<td>string</td>
+<td>no</td>
+<td><strong>item 2</strong> — upserts a customer contact</td>
+</tr>
+<tr>
+<td><strong><code>manager_name</code></strong> / <strong><code>manager_phone_number</code></strong></td>
+<td>string</td>
+<td>no</td>
+<td><strong>item 2</strong></td>
+</tr>
+<tr>
+<td><strong><code>owner_name</code></strong> / <strong><code>owner_phone_number</code></strong></td>
+<td>string</td>
+<td>no</td>
+<td><strong>item 2</strong></td>
+</tr>
 </tbody>
 </table></div>
-<pre><code class="language-json">{ &quot;transaction&quot;: { &quot;lookup_mode&quot;: &quot;vehicle&quot;, &quot;vehicle_id&quot;: 88, &quot;litres&quot;: 35.5, &quot;nozzle_reading&quot;: 104233.5, &quot;fuel_pump_nozzle_id&quot;: 5, &quot;payment_mode&quot;: &quot;cash&quot; } }
+<p><strong>Item 2 — one capture, both records.</strong> This endpoint records the loyalty
+transaction <em>and</em> the visit entry from a single post (<code>CounterEntry</code>), so the
+client no longer chooses between two screens. Two cases produce only one record,
+and neither is an error: an unregistered plate yields a visit with no
+transaction, and a fuel with no catalog selling price yields the sale alone with
+<code>visit_skipped_reason</code> set. <code>POST /api/v1/staff/visit_entries</code> is unchanged for a
+caller that wants a visit-only capture.</p>
+<pre><code class="language-json">{ &quot;transaction&quot;: { &quot;lookup_mode&quot;: &quot;vehicle&quot;, &quot;vehicle_id&quot;: 88, &quot;litres&quot;: 35.5, &quot;nozzle_reading&quot;: 104233.5, &quot;fuel_pump_nozzle_id&quot;: 5, &quot;payment_mode&quot;: &quot;cash&quot;, &quot;fleet_otp&quot;: true, &quot;transport_name&quot;: &quot;NL Roadways&quot;, &quot;driver_name&quot;: &quot;Manoj&quot;, &quot;driver_phone_number&quot;: &quot;9800011122&quot; } }
 </code></pre>
 <p>Response <code>201</code> (added fields in <strong>bold</strong>):</p>
 <pre><code class="language-json">{
@@ -482,10 +525,14 @@ a:hover{text-decoration:underline}
     &quot;id&quot;: 9001, &quot;litres&quot;: 35.5, &quot;unit_price&quot;: 98.95, &quot;fuel_amount&quot;: 3512.73,
     &quot;nozzle_reading&quot;: 104233.5, &quot;payment_mode&quot;: &quot;cash&quot;,
     &quot;pump&quot;: &quot;Pump 3&quot;, &quot;nozzle&quot;: &quot;N5 (HSD)&quot;, &quot;created_at&quot;: &quot;2026-07-21T10:12:00Z&quot;
-  }
+  },
+  &quot;visit_entry&quot;: { &quot;…VisitEntrySerializer…&quot;: true },
+  &quot;visit_skipped_reason&quot;: null
 }
 </code></pre>
-<p>Endpoint errors: <code>422 amount_litres_mismatch</code>; <code>422 no_price_for_nozzle</code> (nozzle fuel type has no active catalog product to price from); existing <code>422 validation_failed</code>, <code>404 vehicle_not_found</code>.</p>
+<p><code>customer</code>, <code>transaction</code> and <code>visit_entry</code> are each null when that record was
+not produced (see the two cases above).
+Endpoint errors: <code>422 amount_litres_mismatch</code>; <code>422 no_price_for_nozzle</code> (nozzle fuel type has no active catalog product to price from); existing <code>422 validation_failed</code>, <code>404 vehicle_not_found</code>.</p>
 <blockquote>
 <p><strong>Global pause interaction (C4):</strong> when <code>reward_setting.rewards_paused_globally</code> is true (see §6), <code>rewards_paused:true</code> and <code>points_earned:0</code> regardless of per-customer state; the transaction is still recorded.</p>
 </blockquote>
@@ -801,7 +848,7 @@ a:hover{text-decoration:underline}
 </blockquote>
 <hr />
 <h2 id="7-admin-pump-assignment-a10-new">7. Admin pump assignment (A10) — <strong>New</strong></h2>
-<p>Today assignment is staff self-service only (<code>/api/v1/my_pump</code>). Adds an admin path to assign any operator to a pump + nozzles.</p>
+<p>Today assignment is admin-only (<code>PATCH /api/v1/my_pump</code>, gated by <code>UserPolicy#manage_pump?</code> per S-MYPUMP); staff keep read access via <code>read_pump?</code> so the transaction and visit-capture screens can resolve their assigned pump. A10 adds an admin path to assign any operator to a pump + nozzles.</p>
 <h3 id="71-get-apiv1adminstaff_membersidpump_assignment-new">7.1 <code>GET /api/v1/admin/staff_members/:id/pump_assignment</code> — <strong>New</strong></h3>
 <p>Auth: admin. Response <code>200</code>:</p>
 <pre><code class="language-json">{ &quot;user&quot;: { &quot;id&quot;: 42, &quot;name&quot;: &quot;Suresh&quot; },
@@ -1062,10 +1109,14 @@ a:hover{text-decoration:underline}
 <p>Errors: <code>422 validation_failed</code> (<code>aadhaar_number</code> not 12 digits, unsupported content type, file too large → <code>details.photo</code>/<code>details.id_card_photo</code>).</p>
 <h3 id="112-get-apiv1adminusersid-changed">11.2 <code>GET /api/v1/admin/users/:id</code> — <strong>Changed</strong></h3>
 <p>Returns the extended serializer above. Aadhaar is <strong>always masked</strong> in responses; the raw value is never serialized. PII handling (encryption at rest, access scoping) per the KYC spec.</p>
+<h3 id="113-get-apiv1adminusers-changed-ordering">11.3 <code>GET /api/v1/admin/users</code> — <strong>Changed (ordering)</strong></h3>
+<p>Auth: admin. Unpaginated: <code>{ "users": [ &lt;UserSerializer&gt;, … ] }</code> (rows as 11.1). Operates on kept users only (soft-deleted excluded).</p>
+<p><strong>Ordering — <code>active DESC, role, name, username, phone_number</code>.</strong> Active accounts are listed <strong>first</strong>; within each active group the previous <code>role → name</code> order is unchanged (<code>admin</code> before <code>staff</code>, then alphabetical). <code>users.active</code> is <code>NOT NULL</code>, so no NULLS clause applies. Backed by the <code>User.admin_listing</code> scope, which the server-rendered <code>/admin/users</code> index shares — the two surfaces cannot drift.</p>
+<p>Clients <strong>must not</strong> re-sort this list; render it in the order received and show each row's <code>active</code> flag (the web index renders an Active/Inactive chip beside the role chip; Android renders <code>ActiveChip</code>) so the grouping is visible.</p>
 <hr />
-<h2 id="12-reports-e1-new">12. Reports (E1) — <strong>New</strong></h2>
-<p>Aggregated litres / discount / gifts by period, grouped by vehicle / transporter / driver.</p>
-<h3 id="121-get-apiv1adminreports-new">12.1 <code>GET /api/v1/admin/reports</code> — <strong>New</strong></h3>
+<h2 id="12-reports-e1-shipped">12. Reports (E1) — <strong>Shipped</strong></h2>
+<p>Aggregated litres / ₹ / discount / rewards by period, grouped by vehicle / transporter / driver / customer.</p>
+<h3 id="121-get-apiv1adminreports">12.1 <code>GET /api/v1/admin/reports</code></h3>
 <p>Auth: admin. Query:</p>
 <div class="table-wrap"><table>
 <thead>
@@ -1077,19 +1128,24 @@ a:hover{text-decoration:underline}
 </thead>
 <tbody>
 <tr>
-<td><code>period</code></td>
+<td><code>grain</code></td>
 <td>enum</td>
-<td><code>daily</code>|<code>weekly</code>|<code>monthly</code>|<code>yearly</code></td>
+<td><code>day</code>|<code>week</code>|<code>month</code>|<code>year</code>; unknown values fall back to <code>month</code></td>
 </tr>
 <tr>
-<td><code>group_by</code></td>
+<td><code>dimension</code></td>
 <td>enum</td>
-<td><code>vehicle</code>|<code>transporter</code>|<code>driver</code></td>
+<td><code>vehicle</code>|<code>transporter</code>|<code>driver</code>|<code>customer</code>; unknown values fall back to <code>vehicle</code></td>
 </tr>
 <tr>
 <td><code>start_date</code>, <code>end_date</code></td>
 <td>date</td>
-<td>range; defaults to current <code>period</code> window</td>
+<td>explicit range</td>
+</tr>
+<tr>
+<td><code>preset</code></td>
+<td>string</td>
+<td>shared dashboard period preset (resolved by <code>OverviewReport.period_range</code>); the range defaults to the current month</td>
 </tr>
 <tr>
 <td><code>fuel_type</code></td>
@@ -1097,28 +1153,76 @@ a:hover{text-decoration:underline}
 <td>optional filter</td>
 </tr>
 <tr>
-<td><code>page</code></td>
+<td><code>fuel_pump_id</code></td>
 <td>int</td>
-<td></td>
+<td>optional filter (G1)</td>
+</tr>
+<tr>
+<td><code>customer_id</code></td>
+<td>int</td>
+<td>optional; narrows the whole report to one customer</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>string</td>
+<td><code>csv</code> streams the export instead of JSON (12.2)</td>
 </tr>
 </tbody>
 </table></div>
 <p>Response <code>200</code>:</p>
 <pre><code class="language-json">{
-  &quot;period&quot;: &quot;monthly&quot;, &quot;group_by&quot;: &quot;transporter&quot;,
-  &quot;range&quot;: { &quot;start_date&quot;: &quot;2026-07-01&quot;, &quot;end_date&quot;: &quot;2026-07-31&quot; },
+  &quot;dimension&quot;: &quot;transporter&quot;, &quot;grain&quot;: &quot;month&quot;,
+  &quot;range&quot;: { &quot;from&quot;: &quot;2026-07-01&quot;, &quot;to&quot;: &quot;2026-07-31&quot; },
+  &quot;columns&quot;: [&quot;key&quot;,&quot;label&quot;,&quot;period&quot;,&quot;litres&quot;,&quot;amount&quot;,&quot;discount&quot;,&quot;gifts&quot;,&quot;gift_count&quot;,&quot;visits&quot;],
+  &quot;reward_value_configured&quot;: true,
   &quot;rows&quot;: [
-    { &quot;key&quot;: &quot;ABC Logistics&quot;, &quot;label&quot;: &quot;ABC Logistics&quot;,
-      &quot;litres&quot;: 4820.0, &quot;amount&quot;: 476000.0, &quot;discount&quot;: 9640.0, &quot;gifts&quot;: 2,
-      &quot;visits&quot;: 41 }
+    { &quot;key&quot;: &quot;ABC Logistics&quot;, &quot;label&quot;: &quot;ABC Logistics&quot;, &quot;period&quot;: &quot;2026-07&quot;,
+      &quot;litres&quot;: 4820.0, &quot;amount&quot;: 476000.0, &quot;discount&quot;: 9640.0,
+      &quot;gifts&quot;: 4200.0, &quot;gift_count&quot;: 2, &quot;visits&quot;: 41 }
   ],
-  &quot;totals&quot;: { &quot;litres&quot;: 4820.0, &quot;amount&quot;: 476000.0, &quot;discount&quot;: 9640.0, &quot;gifts&quot;: 2 },
-  &quot;page&quot;: 1, &quot;per_page&quot;: 25, &quot;total&quot;: 1, &quot;has_more&quot;: false
+  &quot;totals&quot;: { &quot;litres&quot;: 4820.0, &quot;amount&quot;: 476000.0, &quot;discount&quot;: 9640.0,
+              &quot;gifts&quot;: 4200.0, &quot;gift_count&quot;: 2, &quot;visits&quot;: 41 }
 }
 </code></pre>
-<p>Errors: <code>422 invalid_period</code> / <code>invalid_group_by</code> for unknown enum values.</p>
-<h3 id="122-get-apiv1adminreportsexport-new-optional">12.2 <code>GET /api/v1/admin/reports/export</code> — <strong>New (optional)</strong></h3>
-<p>Auth: admin. Same query as 12.1 plus <code>format=csv</code>. Returns <code>text/csv</code> (<code>Content-Disposition: attachment</code>). Non-JSON; client streams to a file. Errors as 12.1.</p>
+<p>The two reward columns are <strong>different units</strong> — read the table before wiring a client:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>field</th>
+<th>unit</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>amount</code></td>
+<td>₹</td>
+<td>litres × catalog selling price (Q1). <code>null</code> — never <code>0</code> — when no catalog price exists for the fuel</td>
+</tr>
+<tr>
+<td><code>discount</code></td>
+<td>₹</td>
+<td>summed from the per-visit captures (B2)</td>
+</tr>
+<tr>
+<td><code>gifts</code></td>
+<td>₹</td>
+<td>cash value of <strong>points redemptions</strong>; labelled "Reward ₹" in the UI and CSV. The key is kept as <code>gifts</code> for backwards compatibility</td>
+</tr>
+<tr>
+<td><code>gift_count</code></td>
+<td>count</td>
+<td><strong>physical campaign gifts</strong> handed over (F1 <code>reward_kind: gift</code>, stamped by <code>campaign_qualifications.reward_granted_at</code>). Attributable per customer only, so it is <code>0</code> on the vehicle / transporter / driver dimensions — a qualification carries no vehicle or driver</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>reward_value_configured</code> is <code>false</code> when no cash value per point is configured in reward settings. Every redemption then stored a NULL ₹ and <code>gifts</code> sums to <code>0</code> for structural reasons, so a client MUST render <code>—</code> instead of <code>₹0.00</code> when the flag is false and the value is zero. Web and Android both do; Android defaults the field to <code>true</code> when an older server omits it.</p>
+<p>Not paginated — the response is the whole aggregation for the range. Unknown <code>dimension</code> / <code>grain</code> values coerce to the defaults above rather than returning an error.</p>
+<h3 id="122-csv-export">12.2 CSV export</h3>
+<p>Same endpoint with <code>format=csv</code> — there is no separate <code>/export</code> path. Returns <code>text/csv; charset=utf-8</code> with a UTF-8 BOM (so Excel renders ₹) and <code>Content-Disposition: attachment</code>. The header row carries the human labels rather than the JSON keys:</p>
+<pre><code>Key,Label,Period,Litres,Amount ₹,Discount ₹,Reward ₹,Gifts,Visits
+</code></pre>
+<p>followed by one line per row and a final <code>TOTAL</code> line. The <code>Reward ₹</code> cell renders <code>—</code> under the same rule as the JSON flag.</p>
 <hr />
 <h2 id="13-customer-feedback-rating-e7-new">13. Customer feedback / rating (E7) — <strong>New</strong></h2>
 <p>Lightweight rating captured against a customer (or a visit), surfaced on the dashboard.</p>
@@ -1165,6 +1269,7 @@ POST  /api/v1/admin/notifications/send          (+ audience, channels, offer)
 POST/PATCH /api/v1/admin/schedules[/:id]        (+ audience, channels)
 POST/PATCH /api/v1/admin/users[/:id]            (+ address, aadhaar_number, photo, id_card_photo; multipart)
 GET   /api/v1/admin/users/:id                   (+ KYC fields, masked aadhaar)
+GET   /api/v1/admin/users                       (ordering: active first, then role → name)
 </code></pre>
 <h2 id="appendix-b-open-items-to-confirm">Appendix B — Open items to confirm</h2>
 <ol>

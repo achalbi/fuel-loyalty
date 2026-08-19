@@ -21,6 +21,42 @@ Fuel-station customers today are a thin record (name + one phone + a plate). The
 > payload gains a `notes` array. See
 > [Staff feedback — Aug 2026](50-staff-feedback-2026-08.md).
 
+
+> **Rewards-given update (2026-08-19, staff feedback item 5):** the per-customer
+> half of "the report should show up discount amount paid, or gifts given for that
+> customer" (the reports-page half shipped alongside it — see
+> [Dashboard & Reports](15-spec-dashboard-reports.md)). `Admin::Crm::CustomerInsight#to_h`
+> gains a **`rewards`** block: `discount_total`, `redemption_value` /
+> `redemption_points` / `redemption_count`, `gift_count` + `gift_descriptions`,
+> and `reward_value_configured`. Per the client decision, "gifts" is **both**
+> kinds reported as **separate figures** — the ₹ value of points redemptions and
+> the count of physical F1 campaign gifts — because they are different units and
+> blending them would be a lie in either direction.
+> - **Web:** a **Rewards Given** card in the admin CRM column
+>   (`app/views/admin/customers/_crm.html.erb`) plus compact "discount given" /
+>   "gifts given" chips in the customer hero. Both are gated on `@crm_insight`,
+>   which only the admin controller builds, so the staff customer page is
+>   unchanged. Each transaction row now shows its own discount.
+> - **API:** `GET /api/v1/admin/customers/:id/insight` carries the `rewards`
+>   block; `CustomerProfileSerializer`'s transaction JSON gains `discount_amount`.
+> - **Android:** a **Rewards Given** card in the admin-only CRM section of
+>   `CustomerProfileScreen`, and the per-transaction `cash_reward` now renders on
+>   the transaction cards.
+> - **The ₹0 trap, again:** with no cash-value-per-point configured every
+>   redemption stored `cash_reward_amount = NULL`, so `redemption_value` is a
+>   structural zero. `reward_value_configured` lets web and Android render `—`
+>   instead of `₹0.00`, exactly as the reports page does.
+
+
+> **Capture merged (2026-08-19, staff feedback item 2):** B2's separate Capture
+> Visit form is retired. The counter has one screen — **New Entry** — whose
+> single submit records the VisitEntry *and* the loyalty Transaction through
+> `CounterEntry` → `VisitEntryRecorder`. The fleet/driver fields live behind a
+> collapsed panel on the transaction wizard; the per-pump/day captures list
+> survives as a report. An unregistered plate still yields a visit with no
+> transaction, and a fuel with no catalog price yields the sale alone with a
+> stated reason. See [Staff feedback — Aug 2026](50-staff-feedback-2026-08.md).
+
 ## Requirements covered
 
 | ID | One-line |
@@ -120,6 +156,15 @@ This is the FSM's high-frequency form. It is **distinct from `transactions`**: a
 Indexes: `[fuel_pump_id, entry_date]` (settlement pulls a pump's day), `[customer_id]`, `[vehicle_id]`, `[entry_date]`, `[transaction_id]`.
 
 Rationale for a separate table vs bolting columns onto `transactions`: the requirement explicitly lists CustomerDetailsEntry and DailySettlement as FSM artifacts separate from the reward transaction; litres/discount/fleet-otp are captured **before** the ₹ is settled; and a visit can be logged for an unregistered plate (customer_id null) which a `transaction` (which requires an active customer) cannot represent.
+
+##### Counting a discount once (the two-table trap)
+
+Discount is stored on **both** tables — `visit_entries.discount_amount` and `transactions.discount_amount` — and `VisitEntryRecorder` **copies** the visit entry's discount onto the loyalty transaction it links (`visit_entries.transaction_id`). So `visit_entries.sum + transactions.sum` reports ₹200 for a single ₹100 fuelling. Every "how much discount did we give?" figure must therefore go through **`Customer#discount_total(range: nil)`**, which applies one rule:
+
+- every visit entry contributes its own `discount_amount`, linked or not;
+- a transaction contributes **only when no visit entry points at it** (an anti-join) — i.e. a standalone counter transaction with no B2 capture behind it.
+
+Two details are load-bearing. The anti-join subquery filters `transaction_id IS NOT NULL`, because a single NULL inside a SQL `NOT IN` makes the whole predicate match nothing. And when a `range` is given the anti-join is scoped to the **same windowed visit scope**, so a back-dated pair straddling the window boundary is still counted once — by whichever side falls inside the window — rather than dropped by both.
 
 #### Relationships
 

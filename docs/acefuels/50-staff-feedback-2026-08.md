@@ -11,7 +11,7 @@ merge.
 | # | Item | Batch | Status |
 |---|------|-------|--------|
 | 1 | Loyalty Lookup — phone number not cleared after navigating away and back | 1 | ✅ Done |
-| 2 | Difference between New Transaction and Capture Visit — only one way to capture | 3 | ⏳ Planned |
+| 2 | Difference between New Transaction and Capture Visit — only one way to capture | 3 | ✅ Done |
 | 3 | Only 3 customer types: Drive-In, Credit, Fleet/OTP | 1 | ✅ Done |
 | 4 | Only 2 payment types: Cash or Credit | 1 | ✅ Already correct |
 | 5 | Settlement date should default to yesterday | 1 | ✅ Done |
@@ -163,3 +163,48 @@ entry instead of overwriting the last — and reading it returns the most recent
 entry, so older app builds and existing API consumers are unaffected. The note
 box on the web form and in the app now starts empty, with the full log rendered
 beneath it.
+
+## Batch 3 — delivered
+
+### 2 · One way to capture
+
+New Transaction and Capture Visit were two screens writing two records for the
+same event at the counter. They are now one screen — **New Entry** — and one
+submit writes both:
+
+- a **VisitEntry** — litres (the source of truth), the driver / transport /
+  Fleet-OTP detail, and the discount the D3 settlement pull reads; and
+- a **Transaction** — the ₹ and the points ledger (C5).
+
+Neither downstream pipeline loses its source, and staff have one way in.
+
+**Where the logic lives.** `CounterEntry` owns the field list both surfaces post
+and decides which records a given capture can produce. `VisitEntryRecorder`
+already composed the pair, so it does the writing; it gained an explicit
+`payment_mode` (Cash/Credit is now chosen, not inferred from the Fleet/OTP
+switch) and accepts a typed ₹ amount, converting it to litres at the catalog
+price so litres stay canonical.
+
+**Two captures can't produce both records, and neither blocks the counter:**
+
+| Situation | What happens |
+|---|---|
+| Unregistered plate | The visit is recorded; there is no customer to award points to, so no transaction. |
+| Fuel with no catalog price, ₹ typed | The sale is recorded alone. `visit_skipped_reason` says why, rather than swallowing it. |
+
+**The screen.** The merged form is the transaction wizard staff already know —
+plate scanner, customer lookup, inline registration, pump and nozzle — with the
+fleet and driver detail behind a collapsed *Fleet & driver detail* panel. A
+drive-in stays a three-tap job; a fleet visit opens the panel and records the
+transport and the people behind it, who join the customer's contact roster.
+
+**What retired.** The separate capture form and its Android screen are gone.
+`/staff/visit_entries/new` redirects to the merged screen so bookmarks still
+work, and the per-pump/day captures list stays — that is a report, not a second
+way in. Nav, topbar, Home quick actions and the Android home grid now offer one
+capture action plus that list.
+
+**API.** `POST /api/v1/staff/transactions` accepts the visit fields alongside
+the sale and returns `visit_entry` and `visit_skipped_reason` next to the
+existing `transaction`. `POST /api/v1/staff/visit_entries` is unchanged, so a
+visit-only capture is still possible for a caller that wants one.

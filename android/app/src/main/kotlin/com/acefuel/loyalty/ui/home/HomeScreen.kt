@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
@@ -77,7 +76,6 @@ fun HomeScreen(
     onCustomers: () -> Unit,
     onRedeem: () -> Unit,
     onAdjustPoints: () -> Unit,
-    onCaptureVisit: () -> Unit,
     onDailySettlement: () -> Unit,
     onAdmin: () -> Unit,
 ) {
@@ -86,8 +84,9 @@ fun HomeScreen(
     val isAdmin = user.role == "admin"
 
     val actions = buildList {
-        add(QuickAction(Icons.Filled.PointOfSale, "New Transaction", nayara.actionPrimaryContainer, nayara.actionPrimary) { haptics.tick(); onNewTransaction() })
-        add(QuickAction(Icons.AutoMirrored.Filled.ListAlt, "Capture Visit", nayara.accentContainer, nayara.accentDefault) { haptics.tick(); onCaptureVisit() })
+        // Item 2 — one capture: the entry screen records the sale and the visit
+        // together, so there is no separate Capture Visit action.
+        add(QuickAction(Icons.Filled.PointOfSale, "New Entry", nayara.actionPrimaryContainer, nayara.actionPrimary) { haptics.tick(); onNewTransaction() })
         add(QuickAction(Icons.AutoMirrored.Filled.ReceiptLong, "Daily Settlement", nayara.statusInfoContainer, nayara.statusInfo) { haptics.tick(); onDailySettlement() })
         add(QuickAction(Icons.Filled.People, "Customers", nayara.accentContainer, nayara.accentDefault) { haptics.tick(); onCustomers() })
         add(QuickAction(Icons.Filled.Redeem, "Redeem", nayara.rewardPointsContainer, nayara.rewardPointsText) { haptics.tick(); onRedeem() })

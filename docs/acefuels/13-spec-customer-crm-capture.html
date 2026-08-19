@@ -131,6 +131,38 @@ entry rather than overwriting — and reading it returns the most recent entry,
 so existing API consumers and installed app builds are unaffected. The profile
 payload gains a <code>notes</code> array. See
 <a href="50-staff-feedback-2026-08.html">Staff feedback — Aug 2026</a>.</p>
+<p><strong>Rewards-given update (2026-08-19, staff feedback item 5):</strong> the per-customer
+half of "the report should show up discount amount paid, or gifts given for that
+customer" (the reports-page half shipped alongside it — see
+<a href="15-spec-dashboard-reports.html">Dashboard &amp; Reports</a>). <code>Admin::Crm::CustomerInsight#to_h</code>
+gains a <strong><code>rewards</code></strong> block: <code>discount_total</code>, <code>redemption_value</code> /
+<code>redemption_points</code> / <code>redemption_count</code>, <code>gift_count</code> + <code>gift_descriptions</code>,
+and <code>reward_value_configured</code>. Per the client decision, "gifts" is <strong>both</strong>
+kinds reported as <strong>separate figures</strong> — the ₹ value of points redemptions and
+the count of physical F1 campaign gifts — because they are different units and
+blending them would be a lie in either direction.
+- <strong>Web:</strong> a <strong>Rewards Given</strong> card in the admin CRM column
+  (<code>app/views/admin/customers/_crm.html.erb</code>) plus compact "discount given" /
+  "gifts given" chips in the customer hero. Both are gated on <code>@crm_insight</code>,
+  which only the admin controller builds, so the staff customer page is
+  unchanged. Each transaction row now shows its own discount.
+- <strong>API:</strong> <code>GET /api/v1/admin/customers/:id/insight</code> carries the <code>rewards</code>
+  block; <code>CustomerProfileSerializer</code>'s transaction JSON gains <code>discount_amount</code>.
+- <strong>Android:</strong> a <strong>Rewards Given</strong> card in the admin-only CRM section of
+  <code>CustomerProfileScreen</code>, and the per-transaction <code>cash_reward</code> now renders on
+  the transaction cards.
+- <strong>The ₹0 trap, again:</strong> with no cash-value-per-point configured every
+  redemption stored <code>cash_reward_amount = NULL</code>, so <code>redemption_value</code> is a
+  structural zero. <code>reward_value_configured</code> lets web and Android render <code>—</code>
+  instead of <code>₹0.00</code>, exactly as the reports page does.</p>
+<p><strong>Capture merged (2026-08-19, staff feedback item 2):</strong> B2's separate Capture
+Visit form is retired. The counter has one screen — <strong>New Entry</strong> — whose
+single submit records the VisitEntry <em>and</em> the loyalty Transaction through
+<code>CounterEntry</code> → <code>VisitEntryRecorder</code>. The fleet/driver fields live behind a
+collapsed panel on the transaction wizard; the per-pump/day captures list
+survives as a report. An unregistered plate still yields a visit with no
+transaction, and a fuel with no catalog price yields the sale alone with a
+stated reason. See <a href="50-staff-feedback-2026-08.html">Staff feedback — Aug 2026</a>.</p>
 </blockquote>
 <h2 id="requirements-covered">Requirements covered</h2>
 <div class="table-wrap"><table>
@@ -392,6 +424,13 @@ payload gains a <code>notes</code> array. See
 </table></div>
 <p>Indexes: <code>[fuel_pump_id, entry_date]</code> (settlement pulls a pump's day), <code>[customer_id]</code>, <code>[vehicle_id]</code>, <code>[entry_date]</code>, <code>[transaction_id]</code>.</p>
 <p>Rationale for a separate table vs bolting columns onto <code>transactions</code>: the requirement explicitly lists CustomerDetailsEntry and DailySettlement as FSM artifacts separate from the reward transaction; litres/discount/fleet-otp are captured <strong>before</strong> the ₹ is settled; and a visit can be logged for an unregistered plate (customer_id null) which a <code>transaction</code> (which requires an active customer) cannot represent.</p>
+<h5 id="counting-a-discount-once-the-two-table-trap">Counting a discount once (the two-table trap)</h5>
+<p>Discount is stored on <strong>both</strong> tables — <code>visit_entries.discount_amount</code> and <code>transactions.discount_amount</code> — and <code>VisitEntryRecorder</code> <strong>copies</strong> the visit entry's discount onto the loyalty transaction it links (<code>visit_entries.transaction_id</code>). So <code>visit_entries.sum + transactions.sum</code> reports ₹200 for a single ₹100 fuelling. Every "how much discount did we give?" figure must therefore go through <strong><code>Customer#discount_total(range: nil)</code></strong>, which applies one rule:</p>
+<ul>
+<li>every visit entry contributes its own <code>discount_amount</code>, linked or not;</li>
+<li>a transaction contributes <strong>only when no visit entry points at it</strong> (an anti-join) — i.e. a standalone counter transaction with no B2 capture behind it.</li>
+</ul>
+<p>Two details are load-bearing. The anti-join subquery filters <code>transaction_id IS NOT NULL</code>, because a single NULL inside a SQL <code>NOT IN</code> makes the whole predicate match nothing. And when a <code>range</code> is given the anti-join is scoped to the <strong>same windowed visit scope</strong>, so a back-dated pair straddling the window boundary is still counted once — by whichever side falls inside the window — rather than dropped by both.</p>
 <h4 id="relationships">Relationships</h4>
 <figure class="figure diagram"><figcaption>Diagram</figcaption><pre class="mermaid">erDiagram
     CUSTOMER ||--o{ CUSTOMER_CONTACT : has

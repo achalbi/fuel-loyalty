@@ -93,6 +93,67 @@ import com.acefuel.loyalty.ui.theme.NayaraOutlinedButton
 import com.acefuel.loyalty.ui.theme.NayaraSpacing
 import com.acefuel.loyalty.ui.theme.nayara
 import kotlinx.coroutines.launch
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
+
+/**
+ * Item 2 — the fleet and driver detail that used to be its own Capture Visit
+ * screen. Collapsed by default so a drive-in stays a three-tap job; a fleet
+ * visit opens it and records the transport and the people behind it. Every
+ * field is optional, and the captured contacts join the customer's roster.
+ */
+@Composable
+private fun VisitDetailSection(state: TxnUiState, viewModel: TransactionViewModel) {
+    val enabled = !state.creating
+    TextButton(onClick = viewModel::toggleVisitDetail) {
+        Icon(
+            imageVector = if (state.visitDetailExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+            contentDescription = null,
+        )
+        Spacer(Modifier.width(NayaraSpacing.Xs))
+        Text("Fleet & driver detail (optional)")
+    }
+
+    AnimatedVisibility(visible = state.visitDetailExpanded, enter = stepEnter(), exit = stepExit()) {
+        Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(checked = state.fleetOtp, onCheckedChange = viewModel::onFleetOtp, enabled = enabled)
+                Spacer(Modifier.width(NayaraSpacing.Md))
+                Text("Fleet / OTP visit", style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+                FormField(state.transportName, viewModel::onTransportName, "Transport name", Modifier.weight(1.5f), enabled = enabled)
+                FormField(
+                    state.approxVehicleCount, viewModel::onApproxVehicleCount, "Vehicles", Modifier.weight(1f),
+                    enabled = enabled, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
+            ContactRow("Driver", state.driverName, viewModel::onDriverName, state.driverPhone, viewModel::onDriverPhone, enabled)
+            ContactRow("Manager", state.managerName, viewModel::onManagerName, state.managerPhone, viewModel::onManagerPhone, enabled)
+            ContactRow("Owner", state.ownerName, viewModel::onOwnerName, state.ownerPhone, viewModel::onOwnerPhone, enabled)
+        }
+    }
+}
+
+@Composable
+private fun ContactRow(
+    role: String,
+    name: String,
+    onName: (String) -> Unit,
+    phone: String,
+    onPhone: (String) -> Unit,
+    enabled: Boolean,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+        FormField(name, onName, "$role name", Modifier.weight(1f), enabled = enabled)
+        FormField(
+            phone, onPhone, "$role mobile", Modifier.weight(1f), enabled = enabled,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,6 +162,8 @@ fun TransactionScreen(
     onViewCustomer: (Long) -> Unit,
     onScanPlate: () -> Unit = {},
     onSetupPump: () -> Unit = {},
+    // S-MYPUMP: only an admin can reach My Pump, so only an admin is offered it.
+    canManagePump: Boolean = false,
     scannedPlate: String? = null,
 ) {
     val container = LocalContainer.current
@@ -440,10 +503,14 @@ fun TransactionScreen(
                         }
 
                         Spacer(Modifier.height(NayaraSpacing.Md))
+                        VisitDetailSection(state, viewModel)
+
+                        Spacer(Modifier.height(NayaraSpacing.Md))
                         NozzleSection(
                             state = state,
                             onRetryPump = viewModel::loadMyPump,
                             onSetupPump = onSetupPump,
+                            canManagePump = canManagePump,
                             onSelect = { haptics.tick(); viewModel.selectNozzle(it) },
                         )
 
@@ -524,6 +591,7 @@ private fun NozzleSection(
     state: TxnUiState,
     onRetryPump: () -> Unit,
     onSetupPump: () -> Unit,
+    canManagePump: Boolean,
     onSelect: (Long) -> Unit,
 ) {
     Text("Nozzle", style = MaterialTheme.typography.labelLarge)
@@ -532,10 +600,19 @@ private fun NozzleSection(
         state.myPumpLoading -> SkeletonListItem(showAvatar = false)
         state.myPumpError != null -> InlineErrorCard(state.myPumpError, onRetry = onRetryPump)
         !state.pumpReady -> {
-            Blocker("Set up My Pump with at least one active nozzle before recording transactions.")
-            Spacer(Modifier.height(NayaraSpacing.Md))
-            NayaraButton(onClick = onSetupPump, modifier = Modifier.fillMaxWidth()) {
-                Text("Set up My Pump")
+            Blocker(
+                if (canManagePump) {
+                    "Set up My Pump with at least one active nozzle before recording transactions."
+                } else {
+                    "Ask an admin to assign your pump with at least one active nozzle " +
+                        "before recording transactions."
+                },
+            )
+            if (canManagePump) {
+                Spacer(Modifier.height(NayaraSpacing.Md))
+                NayaraButton(onClick = onSetupPump, modifier = Modifier.fillMaxWidth()) {
+                    Text("Set up My Pump")
+                }
             }
         }
         else -> {
@@ -543,16 +620,20 @@ private fun NozzleSection(
             if (options.isEmpty()) {
                 val fuel = state.selectedFuelTypeLabel
                 Blocker(
-                    if (fuel != null) {
-                        "Your pump has no active $fuel nozzle assigned. Update My Pump to add one " +
-                            "(or pick a pump that has a $fuel nozzle)."
-                    } else {
-                        "No nozzle is assigned to your pump for this vehicle's fuel type."
+                    when {
+                        fuel != null && canManagePump ->
+                            "Your pump has no active $fuel nozzle assigned. Update My Pump to add one " +
+                                "(or pick a pump that has a $fuel nozzle)."
+                        fuel != null ->
+                            "Your pump has no active $fuel nozzle assigned. Ask an admin to add one."
+                        else -> "No nozzle is assigned to your pump for this vehicle's fuel type."
                     },
                 )
-                Spacer(Modifier.height(NayaraSpacing.Md))
-                NayaraButton(onClick = onSetupPump, modifier = Modifier.fillMaxWidth()) {
-                    Text("Change My Pump")
+                if (canManagePump) {
+                    Spacer(Modifier.height(NayaraSpacing.Md))
+                    NayaraButton(onClick = onSetupPump, modifier = Modifier.fillMaxWidth()) {
+                        Text("Change My Pump")
+                    }
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Md)) {

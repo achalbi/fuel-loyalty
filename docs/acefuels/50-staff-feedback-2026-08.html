@@ -140,7 +140,7 @@ merge.</p>
 <td>2</td>
 <td>Difference between New Transaction and Capture Visit — only one way to capture</td>
 <td>3</td>
-<td>⏳ Planned</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>3</td>
@@ -318,6 +318,56 @@ entry instead of overwriting the last — and reading it returns the most recent
 entry, so older app builds and existing API consumers are unaffected. The note
 box on the web form and in the app now starts empty, with the full log rendered
 beneath it.</p>
+<h2 id="batch-3-delivered">Batch 3 — delivered</h2>
+<h3 id="2-one-way-to-capture">2 · One way to capture</h3>
+<p>New Transaction and Capture Visit were two screens writing two records for the
+same event at the counter. They are now one screen — <strong>New Entry</strong> — and one
+submit writes both:</p>
+<ul>
+<li>a <strong>VisitEntry</strong> — litres (the source of truth), the driver / transport /
+  Fleet-OTP detail, and the discount the D3 settlement pull reads; and</li>
+<li>a <strong>Transaction</strong> — the ₹ and the points ledger (C5).</li>
+</ul>
+<p>Neither downstream pipeline loses its source, and staff have one way in.</p>
+<p><strong>Where the logic lives.</strong> <code>CounterEntry</code> owns the field list both surfaces post
+and decides which records a given capture can produce. <code>VisitEntryRecorder</code>
+already composed the pair, so it does the writing; it gained an explicit
+<code>payment_mode</code> (Cash/Credit is now chosen, not inferred from the Fleet/OTP
+switch) and accepts a typed ₹ amount, converting it to litres at the catalog
+price so litres stay canonical.</p>
+<p><strong>Two captures can't produce both records, and neither blocks the counter:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unregistered plate</td>
+<td>The visit is recorded; there is no customer to award points to, so no transaction.</td>
+</tr>
+<tr>
+<td>Fuel with no catalog price, ₹ typed</td>
+<td>The sale is recorded alone. <code>visit_skipped_reason</code> says why, rather than swallowing it.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The screen.</strong> The merged form is the transaction wizard staff already know —
+plate scanner, customer lookup, inline registration, pump and nozzle — with the
+fleet and driver detail behind a collapsed <em>Fleet &amp; driver detail</em> panel. A
+drive-in stays a three-tap job; a fleet visit opens the panel and records the
+transport and the people behind it, who join the customer's contact roster.</p>
+<p><strong>What retired.</strong> The separate capture form and its Android screen are gone.
+<code>/staff/visit_entries/new</code> redirects to the merged screen so bookmarks still
+work, and the per-pump/day captures list stays — that is a report, not a second
+way in. Nav, topbar, Home quick actions and the Android home grid now offer one
+capture action plus that list.</p>
+<p><strong>API.</strong> <code>POST /api/v1/staff/transactions</code> accepts the visit fields alongside
+the sale and returns <code>visit_entry</code> and <code>visit_skipped_reason</code> next to the
+existing <code>transaction</code>. <code>POST /api/v1/staff/visit_entries</code> is unchanged, so a
+visit-only capture is still possible for a caller that wants one.</p>
 <div class="docfoot">
   <span>Part of the <a href="index.html">AceFuels documentation set</a>.</span>
   <span class="fnote">Generated from 50-staff-feedback-2026-08.md &middot; 2026-07-22</span>

@@ -497,6 +497,17 @@ data class TransactionCreateRequest(
     @SerialName("fuel_pump_id") val fuelPumpId: Long? = null,
     @SerialName("fuel_pump_nozzle_id") val fuelPumpNozzleId: Long? = null,
     @SerialName("payment_mode") val paymentMode: String,
+    // Item 2 — the fleet/driver detail that used to be a separate Capture Visit
+    // post. Sent with the sale so one submit records both records.
+    @SerialName("fleet_otp") val fleetOtp: Boolean = false,
+    @SerialName("transport_name") val transportName: String? = null,
+    @SerialName("approx_vehicle_count") val approxVehicleCount: Int? = null,
+    @SerialName("driver_name") val driverName: String? = null,
+    @SerialName("driver_phone_number") val driverPhoneNumber: String? = null,
+    @SerialName("manager_name") val managerName: String? = null,
+    @SerialName("manager_phone_number") val managerPhoneNumber: String? = null,
+    @SerialName("owner_name") val ownerName: String? = null,
+    @SerialName("owner_phone_number") val ownerPhoneNumber: String? = null,
 )
 
 @Serializable
@@ -504,10 +515,13 @@ data class TransactionCreateEnvelope(val transaction: TransactionCreateRequest)
 
 @Serializable
 data class TransactionCreateResponse(
-    @SerialName("points_earned") val pointsEarned: Int,
-    @SerialName("rewards_paused") val rewardsPaused: Boolean,
-    @SerialName("new_total") val newTotal: Int,
+    @SerialName("points_earned") val pointsEarned: Int = 0,
+    @SerialName("rewards_paused") val rewardsPaused: Boolean = false,
+    @SerialName("new_total") val newTotal: Int = 0,
     val message: String,
+    // Set when the sale was recorded but the visit could not be (no catalog
+    // price for the fuel); shown to the operator rather than swallowed.
+    @SerialName("visit_skipped_reason") val visitSkippedReason: String? = null,
     val customer: StaffCustomerDto,
     val transaction: TransactionResultDto,
 )
