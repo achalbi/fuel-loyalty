@@ -382,6 +382,10 @@
                     selected_pump_id: @prefill_fuel_pump_id,
                     selected_nozzle_id: @prefill_fuel_pump_nozzle_id,
                     dom_prefix: "phone_transaction" %>
+
+                  <%= render "visit_detail_fields",
+                    form: form,
+                    dom_prefix: "phone_transaction" %>
                 </div>
               </fieldset>
 
@@ -603,6 +607,10 @@
                     transaction_fuel_pump_nozzles: @transaction_fuel_pump_nozzles,
                     selected_pump_id: @prefill_fuel_pump_id,
                     selected_nozzle_id: @prefill_fuel_pump_nozzle_id,
+                    dom_prefix: "vehicle_transaction" %>
+
+                  <%= render "visit_detail_fields",
+                    form: form,
                     dom_prefix: "vehicle_transaction" %>
                 </div>
               </fieldset>

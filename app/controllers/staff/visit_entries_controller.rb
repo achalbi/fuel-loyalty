@@ -15,30 +15,18 @@ module Staff
       @fuel_pumps = FuelPump.active.ordered.to_a
     end
 
-    def new
-      authorize VisitEntry, :new?
-      @visit_entry = VisitEntry.new(entry_date: Date.current, fuel_pump: current_user.transaction_fuel_pump)
-      load_form_options
-    end
-
     def create
       authorize VisitEntry, :create?
       result = VisitEntryRecorder.call(user: current_user, attributes: visit_entry_params)
       redirect_to staff_visit_entries_path(date: result.visit_entry.entry_date, fuel_pump_id: result.visit_entry.fuel_pump_id),
         notice: "Visit captured: #{format_litres(result.visit_entry.litres)} L for #{result.visit_entry.vehicle_number}."
     rescue ActiveRecord::RecordInvalid => error
-      @visit_entry = VisitEntry.new(visit_entry_params)
-      error.record.errors.each { |e| @visit_entry.errors.add(e.attribute, e.message) }
-      load_form_options
-      render :new, status: :unprocessable_entity
+      # The capture form lives on the merged New Entry screen now; a rejected
+      # API-style post comes back to the day's list with the reason.
+      redirect_to staff_visit_entries_path, alert: error.record.errors.full_messages.to_sentence
     end
 
     private
-
-    def load_form_options
-      @fuel_pumps = FuelPump.active.ordered.to_a
-      @fuel_type_options = FuelType.active_options
-    end
 
     def visit_entry_params
       params.require(:visit_entry).permit(

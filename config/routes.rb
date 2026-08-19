@@ -65,7 +65,9 @@ Rails.application.routes.draw do
         get "reports", to: "reports#index"
         get "transactions", to: "transactions#index"
         # E3/E5/E7 — per-customer CRM: insight, outreach log, feedback.
-        resources :customers, only: [] do
+        # `index` is item 4's cohort list (thresholds over visits / litres /
+        # discount / contacts / points); customer CRUD stays on the staff API.
+        resources :customers, only: %i[index] do
           member { get :insight }
           resources :contact_logs, only: %i[index create]
           resources :feedbacks, only: %i[index create], controller: "customer_feedbacks"
@@ -153,7 +155,12 @@ Rails.application.routes.draw do
       post :recognize_plate, on: :collection
       post :register_customer, on: :collection
     end
-    resources :visit_entries, only: %i[index new create]
+    # Item 2 — capture happens on the merged New Entry screen; only the day's
+    # captures list survives here. The old `new` URL redirects so existing links
+    # and bookmarks still land somewhere useful. Declared before the resource so
+    # it wins the match.
+    get "visit_entries/new", to: redirect("/staff/transactions/new"), as: :new_visit_entry
+    resources :visit_entries, only: %i[index create]
     resources :settlements, only: %i[index new create show edit update]
   end
 

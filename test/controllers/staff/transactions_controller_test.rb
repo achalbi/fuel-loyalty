@@ -9,7 +9,7 @@ module Staff
 
       assert_response :success
       assert_select "#topbar button.btn-icon[aria-label='Scan Vehicle Plate'][data-topbar-plate-scanner-toggle]", 1
-      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Transaction']", 1
+      assert_select "#topbar a.btn-icon[href='#{new_staff_transaction_path}'][aria-label='New Entry']", 1
       assert_select "#topbar a.btn-icon[href='#{new_loyalty_path}'][aria-label='Loyalty Lookup']", 1
       assert_select ".transaction-entry-titlebar__heading h1", text: "Record Fuel Transaction"
       assert_select ".transaction-entry-titlebar__hint-toggle[data-bs-toggle='collapse'][data-bs-target='#transactionEntryHeadingHint'][aria-controls='transactionEntryHeadingHint']", 1
