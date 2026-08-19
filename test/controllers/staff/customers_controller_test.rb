@@ -2,15 +2,16 @@ require "test_helper"
 
 module Staff
   class CustomersControllerTest < ActionDispatch::IntegrationTest
-    test "staff can browse top three customers by points and search customers" do
+    test "staff browse the whole customer directory A-Z and can search it" do
       sign_in users(:two)
 
-      low = Customer.create!(name: "Low Points", phone_number: "9000000101")
-      mid = Customer.create!(name: "Mid Points", phone_number: "9000000102")
-      high = Customer.create!(name: "High Points", phone_number: "9000000103")
-      top = Customer.create!(name: "Top Points", phone_number: "9000000104")
+      # Created out of alphabetical order, and with point balances that would put
+      # them in a different order still, so neither can be mistaken for the sort.
+      zara = Customer.create!(name: "Zara Last", phone_number: "9000000104")
+      bala = Customer.create!(name: "Bala Second", phone_number: "9000000102")
+      anand = Customer.create!(name: "Anand First", phone_number: "9000000103")
 
-      { low => 120, mid => 260, high => 410, top => 650 }.each do |customer, points|
+      { zara => 650, bala => 120, anand => 410 }.each do |customer, points|
         customer.points_ledgers.create!(points:, entry_type: :earn)
       end
 
@@ -20,14 +21,15 @@ module Staff
       assert_select "h1", "Customers"
       assert_select "button.admin-customers-create-action[data-bs-toggle='modal'][data-bs-target='#addCustomerModal'][aria-label='Add Customer']", text: /\+ Add Customer/
       assert_select "#addCustomerModal"
-      assert_select ".admin-customer-item", 3
 
       names = css_select(".admin-customer-item__name").map(&:text)
-      assert_equal ["Top Points", "High Points", "Mid Points"], names
+      # Every customer is listed — this is a directory, not a leaderboard.
+      assert_equal Customer.count, names.size
+      assert_equal names.sort_by(&:downcase), names
+      assert_includes names, "Bala Second"
       assert_select ".admin-customer-item__points", text: /650 pts/
       assert_select ".admin-customer-item__status", text: "Active"
-      assert_select "a[aria-label='View Top Points']"
-      refute_includes names, "Low Points"
+      assert_select "a[aria-label='View Zara Last']"
 
       get staff_customers_path, params: { q: "9000000002" }
       assert_response :success
