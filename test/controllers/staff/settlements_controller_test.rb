@@ -43,6 +43,40 @@ module Staff
       assert_equal 1180, reading.closing_reading.to_i, "the reading must survive the round trip"
     end
 
+    # The admin on-behalf-of field was carried by the same broken param key as
+    # every other field on this form, and none of the tests around it noticed:
+    # they hand-build `settlement: {...}`, which is true whatever the page
+    # renders. So an admin filling the page in a browser had `recorded_by_id`
+    # discarded and hit the "name the staff member" guard with no way to satisfy
+    # it. This posts what the browser would post instead of a payload of our own.
+    test "the rendered on-behalf-of field round-trips to the FSM who owns the settlement" do
+      admin = users(:one)
+      sign_in admin
+      # The pump chooser at the top of the page, as an admin would use it.
+      get new_staff_settlement_path(fuel_pump_id: @pump.id)
+      assert_response :success
+
+      select_name = "settlement[recorded_by_id]"
+      assert_select "select[name=?]", select_name, 1
+      offered = css_select("select[name='#{select_name}'] option").map { |option| option["value"] }
+      assert_includes offered, @staff.id.to_s, "the FSM must be offered"
+      assert_not_includes offered, admin.id.to_s, "an admin may not file on his own behalf"
+
+      params = rendered_settlement_params("settlement" => { "recorded_by_id" => @staff.id.to_s, "status" => "draft" })
+      assert_equal @staff.id.to_s, params.dig("settlement", "recorded_by_id"),
+        "the page must name this field the way the controller reads it"
+
+      assert_difference -> { DailySettlement.count }, 1 do
+        post staff_settlements_path, params: params
+      end
+
+      settlement = DailySettlement.order(:id).last
+      assert_equal @staff, settlement.recorded_by, "the settlement belongs to the FSM named on the form"
+      assert_equal admin, settlement.entered_by, "the admin who keyed it in stays on record"
+      assert settlement.entered_on_behalf?
+      assert_equal @staff.display_name, settlement.fsm_name_snapshot
+    end
+
     test "staff can open the settlement form with a pre-filled draft and lube grid" do
       sign_in @staff
       get new_staff_settlement_path
@@ -224,6 +258,35 @@ module Staff
       assert_response :success
       assert_select ".alert.alert-warning", text: /no staff accounts yet/
       assert_select "select[name='settlement[recorded_by_id]']", 0
+    end
+
+    # Everything the rendered form would submit: each named field with the value
+    # the page gave it, nested the way Rack parses a real form body. `overrides`
+    # stand in for what the user types or clicks (the submit button is a field
+    # too, and is the only one a browser sends by name alone).
+    def rendered_settlement_params(overrides = {})
+      form = css_select("form[data-settlement-form]").first
+      pairs = form.css("input, select, textarea").filter_map do |field|
+        name = field["name"].to_s
+        next if name.empty? || field.attributes.key?("disabled")
+
+        case field.name
+        when "input"
+          type = (field["type"] || "text").downcase
+          next if %w[submit button image file].include?(type)
+          next if %w[checkbox radio].include?(type) && !field.attributes.key?("checked")
+
+          [name, field["value"].to_s]
+        when "select"
+          # A browser submits the marked option, or the first one when none is.
+          option = field.css("option[selected]").first || field.css("option").first
+          [name, option&.attr("value").to_s]
+        when "textarea"
+          [name, field.text]
+        end
+      end
+      query = pairs.map { |name, value| "#{CGI.escape(name)}=#{CGI.escape(value)}" }.join("&")
+      Rack::Utils.parse_nested_query(query).deep_merge(overrides.deep_stringify_keys)
     end
 
     test "a locked settlement cannot be edited" do
