@@ -1,8 +1,13 @@
 name: Android CI
 
-# Compiles the Android app on GitHub-hosted runners (open network), which can
-# fetch Gradle + the Android SDK that a sandboxed dev session can't. Runs on
-# changes under android/ and can be triggered manually.
+# Compiles the Android app so a Kotlin break is caught before it reaches a
+# release. Runs on changes under android/ and can be triggered manually.
+#
+# A sandboxed dev session CAN run this build locally — Gradle, dl.google.com and
+# Maven Central are all reachable — so reproduce a failure here with:
+#   sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+#   cp .github/android-ci-google-services.json android/app/google-services.json  # if you have no real one
+#   cd android && ./gradlew :app:compileDebugKotlin
 on:
   push:
     branches: [main]
@@ -42,6 +47,24 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      # The real google-services.json is per-environment Firebase config and is
+      # gitignored, so a fresh checkout never has one — and
+      # :app:processDebugGoogleServices gates compileDebugKotlin, which means
+      # the compile task could not run at all without this. Type-checking Kotlin
+      # needs the file to parse, not to address a live Firebase project. Set the
+      # GOOGLE_SERVICES_JSON secret to build against the real one instead.
+      - name: Provide google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            echo "Using the GOOGLE_SERVICES_JSON secret."
+          else
+            cp .github/android-ci-google-services.json android/app/google-services.json
+            echo "Using the checked-in CI placeholder."
+          fi
 
       - name: Compile debug Kotlin
         working-directory: android

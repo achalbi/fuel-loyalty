@@ -1,5 +1,7 @@
 *.iml
 .gradle/
+# Kotlin Gradle plugin session files, written on every build.
+.kotlin/
 /local.properties
 /.idea/
 .DS_Store

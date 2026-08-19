@@ -1,0 +1,28 @@
+{
+  "_comment": [
+    "PLACEHOLDER for CI only — not a Firebase project, not a secret.",
+    "The real google-services.json is per-environment config and is gitignored,",
+    "so a fresh CI checkout has none. :app:processDebugGoogleServices gates",
+    "compileDebugKotlin, so without a well-formed file here the compile task",
+    "cannot run at all. Type-checking Kotlin needs the file to parse, not to",
+    "address a live project. Set the GOOGLE_SERVICES_JSON repo secret to build",
+    "against the real one instead; the workflow prefers it when present."
+  ],
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "acefuels-ci-placeholder",
+    "storage_bucket": "acefuels-ci-placeholder.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": { "package_name": "com.acefuel.loyalty" }
+      },
+      "oauth_client": [],
+      "api_key": [ { "current_key": "AIzaSyCIplaceholderCIplaceholderCIplace" } ],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+    }
+  ],
+  "configuration_version": "1"
+}
