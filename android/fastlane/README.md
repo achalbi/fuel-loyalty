@@ -31,6 +31,14 @@ Build the signed release AAB (requires keystore.properties).
 
 Build and upload the release AAB to the Internal testing track (as draft).
 
+### android closed
+
+```sh
+[bundle exec] fastlane android closed
+```
+
+Build and upload the release AAB to the Closed testing (alpha) track as a draft.
+
 ### android promote_production
 
 ```sh
