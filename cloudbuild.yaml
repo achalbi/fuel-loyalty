@@ -169,7 +169,12 @@ steps:
     args:
       - -c
       - |
-        docker pull $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:latest || exit 0
+        IMG=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME
+        # Both tags seed --cache-from in the Build step. Either can be absent
+        # (first run after this change, or a pruned registry) without harm.
+        docker pull "$$IMG:builder" || true
+        docker pull "$$IMG:latest" || true
+        exit 0
 
   # -----------------------------
   # Build image (BuildKit enabled)
@@ -177,18 +182,44 @@ steps:
   - name: gcr.io/cloud-builders/docker
     id: Build
     waitFor: ['Pull']
+    entrypoint: /bin/bash
     env:
       - DOCKER_BUILDKIT=1
     args:
-      - build
-      - --cache-from=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:latest
-      - -t
-      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
-      - -t
-      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:latest
-      - -f
-      - Dockerfile
-      - .
+      - -c
+      - |
+        set -euo pipefail
+        IMG=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME
+
+        # Export the builder stage as its own tag before building the runtime
+        # image. This is the part that makes caching work at all: inline cache
+        # records only layers belonging to an exported image ("min" mode), so
+        # in a multi-stage build the builder's bundle install and
+        # assets:precompile are invisible to --cache-from unless the stage is
+        # exported like this. Caching against :latest alone -- which is what
+        # this step used to do, and without BUILDKIT_INLINE_CACHE at that --
+        # could never reuse them, so every build reinstalled every gem.
+        #
+        # Cost of the trade: :builder is a second image in Artifact Registry
+        # (build-essential, libpq-dev, the full bundle). Layers are shared and
+        # only changed ones upload, but it is not free -- a registry cleanup
+        # policy on that tag is worth having.
+        docker build \
+          --build-arg BUILDKIT_INLINE_CACHE=1 \
+          --cache-from "$$IMG:builder" \
+          --target builder \
+          -t "$$IMG:builder" \
+          -f Dockerfile .
+
+        # Reuses the builder layers resolved above, so this pass is only the
+        # runtime stage.
+        docker build \
+          --build-arg BUILDKIT_INLINE_CACHE=1 \
+          --cache-from "$$IMG:builder" \
+          --cache-from "$$IMG:latest" \
+          -t "$$IMG:$COMMIT_SHA" \
+          -t "$$IMG:latest" \
+          -f Dockerfile .
 
   # -----------------------------
   # Push image

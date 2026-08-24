@@ -20,3 +20,20 @@ node_modules
 vendor/bundle
 public/assets
 docker-compose.override.yml
+
+# Not part of the Rails image. These are the largest and most frequently
+# touched trees in the repo, and because `COPY . .` precedes assets:precompile,
+# a change to any of them used to invalidate the bundle and asset layers -- an
+# Android version bump or a cloudbuild.yaml edit would rebuild the whole app.
+# Verified unreferenced from app/, config/, lib/, db/ and bin/ at runtime:
+# the only apparent hits were an /android/ user-agent regex in application.js
+# and comments citing docs/design/design-tokens.json.
+android
+docs
+test
+inapp-1.0.0
+prototypes
+design
+scripts
+.github
+cloudbuild.yaml
