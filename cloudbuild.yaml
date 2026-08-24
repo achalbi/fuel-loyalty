@@ -66,6 +66,31 @@ steps:
         else
           echo "ANDROID SDK CACHE: MISS - the compile step will install one"
         fi
+
+        # Gradle's downloaded dependencies and the wrapper distribution. Keyed
+        # by a hash of every file that can change what gets resolved, so a
+        # dependency bump misses instead of silently reusing the wrong jars --
+        # no manual key to remember to bump, unlike the SDK key above.
+        GRADLE_KEY="gradle-deps-$$(find android \
+            \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' \
+               -o -name 'libs.versions.toml' -o -name 'gradle-wrapper.properties' \
+               -o -name 'gradle.properties' \) -type f \
+          | sort | xargs sha256sum | sha256sum | cut -c1-16).tar"
+        echo "$$GRADLE_KEY" > /workspace/.gradle-cache-key
+
+        # Stored uncompressed on purpose: it is almost entirely jars, which are
+        # already deflated, so gzip buys a few percent for real CPU time -- and
+        # the decompress would land on the critical path, unlike the upload.
+        echo miss > /workspace/.gradle-cache
+        if gcloud storage cp "gs://${_BUILD_CACHE_BUCKET}/$$GRADLE_KEY" /workspace/gradle.tar 2>/dev/null; then
+          if tar -xf /workspace/gradle.tar -C /workspace; then
+            echo hit > /workspace/.gradle-cache
+            echo "GRADLE CACHE: HIT - restored gs://${_BUILD_CACHE_BUCKET}/$$GRADLE_KEY"
+          fi
+          rm -f /workspace/gradle.tar
+        else
+          echo "GRADLE CACHE: MISS - gradle will resolve dependencies from the network"
+        fi
         exit 0
 
   # -----------------------------
@@ -134,8 +159,26 @@ steps:
         fi
 
         cp android/ci-google-services.json android/app/google-services.json
+
+        # Must live under /workspace: the cache steps run in a different
+        # container, and only /workspace is shared between steps.
+        export GRADLE_USER_HOME=/workspace/gradle-home
+
         cd android
-        ./gradlew :app:compileDebugKotlin --no-daemon --stacktrace
+        if ! ./gradlew :app:compileDebugKotlin --no-daemon --stacktrace; then
+          # A corrupt restored cache must not be able to fail the deploy -- the
+          # same rule the SDK follows. Retry once from clean, and only report
+          # failure if the build is broken without any cache in play. Marked a
+          # miss so the save step replaces the bad archive.
+          if [ "$$(cat /workspace/.gradle-cache 2>/dev/null)" = "hit" ]; then
+            echo "GRADLE CACHE: compile failed on a restored cache - retrying from clean"
+            rm -rf "$$GRADLE_USER_HOME"
+            echo miss > /workspace/.gradle-cache
+            ./gradlew :app:compileDebugKotlin --no-daemon --stacktrace
+          else
+            exit 1
+          fi
+        fi
 
   # -----------------------------
   # Save the Android SDK to the cache
@@ -149,6 +192,26 @@ steps:
     args:
       - -c
       - |
+        # Gradle first: the SDK check below exits early on a hit, and these two
+        # caches miss independently.
+        if [ "$$(cat /workspace/.gradle-cache 2>/dev/null)" = "hit" ]; then
+          echo "GRADLE CACHE: already warm - nothing to upload"
+        else
+          GRADLE_KEY="$$(cat /workspace/.gradle-cache-key 2>/dev/null)"
+          GRADLE_PATHS=""
+          for d in gradle-home/caches/modules-2 gradle-home/wrapper/dists; do
+            [ -d "/workspace/$$d" ] && GRADLE_PATHS="$$GRADLE_PATHS $$d"
+          done
+          if [ -n "$$GRADLE_KEY" ] && [ -n "$$GRADLE_PATHS" ]; then
+            tar -cf /workspace/gradle.tar -C /workspace $$GRADLE_PATHS \
+              && gcloud storage cp /workspace/gradle.tar "gs://${_BUILD_CACHE_BUCKET}/$$GRADLE_KEY" \
+              && echo "GRADLE CACHE: SAVED for the next build" \
+              || echo "GRADLE CACHE: could not write - builds still work, just slower"
+          else
+            echo "GRADLE CACHE: nothing to save"
+          fi
+        fi
+
         if [ "$$(cat /workspace/.android-sdk-cache 2>/dev/null)" = "hit" ]; then
           echo "ANDROID SDK CACHE: already warm - nothing to upload"
           exit 0
