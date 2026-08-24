@@ -60,11 +60,11 @@ steps:
         if gcloud storage cp "gs://${_BUILD_CACHE_BUCKET}/${_ANDROID_SDK_CACHE_KEY}" /workspace/sdk.tgz 2>/dev/null; then
           if tar -xzf /workspace/sdk.tgz -C /workspace; then
             echo hit > /workspace/.android-sdk-cache
-            echo "restored the SDK from gs://${_BUILD_CACHE_BUCKET}/${_ANDROID_SDK_CACHE_KEY}"
+            echo "ANDROID SDK CACHE: HIT - restored from gs://${_BUILD_CACHE_BUCKET}/${_ANDROID_SDK_CACHE_KEY}"
           fi
           rm -f /workspace/sdk.tgz
         else
-          echo "no cached SDK — the compile step will install one"
+          echo "ANDROID SDK CACHE: MISS - the compile step will install one"
         fi
         exit 0
 
@@ -94,7 +94,31 @@ steps:
         export ANDROID_HOME=/workspace/android-sdk
         export ANDROID_SDK_ROOT="$$ANDROID_HOME"
 
-        if [ ! -x "$$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+        # One list drives both the completeness check and the install, so the
+        # two can never disagree. A package id maps to its install directory by
+        # swapping ';' for '/' (platforms;android-36 -> platforms/android-36).
+        SDK_PACKAGES="platform-tools platforms;android-36 build-tools;36.0.0"
+
+        # Checking only for sdkmanager would accept a cache that has the tools
+        # but is missing a package -- e.g. someone bumps a package below and
+        # forgets to bump _ANDROID_SDK_CACHE_KEY. Gradle would then fail and,
+        # because Migrate waits on this step, a stale cache would block the
+        # deploy. Verify what the build actually needs instead.
+        NEED_INSTALL=0
+        [ -x "$$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ] || NEED_INSTALL=1
+        for pkg in $$SDK_PACKAGES; do
+          [ -e "$$ANDROID_HOME/$$(printf '%s' "$$pkg" | tr ';' '/')" ] || NEED_INSTALL=1
+        done
+
+        if [ "$$NEED_INSTALL" = 1 ]; then
+          if [ -e "$$ANDROID_HOME" ]; then
+            echo "ANDROID SDK CACHE: INCOMPLETE - reinstalling and replacing the cached archive"
+            # Start clean so a partial cache cannot confuse the install below,
+            # and mark it a miss so AndroidCacheSave overwrites the bad archive
+            # rather than leaving every future build to hit the same problem.
+            rm -rf "$$ANDROID_HOME"
+            echo miss > /workspace/.android-sdk-cache
+          fi
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends curl unzip >/dev/null
           mkdir -p "$$ANDROID_HOME/cmdline-tools"
@@ -104,9 +128,9 @@ steps:
           mv "$$ANDROID_HOME/cmdline-tools/cmdline-tools" "$$ANDROID_HOME/cmdline-tools/latest"
           export PATH="$$ANDROID_HOME/cmdline-tools/latest/bin:$$PATH"
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" >/dev/null
+          sdkmanager $$SDK_PACKAGES >/dev/null
         else
-          echo "using the SDK restored from the build cache"
+          echo "ANDROID SDK CACHE: USING RESTORED SDK - skipped the ~250MB download"
         fi
 
         cp android/ci-google-services.json android/app/google-services.json
@@ -126,12 +150,12 @@ steps:
       - -c
       - |
         if [ "$$(cat /workspace/.android-sdk-cache 2>/dev/null)" = "hit" ]; then
-          echo "cache already warm — nothing to upload"
+          echo "ANDROID SDK CACHE: already warm - nothing to upload"
           exit 0
         fi
         tar -czf /workspace/sdk.tgz -C /workspace android-sdk \
           && gcloud storage cp /workspace/sdk.tgz "gs://${_BUILD_CACHE_BUCKET}/${_ANDROID_SDK_CACHE_KEY}" \
-          && echo "cached the SDK for the next build" \
+          && echo "ANDROID SDK CACHE: SAVED for the next build" \
           || echo "could not write the cache (bucket missing or no permission) — builds still work, just slower"
         exit 0
 
