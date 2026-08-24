@@ -51,13 +51,27 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://fly.thoughtbasics.com/\"")
         }
         release {
-            // R8 minify is a follow-up: enable + add keep rules for
-            // kotlinx.serialization DTOs, then verify a signed release on device.
-            isMinifyEnabled = false
+            // R8 code shrink + obfuscation. The generated mapping.txt is bundled
+            // into the AAB (Play deobfuscates crash/ANR traces). Keep rules for
+            // kotlinx.serialization live in proguard-rules.pro — the custom
+            // KotlinxJsonConverterFactory resolves serializers reflectively via
+            // serializer(Type), which R8 full mode would otherwise strip.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Bundle native symbol tables for Play crash/ANR symbolication.
+            // NOTE: currently a no-op that does NOT clear Play's "no debug
+            // symbols" warning — the app ships no first-party native code, and
+            // every bundled .so (ML Kit OCR, CameraX, AndroidX) is already
+            // vendor-stripped, so there is nothing to extract. Kept as correct
+            // release config: it self-activates if first-party native code is
+            // ever added.
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
             buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
             if (keystorePropsFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
