@@ -3,6 +3,13 @@
 # Provision the Google Cloud Storage bucket that caches the Android SDK between
 # Cloud Build runs, and grant the Cloud Build service account object access.
 #
+# YOU PROBABLY DO NOT NEED THIS. The BuildCacheBucket step in cloudbuild.yaml
+# creates the bucket on first use. This script is the fallback for when the
+# build service account cannot create buckets itself: run it once as a human
+# with Storage Admin, and the build will find the bucket already there. It also
+# grants the build account object access explicitly, which the in-build path
+# cannot do for itself.
+#
 # Run from the repo root (optionally pass a bucket name; default below):
 #
 #     ./scripts/setup-build-cache.sh [BUCKET_NAME]

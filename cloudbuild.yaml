@@ -1,5 +1,49 @@
 steps:
   # -----------------------------
+  # Ensure the Android SDK cache bucket exists
+  # -----------------------------
+  # Self-provisioning so the cache needs no manual setup step before it starts
+  # paying off. Runs in parallel with everything else and is off the critical
+  # path — only AndroidCacheSave waits on it.
+  #
+  # No IAM grant here: whatever role lets this service account create a bucket
+  # already carries object access to it. If the account cannot create buckets,
+  # the step says so and exits 0 — every build then installs the SDK from
+  # scratch, exactly as it did before any of this existed.
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: BuildCacheBucket
+    entrypoint: /bin/bash
+    waitFor: ['-']
+    args:
+      - -c
+      - |
+        if gcloud storage buckets describe "gs://${_BUILD_CACHE_BUCKET}" >/dev/null 2>&1; then
+          echo "cache bucket ready -> gs://${_BUILD_CACHE_BUCKET}"
+          exit 0
+        fi
+
+        echo "cache bucket missing — creating gs://${_BUILD_CACHE_BUCKET}"
+        if ! gcloud storage buckets create "gs://${_BUILD_CACHE_BUCKET}" \
+            --project="$PROJECT_ID" \
+            --location="${_DEPLOY_REGION}" \
+            --uniform-bucket-level-access \
+            --public-access-prevention; then
+          echo "could not create the cache bucket (no permission?) — builds still work, just slower"
+          exit 0
+        fi
+
+        # Expire cache objects so stale SDK archives cannot accumulate cost
+        # forever. A miss just means one slower build that repopulates it.
+        printf '%s' \
+          '{"lifecycle":{"rule":[{"action":{"type":"Delete"},"condition":{"age":30}}]}}' \
+          > /tmp/lifecycle.json
+        gcloud storage buckets update "gs://${_BUILD_CACHE_BUCKET}" \
+          --lifecycle-file=/tmp/lifecycle.json >/dev/null \
+          && echo "created the cache bucket with a 30-day object expiry" \
+          || echo "created the cache bucket, but could not set the expiry — objects will not auto-expire"
+        exit 0
+
+  # -----------------------------
   # Restore the cached Android SDK
   # -----------------------------
   # Best-effort: a cache miss, a missing bucket or no GCS permission all fall
@@ -77,7 +121,7 @@ steps:
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: AndroidCacheSave
     entrypoint: /bin/bash
-    waitFor: ['AndroidCompile']
+    waitFor: ['AndroidCompile', 'BuildCacheBucket']
     args:
       - -c
       - |
@@ -207,10 +251,11 @@ options:
 substitutions:
   _TRIGGER_ID: ad281931-7075-4970-a527-68cd5ab9de7f
 
-  # Android SDK build cache. Create the bucket with scripts/setup-build-cache.sh;
-  # until it exists every build just installs the SDK from scratch. The key names
-  # the exact package set, so bumping a package below invalidates the cache
-  # rather than silently reusing the wrong SDK.
+  # Android SDK build cache. The BuildCacheBucket step creates this bucket on
+  # first use, so nothing has to be provisioned by hand; scripts/setup-build-cache.sh
+  # remains for the case where the build service account lacks bucket-create
+  # permission. The key names the exact package set, so bumping a package below
+  # invalidates the cache rather than silently reusing the wrong SDK.
   _BUILD_CACHE_BUCKET: 'fuel-loyalty-build-cache'
   _ANDROID_SDK_CACHE_KEY: 'android-sdk-clt11076708-p36-bt36.0.0.tgz'
 
