@@ -37,3 +37,19 @@ design
 scripts
 .github
 cloudbuild.yaml
+
+# The Cloud Build cache steps materialise these under /workspace, which IS the
+# docker build context (the Build step has no `dir:` and builds `.`). They are
+# multi-GB, they change every build, and Build runs CONCURRENTLY with the cache
+# steps. Left in, they (a) change the COPY . . layer hash every build, which
+# defeats the layer cache entirely, (b) get baked into the image by COPY . .,
+# and (c) can fail `docker build` outright when a file is removed mid-context-
+# upload. Note `android` above does NOT cover these: dockerignore patterns are
+# exact path matches, so it never matched `android-sdk`.
+android-sdk
+gradle-home
+sdk.tgz
+gradle.tar
+.android-sdk-cache
+.gradle-cache
+.gradle-cache-key

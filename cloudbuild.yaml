@@ -61,6 +61,13 @@ steps:
           if tar -xzf /workspace/sdk.tgz -C /workspace; then
             echo hit > /workspace/.android-sdk-cache
             echo "ANDROID SDK CACHE: HIT - restored from gs://${_BUILD_CACHE_BUCKET}/${_ANDROID_SDK_CACHE_KEY}"
+          else
+            # tar writes files before it fails, so a truncated archive leaves a
+            # half-extracted tree behind. Remove it: the marker must describe
+            # what is actually on disk, or the compile step's recovery logic
+            # reasons about state that is not there.
+            echo "ANDROID SDK CACHE: CORRUPT - discarding the partial extraction"
+            rm -rf /workspace/android-sdk
           fi
           rm -f /workspace/sdk.tgz
         else
@@ -86,6 +93,13 @@ steps:
           if tar -xf /workspace/gradle.tar -C /workspace; then
             echo hit > /workspace/.gradle-cache
             echo "GRADLE CACHE: HIT - restored gs://${_BUILD_CACHE_BUCKET}/$$GRADLE_KEY"
+          else
+            # As above: without this the marker says "miss" while a poisoned
+            # gradle home sits on disk, so AndroidCompile's retry-from-clean
+            # never fires and the step exits 1 -- blocking the deploy, and
+            # blocking the save step that would have replaced the bad object.
+            echo "GRADLE CACHE: CORRUPT - discarding the partial extraction"
+            rm -rf /workspace/gradle-home
           fi
           rm -f /workspace/gradle.tar
         else
@@ -307,6 +321,13 @@ steps:
     args:
       - -c
       - |
+        # Without this the step's status is just the LAST command's. A failed
+        # 'jobs deploy' would be swallowed, 'jobs execute' would then run the
+        # PREVIOUS build's job definition (old image, migrations already
+        # applied, exits 0), and Deploy would ship new code against a schema
+        # missing this commit's migrations.
+        set -euo pipefail
+
         gcloud run jobs deploy ${_SERVICE_NAME}-migrate \
           --image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA \
           --region=$_DEPLOY_REGION \
