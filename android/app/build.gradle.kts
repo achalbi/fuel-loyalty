@@ -25,7 +25,7 @@ android {
         applicationId = "com.acefuel.loyalty"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
+        versionCode = 10
         versionName = "1.3.0"
     }
 
