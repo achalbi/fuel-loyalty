@@ -228,6 +228,119 @@ module Admin
         assert_equal 100.0, scoped.totals[:litres], "only the filtered customer's litres count"
       end
 
+      # ------------------------------------------------------------------
+      # Free-text lookups (transporter / driver / driver mobile / vehicle).
+      # ------------------------------------------------------------------
+
+      test "transporter lookup matches any part of the name, case-insensitively" do
+        report = LedgerReport.new(dimension: "transporter", grain: "month", start_date: "2026-06-01",
+                                  end_date: "2026-07-31", transporter: "roadways")
+
+        assert_equal ["NL Roadways"], report.rows.map(&:key), "the June \"Other\" transporter is filtered out"
+        assert_equal 100.0, report.totals[:litres]
+      end
+
+      test "driver lookup matches part of the driver name" do
+        report = LedgerReport.new(dimension: "driver", grain: "month", start_date: "2026-07-01",
+                                  end_date: "2026-07-31", driver_name: "sin")
+
+        assert_equal ["Singh"], report.rows.map(&:key)
+        assert_equal 60.0, report.totals[:litres]
+      end
+
+      # VisitEntry stores phone numbers digits-only, so a mobile typed the way an
+      # operator reads it off a slip has to be normalized before it can match.
+      test "driver mobile lookup normalizes the typed number and matches partials" do
+        VisitEntry.create!(user: @staff, fuel_pump: @pump, entry_date: Date.new(2026, 7, 9),
+                           vehicle_number: "KA01AA0004", litres: 12, discount_amount: 0, fuel_type_code: "petrol",
+                           transport_name: "NL Roadways", driver_name: "Naik", driver_phone_number: "9876543210")
+
+        %w[9876543210].each do |exact|
+          assert_equal ["Naik"], driver_rows(driver_phone: exact), "an exact number matches"
+        end
+        assert_equal ["Naik"], driver_rows(driver_phone: "98765 43210"), "spaces are normalized away"
+        assert_equal ["Naik"], driver_rows(driver_phone: "+91 98765-43210"), "a dialling prefix and dashes still match"
+        assert_equal ["Naik"], driver_rows(driver_phone: "098765 43210"), "a trunk prefix is stripped too"
+        assert_equal ["Naik"], driver_rows(driver_phone: "43210"), "a partial number matches"
+        assert_empty driver_rows(driver_phone: "9000000000")
+      end
+
+      # Same story for plates: stored A-Z0-9 only, so the spaced form on the vehicle
+      # would match nothing without normalizing the query the same way.
+      test "vehicle lookup normalizes the typed plate and matches partials" do
+        assert_equal ["KA01AA0001"], vehicle_rows(vehicle_number: "ka 01 aa 0001")
+        assert_equal ["KA01AA0001"], vehicle_rows(vehicle_number: "KA-01-AA-0001")
+        assert_equal %w[KA01AA0001 KA01AA0002], vehicle_rows(vehicle_number: "aa000").sort.first(2)
+        assert_empty vehicle_rows(vehicle_number: "MH12")
+      end
+
+      # AND, not OR: the operator is narrowing one report ("Rao driving for NL
+      # Roadways"), not searching for anything that matches either term.
+      test "the lookups combine — a row has to match every one supplied" do
+        both = LedgerReport.new(dimension: "vehicle", grain: "month", start_date: "2026-07-01", end_date: "2026-07-31",
+                                transporter: "NL Roadways", driver_name: "Rao")
+        assert_equal ["KA01AA0001"], both.rows.map(&:key), "only Rao's NL Roadways visit"
+
+        none = LedgerReport.new(dimension: "vehicle", grain: "month", start_date: "2026-07-01", end_date: "2026-07-31",
+                                transporter: "Other", driver_name: "Rao")
+        assert_empty none.rows, "the June transporter never drove with Rao"
+      end
+
+      test "blank and whitespace-only lookups are ignored rather than matching nothing" do
+        report = LedgerReport.new(dimension: "vehicle", grain: "month", start_date: "2026-07-01", end_date: "2026-07-31",
+                                  transporter: "  ", driver_name: "", driver_phone: nil, vehicle_number: "   ")
+
+        assert_equal 2, report.rows.size, "an empty box is not a filter"
+        assert_not report.filtered?
+      end
+
+      # A transporter really can be called "50% Logistics", and an unescaped % in a
+      # LIKE pattern would silently turn the lookup into a match-anything wildcard.
+      test "LIKE wildcards typed into a lookup are matched literally" do
+        VisitEntry.create!(user: @staff, fuel_pump: @pump, entry_date: Date.new(2026, 7, 11),
+                           vehicle_number: "KA01AA0005", litres: 5, discount_amount: 0, fuel_type_code: "petrol",
+                           transport_name: "50% Logistics", driver_name: "Bose")
+
+        report = LedgerReport.new(dimension: "transporter", grain: "month", start_date: "2026-07-01",
+                                  end_date: "2026-07-31", transporter: "50%")
+        assert_equal ["50% Logistics"], report.rows.map(&:key), "the % is literal text, not a wildcard"
+      end
+
+      # The lookups echo back NORMALIZED, so the form and the JSON show what was
+      # actually queried rather than what the operator happened to type.
+      test "the applied lookups are exposed in their normalized form" do
+        report = LedgerReport.new(dimension: "vehicle", grain: "month", vehicle_number: "ka 01 aa 0001",
+                                  driver_phone: "+91 98765-43210", transporter: " NL Roadways ")
+
+        assert_equal "KA01AA0001", report.vehicle_number
+        assert_equal "9876543210", report.driver_phone, "the +91 dialling prefix is dropped, not searched for"
+        assert_equal "NL Roadways", report.transporter
+        assert_nil report.driver_name
+        assert report.filtered?
+      end
+
+      # Same rule as the fuel/pump slice, for the same reason: a qualification
+      # carries no transporter, driver or vehicle, so a lookup-narrowed report
+      # cannot claim a gift belongs inside it.
+      test "a lookup-filtered report does not materialise a gift row" do
+        drive_in = customers(:two)
+        grant_gift(customer: drive_in, name: "Drive-in gift")
+
+        filtered = LedgerReport.new(dimension: "customer", grain: "month", start_date: "2026-07-01",
+                                    end_date: "2026-07-31", transporter: "NL Roadways")
+        assert_nil filtered.rows.find { |r| r.key == drive_in.id.to_s }
+        assert_equal 0, filtered.totals[:gift_count]
+      end
+
+      test "filtered? reports whether anything narrows the report beyond its dates" do
+        plain = LedgerReport.new(dimension: "vehicle", grain: "month", start_date: "2026-07-01", end_date: "2026-07-31")
+        assert_not plain.filtered?
+
+        assert LedgerReport.new(dimension: "vehicle", grain: "month", driver_name: "Rao").filtered?
+        assert LedgerReport.new(dimension: "vehicle", grain: "month", fuel_type: "petrol").filtered?
+        assert LedgerReport.new(dimension: "vehicle", grain: "month", customer_id: @customer.id).filtered?
+      end
+
       test "reward_value_configured? follows the cash-per-point setting" do
         report = LedgerReport.new(dimension: "customer", grain: "month", start_date: "2026-07-01", end_date: "2026-07-31")
         assert_not report.reward_value_configured?, "no RewardSetting row exists, so no rate is configured"
@@ -265,6 +378,18 @@ module Admin
         RewardSetting.create!(cash_value_per_point: 0.5)
         configured = LedgerReport.new(dimension: "transporter", grain: "month", start_date: "2026-06-01", end_date: "2026-06-30").to_csv
         assert_includes configured, "Other,2026-06,10.0,1000.0,0.0,0.0,0,1", "a configured rate reports a real ₹0"
+      end
+
+      private
+
+      def driver_rows(**filters)
+        LedgerReport.new(dimension: "driver", grain: "month", start_date: "2026-07-01",
+                         end_date: "2026-07-31", **filters).rows.map(&:key)
+      end
+
+      def vehicle_rows(**filters)
+        LedgerReport.new(dimension: "vehicle", grain: "month", start_date: "2026-07-01",
+                         end_date: "2026-07-31", **filters).rows.map(&:key)
       end
     end
   end

@@ -72,6 +72,70 @@ module Admin
       assert_select "span.text-warning-emphasis", false
     end
 
+    test "the filter form offers the four free-text lookups and a date range" do
+      sign_in @admin
+      get admin_reports_path
+      assert_response :success
+
+      assert_select "input[name=?]", "transporter"
+      assert_select "input[name=?]", "driver_name"
+      assert_select "input[name=?]", "driver_phone"
+      assert_select "input[name=?]", "vehicle_number"
+      assert_select "input[type=date][name=?]", "start_date"
+      assert_select "input[type=date][name=?]", "end_date"
+    end
+
+    test "a lookup narrows the table and echoes the normalized value back into the form" do
+      customer_visit # Fleet Co / Iyer / KA01BB0002
+      sign_in @admin
+      get admin_reports_path, params: { dimension: "transporter", grain: "month", start_date: "2026-07-01",
+                                        end_date: "2026-07-31", transporter: "fleet" }
+      assert_response :success
+
+      assert_select "tbody tr", 1
+      assert_select "td", text: "Fleet Co"
+      assert_select "input[name=transporter][value=?]", "fleet"
+      assert_select "a", text: "Clear", count: 1
+    end
+
+    test "a vehicle typed with spaces still matches the stored plate" do
+      sign_in @admin
+      get admin_reports_path, params: { dimension: "vehicle", grain: "month", start_date: "2026-07-01",
+                                        end_date: "2026-07-31", vehicle_number: "ka 01 aa 0001" }
+      assert_response :success
+
+      assert_select "td", text: "KA01AA0001"
+      # The form echoes the NORMALIZED plate — what the query actually ran with.
+      assert_select "input[name=vehicle_number][value=?]", "KA01AA0001"
+    end
+
+    test "an unmatched lookup says the filters are the reason, not the date range" do
+      sign_in @admin
+      get admin_reports_path, params: { dimension: "transporter", grain: "month", start_date: "2026-07-01",
+                                        end_date: "2026-07-31", driver_name: "nobody" }
+      assert_response :success
+      assert_select "tbody tr", 0
+      assert_select "p", /No captures match these filters/
+    end
+
+    test "no Clear link until something is actually filtering" do
+      sign_in @admin
+      get admin_reports_path, params: { dimension: "vehicle", grain: "month" }
+      assert_response :success
+      assert_select "a", text: "Clear", count: 0
+    end
+
+    test "the CSV export honours the lookups" do
+      customer_visit
+      sign_in @admin
+      get admin_reports_path(format: :csv), params: { dimension: "transporter", grain: "month",
+                                                      start_date: "2026-07-01", end_date: "2026-07-31",
+                                                      driver_name: "iyer" }
+      assert_response :success
+      assert_includes csv_body, "Fleet Co"
+      assert_not_includes csv_body, "NL Roadways", "the export is the filtered report, not the whole ledger"
+    end
+
     test "non-admin is bounced" do
       sign_in @staff
       get admin_reports_path

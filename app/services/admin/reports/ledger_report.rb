@@ -32,16 +32,56 @@ module Admin
 
       Row = Struct.new(:key, :label, :period, :litres, :amount, :discount, :gifts, :gift_count, :visits, keyword_init: true)
 
-      def initialize(dimension:, grain:, start_date: nil, end_date: nil, preset: nil, fuel_type: nil, fuel_pump_id: nil, customer_id: nil)
+      # Free-text lookups the operator types rather than picks: which of the four
+      # visit-entry identity columns each one searches, and how the typed text has
+      # to be normalized first. VisitEntry#normalize_fields stores vehicle numbers
+      # as A-Z0-9 only and phone numbers as digits only, so "KA-01 AA 0001" or
+      # "98765 43210" would match NOTHING unless the query is put through the same
+      # normalizer. Names are stored as typed, so they search raw.
+      TEXT_FILTERS = {
+        transporter: { column: :transport_name, normalizer: nil },
+        driver_name: { column: :driver_name, normalizer: nil },
+        driver_phone: {
+          column: :driver_phone_number,
+          # VisitEntry validates the column as exactly 10 digits, so a mobile typed
+          # with a dialling prefix ("+91 98765 43210" → 12 digits) could never match
+          # a stored value. Strip a leading 91/0 only when the query is exactly that
+          # much longer — a genuine 10-digit-or-shorter partial never is, so a
+          # search for numbers merely containing "91" is left alone.
+          normalizer: ->(v) { ::Customer.normalize_phone_number(v).sub(/\A(?:0|91)(?=\d{10}\z)/, "") },
+        },
+        vehicle_number: { column: :vehicle_number, normalizer: ->(v) { ::Vehicle.normalize_vehicle_number(v) } },
+      }.freeze
+
+      def initialize(dimension:, grain:, start_date: nil, end_date: nil, preset: nil, fuel_type: nil, fuel_pump_id: nil,
+                     customer_id: nil, transporter: nil, driver_name: nil, driver_phone: nil, vehicle_number: nil)
         @dimension = DIMENSIONS.include?(dimension.to_s) ? dimension.to_s : "vehicle"
         @grain = GRAINS.include?(grain.to_s) ? grain.to_s : "month"
         @range = resolve_range(preset, start_date, end_date)
         @fuel_type = fuel_type.presence
         @fuel_pump_id = fuel_pump_id.presence
         @customer_id = customer_id.presence
+        @text_filters = normalize_text_filters(
+          transporter: transporter, driver_name: driver_name,
+          driver_phone: driver_phone, vehicle_number: vehicle_number
+        )
       end
 
       attr_reader :dimension, :grain, :customer_id
+
+      # The normalized text each filter actually searched on — echoed back into the
+      # web form and the JSON payload so the operator sees what was queried rather
+      # than what they typed (a plate typed "ka 01" really did search "KA01").
+      def transporter = @text_filters[:transporter]
+      def driver_name = @text_filters[:driver_name]
+      def driver_phone = @text_filters[:driver_phone]
+      def vehicle_number = @text_filters[:vehicle_number]
+
+      # True when any lookup narrows the report beyond its date range — used both
+      # for the "clear filters" affordance and for the gift-row rule below.
+      def filtered?
+        @text_filters.any? || @fuel_type.present? || @fuel_pump_id.present? || @customer_id.present?
+      end
 
       # The ₹-per-point rate is an operator setting, and RewardSetting#cash_value_for_points
       # returns nil until it is set — so on a pump that never configured one, EVERY
@@ -166,7 +206,36 @@ module Admin
         scope = scope.where(fuel_type_code: @fuel_type) if @fuel_type
         scope = scope.where(fuel_pump_id: @fuel_pump_id) if @fuel_pump_id
         scope = scope.where(customer_id: @customer_id) if @customer_id
+        @text_filters.each { |name, value| scope = contains(scope, TEXT_FILTERS.fetch(name)[:column], value) }
         scope
+      end
+
+      # Substring, case-insensitive, AND-combined across the four lookups — the
+      # operator is narrowing one report ("Rao driving for NL Roadways"), not
+      # OR-searching for anything that matches, which is why this differs from the
+      # single-box customer search in Admin::Crm::CustomerMetrics#search.
+      # LOWER() on both sides so a legacy row saved before VisitEntry#normalize_fields
+      # upcased plates still matches. Built through Arel rather than an interpolated
+      # SQL string so the column name can never become a query fragment.
+      def contains(scope, column, value)
+        lowered = Arel::Nodes::NamedFunction.new("LOWER", [VisitEntry.arel_table[column]])
+        pattern = "%#{::ActiveRecord::Base.sanitize_sql_like(value.downcase)}%"
+        scope.where(lowered.matches(pattern, nil, true))
+      end
+
+      # Drops blank lookups and puts the rest through the same normalizer that
+      # wrote the column. A typed value that normalizes away entirely (say a plate
+      # of "--") is deliberately KEPT as the raw text: it then matches no
+      # normalized row and the report reads "no captures", which is the truth —
+      # dropping it would silently show every row as if it had matched.
+      def normalize_text_filters(**values)
+        values.each_with_object({}) do |(name, raw), filters|
+          text = raw.to_s.strip
+          next if text.blank?
+
+          normalizer = TEXT_FILTERS.fetch(name)[:normalizer]
+          filters[name] = (normalizer ? normalizer.call(text).presence : nil) || text
+        end
       end
 
       # "Reward ₹" (`gifts`) = ₹ value of points redemptions, bucketed per customer
@@ -254,13 +323,16 @@ module Admin
       # zero visits, blank amount, the gift on it. It reads as "no capture in this
       # period, but a gift went out" — exactly what the ledger knows.
       #
-      # The one exception is a fuel_type / fuel_pump-filtered report. A qualification
-      # carries neither, so a gift cannot be said to belong to that slice and
-      # inventing a row inside it would assert something the data does not support;
-      # gifts for customers who DO have captures in the slice are still counted.
+      # The one exception is a report narrowed by fuel_type, fuel_pump_id, or any of
+      # the four free-text lookups (transporter / driver / driver phone / vehicle).
+      # A qualification carries none of those, so a gift cannot be said to belong to
+      # that slice and inventing a row inside it would assert something the data
+      # does not support; gifts for customers who DO have captures in the slice are
+      # still counted. `customer_id` is NOT an exception — a qualification does
+      # carry a customer, so gift_count_lookup filters on it directly.
       # Called out in docs/acefuels/15-spec-dashboard-reports.md.
       def materialize_gift_rows(buckets, gift_counts)
-        return if gift_counts.empty? || @fuel_type || @fuel_pump_id
+        return if gift_counts.empty? || @fuel_type || @fuel_pump_id || @text_filters.any?
 
         missing = gift_counts.keys.reject { |customer_id, period| buckets.key?([customer_id.to_s, period]) }
         return if missing.empty?

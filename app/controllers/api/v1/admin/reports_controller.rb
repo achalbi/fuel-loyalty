@@ -24,7 +24,9 @@ module Api
             dimension: params[:dimension], grain: params[:grain],
             start_date: params[:start_date], end_date: params[:end_date], preset: params[:preset],
             fuel_type: params[:fuel_type], fuel_pump_id: params[:fuel_pump_id],
-            customer_id: params[:customer_id]
+            customer_id: params[:customer_id],
+            transporter: params[:transporter], driver_name: params[:driver_name],
+            driver_phone: params[:driver_phone], vehicle_number: params[:vehicle_number]
           )
         end
 
@@ -33,6 +35,14 @@ module Api
             dimension: report.dimension,
             grain: report.grain,
             range: { from: report.date_range.begin.iso8601, to: report.date_range.end.iso8601 },
+            # The NORMALIZED lookups the query actually ran with (a plate typed
+            # "ka 01" searched "KA01") so the client can show what it filtered on.
+            filters: {
+              transporter: report.transporter, driver_name: report.driver_name,
+              driver_phone: report.driver_phone, vehicle_number: report.vehicle_number,
+              fuel_type: params[:fuel_type].presence, fuel_pump_id: params[:fuel_pump_id].presence,
+              customer_id: report.customer_id,
+            },
             columns: ::Admin::Reports::LedgerReport::COLUMNS,
             # False when no ₹-per-point rate is configured: every redemption stored
             # a NULL cash value, so the client must render "—", not "₹0.00".

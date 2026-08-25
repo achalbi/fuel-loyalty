@@ -13,5 +13,11 @@ interface ReportsApi {
         @Query("end_date") endDate: String? = null,
         @Query("fuel_type") fuelType: String? = null,
         @Query("fuel_pump_id") fuelPumpId: Long? = null,
+        // Free-text lookups; the server normalizes plates/mobiles the same way the
+        // capture stored them, so partial and loosely-typed values still match.
+        @Query("transporter") transporter: String? = null,
+        @Query("driver_name") driverName: String? = null,
+        @Query("driver_phone") driverPhone: String? = null,
+        @Query("vehicle_number") vehicleNumber: String? = null,
     ): ReportResponse
 }

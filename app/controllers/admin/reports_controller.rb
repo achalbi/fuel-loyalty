@@ -28,7 +28,9 @@ module Admin
         dimension: params[:dimension], grain: params[:grain],
         start_date: params[:start_date], end_date: params[:end_date], preset: params[:preset],
         fuel_type: params[:fuel_type], fuel_pump_id: params[:fuel_pump_id],
-        customer_id: params[:customer_id]
+        customer_id: params[:customer_id],
+        transporter: params[:transporter], driver_name: params[:driver_name],
+        driver_phone: params[:driver_phone], vehicle_number: params[:vehicle_number]
       )
     end
 

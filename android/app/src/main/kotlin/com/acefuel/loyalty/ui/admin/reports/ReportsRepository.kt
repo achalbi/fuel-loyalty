@@ -16,6 +16,15 @@ class ReportsRepository(
         endDate: String? = null,
         fuelType: String? = null,
         fuelPumpId: Long? = null,
+        transporter: String? = null,
+        driverName: String? = null,
+        driverPhone: String? = null,
+        vehicleNumber: String? = null,
     ): ApiResult<ReportResponse> =
-        apiCall(json) { api.report(dimension, grain, startDate, endDate, fuelType, fuelPumpId) }
+        apiCall(json) {
+            api.report(
+                dimension, grain, startDate, endDate, fuelType, fuelPumpId,
+                transporter, driverName, driverPhone, vehicleNumber,
+            )
+        }
 }
