@@ -28,8 +28,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -65,10 +63,10 @@ import com.acefuel.loyalty.ui.designsystem.DateField
 import com.acefuel.loyalty.ui.designsystem.EmptyState
 import com.acefuel.loyalty.ui.designsystem.ErrorState
 import com.acefuel.loyalty.ui.designsystem.InlineErrorCard
+import com.acefuel.loyalty.ui.designsystem.LabeledDropdown
 import com.acefuel.loyalty.ui.designsystem.NayaraCard
 import com.acefuel.loyalty.ui.designsystem.NayaraPullToRefresh
 import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
-import com.acefuel.loyalty.ui.designsystem.PickerField
 import com.acefuel.loyalty.ui.designsystem.SkeletonCard
 import com.acefuel.loyalty.ui.designsystem.SkeletonList
 import com.acefuel.loyalty.ui.designsystem.StatusChip
@@ -747,43 +745,6 @@ private fun shiftOptionLabel(t: ShiftTemplateDto): String =
 // ============================================================================
 // Shared building blocks
 // ============================================================================
-
-/**
- * A tap-to-open dropdown built on the stable [DropdownMenu] (no experimental
- * ExposedDropdown APIs). The field is a designsystem [PickerField]; the menu
- * anchors to the wrapping [Box].
- */
-@Composable
-private fun <T> LabeledDropdown(
-    label: String,
-    selectedLabel: String,
-    options: List<Pair<T, String>>,
-    modifier: Modifier = Modifier,
-    onSelect: (T) -> Unit,
-) {
-    val haptics = rememberHaptics()
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier) {
-        PickerField(
-            label = label,
-            value = selectedLabel,
-            onClick = { expanded = true },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { (value, text) ->
-                DropdownMenuItem(
-                    text = { Text(text) },
-                    onClick = {
-                        haptics.tick()
-                        onSelect(value)
-                        expanded = false
-                    },
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun SectionHeader(text: String) {

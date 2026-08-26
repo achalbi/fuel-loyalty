@@ -37,10 +37,45 @@ module Api
           petrol = body["nozzle_readings"].find { |r| r["fuel_pump_nozzle_id"] == @petrol.id }
           assert_equal 640.0, petrol["opening_reading"]
           assert_equal "prior_settlement", petrol["opening_source"]
+          # The offer is only a default; the phone shows what it was and when it
+          # was settled so the FSM can tell yesterday's figure from a stale one.
+          assert_equal 640.0, petrol["prior_closing_reading"]
+          assert_equal "2026-07-20", petrol["prior_closing_date"]
           assert_equal 102.75, petrol["unit_price"]
 
           assert_equal 1, body["discount_lines"].size
           assert_equal "NL", body["discount_lines"].first["transport_name"]
+        end
+
+        # The native sheet has no rows to type into when the draft resolves no
+        # pump, and it tells the FSM which of the two reasons it is from these
+        # two fields alone — a null `fuel_pump` means "you have no assignment for
+        # this date", an empty grid under a named pump means "that pump has no
+        # nozzles". Pin the shape both messages read.
+        test "GET new returns a null pump and no nozzle rows when the caller has no assignment for the date" do
+          @staff.update!(fuel_pump_id: nil, assigned_fuel_pump_nozzle_ids: [])
+
+          get api_v1_staff_new_settlement_path, params: { business_date: "2026-07-21" }, headers: auth_headers(@staff)
+          assert_response :ok
+          body = response.parsed_body
+
+          assert_nil body["fuel_pump"]
+          assert_empty body["nozzle_readings"]
+          # The lube picklist is pump-independent, so the rest of the sheet still
+          # hydrates — which is exactly why the empty grid needs saying out loud.
+          assert_equal "2026-07-21", body["business_date"]
+        end
+
+        test "GET new for a named pump with no active nozzles returns the pump and an empty grid" do
+          @pump.nozzles.update_all(active: false)
+
+          get api_v1_staff_new_settlement_path,
+            params: { business_date: "2026-07-21", fuel_pump_id: @pump.id }, headers: auth_headers(@staff)
+          assert_response :ok
+          body = response.parsed_body
+
+          assert_equal @pump.id, body.dig("fuel_pump", "id")
+          assert_empty body["nozzle_readings"]
         end
 
         test "POST create derives amounts server-side and returns totals" do
@@ -219,6 +254,34 @@ module Api
 
           assert_response :forbidden
           assert_nil theirs.reload.notes
+        end
+        # The FSM has to be able to type over the auto-filled opening — a pump
+        # left unsettled for a few days kept selling, so the last recorded
+        # closing is behind the meter. The server decides what to call that.
+        test "POST accepts an opening the FSM typed over and records it as corrected" do
+          DailySettlement.create!(
+            fuel_pump: @pump, business_date: Date.new(2026, 7, 15), recorded_by: @staff, status: "submitted",
+            nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 100, closing_reading: 640, unit_price: 100 }]
+          )
+
+          post api_v1_staff_settlements_path, headers: auth_headers(@staff), params: {
+            settlement: {
+              fuel_pump_id: @pump.id, business_date: "2026-07-21", status: "submitted",
+              nozzle_readings_attributes: [
+                # A build already on a phone still posts its own opening_source;
+                # it must not be able to pass a correction off as an inheritance.
+                { fuel_pump_nozzle_id: @petrol.id, opening_reading: "1490.250",
+                  closing_reading: "1600", opening_source: "prior_settlement" },
+              ],
+            },
+          }
+          assert_response :created
+
+          reading = response.parsed_body["nozzle_readings"].first
+          assert_equal 1490.25, reading["opening_reading"]
+          assert_equal "corrected", reading["opening_source"]
+          assert_equal 640.0, reading["prior_closing_reading"]
+          assert_equal "2026-07-15", reading["prior_closing_date"]
         end
       end
     end

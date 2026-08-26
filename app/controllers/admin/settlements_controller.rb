@@ -15,18 +15,28 @@ module Admin
 
     def index
       authorize DailySettlement, :admin_manage?
+      # `business_date` is the single-day cut the rollup links still carry; from/to
+      # is the range an admin reaches for when looking back over past days. A bare
+      # `business_date` is just the range with both ends on the same day.
       @business_date = parse_date(params[:business_date])
+      @from = parse_date(params[:from]) || @business_date
+      @to = parse_date(params[:to]) || @business_date
+      @query = params[:q].to_s.strip
       @fuel_pump = FuelPump.find_by(id: params[:fuel_pump_id])
       # Not scoped to `kept`: a soft-deleted FSM still owns their history, and the
       # rollup row below links straight to this filter.
       @staff_member = User.find_by(id: params[:user_id])
       scope = DailySettlement.recent_first.includes(:fuel_pump, :recorded_by)
-      scope = scope.for_date(@business_date) if @business_date
+      scope = apply_date_filter(scope)
       scope = scope.where(fuel_pump_id: @fuel_pump.id) if @fuel_pump
       scope = scope.where(recorded_by_id: @staff_member.id) if @staff_member
       scope = scope.where(status: params[:status]) if params[:status].present?
+      # Rule 17 — merged, so the search narrows the filters above rather than
+      # escaping them. Shared with the API via the model (DailySettlement.matching_text).
+      scope = scope.merge(DailySettlement.matching_text(@query))
       @settlements = scope.to_a
-      @cross_pump_totals = cross_pump_totals(@settlements) if @business_date && @fuel_pump.nil?
+      @date_filter_label = date_filter_label
+      @cross_pump_totals = cross_pump_totals(@settlements) if @date_filter_label && @fuel_pump.nil?
       # Admin-12: "the settlement reports of the users for a particular day" —
       # one row per FSM who recorded a settlement in the current filter.
       @per_user_totals = per_user_totals(@settlements)
@@ -82,6 +92,26 @@ module Admin
 
     def set_settlement
       @settlement = DailySettlement.find(params[:id])
+    end
+
+    # Either end may stand alone: "everything since the 1st" and "everything up
+    # to the 1st" are both things an admin asks for, and refusing a half-filled
+    # range would just look broken.
+    def apply_date_filter(scope)
+      return scope.where(business_date: @from..@to) if @from && @to
+      return scope.where(business_date: (@from..)) if @from
+      return scope.where(business_date: (..@to)) if @to
+
+      scope
+    end
+
+    def date_filter_label
+      return nil if @from.nil? && @to.nil?
+      return @from.to_s if @from && @from == @to
+      return "#{@from} → #{@to}" if @from && @to
+      return "from #{@from}" if @from
+
+      "up to #{@to}"
     end
 
     # The FSM this edit is being made for. Never the admin doing it — naming

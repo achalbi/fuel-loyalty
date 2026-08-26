@@ -44,6 +44,11 @@ module Api
             fuel_type: row.fuel_pump_nozzle&.fuel_type_name,
             opening_reading: f(row.opening_reading),
             opening_source: row.opening_source,
+            # What the last settled sheet closed at, and when. The client shows
+            # both so the FSM can tell an inherited figure from a stale one and
+            # correct it when days went unsettled (rule 1).
+            prior_closing_reading: f(row.prior_closing_reading),
+            prior_closing_date: row.prior_closing_date&.iso8601,
             unit_price: f(row.unit_price),
           }
         end

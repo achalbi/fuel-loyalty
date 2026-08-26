@@ -165,7 +165,7 @@ module Api
           permitted = params.require(:settlement).permit(
             :fuel_pump_id, :business_date, :shift_template_id, :status,
             :notes,
-            nozzle_readings_attributes: %i[id fuel_pump_nozzle_id opening_reading closing_reading testing_litres rollover opening_source _destroy],
+            nozzle_readings_attributes: %i[id fuel_pump_nozzle_id opening_reading closing_reading testing_litres rollover _destroy],
             lube_lines_attributes: %i[id product_id quantity opening_stock closing_stock _destroy],
             discount_lines_attributes: %i[id visit_entry_id transport_name litres discount_amount driver_name driver_phone_number manager_name manager_phone_number owner_name owner_phone_number _destroy],
             credit_lines_attributes: %i[id credit_type litres discount_amount amount reference note _destroy],

@@ -271,6 +271,31 @@ module Staff
       assert_equal @staff, settlement.recorded_by, "ownership is decided at creation and never re-pointed"
     end
 
+    # The staff show page was reduced to the shared sheet, so nothing but this
+    # test stands between an FSM and a blank page if the partial stops rendering.
+    test "the staff sheet shows the settlement in the format it was entered" do
+      settlement = DailySettlement.create!(
+        fuel_pump: @pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff, status: "submitted",
+        digital_receipts_attributes: [{ label: "PhonePe POS", amount: 500 }],
+        cash_denominations_attributes: [{ denomination: 500, quantity: 4 }],
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 1000, closing_reading: 1100, unit_price: 100 }]
+      )
+      sign_in @staff
+
+      get staff_settlement_path(settlement)
+
+      assert_response :success
+      ["Nozzle readings", "Lubricants &amp; oils", "Digital receipts", "Credit lines",
+       "Cash taken out", "Cash count", "Stock received", "Decantation", "Rate comparison"].each do |section|
+        assert_includes response.body, ">#{section}", "#{section} is missing from the staff sheet"
+      end
+      assert_select "td", text: "PhonePe POS"
+      assert_select "td", text: "₹500"
+      # Read-only here too: the sheet is not the entry form.
+      assert_select "form[data-settlement-form]", count: 0
+      assert_select "input[name^='settlement']", count: 0
+    end
+
     # An Edit control that only bounces the person who clicks it is worse than no
     # control: the list and the sheet must point an admin at the console directly.
     test "the Edit control an admin sees points at the audited console, not the staff form" do
@@ -422,6 +447,31 @@ module Staff
       Rack::Utils.parse_nested_query(query).deep_merge(overrides.deep_stringify_keys)
     end
 
+    # The draft resolves the pump from the caller's assignment ON the business
+    # date, so an FSM the admin only posts day-by-day (no standing pump) opens
+    # the sheet for yesterday with no pump — and the nozzle grid renders empty.
+    # It used to render empty and SILENT: no rows, no explanation, and nothing
+    # on the page saying the pump chooser was the way out.
+    test "an empty nozzle grid says why instead of rendering nothing" do
+      @staff.update!(fuel_pump_id: nil, assigned_fuel_pump_nozzle_ids: [])
+      sign_in @staff
+      get new_staff_settlement_path
+
+      assert_response :success
+      assert_select "input[name=?]", "settlement[nozzle_readings_attributes][0][closing_reading]", 0
+      assert_match(/No pump is assigned to you/, response.body)
+    end
+
+    test "a pump with no active nozzles says so rather than rendering an empty grid" do
+      @pump.nozzles.update_all(active: false)
+      sign_in @staff
+      get new_staff_settlement_path(fuel_pump_id: @pump.id)
+
+      assert_response :success
+      assert_select "input[name=?]", "settlement[nozzle_readings_attributes][0][closing_reading]", 0
+      assert_match(/has no active nozzles/, response.body)
+    end
+
     test "a locked settlement cannot be edited" do
       settlement = DailySettlement.create!(fuel_pump: @pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff,
                                            status: "reconciled", locked: true,
@@ -429,6 +479,44 @@ module Staff
       sign_in @staff
       get edit_staff_settlement_path(settlement)
       assert_redirected_to staff_settlement_path(settlement)
+    end
+
+    # The opening reading is auto-filled from the last settled sheet, but a pump
+    # that went unsettled for a few days kept selling — the offered figure is
+    # then behind the meter and only the FSM can say where it is. It has to be
+    # typeable, and the sheet has to show that it was typed.
+    test "the opening reading is editable and a typed-over value is recorded as corrected" do
+      DailySettlement.create!(
+        fuel_pump: @pump, business_date: Date.new(2026, 7, 15), recorded_by: @staff, status: "submitted",
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 500, closing_reading: 1000, unit_price: 100 }]
+      )
+      sign_in @staff
+
+      get new_staff_settlement_path(fuel_pump_id: @pump.id, business_date: "2026-07-21")
+      assert_response :success
+      opening_field = css_select("input[name='settlement[nozzle_readings_attributes][0][opening_reading]']").first
+      assert_not_nil opening_field
+      assert_nil opening_field["readonly"], "the FSM must be able to correct the auto-filled opening"
+      assert_equal "1000.0", opening_field["data-opening-auto"]
+      assert_match "5 days not settled", response.body
+
+      post staff_settlements_path, params: {
+        settlement: {
+          fuel_pump_id: @pump.id, business_date: "2026-07-21", status: "submitted",
+          nozzle_readings_attributes: {
+            "0" => { fuel_pump_nozzle_id: @petrol.id, opening_reading: "2310.500", closing_reading: "2400" },
+          },
+        },
+      }
+      settlement = DailySettlement.order(:id).last
+      reading = settlement.nozzle_readings.find_by(fuel_pump_nozzle_id: @petrol.id)
+      assert_equal BigDecimal("2310.5"), reading.opening_reading
+      assert_equal "corrected", reading.opening_source
+      assert_equal BigDecimal("1000"), reading.prior_closing_reading
+
+      get staff_settlement_path(settlement)
+      assert_response :success
+      assert_select "span.badge", text: "edited"
     end
   end
 end

@@ -21,6 +21,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
@@ -37,7 +38,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.acefuel.loyalty.core.di.LocalContainer
+import com.acefuel.loyalty.ui.designsystem.BannerTone
+import com.acefuel.loyalty.ui.designsystem.DateField
 import com.acefuel.loyalty.ui.designsystem.FormField
+import com.acefuel.loyalty.ui.designsystem.LabeledDropdown
+import com.acefuel.loyalty.ui.designsystem.NayaraBanner
 import com.acefuel.loyalty.ui.designsystem.NayaraSegmentedControl
 import com.acefuel.loyalty.ui.designsystem.NayaraSnackbarHost
 import com.acefuel.loyalty.ui.designsystem.NayaraTopBar
@@ -45,6 +50,8 @@ import com.acefuel.loyalty.ui.designsystem.showError
 import com.acefuel.loyalty.ui.designsystem.showSuccess
 import com.acefuel.loyalty.ui.theme.NayaraButton
 import com.acefuel.loyalty.ui.theme.NayaraSpacing
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 private fun money(v: Double): String = "₹" + "%,.2f".format(v)
 private val decimalKeyboard = KeyboardOptions(keyboardType = KeyboardType.Decimal)
@@ -71,6 +78,7 @@ fun SettlementScreen(
             initializer {
                 SettlementViewModel(
                     SettlementRepository(container.retrofit.create(SettlementApi::class.java), container.json),
+                    container.staffRepository,
                     fuelPumpId,
                     businessDate,
                 )
@@ -111,7 +119,12 @@ fun SettlementScreen(
             state.fsmName?.let { Text("FSM: $it", style = MaterialTheme.typography.bodySmall) }
             if (state.locked) Text("Locked — read only.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
 
+            // Shown even when locked: the chooser doesn't edit the sheet, it is
+            // how the FSM gets off a locked one to the day they still owe.
+            DraftChooser(state, viewModel)
+
             SectionHeader("Nozzle readings")
+            state.noNozzlesReason?.let { NayaraBanner(it, BannerTone.Warning) }
             state.nozzles.forEachIndexed { i, row ->
                 NozzleCard(state, row, i, viewModel)
             }
@@ -216,6 +229,39 @@ fun SettlementScreen(
     }
 }
 
+/**
+ * Pump + business-date chooser, mirroring the web draft chooser. The server
+ * resolves the pump from the caller's assignment ON the business date, so an
+ * FSM with no assignment for that day gets a draft with no nozzle rows — this
+ * is how they name the pump they worked and reload. Applied only on tap:
+ * reloading discards anything already typed.
+ */
+@Composable
+private fun DraftChooser(state: SettlementUiState, vm: SettlementViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
+            LabeledDropdown(
+                label = "Pump",
+                selectedLabel = state.pumps.firstOrNull { it.id == state.pumpChoice }?.displayName
+                    ?: state.pumpName ?: "Select pump",
+                options = state.pumps.map { it.id to it.displayName },
+                modifier = Modifier.weight(1f),
+                enabled = state.pumps.isNotEmpty(),
+                onSelect = vm::onPumpChoice,
+            )
+            DateField(
+                label = "Business date",
+                value = parseIsoDate(state.dateChoice),
+                onChange = { vm.onDateChoice(it.toString()) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+        if (state.draftChoiceChanged) {
+            OutlinedButton(onClick = vm::loadChosenDraft) { Text("Load draft") }
+        }
+    }
+}
+
 @Composable
 private fun NozzleCard(state: SettlementUiState, row: NozzleRow, i: Int, vm: SettlementViewModel) {
     Card(Modifier.fillMaxWidth()) {
@@ -224,9 +270,23 @@ private fun NozzleCard(state: SettlementUiState, row: NozzleRow, i: Int, vm: Set
                 Text("${row.label} · ${row.fuelType}", fontWeight = FontWeight.SemiBold)
                 Text(money(row.unitPrice) + "/L", style = MaterialTheme.typography.bodySmall)
             }
+            // The opening is auto-filled from the last settled sheet but stays
+            // typeable: days can pass with nobody filing a sheet while the pump
+            // keeps selling, and the auto-filled figure is then behind the meter.
+            // The helper line says where that figure came from so the FSM can
+            // tell yesterday's reading from a stale one.
             Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
-                FormField(row.opening, { vm.onOpening(i, it) }, "Yesterday", Modifier.weight(1f), enabled = !state.locked && !row.openingReadonly, keyboardOptions = decimalKeyboard)
-                FormField(row.closing, { vm.onClosing(i, it) }, "Today", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
+                FormField(
+                    row.opening, { vm.onOpening(i, it) }, "Opening", Modifier.weight(1f),
+                    helper = openingHelper(row, state.businessDate),
+                    enabled = !state.locked, keyboardOptions = decimalKeyboard
+                )
+                FormField(row.closing, { vm.onClosing(i, it) }, "Closing", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
+            }
+            // Undo is worth a control of its own here: without it a mistyped
+            // meter reading costs the FSM the whole sheet to get back.
+            if (!state.locked && row.openingOverridden) {
+                TextButton(onClick = { vm.resetOpening(i) }) { Text("Undo opening edit") }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
                 FormField(row.testing, { vm.onTesting(i, it) }, "Testing", Modifier.weight(1f), enabled = !state.locked, keyboardOptions = decimalKeyboard)
@@ -272,5 +332,27 @@ private fun SectionHeader(text: String) {
     HorizontalDivider()
     Text(text, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
 }
+
+private val DAY_MONTH = DateTimeFormatter.ofPattern("d MMM")
+
+private fun openingHelper(row: NozzleRow, businessDate: String): String? {
+    val prior = row.priorClosing ?: return null
+    val settledOn = row.priorClosingDate?.let(::parseIsoDate)
+    val note = StringBuilder("Last settled ${trim(prior)}")
+    if (settledOn != null) note.append(" on ${settledOn.format(DAY_MONTH)}")
+    val gap = unsettledDays(settledOn, parseIsoDate(businessDate))
+    if (gap > 0) note.append(" · $gap ${if (gap == 1L) "day" else "days"} not settled")
+    return note.toString()
+}
+
+// Whole days between the sheet that figure came from and this one. Zero when
+// they are consecutive; anything more is time the pump sold through unrecorded.
+private fun unsettledDays(settledOn: LocalDate?, businessDate: LocalDate?): Long {
+    if (settledOn == null || businessDate == null) return 0
+    return (businessDate.toEpochDay() - settledOn.toEpochDay() - 1).coerceAtLeast(0)
+}
+
+private fun parseIsoDate(value: String): LocalDate? =
+    runCatching { LocalDate.parse(value) }.getOrNull()
 
 private fun trim(v: Double): String = if (v % 1.0 == 0.0) v.toLong().toString() else "%.3f".format(v).trimEnd('0').trimEnd('.')

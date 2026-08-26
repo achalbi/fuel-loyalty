@@ -75,6 +75,8 @@ module Api
             fuel_type: row.fuel_pump_nozzle&.fuel_type_name,
             opening_reading: f(row.opening_reading),
             opening_source: row.opening_source,
+            prior_closing_reading: f(row.prior_closing_reading),
+            prior_closing_date: row.prior_closing_date&.iso8601,
             closing_reading: f(row.closing_reading),
             testing_litres: f(row.testing_litres),
             rollover: row.rollover,
@@ -104,7 +106,8 @@ module Api
 
         def credit_line(row)
           {
-            id: row.id, credit_type: row.credit_type, litres: f(row.litres),
+            id: row.id, credit_type: row.credit_type, credit_type_label: row.credit_type_label,
+            litres: f(row.litres),
             discount_amount: f(row.discount_amount), amount: f(row.amount),
             reference: row.reference, note: row.note,
           }

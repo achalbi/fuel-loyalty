@@ -56,17 +56,66 @@ class DailySettlement < ApplicationRecord
   scope :financial, -> { where(status: %i[submitted reconciled]) }
   scope :recent_first, -> { order(business_date: :desc, created_at: :desc) }
 
-  # Most recent prior closing reading for a nozzle, used to auto-populate the
-  # next settlement's opening reading (business rule 1).
-  def self.prior_closing_reading(fuel_pump_nozzle_id, business_date)
-    SettlementNozzleReading
+  # A pump has no name of its own — `display_name` is "Pump <sequence_number>" —
+  # so a text search can only reach one through its number. Match that number
+  # only when the WHOLE query is it ("3", "pump 3"): reading the first digit run
+  # out of any free-text query turns a reference like "NL-01/AE-2471" into "give
+  # me everything Pump 1 ever filed", which is not what was typed.
+  PUMP_NUMBER_QUERY = /\A(?:pump\s*)?(\d{1,4})\z/i
+
+  # Admin-console free-text lookup (business rule 17), over the things an admin
+  # actually remembers about a past sheet: who filed it, which pump, and anything
+  # typed into the notes. Lives here so the web console and the API cannot drift
+  # apart — merge it into a filtered scope and it narrows, never widens.
+  def self.matching_text(query)
+    query = query.to_s.strip
+    return all if query.blank?
+
+    pattern = "%#{sanitize_sql_like(query)}%"
+    matched = where("daily_settlements.fsm_name_snapshot ILIKE :pattern", pattern: pattern)
+      .or(where("daily_settlements.notes ILIKE :pattern", pattern: pattern))
+      .or(where(recorded_by_id: users_matching_text(pattern)))
+    sequence_number = query[PUMP_NUMBER_QUERY, 1]
+    return matched if sequence_number.nil?
+
+    matched.or(where(fuel_pump_id: FuelPump.where(sequence_number: sequence_number).select(:id)))
+  end
+
+  def self.users_matching_text(pattern)
+    User.where(
+      "users.name ILIKE :pattern OR users.username ILIKE :pattern OR users.phone_number ILIKE :pattern",
+      pattern: pattern
+    ).select(:id)
+  end
+  private_class_method :users_matching_text
+
+  # What the last settled sheet left a nozzle's meter at, and the date it was
+  # settled. The reading auto-populates the next settlement's opening (business
+  # rule 1); the date is what tells the FSM whether that figure is yesterday's
+  # or a week old, which is the difference between accepting it and correcting
+  # it. Rows with no closing figure are skipped rather than read as "no prior" —
+  # an incomplete sheet should not blank out a meter history that exists.
+  PriorClosing = Struct.new(:reading, :business_date, keyword_init: true)
+
+  def self.prior_closing(fuel_pump_nozzle_id, business_date)
+    return nil if fuel_pump_nozzle_id.blank? || business_date.blank?
+
+    reading, settled_on = SettlementNozzleReading
       .joins(:daily_settlement)
       .merge(DailySettlement.financial)
       .where(fuel_pump_nozzle_id: fuel_pump_nozzle_id)
+      .where.not(closing_reading: nil)
       .where("daily_settlements.business_date < ?", business_date)
       .order("daily_settlements.business_date DESC, daily_settlements.id DESC")
       .limit(1)
-      .pick(:closing_reading)
+      .pick(:closing_reading, "daily_settlements.business_date")
+    return nil if reading.nil?
+
+    PriorClosing.new(reading: reading, business_date: settled_on)
+  end
+
+  def self.prior_closing_reading(fuel_pump_nozzle_id, business_date)
+    prior_closing(fuel_pump_nozzle_id, business_date)&.reading
   end
 
   def editable_by_fsm?

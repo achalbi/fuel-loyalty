@@ -114,6 +114,13 @@
   --bs-secondary-color: var(--fl-muted);
   --bs-secondary-bg: var(--fl-surface-muted);
   --bs-tertiary-bg: var(--fl-surface);
+  /* Bootstrap's .bg-body / .bg-body-secondary / .bg-body-tertiary utilities read
+     the *-rgb triples, not the vars above. Overriding only the vars left every
+     such panel painted Bootstrap-light while the text followed the theme —
+     white on white in dark mode. Keep each triple in step with its var. */
+  --bs-body-bg-rgb: 249, 250, 252;
+  --bs-secondary-bg-rgb: 241, 243, 245;
+  --bs-tertiary-bg-rgb: 255, 255, 255;
   --bs-form-control-bg: var(--fl-surface);
   --bs-form-control-disabled-bg: var(--fl-surface-muted);
   --bs-form-select-bg: var(--fl-surface);
@@ -146,6 +153,9 @@ html[data-theme="dark"] {
   --fl-overlay: rgba(0, 0, 0, 0.7);
   --fl-gray-400: #838990;
   --fl-gray-700: #d0d4d9;
+  --bs-body-bg-rgb: 8, 15, 24;
+  --bs-secondary-bg-rgb: 36, 47, 60;
+  --bs-tertiary-bg-rgb: 15, 24, 34;
   --bs-primary-rgb: 143, 208, 255;
   --bs-success-rgb: 151, 217, 177;
   --bs-info-rgb: 150, 210, 232;

@@ -1,0 +1,290 @@
+<%# The settlement as the FSM filled it in: every section of
+    staff/settlements/_form in the same order, with the same column headings,
+    printed instead of typed. An admin reviewing a shift has to see the sheet,
+    not a digest of it — a summary cannot be checked against the paper it came
+    from. Empty sections stay on the page (with "None recorded"), because a
+    section silently dropped reads as "nothing to see" when it may mean
+    "nothing was entered". Locals: settlement. %>
+<div class="settlement-sheet vstack gap-4">
+
+  <%# 1 — Header ------------------------------------------------------------ %>
+  <div class="row g-3">
+    <div class="col-sm-4">
+      <div class="form-label mb-0">Pump</div>
+      <div class="form-control-plaintext fw-semibold py-0"><%= settlement.fuel_pump&.display_name || "—" %></div>
+    </div>
+    <div class="col-sm-4">
+      <div class="form-label mb-0">Business date</div>
+      <div class="form-control-plaintext py-0"><%= settlement.business_date %></div>
+    </div>
+    <div class="col-sm-4">
+      <div class="form-label mb-0">FSM</div>
+      <div class="form-control-plaintext py-0">
+        <%# The snapshot, not the recorder's name today: this is a reprint of what
+            was entered, and the entry form's FSM field shows the snapshot too. %>
+        <%= settlement.fsm_name_snapshot.presence || settlement.recorded_by&.display_name || "—" %>
+      </div>
+    </div>
+  </div>
+
+  <%# 2 — Nozzle readings (D1) --------------------------------------------- %>
+  <section>
+    <h2 class="h5">Nozzle readings</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Nozzle</th><th>Fuel</th><th class="text-end">Opening</th><th class="text-end">Closing</th>
+            <th class="text-end">Testing</th><th class="text-center">Rollover</th>
+            <th class="text-end">Net L</th><th class="text-end">₹/L</th><th class="text-end">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% settlement.nozzle_readings.each do |reading| %>
+            <tr>
+              <td><%= reading.fuel_pump_nozzle&.display_name %></td>
+              <td><%= (reading.fuel_type_code_snapshot || reading.fuel_pump_nozzle&.fuel_type_code).to_s.upcase %></td>
+              <%# An opening the FSM typed over is the one figure on this sheet
+                  that did not come from the previous one. Whoever reviews it
+                  should see that, and see what it was changed from. %>
+              <td class="text-end">
+                <%= settlement_litres(reading.opening_reading) %>
+                <% if reading.opening_corrected? %>
+                  <span class="badge text-bg-warning align-middle"
+                        title="Corrected by hand — <%= settlement_prior_closing_note(reading) %>">edited</span>
+                <% end %>
+              </td>
+              <td class="text-end"><%= settlement_litres(reading.closing_reading) %></td>
+              <td class="text-end"><%= settlement_litres(reading.testing_litres) %></td>
+              <td class="text-center"><%= reading.rollover? ? "Yes" : "—" %></td>
+              <td class="text-end"><%= settlement_litres(reading.net_litres_sold) %></td>
+              <td class="text-end"><%= settlement_money(reading.unit_price) %></td>
+              <td class="text-end"><%= settlement_money(reading.amount) %></td>
+            </tr>
+          <% end %>
+          <% if settlement.nozzle_readings.none? %>
+            <tr><td colspan="9" class="text-body-secondary small">No nozzle readings recorded.</td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <%# 3 — Lubes (D2) ------------------------------------------------------- %>
+  <section>
+    <h2 class="h5">Lubricants &amp; oils</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr><th>Product</th><th class="text-end">Qty</th><th class="text-end">₹ each</th>
+              <th class="text-end">Amount</th><th class="text-end">Open stock</th><th class="text-end">Close stock</th></tr>
+        </thead>
+        <tbody>
+          <% settlement.lube_lines.each do |line| %>
+            <tr>
+              <td><%= line.product_name_snapshot.presence || line.product&.display_name %></td>
+              <td class="text-end"><%= settlement_count(line.quantity) %></td>
+              <td class="text-end"><%= settlement_money(line.unit_price) %></td>
+              <td class="text-end"><%= settlement_money(line.amount) %></td>
+              <td class="text-end"><%= settlement_count(line.opening_stock) %></td>
+              <td class="text-end"><%= settlement_count(line.closing_stock) %></td>
+            </tr>
+          <% end %>
+          <% if settlement.lube_lines.none? %>
+            <tr><td colspan="6" class="text-body-secondary small">No lubricants sold.</td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <%# 4 — Discounts (D3) --------------------------------------------------- %>
+  <section>
+    <h2 class="h5">Discounts <span class="text-muted small">(pulled from the day's visits, plus any added at settlement)</span></h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>Transport</th><th>Driver</th><th class="text-end">Litres</th><th class="text-end">Discount ₹</th></tr></thead>
+        <tbody>
+          <% settlement.discount_lines.each do |line| %>
+            <tr>
+              <td>
+                <%= line.transport_name.presence || "—" %>
+                <% if line.visit_entry_id.blank? %><span class="text-muted small">· added here</span><% end %>
+              </td>
+              <td><%= line.driver_name.presence || "—" %></td>
+              <td class="text-end"><%= settlement_litres(line.litres) %></td>
+              <td class="text-end"><%= settlement_money(line.discount_amount) %></td>
+            </tr>
+          <% end %>
+          <% if settlement.discount_lines.none? %>
+            <tr><td colspan="4" class="text-body-secondary small">No same-day discounts captured for this pump.</td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <%# 5 — Digital receipts (D4) + credit lines (D5) ------------------------ %>
+  <div class="row g-4">
+    <div class="col-md-5">
+      <h2 class="h5">Digital receipts</h2>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Means</th><th class="text-end">Amount ₹</th></tr></thead>
+          <tbody>
+            <% settlement.digital_receipts.each do |receipt| %>
+              <tr>
+                <td><%= receipt.label %></td>
+                <td class="text-end"><%= settlement_money(receipt.amount) %></td>
+              </tr>
+            <% end %>
+            <% if settlement.digital_receipts.none? %>
+              <tr><td colspan="2" class="text-body-secondary small">No digital receipts recorded.</td></tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="col-md-7">
+      <h2 class="h5">Credit lines</h2>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Type</th><th class="text-end">Litres</th><th class="text-end">Amount ₹</th><th>Reference</th></tr></thead>
+          <tbody>
+            <% settlement.credit_lines.each do |line| %>
+              <tr>
+                <td><%= line.credit_type_label %></td>
+                <td class="text-end"><%= settlement_litres(line.litres) %></td>
+                <td class="text-end"><%= settlement_money(line.amount) %></td>
+                <td><%= line.reference.presence || "—" %></td>
+              </tr>
+            <% end %>
+            <% if settlement.credit_lines.none? %>
+              <tr><td colspan="4" class="text-body-secondary small">No credit lines recorded.</td></tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <%# 6 — Cash taken out during the day ------------------------------------ %>
+  <section>
+    <h2 class="h5">Cash taken out <span class="text-muted small">(salary advance, sundry)</span></h2>
+    <div class="table-responsive" style="max-width:40rem">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>What for</th><th class="text-end">Amount ₹</th></tr></thead>
+        <tbody>
+          <% settlement.expense_lines.each do |line| %>
+            <tr>
+              <td><%= line.description %></td>
+              <td class="text-end"><%= settlement_money(line.amount) %></td>
+            </tr>
+          <% end %>
+          <% if settlement.expense_lines.none? %>
+            <tr><td colspan="2" class="text-body-secondary small">Nothing taken out.</td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <%# 7 — Final amount banner (D6) ----------------------------------------- %>
+  <div class="card bg-body-tertiary">
+    <div class="card-body row text-center g-2">
+      <% [["Fuel", settlement.total_fuel_amount], ["Lubes", settlement.total_lube_amount],
+          ["− Discounts", settlement.total_discount_amount], ["− Credit", settlement.total_credit_amount],
+          ["− Digital", settlement.total_digital_receipt_amount], ["− Cash out", settlement.total_expense_amount]].each do |label, value| %>
+        <div class="col">
+          <div class="small text-muted"><%= label %></div>
+          <div class="fw-semibold"><%= settlement_money(value) %></div>
+        </div>
+      <% end %>
+      <div class="col border-start">
+        <div class="small text-muted">Final to settle</div>
+        <div class="fw-bold fs-5"><%= settlement_money(settlement.final_amount_to_settle) %></div>
+      </div>
+    </div>
+  </div>
+
+  <%# 8 — Cash denomination + shortage (D7) -------------------------------- %>
+  <section>
+    <h2 class="h5">Cash count</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle" style="max-width:34rem">
+        <thead><tr><th>Denomination</th><th class="text-end">Qty</th><th class="text-end">Amount</th></tr></thead>
+        <tbody>
+          <% settlement.cash_denominations.each do |denomination| %>
+            <tr>
+              <td>₹<%= denomination.denomination %></td>
+              <td class="text-end"><%= settlement_count(denomination.quantity) %></td>
+              <td class="text-end"><%= settlement_money(denomination.amount) %></td>
+            </tr>
+          <% end %>
+          <% if settlement.cash_denominations.none? %>
+            <tr><td colspan="3" class="text-body-secondary small">No cash counted.</td></tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <tr><th colspan="2" class="text-end">Counted cash</th><th class="text-end"><%= settlement_money(settlement.counted_cash_amount) %></th></tr>
+          <tr>
+            <th colspan="2" class="text-end">Shortage (final − counted)</th>
+            <th class="text-end <%= "text-danger" if settlement.shortage_amount.to_d.positive? %>"><%= settlement_money(settlement.shortage_amount) %></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <%# 9 — Stock received / decantation / rate comparison (D8/D10) ---------- %>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <h2 class="h5">Stock received</h2>
+      <ul class="list-unstyled mb-0">
+        <% settlement.stock_receipts.each do |receipt| %>
+          <li><%= receipt.fuel_type_code.to_s.upcase %>: <%= settlement_litres(receipt.litres_received) %> L</li>
+        <% end %>
+        <% if settlement.stock_receipts.none? %>
+          <li class="text-body-secondary small">No stock received.</li>
+        <% end %>
+      </ul>
+    </div>
+    <div class="col-md-4">
+      <h2 class="h5">Decantation</h2>
+      <ul class="list-unstyled mb-0">
+        <% settlement.decantations.each do |decantation| %>
+          <li>
+            <%= decantation.fuel_type_code.to_s.upcase %>
+            <%= decantation.tank_label.presence %>:
+            <%= settlement_litres(decantation.opening_kl) %> → <%= settlement_litres(decantation.closing_kl) %> KL
+          </li>
+        <% end %>
+        <% if settlement.decantations.none? %>
+          <li class="text-body-secondary small">No decantation recorded.</li>
+        <% end %>
+      </ul>
+    </div>
+    <div class="col-md-4">
+      <h2 class="h5">Rate comparison</h2>
+      <ul class="list-unstyled mb-0">
+        <% settlement.rate_comparisons.each do |comparison| %>
+          <li>
+            <%= comparison.fuel_type_code.to_s.upcase %>: ours <%= settlement_price(comparison.own_price) %>
+            vs <%= comparison.competitor_name.presence || "competitor" %> <%= settlement_price(comparison.competitor_price) %>
+          </li>
+        <% end %>
+        <% if settlement.rate_comparisons.none? %>
+          <li class="text-body-secondary small">No rate comparison recorded.</li>
+        <% end %>
+      </ul>
+    </div>
+  </div>
+
+  <%# 10 — Notes ----------------------------------------------------------- %>
+  <div>
+    <div class="form-label mb-0">Notes</div>
+    <div class="form-control-plaintext py-0<%= " text-body-secondary" if settlement.notes.blank? %>">
+      <%= settlement.notes.presence || "None." %>
+    </div>
+  </div>
+</div>

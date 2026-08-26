@@ -8,7 +8,7 @@ module Api
       class SettlementsController < Api::V1::Admin::BaseController
         before_action :set_settlement, only: %i[show update reconcile]
 
-        # GET /api/v1/admin/settlements?business_date=&from=&to=&fuel_pump_id=&status=
+        # GET /api/v1/admin/settlements?business_date=&from=&to=&fuel_pump_id=&user_id=&status=&q=
         def index
           authorize DailySettlement, :admin_manage?
           scope = filtered_scope
@@ -18,7 +18,7 @@ module Api
             total: rows.size,
             per_user_totals: per_user_totals(rows),
           }
-          body[:cross_pump_totals] = cross_pump_totals(rows) if single_date_all_pumps?
+          body[:cross_pump_totals] = cross_pump_totals(rows) if date_filtered_all_pumps?
           render json: body, status: :ok
         end
 
@@ -75,17 +75,22 @@ module Api
 
         def filtered_scope
           scope = DailySettlement.recent_first.includes(:fuel_pump, :recorded_by)
-          scope = scope.for_date(parse_date(params[:business_date])) if params[:business_date].present?
           scope = scope.where(business_date: date_range) if date_range
           scope = scope.where(fuel_pump_id: params[:fuel_pump_id]) if params[:fuel_pump_id].present?
           # Admin-12 — the per-user ("which FSM settled what") report cut.
           scope = scope.where(recorded_by_id: params[:user_id]) if params[:user_id].present?
           scope = scope.where(status: params[:status]) if params[:status].present?
-          scope
+          # Rule 17 — merged, so the search narrows the filters above rather than
+          # escaping them. Same scope the web console uses, so the two cannot drift.
+          scope.merge(DailySettlement.matching_text(params[:q]))
         end
 
-        def single_date_all_pumps?
-          params[:business_date].present? && params[:fuel_pump_id].blank?
+        # A cross-pump rollup only means something once the rows are cut to a
+        # period, and only while every pump is still in the cut. `date_range`
+        # already folds `business_date` in, and returns nil for an unparseable
+        # one, so a junk date reports no rollup rather than an all-zero one.
+        def date_filtered_all_pumps?
+          date_range.present? && params[:fuel_pump_id].blank?
         end
 
         FINANCIAL_FIELDS = %i[total_fuel_amount total_lube_amount total_discount_amount total_credit_amount
@@ -142,14 +147,26 @@ module Api
           @on_behalf_of = User.kept.find_by(id: params[:on_behalf_of_id])
         end
 
+        # `business_date` is the single-day cut the older clients still send; an
+        # explicit from/to overrides it, resolved exactly as the web console
+        # resolves it so the same query string cannot answer differently on the
+        # two surfaces. Either end may stand alone — "everything since the 1st"
+        # is as ordinary a question as a closed range.
         def date_range
-          return nil if params[:from].blank? || params[:to].blank?
+          return @date_range if defined?(@date_range)
 
-          from = parse_date(params[:from])
-          to = parse_date(params[:to])
-          return nil if from.nil? || to.nil?
+          @date_range = resolve_date_range
+        end
 
-          from..to
+        def resolve_date_range
+          business_date = parse_date(params[:business_date])
+          from = parse_date(params[:from]) || business_date
+          to = parse_date(params[:to]) || business_date
+          return from..to if from && to
+          return (from..) if from
+          return (..to) if to
+
+          nil
         end
 
         def settlement_params

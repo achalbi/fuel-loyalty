@@ -33,8 +33,12 @@ module Settlement
       assert_equal "prior_settlement", petrol_row.opening_source
       assert_equal BigDecimal("105.5"), petrol_row.unit_price
 
+      assert_equal BigDecimal("5500"), petrol_row.prior_closing_reading
+      assert_equal Date.new(2026, 7, 20), petrol_row.prior_closing_date
+
       diesel_row = result.settlement.nozzle_readings.find { |r| r.fuel_pump_nozzle_id == fuel_pump_nozzles(:two).id }
       assert_nil diesel_row.opening_reading
+      assert_nil diesel_row.prior_closing_reading
       assert_equal "manual", diesel_row.opening_source
 
       assert_equal 1, result.settlement.discount_lines.size
@@ -107,6 +111,38 @@ module Settlement
       result = Builder.call(user: @staff, fuel_pump_id: other_pump.id, business_date: "2026-07-21")
 
       assert_equal other_pump.id, result.fuel_pump.id
+    end
+
+    # The pump kept selling on the days nobody settled, so the offer is stale by
+    # exactly that gap — carry the date it came from rather than let a week-old
+    # figure read as yesterday's.
+    test "auto-pops across a gap of unsettled days and reports how wide the gap is" do
+      DailySettlement.create!(
+        fuel_pump: @pump, business_date: Date.new(2026, 7, 15), recorded_by: @staff, status: "submitted",
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 4000, closing_reading: 5500, unit_price: 100 }]
+      )
+
+      result = Builder.call(user: @staff, business_date: "2026-07-21")
+
+      petrol_row = result.settlement.nozzle_readings.find { |r| r.fuel_pump_nozzle_id == @petrol.id }
+      assert_equal BigDecimal("5500"), petrol_row.opening_reading
+      assert_equal Date.new(2026, 7, 15), petrol_row.prior_closing_date
+      assert_equal 5, petrol_row.unsettled_days_before(Date.new(2026, 7, 21))
+      assert_equal 0, petrol_row.unsettled_days_before(Date.new(2026, 7, 16))
+    end
+
+    # A draft is not a settled figure — the pump may still be selling against it.
+    test "ignores a draft settlement when auto-popping" do
+      DailySettlement.create!(
+        fuel_pump: @pump, business_date: Date.new(2026, 7, 20), recorded_by: @staff, status: "draft",
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 4000, closing_reading: 4900, unit_price: 100 }]
+      )
+
+      result = Builder.call(user: @staff, business_date: "2026-07-21")
+
+      petrol_row = result.settlement.nozzle_readings.find { |r| r.fuel_pump_nozzle_id == @petrol.id }
+      assert_nil petrol_row.opening_reading
+      assert_equal "manual", petrol_row.opening_source
     end
 
     test "reports an existing settlement for the pump/date/shift" do

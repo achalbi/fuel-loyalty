@@ -67,7 +67,7 @@
       <table class="table table-sm align-middle">
         <thead>
           <tr>
-            <th>Nozzle</th><th>Fuel</th><th class="text-end">Yesterday</th><th class="text-end">Today</th>
+            <th>Nozzle</th><th>Fuel</th><th class="text-end">Opening</th><th class="text-end">Closing</th>
             <th class="text-end">Testing</th><th class="text-center">Rollover</th>
             <th class="text-end">Net L</th><th class="text-end">₹/L</th><th class="text-end">Amount</th>
           </tr>
@@ -77,13 +77,29 @@
             <tr data-nozzle-row>
               <td>
                 <%= nr.hidden_field :fuel_pump_nozzle_id %>
-                <%= nr.hidden_field :opening_source %>
                 <%= nr.object.fuel_pump_nozzle&.display_name %>
               </td>
               <td><%= (nr.object.fuel_type_code_snapshot || nr.object.fuel_pump_nozzle&.fuel_type_code).to_s.upcase %></td>
-              <td style="min-width:8rem">
+              <%# Rule 1 — the last settled closing is the *default*, never a fact.
+                  Days can go by with nobody filing a sheet while the pump keeps
+                  selling, so the offered figure is only right when yesterday was
+                  settled; the FSM reads the meter and types over it otherwise.
+                  `opening_source` is not posted — the server decides whether this
+                  reading was inherited or corrected by comparing what came back
+                  against what it offered. %>
+              <td style="min-width:9rem">
                 <%= nr.number_field :opening_reading, step: "0.001", class: "form-control form-control-sm text-end",
-                      data: { opening: true }, readonly: (nr.object.opening_source == "prior_settlement") %>
+                      data: { opening: true, opening_auto: nr.object.prior_closing_reading&.to_s("F") } %>
+                <% prior_note = settlement_prior_closing_note(nr.object) %>
+                <% if prior_note %>
+                  <% gap_note = settlement_unsettled_gap_note(nr.object, @settlement.business_date) %>
+                  <div class="form-text text-end lh-sm mt-1<%= " text-warning-emphasis" if gap_note %>">
+                    <%= prior_note %>
+                    <% if gap_note %><br><%= gap_note %><% end %>
+                    <button type="button" class="btn btn-link btn-sm p-0 align-baseline d-none"
+                            data-opening-reset title="Put the last settled reading back">Undo edit</button>
+                  </div>
+                <% end %>
               </td>
               <td style="min-width:8rem">
                 <%= nr.number_field :closing_reading, step: "0.001", class: "form-control form-control-sm text-end", data: { closing: true } %>
@@ -98,6 +114,23 @@
                 <span class="d-none" data-unit-price><%= nr.object.unit_price.to_f %></span>
               </td>
               <td class="text-end" data-amount>—</td>
+            </tr>
+          <% end %>
+          <%# The draft resolves the pump from the caller's assignment ON the
+              business date, so an FSM with no assignment for that day lands
+              here with no rows and nothing to type into. Say why. %>
+          <% if @settlement.nozzle_readings.reject(&:marked_for_destruction?).none? %>
+            <% nozzle_pump = @fuel_pump || @settlement.fuel_pump %>
+            <tr>
+              <td colspan="9" class="text-body-secondary small">
+                <% if nozzle_pump %>
+                  <%= nozzle_pump.display_name %> has no active nozzles, so there are no readings to enter.
+                  Ask your manager to add its nozzles.
+                <% else %>
+                  No pump is assigned to you for <%= @settlement.business_date %>, so there are no nozzles to read.
+                  Choose the pump you worked above and load the draft again.
+                <% end %>
+              </td>
             </tr>
           <% end %>
         </tbody>

@@ -9,8 +9,14 @@ class AdminSettlementsRepository(
     private val api: AdminSettlementsApi,
     private val json: Json,
 ) {
-    suspend fun list(businessDate: String? = null, fuelPumpId: Long? = null, status: String? = null): ApiResult<AdminSettlementListResponse> =
-        apiCall(json) { api.list(businessDate, fuelPumpId, status) }
+    suspend fun list(
+        from: String? = null,
+        to: String? = null,
+        fuelPumpId: Long? = null,
+        status: String? = null,
+        query: String? = null,
+    ): ApiResult<AdminSettlementListResponse> =
+        apiCall(json) { api.list(from = from, to = to, fuelPumpId = fuelPumpId, status = status, query = query) }
 
     suspend fun show(id: Long): ApiResult<AdminSettlementDto> =
         apiCall(json) { api.show(id) }

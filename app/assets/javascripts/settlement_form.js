@@ -76,6 +76,32 @@
     set("[data-shortage]", money(shortage));
   };
 
+  // The opening reading is auto-filled from the last settled sheet and the FSM
+  // may type over it (rule 1). Once they have, reveal an undo: a mistyped meter
+  // reading is otherwise unrecoverable without reloading the form and throwing
+  // away everything else already entered.
+  const syncOpeningOverrides = (form) => {
+    form.querySelectorAll("[data-nozzle-row]").forEach((row) => {
+      const input = row.querySelector("[data-opening]");
+      const reset = row.querySelector("[data-opening-reset]");
+      if (!input || !reset) return;
+
+      const auto = input.dataset.openingAuto;
+      const overridden = auto !== undefined && auto !== "" && parseFloat(input.value) !== parseFloat(auto);
+      reset.classList.toggle("d-none", !overridden);
+    });
+  };
+
+  const resetOpening = (row, form) => {
+    const input = row.querySelector("[data-opening]");
+    if (!input || !input.dataset.openingAuto) return;
+
+    input.value = input.dataset.openingAuto;
+    recompute(form);
+    syncOpeningOverrides(form);
+    input.focus();
+  };
+
   // Rows the FSM can add on the spot: a discount missed at capture (item 11), a
   // digital means we don't seed (item 10), cash taken out (item 12). Each
   // section carries a <template> whose inputs are named here, so the nested
@@ -121,12 +147,17 @@
 
   const init = () => {
     document.querySelectorAll("[data-settlement-form]").forEach((form) => {
-      form.addEventListener("input", () => recompute(form));
-      form.addEventListener("change", () => recompute(form));
+      form.addEventListener("input", () => { recompute(form); syncOpeningOverrides(form); });
+      form.addEventListener("change", () => { recompute(form); syncOpeningOverrides(form); });
+      form.addEventListener("click", (event) => {
+        const trigger = event.target.closest("[data-opening-reset]");
+        if (trigger) resetOpening(trigger.closest("[data-nozzle-row]"), form);
+      });
       REPEATABLE_SECTIONS.forEach((config) => {
         form.querySelector(config.trigger)?.addEventListener("click", () => addRow(form, config));
       });
       recompute(form);
+      syncOpeningOverrides(form);
     });
   };
 
