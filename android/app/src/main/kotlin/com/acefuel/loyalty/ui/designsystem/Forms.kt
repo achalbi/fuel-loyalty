@@ -9,6 +9,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -17,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -148,5 +151,45 @@ fun PickerField(
                     onClick = onClick,
                 ),
         )
+    }
+}
+
+/**
+ * A tap-to-open dropdown built on the stable [DropdownMenu] (no experimental
+ * ExposedDropdown APIs). The field is a [PickerField]; the menu anchors to the
+ * wrapping [Box]. Promoted out of AttendanceScreen so every form picks options
+ * the same way.
+ */
+@Composable
+fun <T> LabeledDropdown(
+    label: String,
+    selectedLabel: String,
+    options: List<Pair<T, String>>,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onSelect: (T) -> Unit,
+) {
+    val haptics = rememberHaptics()
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier) {
+        PickerField(
+            label = label,
+            value = selectedLabel,
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = enabled,
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { (value, text) ->
+                DropdownMenuItem(
+                    text = { Text(text) },
+                    onClick = {
+                        haptics.tick()
+                        onSelect(value)
+                        expanded = false
+                    },
+                )
+            }
+        }
     }
 }

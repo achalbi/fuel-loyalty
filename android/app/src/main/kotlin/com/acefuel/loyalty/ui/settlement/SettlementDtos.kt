@@ -40,6 +40,12 @@ data class DraftNozzleDto(
     @SerialName("fuel_type") val fuelType: String? = null,
     @SerialName("opening_reading") val openingReading: Double? = null,
     @SerialName("opening_source") val openingSource: String? = null,
+    // What the last settled sheet closed this nozzle at, and the date it was
+    // settled. The opening above is auto-filled from it, but only as a default:
+    // a pump left unsettled for days kept selling, so the FSM may have to read
+    // the meter and type over it. Showing both is what makes that judgeable.
+    @SerialName("prior_closing_reading") val priorClosingReading: Double? = null,
+    @SerialName("prior_closing_date") val priorClosingDate: String? = null,
     @SerialName("unit_price") val unitPrice: Double? = null,
 )
 
@@ -89,6 +95,9 @@ data class SettlementSummaryDto(
     val status: String,
     val locked: Boolean = false,
     @SerialName("fuel_pump") val fuelPump: String? = null,
+    // The admin list searches by FSM (rule 17), so a result row has to say whose
+    // sheet it is — otherwise every hit costs a tap to attribute.
+    @SerialName("fsm_name") val fsmName: String? = null,
     @SerialName("total_fuel_amount") val totalFuelAmount: Double = 0.0,
     @SerialName("final_amount_to_settle") val finalAmountToSettle: Double = 0.0,
     @SerialName("shortage_amount") val shortageAmount: Double = 0.0,
@@ -107,6 +116,9 @@ data class NozzleReadingDto(
     @SerialName("display_name") val displayName: String? = null,
     @SerialName("fuel_type_code") val fuelTypeCode: String? = null,
     @SerialName("opening_reading") val openingReading: Double? = null,
+    @SerialName("opening_source") val openingSource: String? = null,
+    @SerialName("prior_closing_reading") val priorClosingReading: Double? = null,
+    @SerialName("prior_closing_date") val priorClosingDate: String? = null,
     @SerialName("closing_reading") val closingReading: Double? = null,
     @SerialName("testing_litres") val testingLitres: Double? = null,
     val rollover: Boolean = false,
@@ -123,6 +135,8 @@ data class LubeLineDto(
     val quantity: Int = 0,
     @SerialName("unit_price") val unitPrice: Double? = null,
     val amount: Double? = null,
+    @SerialName("opening_stock") val openingStock: Int? = null,
+    @SerialName("closing_stock") val closingStock: Int? = null,
 )
 
 @Serializable
@@ -139,6 +153,9 @@ data class SettlementDiscountDto(
 data class CreditLineDto(
     val id: Long? = null,
     @SerialName("credit_type") val creditType: String = "fleet_otp",
+    // Server-rendered label ("Fleet/OTP"); humanizing the enum here would print
+    // "Fleet otp" where every other surface says "Fleet/OTP".
+    @SerialName("credit_type_label") val creditTypeLabel: String? = null,
     val litres: Double = 0.0,
     val amount: Double = 0.0,
     val reference: String? = null,
@@ -189,6 +206,16 @@ data class StockReceiptDto(
     @SerialName("litres_received") val litresReceived: Double = 0.0,
 )
 
+/** D8 — tank KL readings either side of a tanker drop. */
+@Serializable
+data class DecantationDto(
+    val id: Long? = null,
+    @SerialName("fuel_type_code") val fuelTypeCode: String? = null,
+    @SerialName("tank_label") val tankLabel: String? = null,
+    @SerialName("opening_kl") val openingKl: Double? = null,
+    @SerialName("closing_kl") val closingKl: Double? = null,
+)
+
 @Serializable
 data class RateComparisonDto(
     val id: Long? = null,
@@ -228,7 +255,6 @@ data class NozzleReadingRequest(
     @SerialName("closing_reading") val closingReading: String? = null,
     @SerialName("testing_litres") val testingLitres: String? = null,
     val rollover: Boolean = false,
-    @SerialName("opening_source") val openingSource: String? = null,
 )
 
 @Serializable

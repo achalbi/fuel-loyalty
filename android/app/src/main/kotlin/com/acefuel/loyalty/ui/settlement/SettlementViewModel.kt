@@ -2,7 +2,9 @@ package com.acefuel.loyalty.ui.settlement
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.acefuel.loyalty.core.data.StaffRepository
 import com.acefuel.loyalty.core.network.ApiResult
+import com.acefuel.loyalty.core.network.dto.PumpDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,13 +19,21 @@ data class NozzleRow(
     val fuelType: String,
     val unitPrice: Double,
     val opening: String,
-    val openingReadonly: Boolean,
-    val openingSource: String?,
+    // The last settled closing for this nozzle and the date it was settled.
+    // `opening` starts as that figure but is always typeable: days can go by
+    // with nobody filing a sheet while the pump keeps selling, and then only the
+    // operator can say where the meter actually is. The server decides whether
+    // what comes back was inherited or corrected, so nothing is sent about it.
+    val priorClosing: Double?,
+    val priorClosingDate: String?,
     val closing: String = "",
     val testing: String = "0",
     val rollover: Boolean = false,
     val existingId: Long? = null,
-)
+) {
+    val openingOverridden: Boolean
+        get() = priorClosing != null && opening.trim().toDoubleOrNull() != priorClosing
+}
 
 data class LubeRow(val productId: Long, val name: String, val unitPrice: Double, val qty: String = "0", val existingId: Long? = null)
 data class DiscountRow(val visitEntryId: Long?, val transport: String?, val litres: Double, val discount: Double, val driver: String?, val existingId: Long? = null)
@@ -66,6 +76,13 @@ data class SettlementUiState(
     val receipts: List<ReceiptRow> = emptyList(),
     val expenses: List<ExpenseRow> = emptyList(),
     val notes: String = "",
+    // The pump/date chooser (mirrors the web draft chooser). `pumps` is the
+    // catalog from /my_pump; the two `*Choice` fields are what the FSM has
+    // staged, applied only when they tap "Load draft" so a mis-tap can't throw
+    // away readings already typed.
+    val pumps: List<PumpDto> = emptyList(),
+    val pumpChoice: Long? = null,
+    val dateChoice: String = "",
     val error: String? = null,
     val savedMessage: String? = null,
 ) {
@@ -89,23 +106,74 @@ data class SettlementUiState(
     val shortage: Double get() = finalToSettle - countedCash
 
     val canSubmit: Boolean get() = !submitting && !loading && !locked && nozzles.any { it.closing.isNotBlank() }
+
+    /** The staged pump/date differ from the draft on screen — offer "Load draft". */
+    val draftChoiceChanged: Boolean
+        get() = (pumpChoice != null && pumpChoice != fuelPumpId) ||
+            (dateChoice.isNotBlank() && dateChoice != businessDate)
+
+    /**
+     * Why the nozzle grid is empty, or null when it isn't. An FSM with no pump
+     * assignment for the business date used to get a silent blank section with
+     * nothing to type into and no way out.
+     */
+    val noNozzlesReason: String?
+        get() = when {
+            loading || nozzles.isNotEmpty() -> null
+            fuelPumpId == null ->
+                "No pump is assigned to you for $businessDate, so there are no nozzles to read. " +
+                    "Choose the pump you worked above and tap Load draft."
+            else ->
+                "${pumpName ?: "This pump"} has no active nozzles, so there are no readings to enter. " +
+                    "Ask your manager to add its nozzles."
+        }
 }
 
 class SettlementViewModel(
     private val repository: SettlementRepository,
-    private val fuelPumpId: Long?,
-    private val businessDate: String?,
+    private val staffRepository: StaffRepository,
+    fuelPumpId: Long?,
+    businessDate: String?,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettlementUiState())
     val state: StateFlow<SettlementUiState> = _state.asStateFlow()
 
-    init { load() }
+    // What the draft on screen was loaded for. Mutable because the screen
+    // carries a chooser: the server resolves the pump from the caller's
+    // assignment ON the business date, and an FSM with no assignment for that
+    // date (only a dated one for today, say) otherwise gets a pumpless draft —
+    // no nozzle rows, nothing to submit.
+    private var loadedPumpId: Long? = fuelPumpId
+    private var loadedDate: String? = businessDate
+
+    init {
+        loadPumps()
+        load()
+    }
+
+    /**
+     * The pump catalog for the chooser, plus today's assignment as the default
+     * selection. Best-effort: a failure here leaves the chooser empty but must
+     * never block the draft itself.
+     */
+    private fun loadPumps() {
+        viewModelScope.launch {
+            val result = staffRepository.myPump()
+            if (result !is ApiResult.Success) return@launch
+            _state.update {
+                it.copy(
+                    pumps = result.data.pumps.filter { pump -> pump.active },
+                    pumpChoice = it.pumpChoice ?: result.data.fuelPumpId,
+                )
+            }
+        }
+    }
 
     private fun load() {
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            when (val draft = repository.newDraft(fuelPumpId, businessDate)) {
+            when (val draft = repository.newDraft(loadedPumpId, loadedDate)) {
                 is ApiResult.Success -> {
                     val existing = draft.data.existingSettlementId
                     if (existing != null) {
@@ -129,9 +197,14 @@ class SettlementViewModel(
     }
 
     private fun hydrateDraft(draft: SettlementDraftResponse) {
-        _state.update {
+        _state.update { prev ->
             SettlementUiState(
                 loading = false,
+                // The chooser survives every (re)hydrate — it is how the FSM got
+                // here and how they get to another pump or date.
+                pumps = prev.pumps,
+                pumpChoice = draft.fuelPump?.id ?: prev.pumpChoice,
+                dateChoice = draft.businessDate,
                 businessDate = draft.businessDate,
                 fuelPumpId = draft.fuelPump?.id,
                 pumpName = draft.fuelPump?.displayName,
@@ -143,8 +216,8 @@ class SettlementViewModel(
                         fuelType = n.fuelType ?: n.fuelTypeCode?.uppercase() ?: "",
                         unitPrice = n.unitPrice ?: 0.0,
                         opening = n.openingReading?.let(::trimNum) ?: "",
-                        openingReadonly = n.openingSource == "prior_settlement",
-                        openingSource = n.openingSource,
+                        priorClosing = n.priorClosingReading,
+                        priorClosingDate = n.priorClosingDate,
                     )
                 },
                 lubes = draft.lubeProducts.map { LubeRow(it.productId, it.name, it.unitPrice ?: 0.0) },
@@ -187,9 +260,12 @@ class SettlementViewModel(
     ) {
         val savedLubes = d.lubeLines.associateBy { it.productId }
         val savedDenoms = d.cashDenominations.associateBy { it.denomination }
-        _state.update {
+        _state.update { prev ->
             SettlementUiState(
                 loading = false,
+                pumps = prev.pumps,
+                pumpChoice = d.fuelPumpId ?: prev.pumpChoice,
+                dateChoice = d.businessDate,
                 settlementId = d.id,
                 locked = d.locked,
                 businessDate = d.businessDate,
@@ -203,8 +279,9 @@ class SettlementViewModel(
                     NozzleRow(
                         nozzleId = n.fuelPumpNozzleId, label = n.displayName ?: "Nozzle",
                         fuelType = n.fuelTypeCode?.uppercase() ?: "", unitPrice = n.unitPrice ?: 0.0,
-                        opening = n.openingReading?.let(::trimNum) ?: "", openingReadonly = false,
-                        openingSource = null, closing = n.closingReading?.let(::trimNum) ?: "",
+                        opening = n.openingReading?.let(::trimNum) ?: "",
+                        priorClosing = n.priorClosingReading, priorClosingDate = n.priorClosingDate,
+                        closing = n.closingReading?.let(::trimNum) ?: "",
                         testing = n.testingLitres?.let(::trimNum) ?: "0", rollover = n.rollover, existingId = n.id,
                     )
                 },
@@ -274,6 +351,9 @@ class SettlementViewModel(
         _state.update { it.copy(nozzles = it.nozzles.mapIndexed { idx, r -> if (idx == i) f(r) else r }) }
 
     fun onOpening(i: Int, v: String) = editNozzle(i) { it.copy(opening = v) }
+    fun resetOpening(i: Int) = editNozzle(i) { row ->
+        row.priorClosing?.let { row.copy(opening = trimNum(it)) } ?: row
+    }
     fun onClosing(i: Int, v: String) = editNozzle(i) { it.copy(closing = v) }
     fun onTesting(i: Int, v: String) = editNozzle(i) { it.copy(testing = v) }
     fun onRollover(i: Int, v: Boolean) = editNozzle(i) { it.copy(rollover = v) }
@@ -321,6 +401,19 @@ class SettlementViewModel(
     private fun editExpense(i: Int, f: (ExpenseRow) -> ExpenseRow) =
         _state.update { it.copy(expenses = it.expenses.mapIndexed { idx, r -> if (idx == i) f(r) else r }) }
     fun onNotes(v: String) = _state.update { it.copy(notes = v) }
+
+    // ---- pump / date chooser ----
+    fun onPumpChoice(id: Long) = _state.update { it.copy(pumpChoice = id) }
+    fun onDateChoice(date: String) = _state.update { it.copy(dateChoice = date) }
+
+    /** Re-hydrate the form for the staged pump/date. Discards unsaved edits. */
+    fun loadChosenDraft() {
+        val s = _state.value
+        if (s.loading || s.submitting || !s.draftChoiceChanged) return
+        loadedPumpId = s.pumpChoice
+        loadedDate = s.dateChoice.ifBlank { null }
+        load()
+    }
 
     fun consumeError() = _state.update { it.copy(error = null) }
     fun consumeSaved() = _state.update { it.copy(savedMessage = null) }
@@ -373,7 +466,7 @@ class SettlementViewModel(
             NozzleReadingRequest(
                 id = it.existingId, fuelPumpNozzleId = it.nozzleId,
                 openingReading = it.opening.ifBlank { null }, closingReading = it.closing.ifBlank { null },
-                testingLitres = it.testing.ifBlank { "0" }, rollover = it.rollover, openingSource = it.openingSource,
+                testingLitres = it.testing.ifBlank { "0" }, rollover = it.rollover,
             )
         },
         lubeLines = s.lubes.filter { (it.qty.toIntOrNull() ?: 0) > 0 || it.existingId != null }

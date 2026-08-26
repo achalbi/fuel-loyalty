@@ -17,7 +17,7 @@ module Settlement
     def snapshot(settlement)
       parent = PARENT_FIELDS.index_with { |field| stringify(settlement.public_send(field)) }
       parent.merge(
-        "nozzle_readings" => fingerprint(settlement.nozzle_readings, %i[fuel_pump_nozzle_id closing_reading testing_litres net_litres_sold unit_price amount]),
+        "nozzle_readings" => fingerprint(settlement.nozzle_readings, %i[fuel_pump_nozzle_id opening_reading closing_reading testing_litres net_litres_sold unit_price amount]),
         "lube_lines" => fingerprint(settlement.lube_lines, %i[product_id quantity unit_price amount]),
         "discount_lines" => fingerprint(settlement.discount_lines, %i[visit_entry_id litres discount_amount]),
         "credit_lines" => fingerprint(settlement.credit_lines, %i[credit_type litres amount reference]),

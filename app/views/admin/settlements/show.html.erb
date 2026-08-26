@@ -3,7 +3,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h1 class="h3 mb-0"><%= @settlement.fuel_pump&.display_name %> · <%= @settlement.business_date %></h1>
-    <span class="badge text-bg-<%= @settlement.reconciled? ? "success" : (@settlement.submitted? ? "primary" : "secondary") %>"><%= @settlement.status.humanize %></span>
+    <span class="badge <%= settlement_status_badge_class(@settlement) %>"><%= @settlement.status.humanize %></span>
     <span class="text-muted small">
       FSM: <%= @settlement.recorded_by&.display_name.presence || @settlement.fsm_name_snapshot %><% if @settlement.entered_on_behalf? %> · entered by <%= @settlement.entered_by.display_name %><% end %>
     </span>
@@ -18,52 +18,12 @@
   </div>
 </div>
 
-<div class="row g-3 mb-4">
-  <% [["Fuel", @settlement.total_fuel_amount], ["Lubes", @settlement.total_lube_amount],
-      ["Discounts", @settlement.total_discount_amount], ["Credit", @settlement.total_credit_amount],
-      ["Digital receipts", @settlement.total_digital_receipt_amount], ["Cash taken out", @settlement.total_expense_amount],
-      ["Final to settle", @settlement.final_amount_to_settle], ["Counted cash", @settlement.counted_cash_amount],
-      ["Shortage", @settlement.shortage_amount]].each do |label, value| %>
-    <div class="col-6 col-md-3">
-      <div class="card h-100"><div class="card-body py-2">
-        <div class="small text-muted"><%= label %></div>
-        <div class="fw-semibold"><%= number_to_currency(value, unit: "₹") %></div>
-      </div></div>
-    </div>
-  <% end %>
-</div>
+<%# The sheet exactly as the FSM entered it — same sections, same order, same
+    columns, read-only. Reviewing a shift means checking what was written down,
+    which a rolled-up summary cannot support. %>
+<%= render "shared/settlement_sheet", settlement: @settlement %>
 
-<h2 class="h5">Nozzle readings</h2>
-<div class="table-responsive mb-4">
-  <table class="table table-sm">
-    <thead><tr><th>Nozzle</th><th>Fuel</th><th class="text-end">Open</th><th class="text-end">Close</th><th class="text-end">Testing</th><th class="text-end">Net L</th><th class="text-end">₹/L</th><th class="text-end">Amount</th></tr></thead>
-    <tbody>
-      <% @settlement.nozzle_readings.each do |r| %>
-        <tr>
-          <td><%= r.fuel_pump_nozzle&.display_name %></td>
-          <td><%= r.fuel_type_code_snapshot.to_s.upcase %></td>
-          <td class="text-end"><%= r.opening_reading %></td>
-          <td class="text-end"><%= r.closing_reading %></td>
-          <td class="text-end"><%= r.testing_litres %></td>
-          <td class="text-end"><%= r.net_litres_sold %></td>
-          <td class="text-end"><%= number_to_currency(r.unit_price, unit: "₹") %></td>
-          <td class="text-end"><%= number_to_currency(r.amount, unit: "₹") %></td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
-</div>
-
-<% if @settlement.discount_lines.any? %>
-  <h2 class="h5">Discounts</h2>
-  <ul class="mb-4">
-    <% @settlement.discount_lines.each do |d| %>
-      <li><%= d.transport_name.presence || d.driver_name.presence || "—" %>: <%= d.litres %> L → <%= number_to_currency(d.discount_amount, unit: "₹") %><% if d.visit_entry_id %> <span class="badge text-bg-light">linked</span><% end %></li>
-    <% end %>
-  </ul>
-<% end %>
-
-<h2 class="h5">Audit trail</h2>
+<h2 class="h5 mt-4">Audit trail</h2>
 <% if @changes.any? %>
   <div class="vstack gap-2 mb-4">
     <% @changes.each do |change| %>

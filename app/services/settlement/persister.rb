@@ -29,6 +29,7 @@ module Settlement
         # in settlement_changes instead.
         @settlement.entered_by ||= @actor if @settlement.new_record?
         snapshot_prices!
+        stamp_opening_readings!
         stamp_submission
         @settlement.save!
 
@@ -56,6 +57,26 @@ module Settlement
         fuel_code = fuel_by_nozzle[reading.fuel_pump_nozzle_id]
         reading.fuel_type_code_snapshot = fuel_code if reading.fuel_type_code_snapshot.blank?
         reading.unit_price = FuelPricing.current_price(fuel_code) if reading.unit_price.blank?
+      end
+    end
+
+    # Rule 1 — what the last settled sheet closed at is the *offer* for today's
+    # opening, and whether the FSM took that offer or overrode it is decided
+    # here, from the database. `opening_source` is the audit answer to "was this
+    # meter reading typed or inherited?", so it is never read off the request:
+    # a client that names its own source can call any correction an inheritance.
+    # The offered figure is snapshotted once, when the row is created, like
+    # unit_price: a sheet filed later for an earlier date must not rewrite what
+    # an existing row was shown at the time, and a legacy row that predates the
+    # snapshot is left alone rather than relabelled from today's history.
+    def stamp_opening_readings!
+      @settlement.nozzle_readings.reject(&:marked_for_destruction?).each do |reading|
+        if reading.new_record?
+          prior = DailySettlement.prior_closing(reading.fuel_pump_nozzle_id, @settlement.business_date)
+          reading.prior_closing_reading = prior&.reading
+          reading.prior_closing_date = prior&.business_date
+        end
+        reading.derive_opening_source!
       end
     end
 

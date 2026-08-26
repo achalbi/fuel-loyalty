@@ -1,9 +1,10 @@
 module Settlement
   # Builds a pre-filled (unsaved) settlement draft for a pump/date/shift:
-  # active nozzles with yesterday's closing auto-popped as today's opening
-  # (business rule 1) and the catalog selling price snapshotted, plus the
-  # same-day B2 discount lines (D3), the lube picklist (D2), and the cash
-  # denomination grid (D7). Returns the option lists the "new" API/UI needs.
+  # active nozzles with the last settled closing auto-popped as today's opening
+  # (business rule 1 — a default the FSM may correct) and the catalog selling
+  # price snapshotted, plus the same-day B2 discount lines (D3), the lube
+  # picklist (D2), and the cash denomination grid (D7). Returns the option lists
+  # the "new" API/UI needs.
   class Builder
     Result = Struct.new(
       :settlement, :fuel_pump, :lube_products, :denominations, :existing,
@@ -81,16 +82,22 @@ module Settlement
       )
     end
 
+    # Rule 1 — offer the last settled closing as today's opening, and carry the
+    # date it came from so the FSM can see whether it is yesterday's figure or a
+    # stale one. It is only ever the default: the meter kept running through any
+    # day nobody settled, and the operator is the one who can read where it is.
     def build_nozzle_readings(settlement)
       @fuel_pump.nozzles.active.ordered.each do |nozzle|
-        prior = DailySettlement.prior_closing_reading(nozzle.id, @business_date)
-        settlement.nozzle_readings.build(
+        prior = DailySettlement.prior_closing(nozzle.id, @business_date)
+        reading = settlement.nozzle_readings.build(
           fuel_pump_nozzle: nozzle,
           fuel_type_code_snapshot: nozzle.fuel_type_code,
-          opening_reading: prior,
-          opening_source: prior.present? ? "prior_settlement" : "manual",
+          opening_reading: prior&.reading,
+          prior_closing_reading: prior&.reading,
+          prior_closing_date: prior&.business_date,
           unit_price: FuelPricing.current_price(nozzle.fuel_type_code)
         )
+        reading.derive_opening_source!
       end
     end
 
