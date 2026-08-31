@@ -1,0 +1,3 @@
+Correct an opening meter reading, and find any past settlement.
+
+The opening reading still fills in from the last settled sheet, but you can now type over it — it shows which day it came from and warns when days went unsettled, so a meter that kept running isn't silently wrong. Admins get the full settlement sheet on the phone, and can find a past day by date range, status, or by typing a transporter, vehicle, driver or mobile. Dark-mode panels that showed white on white are fixed.
