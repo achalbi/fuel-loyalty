@@ -15,6 +15,7 @@ class SettlementDiscountLine < ApplicationRecord
     new(
       visit_entry: entry,
       transport_name: entry.transport_name,
+      vehicle_number: entry.vehicle_number,
       litres: entry.litres,
       discount_amount: entry.discount_amount,
       driver_name: entry.driver_name,
@@ -31,5 +32,11 @@ class SettlementDiscountLine < ApplicationRecord
   def normalize
     self.litres = 0 if litres.blank?
     self.discount_amount = 0 if discount_amount.blank?
+    # Both stored the way `visit_entries` stores them (A-Z0-9 for a plate,
+    # digits for a mobile), so the admin console's free-text lookup can put the
+    # typed query through the same normalizers and have "KA-01 AA 0001" and
+    # "+91 98765 43210" find what was captured (rule 17).
+    self.vehicle_number = Vehicle.normalize_vehicle_number(vehicle_number).presence
+    self.driver_phone_number = Customer.normalize_phone_number(driver_phone_number).presence
   end
 end

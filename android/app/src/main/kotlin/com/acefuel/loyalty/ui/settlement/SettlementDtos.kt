@@ -144,9 +144,13 @@ data class SettlementDiscountDto(
     val id: Long? = null,
     @SerialName("visit_entry_id") val visitEntryId: Long? = null,
     @SerialName("transport_name") val transportName: String? = null,
+    // Snapshotted from the capture, never sent back up: the server stamps it
+    // from the visit entry the line was pulled from (business rule 17).
+    @SerialName("vehicle_number") val vehicleNumber: String? = null,
     val litres: Double = 0.0,
     @SerialName("discount_amount") val discountAmount: Double = 0.0,
     @SerialName("driver_name") val driverName: String? = null,
+    @SerialName("driver_phone_number") val driverPhoneNumber: String? = null,
 )
 
 @Serializable

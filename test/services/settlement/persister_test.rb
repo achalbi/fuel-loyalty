@@ -104,7 +104,74 @@ module Settlement
       assert_equal "prior_settlement", reading.opening_source
     end
 
+    # Rule 17 searches a past sheet by the vehicle on its discount lines, and no
+    # client posts a plate — the native app's discount payload is transporter,
+    # litres and money. The server has to take it from the visit the line was
+    # snapshotted from, or the lookup finds nothing for anything filed on a phone.
+    test "stamps the discount line's vehicle from the visit it was pulled from" do
+      entry = visit_entry(vehicle: "KA-05 MJ 4455", transport: "NL Roadways")
+      settlement = DailySettlement.new(fuel_pump: @pump, business_date: Date.new(2026, 7, 21))
+
+      result = Persister.call(
+        settlement: settlement, actor: @staff,
+        attributes: {
+          status: "submitted",
+          nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: "0", closing_reading: "10" }],
+          # Exactly what the phone sends: no plate, no driver.
+          discount_lines_attributes: [{ visit_entry_id: entry.id, transport_name: "NL Roadways", litres: "40", discount_amount: "120" }],
+        }
+      )
+
+      assert_equal "KA05MJ4455", result.settlement.discount_lines.first.vehicle_number
+    end
+
+    # A line the FSM adds at settlement was never a capture, so there is no plate
+    # to snapshot and none may be invented.
+    test "a discount line added at settlement keeps no vehicle" do
+      result = Persister.call(
+        settlement: DailySettlement.new(fuel_pump: @pump, business_date: Date.new(2026, 7, 21)), actor: @staff,
+        attributes: {
+          status: "submitted",
+          nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: "0", closing_reading: "10" }],
+          discount_lines_attributes: [{ transport_name: "Walk-in", litres: "5", discount_amount: "10" }],
+        }
+      )
+
+      assert_nil result.settlement.discount_lines.first.vehicle_number
+    end
+
+    # The snapshot is what makes a later B2 edit auditable — re-saving the sheet
+    # must not quietly pull the corrected plate in over it.
+    test "a plate corrected on the visit afterwards does not rewrite the stamped line" do
+      entry = visit_entry(vehicle: "KA05MJ4455", transport: "NL Roadways")
+      settlement = Persister.call(
+        settlement: DailySettlement.new(fuel_pump: @pump, business_date: Date.new(2026, 7, 21)), actor: @staff,
+        attributes: {
+          status: "draft",
+          nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: "0", closing_reading: "10" }],
+          discount_lines_attributes: [{ visit_entry_id: entry.id, litres: "40", discount_amount: "120" }],
+        }
+      ).settlement
+      line = settlement.discount_lines.first
+      entry.update!(vehicle_number: "KA05MJ9999")
+
+      Persister.call(
+        settlement: settlement, actor: @staff,
+        attributes: { discount_lines_attributes: [{ id: line.id, discount_amount: "150" }] }
+      )
+
+      assert_equal "KA05MJ4455", line.reload.vehicle_number
+      assert_equal BigDecimal("150"), line.discount_amount
+    end
+
     private
+
+    def visit_entry(vehicle:, transport:)
+      VisitEntry.create!(
+        user: @staff, fuel_pump: @pump, entry_date: Date.new(2026, 7, 21),
+        vehicle_number: vehicle, litres: 40, discount_amount: 120, transport_name: transport
+      )
+    end
 
     def prior_settlement(closing:, on:)
       DailySettlement.create!(

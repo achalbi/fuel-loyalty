@@ -56,6 +56,7 @@ module Api
         def discount_line(row)
           {
             visit_entry_id: row.visit_entry_id, transport_name: row.transport_name,
+            vehicle_number: row.vehicle_number,
             litres: f(row.litres), discount_amount: f(row.discount_amount),
             driver_name: row.driver_name, driver_phone_number: row.driver_phone_number,
             manager_name: row.manager_name, manager_phone_number: row.manager_phone_number,

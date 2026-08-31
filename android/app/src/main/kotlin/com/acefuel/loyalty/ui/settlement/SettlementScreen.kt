@@ -149,7 +149,13 @@ fun SettlementScreen(
                 Text("No same-day discounts captured for this pump.", style = MaterialTheme.typography.bodySmall)
             }
             state.discounts.forEach { d ->
-                Text("• ${d.transport ?: d.driver ?: "—"} — ${trim(d.litres)} L → ${money(d.discount)}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    // The plate is on the web sheet's discount row and is one of
+                    // the things a past sheet is searched by (rule 17), so it
+                    // belongs on the line the FSM checks before submitting.
+                    "• ${d.transport ?: d.driver ?: "—"}${d.vehicle?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""} — ${trim(d.litres)} L → ${money(d.discount)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
             state.addedDiscounts.forEachIndexed { i, d ->
                 Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {

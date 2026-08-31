@@ -217,8 +217,9 @@ Response `200`:
     { "product_id": 6, "name": "10W30 800ml", "selling_price": 350.0, "opening_stock": 42.0 }
   ],
   "discount_lines": [
-    { "customer_entry_id": 55, "transport_name": "ABC Logistics", "litres": 136.0,
-      "discount_amount": 272.0, "driver_name": "Ravi", "driver_mobile": "9800000000",
+    { "visit_entry_id": 55, "transport_name": "ABC Logistics", "vehicle_number": "KA05MJ4455",
+      "litres": 136.0, "discount_amount": 272.0,
+      "driver_name": "Ravi", "driver_phone_number": "9800000000",
       "manager_name": null, "owner_name": null }
   ],
   "fuel_types_for_stock": [ { "code": "ms", "name": "MS" }, { "code": "hsd", "name": "HSD" } ],

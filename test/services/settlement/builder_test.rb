@@ -44,6 +44,9 @@ module Settlement
       assert_equal 1, result.settlement.discount_lines.size
       assert_equal "NL Roadways", result.settlement.discount_lines.first.transport_name
       assert_equal BigDecimal("120"), result.settlement.discount_lines.first.discount_amount
+      # The plate rides along with the rest of the capture's identity, which is
+      # what lets an admin find this sheet by vehicle later (rule 17).
+      assert_equal "TN01AA1111", result.settlement.discount_lines.first.vehicle_number
 
       assert_includes result.lube_products.map(&:id), @lube.id
       assert_equal SettlementCashDenomination::DENOMINATIONS, result.denominations

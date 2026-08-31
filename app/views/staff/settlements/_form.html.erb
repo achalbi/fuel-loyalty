@@ -175,7 +175,7 @@
     <h2 class="h5">Discounts <span class="text-muted small">(pulled from today's visits — add any that were missed)</span></h2>
     <div class="table-responsive<%= " d-none" if @settlement.discount_lines.reject(&:marked_for_destruction?).none? %>" data-discount-table>
         <table class="table table-sm align-middle">
-          <thead><tr><th>Transport</th><th>Driver</th><th class="text-end">Litres</th><th class="text-end">Discount ₹</th></tr></thead>
+          <thead><tr><th>Transport</th><th>Vehicle</th><th>Driver</th><th class="text-end">Litres</th><th class="text-end">Discount ₹</th></tr></thead>
           <tbody>
             <%= form.fields_for :discount_lines do |dl| %>
               <tr>
@@ -190,7 +190,15 @@
                   <%= dl.hidden_field :owner_phone_number %>
                   <%= dl.text_field :transport_name, class: "form-control form-control-sm border-0 bg-transparent px-0" %>
                 </td>
-                <td><%= dl.object.driver_name %></td>
+                <%# The plate is snapshotted from the capture, not typed here:
+                    it is what ties this line back to the visit it came from. %>
+                <td><%= dl.object.vehicle_number.presence || "—" %></td>
+                <td>
+                  <%= dl.object.driver_name %>
+                  <% if dl.object.driver_phone_number.present? %>
+                    <div class="text-muted small"><%= dl.object.driver_phone_number %></div>
+                  <% end %>
+                </td>
                 <td class="text-end"><%= number_with_precision(dl.object.litres, precision: 3, strip_insignificant_zeros: true) %></td>
                 <td class="text-end" style="min-width:7rem">
                   <%= dl.number_field :discount_amount, step: "0.01", min: 0, class: "form-control form-control-sm text-end", data: { discount: true } %>
@@ -206,6 +214,7 @@
     <template data-discount-row-template>
       <tr>
         <td><input type="text" class="form-control form-control-sm" placeholder="Transport or customer" data-template-name="transport_name"></td>
+        <td class="text-muted small">—</td>
         <td class="text-muted small">Added here</td>
         <td class="text-end" style="min-width:5rem"><input type="number" step="0.001" min="0" class="form-control form-control-sm text-end" data-template-name="litres"></td>
         <td class="text-end" style="min-width:7rem"><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end" data-discount data-template-name="discount_amount"></td>
