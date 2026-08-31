@@ -10,7 +10,7 @@
 <%= form_with url: admin_settlements_path, method: :get, class: "row g-2 align-items-end mb-2" do |f| %>
   <div class="col-sm-4">
     <%= f.label :q, "Search", class: "form-label" %>
-    <%= f.search_field :q, value: @query, class: "form-control", placeholder: "FSM, pump number, notes" %>
+    <%= f.search_field :q, value: @query, class: "form-control", placeholder: "FSM, transporter, vehicle, driver, mobile, pump number, notes" %>
   </div>
   <div class="col-sm-2">
     <%= f.label :from, "From", class: "form-label" %>

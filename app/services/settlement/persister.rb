@@ -30,6 +30,7 @@ module Settlement
         @settlement.entered_by ||= @actor if @settlement.new_record?
         snapshot_prices!
         stamp_opening_readings!
+        stamp_discount_vehicles!
         stamp_submission
         @settlement.save!
 
@@ -78,6 +79,26 @@ module Settlement
         end
         reading.derive_opening_source!
       end
+    end
+
+    # A discount line pulled from a B2 visit carries that visit's plate, which is
+    # how an admin traces a vehicle to the sheet it was discounted on (rule 17).
+    # Taken from the visit entry rather than the request: no client sends it, the
+    # native app's discount payload carries only the transporter and the money,
+    # and a plate the client could set would be a plate that disagrees with the
+    # capture it claims to be a snapshot of.
+    #
+    # Stamped once, when the row is created — like unit_price and the offered
+    # opening. A later B2 correction must not silently rewrite what a submitted
+    # sheet was built from; that is what the audit trail is for. A line the FSM
+    # added at settlement has no visit entry and keeps no plate.
+    def stamp_discount_vehicles!
+      new_lines = @settlement.discount_lines.reject(&:marked_for_destruction?).select(&:new_record?)
+      linked = new_lines.select { |line| line.visit_entry_id.present? && line.vehicle_number.blank? }
+      return if linked.empty?
+
+      plates = VisitEntry.where(id: linked.map(&:visit_entry_id)).pluck(:id, :vehicle_number).to_h
+      linked.each { |line| line.vehicle_number = plates[line.visit_entry_id] }
     end
 
     def snapshot_rate_comparison_prices!

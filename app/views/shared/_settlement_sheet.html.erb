@@ -103,7 +103,7 @@
     <h2 class="h5">Discounts <span class="text-muted small">(pulled from the day's visits, plus any added at settlement)</span></h2>
     <div class="table-responsive">
       <table class="table table-sm align-middle">
-        <thead><tr><th>Transport</th><th>Driver</th><th class="text-end">Litres</th><th class="text-end">Discount ₹</th></tr></thead>
+        <thead><tr><th>Transport</th><th>Vehicle</th><th>Driver</th><th class="text-end">Litres</th><th class="text-end">Discount ₹</th></tr></thead>
         <tbody>
           <% settlement.discount_lines.each do |line| %>
             <tr>
@@ -111,13 +111,23 @@
                 <%= line.transport_name.presence || "—" %>
                 <% if line.visit_entry_id.blank? %><span class="text-muted small">· added here</span><% end %>
               </td>
-              <td><%= line.driver_name.presence || "—" %></td>
+              <%# Everything an admin searches a past sheet by (rule 17) has to be
+                  readable on it, or a hit cannot be explained — transporter,
+                  vehicle, driver and the driver's mobile. A line added at
+                  settlement was never a capture, so it carries none of them. %>
+              <td><%= line.vehicle_number.presence || "—" %></td>
+              <td>
+                <%= line.driver_name.presence || "—" %>
+                <% if line.driver_phone_number.present? %>
+                  <div class="text-muted small"><%= line.driver_phone_number %></div>
+                <% end %>
+              </td>
               <td class="text-end"><%= settlement_litres(line.litres) %></td>
               <td class="text-end"><%= settlement_money(line.discount_amount) %></td>
             </tr>
           <% end %>
           <% if settlement.discount_lines.none? %>
-            <tr><td colspan="4" class="text-body-secondary small">No same-day discounts captured for this pump.</td></tr>
+            <tr><td colspan="5" class="text-body-secondary small">No same-day discounts captured for this pump.</td></tr>
           <% end %>
         </tbody>
       </table>

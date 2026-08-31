@@ -64,18 +64,22 @@ class DailySettlement < ApplicationRecord
   PUMP_NUMBER_QUERY = /\A(?:pump\s*)?(\d{1,4})\z/i
 
   # Admin-console free-text lookup (business rule 17), over the things an admin
-  # actually remembers about a past sheet: who filed it, which pump, and anything
-  # typed into the notes. Lives here so the web console and the API cannot drift
-  # apart — merge it into a filtered scope and it narrows, never widens.
+  # actually remembers about a past sheet: who filed it, which pump, anything
+  # typed into the notes, and — because a question about a settlement usually
+  # starts with a customer rather than a shift — the transporter, vehicle,
+  # driver and driver's mobile on its discount lines. Lives here so the web
+  # console and the API cannot drift apart — merge it into a filtered scope and
+  # it narrows, never widens.
   def self.matching_text(query)
     query = query.to_s.strip
     return all if query.blank?
 
     pattern = "%#{sanitize_sql_like(query)}%"
+    sequence_number = query[PUMP_NUMBER_QUERY, 1]
     matched = where("daily_settlements.fsm_name_snapshot ILIKE :pattern", pattern: pattern)
       .or(where("daily_settlements.notes ILIKE :pattern", pattern: pattern))
       .or(where(recorded_by_id: users_matching_text(pattern)))
-    sequence_number = query[PUMP_NUMBER_QUERY, 1]
+      .or(where(id: discount_lines_matching_text(query, pattern, pump_query: sequence_number.present?)))
     return matched if sequence_number.nil?
 
     matched.or(where(fuel_pump_id: FuelPump.where(sequence_number: sequence_number).select(:id)))
@@ -88,6 +92,59 @@ class DailySettlement < ApplicationRecord
     ).select(:id)
   end
   private_class_method :users_matching_text
+
+  # A subquery, not a join: `matching_text` is OR-ed together and then merged
+  # into a scope that is already filtered by pump, FSM, status and date, and a
+  # relation carrying its own join cannot be OR-ed with one that does not.
+  #
+  # Plates and mobiles are stored normalized on both sides (A-Z0-9 and digits
+  # respectively), so the query goes through the same normalizers before it is
+  # matched — otherwise "KA-01 AA 0001" and "+91 98765 43210", which is how both
+  # are actually written down, would find nothing. Names are stored as typed and
+  # search raw. A name run through the plate normalizer ("Sharma Roadways" →
+  # "SHARMAROADWAYS") is harmless: no plate contains it.
+  #
+  # Two queries are refused an identifier clause rather than answered badly:
+  #   - one with no letters or digits at all ("---"), which normalizes to nothing
+  #     and would match as `ILIKE '%%'` — every line that has a plate;
+  #   - a bare pump number ("3", "pump 3"), which means the pump and nothing else.
+  #     Nearly every plate and every mobile contains a given digit, so reading a
+  #     1-4 digit query as a fragment of one would answer "Pump 3" with the whole
+  #     table. Names keep their clause: a digit inside a transporter's name is a
+  #     genuine substring hit, and few names carry one.
+  def self.discount_lines_matching_text(query, pattern, pump_query: false)
+    scope = SettlementDiscountLine
+      .where("settlement_discount_lines.transport_name ILIKE :pattern", pattern: pattern)
+      .or(SettlementDiscountLine.where("settlement_discount_lines.driver_name ILIKE :pattern", pattern: pattern))
+    return scope.select(:daily_settlement_id) if pump_query
+
+    plate = Vehicle.normalize_vehicle_number(query)
+    unless plate.blank?
+      scope = scope.or(SettlementDiscountLine.where(
+        "settlement_discount_lines.vehicle_number ILIKE :plate_pattern",
+        plate_pattern: "%#{sanitize_sql_like(plate)}%"
+      ))
+    end
+    mobile = normalized_mobile_query(query)
+    unless mobile.blank?
+      scope = scope.or(SettlementDiscountLine.where(
+        "settlement_discount_lines.driver_phone_number ILIKE :mobile_pattern",
+        mobile_pattern: "%#{sanitize_sql_like(mobile)}%"
+      ))
+    end
+    scope.select(:daily_settlement_id)
+  end
+  private_class_method :discount_lines_matching_text
+
+  # Mobiles are stored as exactly ten digits, so a number typed with a dialling
+  # prefix ("+91 98765 43210" → twelve) could never match one. Strip a leading
+  # 91 or 0 only when the query is exactly that much longer than ten — a genuine
+  # ten-digit-or-shorter fragment never is, so a search for numbers that merely
+  # contain "91" is left alone. Same rule the Reports lookup uses.
+  def self.normalized_mobile_query(query)
+    Customer.normalize_phone_number(query).sub(/\A(?:0|91)(?=\d{10}\z)/, "")
+  end
+  private_class_method :normalized_mobile_query
 
   # What the last settled sheet left a nozzle's meter at, and the date it was
   # settled. The reading auto-populates the next settlement's opening (business

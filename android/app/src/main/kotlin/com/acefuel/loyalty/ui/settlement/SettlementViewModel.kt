@@ -36,7 +36,8 @@ data class NozzleRow(
 }
 
 data class LubeRow(val productId: Long, val name: String, val unitPrice: Double, val qty: String = "0", val existingId: Long? = null)
-data class DiscountRow(val visitEntryId: Long?, val transport: String?, val litres: Double, val discount: Double, val driver: String?, val existingId: Long? = null)
+data class DiscountRow(val visitEntryId: Long?, val transport: String?, val vehicle: String?, val litres: Double,
+                       val discount: Double, val driver: String?, val existingId: Long? = null)
 data class CreditRow(val type: String = "fleet_otp", val litres: String = "", val amount: String = "", val reference: String = "", val existingId: Long? = null)
 data class DenomRow(val denomination: Int, val qty: String = "0", val existingId: Long? = null)
 data class ReceiptRow(val label: String = "", val amount: String = "", val existingId: Long? = null)
@@ -221,7 +222,7 @@ class SettlementViewModel(
                     )
                 },
                 lubes = draft.lubeProducts.map { LubeRow(it.productId, it.name, it.unitPrice ?: 0.0) },
-                discounts = draft.discountLines.map { DiscountRow(it.visitEntryId, it.transportName, it.litres, it.discountAmount, it.driverName) },
+                discounts = draft.discountLines.map { DiscountRow(it.visitEntryId, it.transportName, it.vehicleNumber, it.litres, it.discountAmount, it.driverName) },
                 denoms = draft.denominations.map { DenomRow(it) },
                 receipts = draft.defaultDigitalReceiptLabels.map { ReceiptRow(label = it) } + ReceiptRow(),
                 expenses = listOf(ExpenseRow()),
@@ -287,7 +288,7 @@ class SettlementViewModel(
                 },
                 lubes = mergeLubes(lubeCatalog, d, savedLubes),
                 discounts = d.discountLines.filter { it.visitEntryId != null }
-                    .map { DiscountRow(it.visitEntryId, it.transportName, it.litres, it.discountAmount, it.driverName, it.id) },
+                    .map { DiscountRow(it.visitEntryId, it.transportName, it.vehicleNumber, it.litres, it.discountAmount, it.driverName, it.id) },
                 addedDiscounts = d.discountLines.filter { it.visitEntryId == null }
                     .map { ManualDiscountRow(it.transportName ?: "", trimNum(it.litres), trimNum(it.discountAmount), it.id) },
                 credits = d.creditLines.map { CreditRow(it.creditType, trimNum(it.litres), trimNum(it.amount), it.reference ?: "", it.id) }.ifEmpty { listOf(CreditRow()) },

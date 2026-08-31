@@ -167,6 +167,100 @@ module Admin
       assert_select "a[href=?]", admin_settlement_path(theirs), count: 0
     end
 
+    # An admin asking about a discount is holding a transporter's complaint, a
+    # plate or a driver's number, not a shift roster — so the lookup has to reach
+    # the discount lines the sheet is questioned over, not only who filed it.
+    test "index searches past settlements by transporter, vehicle, driver and mobile" do
+      other_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
+      theirs = DailySettlement.create!(
+        fuel_pump: other_pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff, status: "submitted",
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: other_pump.nozzles.first.id, opening_reading: 10, closing_reading: 20, unit_price: 100 }],
+        discount_lines_attributes: [{ transport_name: "NL Roadways", vehicle_number: "KA05MJ4455",
+                                      driver_name: "Ravi Kumar", driver_phone_number: "9800011122",
+                                      litres: 40, discount_amount: 120 }]
+      )
+      sign_in @admin
+
+      ["NL Roadways", "Ravi Kumar"].each do |query|
+        get admin_settlements_path, params: { q: query }
+        assert_response :success
+        assert_select "a[href=?]", admin_settlement_path(theirs), { count: 1 }, "#{query.inspect} should find the sheet"
+        assert_select "a[href=?]", admin_settlement_path(@settlement), count: 0
+      end
+
+      # Plates and mobiles are stored A-Z0-9 / digits only, so the typed form has
+      # to be normalized before it is matched — otherwise the way both are
+      # actually written down finds nothing.
+      ["KA05MJ4455", "ka-05 mj 4455", "MJ4455",
+       "9800011122", "98000 11122", "+91 98000 11122"].each do |query|
+        get admin_settlements_path, params: { q: query }
+        assert_response :success
+        assert_select "a[href=?]", admin_settlement_path(theirs), { count: 1 }, "#{query.inspect} should find the sheet"
+      end
+
+      ["KA05MJ0000", "9800099999", "Ravi Shankar"].each do |query|
+        get admin_settlements_path, params: { q: query }
+        assert_response :success
+        assert_select "a[href=?]", admin_settlement_path(theirs), { count: 0 }, "#{query.inspect} should find nothing"
+      end
+    end
+
+    # Nearly every plate and every mobile contains a given digit, so a bare pump
+    # number must not be read as a fragment of one — it would answer "Pump 3"
+    # with every sheet that has a discount line on it.
+    test "a bare pump number is not read as a fragment of a plate or a mobile" do
+      other_pump = FuelPump.create!(active: true, nozzles_attributes: [{ fuel_type_code: "petrol", active: true }])
+      theirs = DailySettlement.create!(
+        fuel_pump: other_pump, business_date: Date.new(2026, 7, 21), recorded_by: @staff, status: "submitted",
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: other_pump.nozzles.first.id, opening_reading: 10, closing_reading: 20, unit_price: 100 }],
+        discount_lines_attributes: [{ transport_name: "NL Roadways", vehicle_number: "KA05MJ4455",
+                                      driver_phone_number: "9800011122", litres: 40, discount_amount: 120 }]
+      )
+      sign_in @admin
+
+      # @pump owns @settlement; the plate and the mobile above both contain its
+      # digits, so a fragment reading would drag `theirs` in with it.
+      get admin_settlements_path, params: { q: "#{@pump.sequence_number}" }
+
+      assert_response :success
+      assert_select "a[href=?]", admin_settlement_path(@settlement), { count: 1 }, "the pump's own sheet is the answer"
+      assert_select "a[href=?]", admin_settlement_path(theirs), { count: 0 },
+        "a 1-4 digit pump query must not be matched against plates and mobiles"
+    end
+
+    # The lookup narrows the filters above it (rule 17). A transporter who did
+    # fuel, on a day that is outside the range in force, is not an answer.
+    test "a transporter search narrows the range rather than escaping it" do
+      theirs = DailySettlement.create!(
+        fuel_pump: @pump, business_date: Date.new(2026, 6, 1), recorded_by: @staff, status: "submitted",
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 10, closing_reading: 20, unit_price: 100 }],
+        discount_lines_attributes: [{ transport_name: "NL Roadways", vehicle_number: "KA05MJ4455", litres: 40, discount_amount: 120 }]
+      )
+      sign_in @admin
+
+      get admin_settlements_path, params: { q: "NL Roadways", from: "2026-07-01", to: "2026-07-31" }
+
+      assert_response :success
+      assert_select "a[href=?]", admin_settlement_path(theirs), { count: 0 },
+        "a match outside the range in force must not be pulled back in by the search"
+    end
+
+    # A query with no letters or digits normalizes to an empty plate, and matching
+    # on that is `ILIKE '%%'` — every line that has one, which is not a search.
+    test "a punctuation-only query does not match every sheet with a vehicle" do
+      DailySettlement.create!(
+        fuel_pump: @pump, business_date: Date.new(2026, 7, 22), recorded_by: @staff, status: "submitted",
+        nozzle_readings_attributes: [{ fuel_pump_nozzle_id: @petrol.id, opening_reading: 10, closing_reading: 20, unit_price: 100 }],
+        discount_lines_attributes: [{ transport_name: "NL Roadways", vehicle_number: "KA05MJ4455", litres: 40, discount_amount: 120 }]
+      )
+      sign_in @admin
+
+      get admin_settlements_path, params: { q: "---" }
+
+      assert_response :success
+      assert_select "tbody tr td a[href^=?]", "/admin/settlements/", count: 0
+    end
+
     # "Meena" is also the fsm_name_snapshot, so searching for it proves nothing
     # about the recorder branch. A username and a phone number exist ONLY on the
     # user record, so these two queries can be answered by nothing else.

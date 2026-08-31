@@ -182,7 +182,7 @@ private fun FilterBar(state: AdminSettlementsUiState, vm: AdminSettlementsViewMo
         SearchField(
             value = state.query,
             onValueChange = vm::onQuery,
-            placeholder = "FSM, pump number, notes",
+            placeholder = "FSM, transporter, vehicle, driver, mobile, pump",
         )
         Row(horizontalArrangement = Arrangement.spacedBy(NayaraSpacing.Sm)) {
             DateField(
@@ -329,7 +329,10 @@ private fun DetailView(state: AdminSettlementsUiState, vm: AdminSettlementsViewM
         } else {
             items(s.discountLines) { d ->
                 SheetCard(title = d.transportName?.ifBlank { null } ?: d.driverName?.ifBlank { null } ?: BLANK) {
+                    // Searchable by rule 17, so it has to be readable here too.
+                    if (!d.vehicleNumber.isNullOrBlank()) SheetRow("Vehicle", d.vehicleNumber)
                     if (!d.driverName.isNullOrBlank()) SheetRow("Driver", d.driverName)
+                    if (!d.driverPhoneNumber.isNullOrBlank()) SheetRow("Driver mobile", d.driverPhoneNumber)
                     SheetRow("Litres", litres(d.litres))
                     SheetRow("Discount", money(d.discountAmount), emphasis = true)
                     if (d.visitEntryId == null) SheetRow("Source", "Added at settlement")
